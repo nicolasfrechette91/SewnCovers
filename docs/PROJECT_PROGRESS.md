@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 1 - Project foundation
-- Current task: 1.3 - Scaffold the compact Python/FastAPI service and dependency tooling
+- Current task: 1.5 - Verify both applications run locally and document the repeatable setup
 - Status: Not started
-- Overall progress: 2 / 58 tasks completed
-- Up next: 1.3 - Scaffold the compact Python/FastAPI service and dependency tooling
+- Overall progress: 4 / 58 tasks completed
+- Up next: 1.5 - Verify both applications run locally and document the repeatable setup
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -21,8 +21,8 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | --- | --- | --- |
 | 1.1 | Define supported shapes, measurement rules, MVP boundaries, security boundary, and monorepo contract | Completed |
 | 1.2 | Verify and configure the existing strict Next.js + React + TypeScript application for GitHub Pages static export | Completed |
-| 1.3 | Scaffold the compact Python/FastAPI service and dependency tooling | Not started |
-| 1.4 | Configure safe local environment examples, including public `NEXT_PUBLIC_API_URL`, repository hygiene, and developer commands | Not started |
+| 1.3 | Scaffold the compact Python/FastAPI service and dependency tooling | Completed |
+| 1.4 | Configure safe local environment examples, including public `NEXT_PUBLIC_API_URL`, repository hygiene, and developer commands | Completed |
 | 1.5 | Verify both applications run locally and document the repeatable setup | Not started |
 
 ## Phase 2: Frontend visual foundation
@@ -153,3 +153,21 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Public-folder image references explicitly include the build-time base path. The verified Pages export contains `/sewncovers/_next/`, `/sewncovers/next.svg`, and `/sewncovers/vercel.svg` URLs with no unprefixed equivalents.
 - Strict TypeScript remains enabled and `npm run typecheck` runs `tsc --noEmit`. Public backend configuration uses only `NEXT_PUBLIC_API_URL`; no Vite-style API variable remains.
 - The current routes use no runtime server features or other static-export blockers. The existing `next/font/google` setup downloads Geist during a clean production build, so that build requires outbound access to Google Fonts; Next.js then self-hosts the generated font files in the static export.
+
+### 2026-07-22 - FastAPI service scaffold
+
+- The backend supports Python 3.12 (`>=3.12,<3.13`) and uses standard `venv` plus pip for broad local and Render compatibility.
+- `backend/pyproject.toml` is the single dependency source of truth. Runtime and `dev` optional dependencies are separated and direct versions are pinned; no lockfile is included because standard pip does not normally generate one.
+- The compact structure contains `app/main.py`, package markers, one scaffold test, the environment example, project metadata, and backend setup documentation. The application is titled `SewnCovers API` and exposes only a temporary `GET /` verification response.
+- Database connections, settings management, CORS, database-aware health behavior, patterns, saved designs, authentication, uploads, and commercial behavior remain deferred to their roadmap tasks.
+- Verification passed with `python -m pip install -e ".[dev]"`, `python -m pip check`, `python -m ruff format --check .`, `python -m ruff check .`, `python -m pytest`, a direct application import, and live Uvicorn requests to `/` and `/docs`.
+
+### 2026-07-22 - Local environment and repository hygiene
+
+- `frontend/.env.example` exposes only the public local API address through `NEXT_PUBLIC_API_URL=http://localhost:8000`; frontend documentation uses the ignored `.env.local` file and explicitly prohibits private values in `NEXT_PUBLIC_` variables.
+- `backend/.env.example` keeps `ENVIRONMENT=development` and `FRONTEND_ORIGIN=http://localhost:3000` as safe deferred placeholders. `DATABASE_URL` remains empty until database setup, and the current FastAPI scaffold does not load or require these values.
+- Root ignore rules now apply Next.js dependencies, build output, coverage, environment files, Python virtual environments/caches/package metadata, editor state, logs, operating-system files, and temporary files across the monorepo. Environment examples and dependency lockfiles remain trackable.
+- The root and application READMEs document npm and pip setup, PowerShell and macOS/Linux environment-file and virtual-environment commands, frontend and backend quality commands, local addresses, and the two-terminal workflow. They also state that the database and frontend/API integration remain deferred.
+- Ignore checks passed for representative local environments, Next.js output, coverage, Python caches, virtual environments, package metadata, editor files, and temporary files. No generated build directory, cache, virtual environment, package metadata, or populated environment file is tracked; only the two safe examples exist.
+- The tracked and untracked task files contain no populated secret-like assignments or credential signatures. No `VITE_API_URL` reference remains, and every `NEXT_PUBLIC_API_URL` reference describes only the public backend address.
+- Verification passed with `git diff --check`, frontend lint, strict type-checking, and static-export build, plus backend dependency consistency, Ruff formatting and linting, and Pytest. All documented commands match `frontend/package.json` or `backend/pyproject.toml`.

@@ -71,13 +71,39 @@ The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. D
 
 ## Current state
 
-The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend directory is reserved for the FastAPI service and has not yet been scaffolded.
+The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend now has a compact Python 3.12 and FastAPI scaffold with its setup and quality commands documented in [`backend/README.md`](backend/README.md); database integration and business endpoints are not implemented yet.
 
 See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task checklist and current handoff state.
 
+## Local development
+
+The frontend and backend are independent applications and run in two terminals. Install each application's dependencies once by following its README.
+
+In the first Windows PowerShell terminal, run the API:
+
+```powershell
+cd backend
+.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload
+```
+
+The API is available at <http://127.0.0.1:8000/> and its interactive documentation is at <http://127.0.0.1:8000/docs>.
+
+In the second terminal, run the frontend:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+The frontend is available at <http://localhost:3000>. Copy `frontend/.env.example` to `frontend/.env.local` and `backend/.env.example` to `backend/.env` as described in the application READMEs. The database is not connected yet, and the current frontend may not consume the API until the later integration phase.
+
+- [Frontend setup and commands](frontend/README.md)
+- [Backend setup and commands](backend/README.md)
+
 ## Environment contract
 
-Copy the example files when local services are scaffolded. Never commit populated `.env` files.
+Copy the example files to ignored local environment files. Never commit populated `.env` files.
 
 - Frontend: `NEXT_PUBLIC_API_URL`
 - Backend: `DATABASE_URL`, `FRONTEND_ORIGIN`, and `ENVIRONMENT`

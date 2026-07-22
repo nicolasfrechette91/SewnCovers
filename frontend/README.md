@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SewnCovers frontend
 
-## Getting Started
+This directory contains the Next.js 16.2.11, React, and TypeScript App Router frontend. It is configured for static export to GitHub Pages. The current foundation does not call the FastAPI service yet; API integration is deferred to a later roadmap task.
 
-First, run the development server:
+## Requirements
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 20.9.0 or newer, as required by the installed Next.js version
+- npm, using the committed `package-lock.json`
+
+## Local setup
+
+Run these commands from the `frontend` directory:
+
+```powershell
+npm ci
+Copy-Item .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+On macOS or Linux, copy the environment example with:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`NEXT_PUBLIC_API_URL` is the browser-visible FastAPI address and defaults to `http://localhost:8000` in the example. Every `NEXT_PUBLIC_` value is embedded in browser code, so never put credentials, database URLs, API keys, or other private values there. Local environment files are ignored and must not be committed.
 
-## Learn More
+## Run the frontend
 
-To learn more about Next.js, take a look at the following resources:
+Start the development server:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```powershell
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open <http://localhost:3000>. Run the backend separately when it is needed; the current frontend does not consume it yet.
 
-## Deploy on Vercel
+## Quality checks
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Run these commands from the `frontend` directory:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```powershell
+npm run lint
+npm run typecheck
+npm run build
+```
+
+`npm run typecheck` performs strict TypeScript checking without emitting files. `npm run build` performs the production build and writes the static export to the ignored `out/` directory. The existing configuration keeps local development and ordinary local builds at the domain root while GitHub Actions builds use the `/sewncovers` base path required by GitHub Pages.
