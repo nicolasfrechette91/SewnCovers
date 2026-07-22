@@ -61,17 +61,17 @@ This repository is a monorepo with independently deployable applications:
 
 ```text
 sewncovers/
-|- frontend/   React, TypeScript, and Vite; deployed to GitHub Pages
+|- frontend/   Next.js, React, and TypeScript; statically exported to GitHub Pages
 |- backend/    Python and FastAPI; deployed to Render
 |- docs/       Roadmap progress and project decisions
 `- .github/    Continuous integration and deployment workflows (planned)
 ```
 
-The browser may receive only the public API URL through `VITE_API_URL`. Database credentials and other secrets remain in the FastAPI/Render environment. FastAPI is the only application that connects to PostgreSQL on Neon.
+The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. Database credentials and other secrets remain in the FastAPI/Render environment. FastAPI is the only application that connects to PostgreSQL on Neon.
 
 ## Current state
 
-The repository was initialized with a Next.js starter, which does not match the approved stack. It is being preserved until the next foundation task replaces it with a React + TypeScript + Vite scaffold. The backend directory is reserved for the FastAPI service and has not yet been scaffolded.
+The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend directory is reserved for the FastAPI service and has not yet been scaffolded.
 
 See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task checklist and current handoff state.
 
@@ -79,12 +79,12 @@ See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task
 
 Copy the example files when local services are scaffolded. Never commit populated `.env` files.
 
-- Frontend: `VITE_API_URL`
+- Frontend: `NEXT_PUBLIC_API_URL`
 - Backend: `DATABASE_URL`, `FRONTEND_ORIGIN`, and `ENVIRONMENT`
 
 ## Free-tier constraints
 
-- GitHub Pages serves only the static frontend and requires the Vite repository base path.
+- GitHub Pages serves only the static Next.js export and requires the `/sewncovers` repository base path.
 - Render free services may spin down, so the UI must explain and retry a slow first request.
 - Neon and Render limits can change and will be verified immediately before deployment.
 - Pattern images stay in the frontend deployment; PostgreSQL stores their paths rather than image data.

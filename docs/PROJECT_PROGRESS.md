@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 1 - Project foundation
-- Current task: 1.2 - Verify and configure the existing Next.js application
+- Current task: 1.3 - Scaffold the compact Python/FastAPI service and dependency tooling
 - Status: Not started
-- Overall progress: 1 / 58 tasks completed
-- Up next: 1.2 - Verify and configure the existing Next.js application for static export
+- Overall progress: 2 / 58 tasks completed
+- Up next: 1.3 - Scaffold the compact Python/FastAPI service and dependency tooling
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -20,7 +20,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | Task | Deliverable | Status |
 | --- | --- | --- |
 | 1.1 | Define supported shapes, measurement rules, MVP boundaries, security boundary, and monorepo contract | Completed |
-| 1.2 | Verify and configure the existing strict Next.js + React + TypeScript application for GitHub Pages static export | Not started |
+| 1.2 | Verify and configure the existing strict Next.js + React + TypeScript application for GitHub Pages static export | Completed |
 | 1.3 | Scaffold the compact Python/FastAPI service and dependency tooling | Not started |
 | 1.4 | Configure safe local environment examples, including public `NEXT_PUBLIC_API_URL`, repository hygiene, and developer commands | Not started |
 | 1.5 | Verify both applications run locally and document the repeatable setup | Not started |
@@ -144,3 +144,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 - The canonical product name is **SewnCovers**, including the final "s", to better support a commerce-oriented brand.
 - Use `SewnCovers` in user-facing copy and `sewncovers` for lowercase technical identifiers such as package, database, repository, and deployment names.
+
+### 2026-07-22 - Next.js static-export baseline
+
+- The frontend uses npm, Next.js 16.2.11, React 19.2.4, TypeScript 5.9.3, and the App Router.
+- Next.js uses `output: "export"`, `images.unoptimized: true`, and `trailingSlash: true`; successful builds emit the ignored `frontend/out` directory.
+- GitHub Actions builds use `basePath: "/sewncovers"`, while local development and ordinary local builds remain at the domain root. `assetPrefix` is intentionally omitted because Next.js applies `basePath` to framework assets and recommends `assetPrefix` only for separate CDN hosting.
+- Public-folder image references explicitly include the build-time base path. The verified Pages export contains `/sewncovers/_next/`, `/sewncovers/next.svg`, and `/sewncovers/vercel.svg` URLs with no unprefixed equivalents.
+- Strict TypeScript remains enabled and `npm run typecheck` runs `tsc --noEmit`. Public backend configuration uses only `NEXT_PUBLIC_API_URL`; no Vite-style API variable remains.
+- The current routes use no runtime server features or other static-export blockers. The existing `next/font/google` setup downloads Geist during a clean production build, so that build requires outbound access to Google Fonts; Next.js then self-hosts the generated font files in the static export.
