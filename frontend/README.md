@@ -9,17 +9,22 @@ This directory contains the Next.js 16.2.11, React, and TypeScript App Router fr
 
 ## Local setup
 
-Run these commands from the `frontend` directory:
+Install the locked dependencies from the `frontend` directory:
 
 ```powershell
 npm ci
-Copy-Item .env.example .env.local
 ```
 
-On macOS or Linux, copy the environment example with:
+If `.env.local` does not already exist, create it in Windows PowerShell with:
+
+```powershell
+if (-not (Test-Path .env.local)) { Copy-Item .env.example .env.local }
+```
+
+On macOS or Linux, create it only when it does not already exist:
 
 ```bash
-cp .env.example .env.local
+test -e .env.local || cp .env.example .env.local
 ```
 
 `NEXT_PUBLIC_API_URL` is the browser-visible FastAPI address and defaults to `http://localhost:8000` in the example. Every `NEXT_PUBLIC_` value is embedded in browser code, so never put credentials, database URLs, API keys, or other private values there. Local environment files are ignored and must not be committed.
@@ -33,6 +38,8 @@ npm run dev
 ```
 
 Open <http://localhost:3000>. Run the backend separately when it is needed; the current frontend does not consume it yet.
+
+Press `Ctrl+C` in this terminal to stop the development server.
 
 ## Quality checks
 

@@ -10,9 +10,9 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 - Current phase: Phase 1 - Project foundation
 - Current task: 1.5 - Verify both applications run locally and document the repeatable setup
-- Status: Not started
-- Overall progress: 4 / 58 tasks completed
-- Up next: 1.5 - Verify both applications run locally and document the repeatable setup
+- Status: Completed
+- Overall progress: 5 / 58 tasks completed
+- Up next: 2.1 - Define warm ivory, forest-green, terracotta, typography, spacing, elevation, and focus tokens
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -23,7 +23,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 1.2 | Verify and configure the existing strict Next.js + React + TypeScript application for GitHub Pages static export | Completed |
 | 1.3 | Scaffold the compact Python/FastAPI service and dependency tooling | Completed |
 | 1.4 | Configure safe local environment examples, including public `NEXT_PUBLIC_API_URL`, repository hygiene, and developer commands | Completed |
-| 1.5 | Verify both applications run locally and document the repeatable setup | Not started |
+| 1.5 | Verify both applications run locally and document the repeatable setup | Completed |
 
 ## Phase 2: Frontend visual foundation
 
@@ -171,3 +171,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Ignore checks passed for representative local environments, Next.js output, coverage, Python caches, virtual environments, package metadata, editor files, and temporary files. No generated build directory, cache, virtual environment, package metadata, or populated environment file is tracked; only the two safe examples exist.
 - The tracked and untracked task files contain no populated secret-like assignments or credential signatures. No `VITE_API_URL` reference remains, and every `NEXT_PUBLIC_API_URL` reference describes only the public backend address.
 - Verification passed with `git diff --check`, frontend lint, strict type-checking, and static-export build, plus backend dependency consistency, Ruff formatting and linting, and Pytest. All documented commands match `frontend/package.json` or `backend/pyproject.toml`.
+
+### 2026-07-22 - Repeatable local setup verification
+
+- Node.js 24.15.0 and npm 11.12.1 satisfied Next.js's Node.js 20.9.0 minimum. From `frontend`, `npm ci`, `npm run lint`, `npm run typecheck`, and `npm run build` passed. The static export generated `/` and `/_not-found`; as previously documented, the build required outbound access to download and self-host Geist. `npm ci` reported three audit advisories (one moderate and two high), but no unrelated dependency upgrade was performed during this task.
+- The preserved `backend/.venv` used Python 3.12.13. From `backend`, the equivalent non-activated PowerShell commands `& '.\.venv\Scripts\python.exe' -m pip install -e ".[dev]"`, `& '.\.venv\Scripts\python.exe' -m pip check`, `& '.\.venv\Scripts\python.exe' -m ruff format --check .`, `& '.\.venv\Scripts\python.exe' -m ruff check .`, and `& '.\.venv\Scripts\python.exe' -m pytest` passed; Pytest collected and passed the scaffold test.
+- `npm run dev` and `& '.\.venv\Scripts\python.exe' -m uvicorn app.main:app --reload` ran concurrently without a port conflict. While both remained active, `http://localhost:3000/`, `http://127.0.0.1:8000/`, `http://127.0.0.1:8000/docs`, and `http://127.0.0.1:8000/openapi.json` returned HTTP 200. The backend root returned `{"service":"SewnCovers API","status":"ready"}` and OpenAPI identified `SewnCovers API`.
+- Local frontend HTML did not contain `/sewncovers/`; `/sewncovers/` returned 404 as expected, all discovered `/_next/` assets plus `/next.svg` and `/vercel.svg` returned 200, and the browser rendered both images successfully. The scaffold Vercel logo declaration was corrected from 16x16 to its 16x14 aspect ratio; after the correction, the browser warning/error console was empty and lint, strict type-checking, and the production build passed again.
+- Documentation now includes safe copy-if-absent environment commands, explicit macOS/Linux Python 3.12 virtual-environment creation, backend `pip check`, server shutdown instructions, required versions, and the verified two-terminal workflow. The database remains disconnected, environment examples remain optional for the minimal applications, and frontend/API integration remains deferred.
+- The task-owned development processes were stopped after the smoke test. Ports 3000 and 8000 had no remaining listeners, and no unrelated processes were terminated.

@@ -77,7 +77,7 @@ See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task
 
 ## Local development
 
-The frontend and backend are independent applications and run in two terminals. Install each application's dependencies once by following its README.
+The frontend and backend are independent applications and run in two terminals. The required tools are Node.js 20.9.0 or newer with npm, plus Python 3.12 with `venv` and pip. Install each application's dependencies once by following its README. Preserve any existing `.env.local`, `.env`, dependency directory, or virtual environment; the safe example files are needed only when the corresponding local file does not already exist.
 
 In the first Windows PowerShell terminal, run the API:
 
@@ -97,6 +97,8 @@ npm run dev
 ```
 
 The frontend is available at <http://localhost:3000>. Copy `frontend/.env.example` to `frontend/.env.local` and `backend/.env.example` to `backend/.env` as described in the application READMEs. The database is not connected yet, and the current frontend may not consume the API until the later integration phase.
+
+Press `Ctrl+C` in each terminal to stop both development servers. The application READMEs contain the verified install, lint, format, type-check, test, and build commands for Windows PowerShell and macOS/Linux.
 
 - [Frontend setup and commands](frontend/README.md)
 - [Backend setup and commands](backend/README.md)

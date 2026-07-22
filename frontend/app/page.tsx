@@ -48,7 +48,7 @@ export default function Home() {
               src={`${basePath}/vercel.svg`}
               alt="Vercel logomark"
               width={16}
-              height={16}
+              height={14}
             />
             Deploy Now
           </a>
