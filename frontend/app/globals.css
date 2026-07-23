@@ -21,6 +21,12 @@
   --color-border-strong: #988974;
   --color-focus: #c04f32;
   --color-focus-contrast: #fffdf8;
+  --color-control-disabled-surface: var(--color-surface-subtle);
+  --color-control-disabled-text: var(--color-text-muted);
+  --color-control-disabled-border: var(--color-border-strong);
+  --color-error-surface: #f8e9e3;
+  --color-error-border: #a6462f;
+  --color-error-text: #783523;
 
   /* Compatibility aliases for the starter while later UI work is deferred. */
   --color-background: var(--color-page);
@@ -121,6 +127,24 @@ body {
     [contenteditable="true"],
     [tabindex]:not([tabindex="-1"])
   ):focus-visible {
+    box-shadow: none;
+    outline-color: Highlight;
+  }
+
+  .unit-selector-input:checked + .unit-selector-label {
+    outline: 2px solid CanvasText;
+    outline-offset: -2px;
+  }
+}
+
+.unit-selector-input:focus-visible + .unit-selector-label {
+  box-shadow: var(--shadow-focus);
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+}
+
+@media (forced-colors: active) {
+  .unit-selector-input:focus-visible + .unit-selector-label {
     box-shadow: none;
     outline-color: Highlight;
   }

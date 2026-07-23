@@ -64,4 +64,16 @@ The visual foundation uses a warm ivory page, warm-neutral surfaces, forest-gree
 
 WCAG 2.2 contrast checks: primary text on the page is 12.28:1; muted text is 5.22:1 on the page and 5.64:1 on cards; light text on the brand is 8.92:1; brand on the page is 8.20:1; text-safe terracotta on the page is 5.64:1; and the focus color is 4.31:1 on the page and 4.65:1 on cards. The strong border is 3.08:1 on the page and 3.32:1 on cards. The inner light focus ring is 8.92:1 against the brand, while the outer terracotta ring is 4.65:1 against the inner ring. Values were checked with the WCAG relative-luminance formula.
 
-Dark mode, status colors, disabled-state colors, and motion tokens are intentionally deferred until a roadmap task or concrete component establishes their requirements. The existing homepage structure and content remain deferred to Task 2.5.
+Task 2.2 adds semantic disabled-control aliases and an error surface/border/text palette because those concrete component states now require them. Dark mode and a broader status or motion-token system remain deferred. The existing homepage structure and content remain deferred to Task 2.5.
+
+## UI primitives
+
+Reusable typed primitives live in `components/ui/` and are available from the `@/components/ui` barrel. Their static Tailwind class mappings consume the semantic theme utilities above; optional `className` props are intended for layout integration rather than replacing required state or focus treatment.
+
+- `Button` renders a native button with primary or secondary variants, default or compact sizing, `type="button"` by default, and native disabled behavior. Loading disables interaction, sets `aria-busy`, preserves the original width where practical, and exposes a visible loading label.
+- `NumberInput` renders a labeled native number input with standard controlled or uncontrolled value handling, decimal-friendly input mode, supporting text, native numeric attributes, and optional invalid styling. Caller-provided error IDs compose with generated supporting-text IDs through `aria-describedby`; the component does not coerce, clamp, round, validate, or convert values.
+- `UnitSelector` is a controlled native radio group for centimetres (`cm`) and inches (`in`). Its fieldset and legend provide group semantics, selected state includes a visible checkmark, and unit changes do not convert numeric values.
+- `LoadingState` exposes a visible, polite status label and an assistive-technology-hidden CSS spinner. Rotation is limited to users without a reduced-motion preference, while the static indicator remains visible for reduced motion.
+- `ErrorMessage` remains in document flow, defaults to assertive alert semantics, accepts normal React content and an `id` for form association, and uses the semantic error surface, border, and text tokens.
+
+Business validation, measurement conversion, persistence, retry behavior, overlays, skeletons, toasts, and global error handling remain deferred to their roadmap tasks.
