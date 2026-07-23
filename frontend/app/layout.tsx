@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+
+import { SiteFooter, SiteHeader } from "@/components/layout";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,7 +30,23 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <a
+          href="#main-content"
+          className="sr-only rounded-control bg-brand text-button font-control text-on-brand focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:flex focus:min-h-11 focus:items-center focus:px-control-x focus:py-control-y focus:not-sr-only"
+        >
+          Skip to main content
+        </a>
+        <SiteHeader />
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex min-w-0 flex-1 flex-col"
+        >
+          {children}
+        </main>
+        <SiteFooter />
+      </body>
     </html>
   );
 }

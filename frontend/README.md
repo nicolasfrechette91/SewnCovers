@@ -89,3 +89,14 @@ Reusable domain-oriented shells live in `components/configurator/` and are expor
 - `ConfigurationSummary` renders caller-formatted label/value items as a description list, including intentional empty and missing-value fallbacks. It performs no measurement conversion, calculation, validation, pricing, or totals.
 
 Future parent components remain responsible for data fetching, filter logic, configuration state, workflow navigation, business validation, measurement conversion, accurate preview rendering, pricing, persistence, and API integration.
+
+## Global layout components
+
+Reusable server-compatible layout components live in `components/layout/` and are exported through `@/components/layout`. The root layout renders the site header and footer around one flexing `<main id="main-content">` landmark and provides a focus-revealed skip link to that stable target. The starter homepage keeps its existing content and now relies on the root layout for its main landmark.
+
+- `SiteHeader` renders a static semantic header and primary navigation with an accessible text-based SewnCovers home link because no approved logo asset exists. Optional typed navigation items use `next/link`; a caller may provide an exact `currentHref` to add `aria-current="page"` and a persistent underline without route-dependent client logic.
+- Navigation stacks and wraps with responsive CSS. The repository currently defines only `/`, so the integrated header does not invent later destinations or render a redundant disclosure menu. The component has no client boundary; a mobile disclosure can be added when multiple real routes make one necessary.
+- `SiteFooter` renders the documented SewnCovers portfolio-prototype identity and a build-time year. Optional typed footer navigation is omitted from the integrated frame until real destinations are defined.
+- Internal `next/link` destinations remain application-relative because Next.js applies the configured `/sewncovers` base path automatically in GitHub Pages builds. Public image paths continue to use the existing build-time base-path strategy.
+
+Legal, contact, social, account, commerce, search, and additional product or configurator links remain deferred until their routes and content are defined.

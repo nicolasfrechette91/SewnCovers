@@ -5,12 +5,13 @@ export default function Home() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-page font-sans">
-      <main className="flex w-full max-w-3xl flex-1 flex-col items-center justify-between bg-surface px-16 py-32 sm:items-start">
+      <div className="flex w-full max-w-3xl flex-1 flex-col items-center justify-between bg-surface px-16 py-32 sm:items-start">
         <Image
           src={`${basePath}/next.svg`}
           alt="Next.js logo"
-          width={100}
-          height={20}
+          width={394}
+          height={80}
+          style={{ height: "auto", width: 100 }}
           priority
         />
         <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
@@ -59,7 +60,7 @@ export default function Home() {
             Documentation
           </a>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

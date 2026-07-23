@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 2 - Frontend visual foundation
-- Current task: 2.3 - Build StepIndicator, PatternCard, PatternFilter, CushionPreview, and ConfigurationSummary shells
+- Current task: 2.4 - Build the responsive, accessible site header and footer
 - Status: Completed
-- Overall progress: 8 / 58 tasks completed
-- Up next: 2.4 - Build the responsive, accessible site header and footer
+- Overall progress: 9 / 58 tasks completed
+- Up next: 2.5 - Build the landing page with value proposition, examples, three-step explanation, CTA, and prototype notice
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -32,7 +32,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 2.1 | Define warm ivory, forest-green, terracotta, typography, spacing, elevation, and focus tokens | Completed |
 | 2.2 | Build Button, NumberInput, UnitSelector, LoadingState, and ErrorMessage primitives | Completed |
 | 2.3 | Build StepIndicator, PatternCard, PatternFilter, CushionPreview, and ConfigurationSummary shells | Completed |
-| 2.4 | Build the responsive, accessible site header and footer | Not started |
+| 2.4 | Build the responsive, accessible site header and footer | Completed |
 | 2.5 | Build the landing page with value proposition, examples, three-step explanation, CTA, and prototype notice | Not started |
 
 ## Phase 3: Frontend configurator
@@ -217,3 +217,15 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Keyboard focus and radio-arrow behavior remain provided by native controls, and the generated CSS contains the two-color focus treatment for visually hidden card/filter inputs, but the browser-control key injection did not independently complete a keyboard traversal. Generated CSS inspection confirmed forced-colors checked/focus boundaries and reduced-motion transition suppression; OS-level forced-colors and reduced-motion modes and screen-reader software were not used. Contrast remained 8.92:1 for on-brand/brand, 13.27:1 for primary text/surface, 4.75:1 for disabled muted text/subtle surface, 3.32:1 for strong control borders/surface, and 4.65:1 for focus/surface.
 - Verification passed with `npm run lint`, `npm run typecheck`, `npm run build`, `$env:GITHUB_ACTIONS = "true"; npm run build`, production generated-CSS inspection, WCAG relative-luminance calculations, local browser/DOM checks at `/` and the removed validation route, production-export URL inspection, and `git diff --check`. The final Pages export uses `/sewncovers/_next/`, `/sewncovers/next.svg`, and `/sewncovers/vercel.svg` with no unprefixed equivalents. The known sandboxed Google Fonts fetch failure was reproduced and the required outbound-enabled builds passed.
 - `npm audit --json` still reports exactly three existing advisories: one moderate transitive PostCSS advisory and two high findings represented by the direct Next.js aggregate and transitive Sharp advisory. No package or lockfile, backend file, homepage, generated output, dependency directory, credential, environment file, API integration, workflow, pricing, persistence, conversion, or business-validation logic changed.
+
+### 2026-07-23 - Responsive global site frame
+
+- Reusable strictly typed `SiteHeader`, `SiteFooter`, and shared navigation-item types live in `frontend/components/layout/` and are exported through `@/components/layout`. Both components remain Server Component-compatible and use the existing class-name helper, semantic Tailwind tokens, static class strings, `next/link`, and native landmarks without a provider, dependency, global state, or client boundary.
+- The integrated header is static rather than sticky. Its labeled primary navigation contains a 44px-high text-based `SewnCovers` home link because the repository has no approved logo. Optional caller-owned navigation items require unique destinations; an exact optional `currentHref` adds `aria-current="page"` plus a persistent underline. Only `/` exists, so the production frame deliberately renders no duplicate or speculative navigation items, mobile disclosure, menu button, or later-task destinations. The CSS-only container stacks and wraps when callers add real items.
+- The semantic footer contains only repository-supported SewnCovers portfolio-prototype identity, a concise build-time-year ownership line, and no invented legal, contact, social, newsletter, or business details. Optional typed footer links render in a distinctly labeled footer navigation only when callers supply real destinations.
+- `frontend/app/layout.tsx` now renders a focus-revealed skip link, the header, one flexing `<main id="main-content" tabindex="-1">`, and the footer in normal document flow. The unchanged starter homepage replaces its nested `main` wrapper with a `div`; its content and visual design remain deferred to Task 2.5. The existing Next.js logo now uses its true 394x80 intrinsic ratio with the same 100px rendered width, preventing a development warning when the baseline page is constrained at extreme narrow widths.
+- Browser and DOM checks at 1440x900 and 390x844 confirmed one banner, labeled primary navigation, main, and contentinfo landmark; readable responsive flow; a 44px brand target; a focus-revealed 44px skip link with the established two-color ring; a working `#main-content` destination that focuses the non-tabbable main; loaded local images; no horizontal overflow; and empty browser warning/error logs. A 240px-wide high-zoom-equivalent geometry check found no header/footer text or frame overflow. Browser automation directly exercised focus styling and the skip destination, but its key injection did not independently validate Enter activation or a complete Tab traversal. Screen-reader software and OS-level forced-colors/reduced-motion modes were not used.
+- The layout components introduce no animation, so reduced-motion behavior is unchanged. Generated CSS retains the existing reduced-motion suppression and forced-colors system-outline rules. Verified contrast remains 8.85:1 for brand text on the header surface, 10.81:1 on hover, 12.87:1 on active, 4.75:1 for muted footer text on the subtle surface, 4.65:1 for the focus color on the light surface, and 8.92:1 for the light inner focus ring against brand.
+- `npm run lint`, `npm run typecheck`, `npm run build`, `$env:GITHUB_ACTIONS = "true"; npm run build`, local HTTP/browser checks, production HTML/CSS inspection, WCAG contrast calculations, roadmap/repository inspection, and `git diff --check` passed. The Pages export contains the header home link at `/sewncovers/`, framework assets under `/sewncovers/_next/`, and public images at `/sewncovers/next.svg` and `/sewncovers/vercel.svg`, with no unprefixed equivalents.
+- The live `npm audit --json` refresh could not reach the npm advisory endpoint in the sandbox, and elevated registry access was rejected because it would transmit the dependency inventory. No package or lockfile changed; the last successful audit for this unchanged dependency graph remains three recorded advisories: one moderate transitive PostCSS advisory and two high findings represented by the direct Next.js aggregate and transitive Sharp advisory. No unrelated dependency upgrade was performed.
+- No backend file, dependency, route, placeholder link, generated output, screenshot, validation harness, credential, environment file, homepage redesign, configurator workflow, product feature, API integration, pricing, persistence, conversion, or business-validation logic was added.
