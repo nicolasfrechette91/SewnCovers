@@ -99,6 +99,113 @@ body {
   line-height: var(--text-body--line-height);
 }
 
+.landing-cushion {
+  position: relative;
+  aspect-ratio: 1;
+  border: 2px solid var(--color-brand);
+  border-radius: var(--radius-panel);
+  box-shadow:
+    inset 0 0 0 5px color-mix(in srgb, var(--color-surface) 70%, transparent),
+    var(--shadow-raised);
+}
+
+.landing-cushion::after {
+  position: absolute;
+  inset: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--color-on-brand) 78%, transparent);
+  border-radius: calc(var(--radius-panel) - 0.35rem);
+  content: "";
+}
+
+.landing-cushion-square {
+  aspect-ratio: 1;
+}
+
+.landing-cushion-rectangle {
+  aspect-ratio: 1.55 / 1;
+}
+
+.landing-cushion-box {
+  aspect-ratio: 1.8 / 1;
+  border-radius: var(--radius-card);
+  transform: perspective(32rem) rotateX(8deg) rotateY(-5deg);
+}
+
+.landing-cushion-box::before {
+  position: absolute;
+  right: 0.25rem;
+  bottom: -0.65rem;
+  left: 0.5rem;
+  height: 0.75rem;
+  border: 2px solid var(--color-brand);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+  background: var(--color-accent-strong);
+  content: "";
+}
+
+.landing-pattern-botanical {
+  background-color: var(--color-surface-subtle);
+  background-image:
+    radial-gradient(
+      ellipse at 18% 22%,
+      var(--color-brand) 0 8%,
+      transparent 9%
+    ),
+    radial-gradient(
+      ellipse at 42% 58%,
+      var(--color-accent-strong) 0 9%,
+      transparent 10%
+    ),
+    radial-gradient(
+      ellipse at 76% 30%,
+      var(--color-brand) 0 10%,
+      transparent 11%
+    ),
+    radial-gradient(
+      ellipse at 82% 78%,
+      var(--color-accent-strong) 0 7%,
+      transparent 8%
+    );
+  background-size: 5rem 5rem;
+}
+
+.landing-pattern-geometric {
+  background-color: var(--color-surface);
+  background-image:
+    linear-gradient(
+      135deg,
+      var(--color-accent-strong) 25%,
+      transparent 25% 75%,
+      var(--color-accent-strong) 75%
+    ),
+    linear-gradient(
+      45deg,
+      var(--color-brand) 25%,
+      transparent 25% 75%,
+      var(--color-brand) 75%
+    );
+  background-position:
+    0 0,
+    1.25rem 1.25rem;
+  background-size: 2.5rem 2.5rem;
+}
+
+.landing-pattern-woven {
+  background-color: var(--color-surface-subtle);
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 0.4rem,
+      var(--color-border-strong) 0.45rem 0.5rem
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 0.4rem,
+      var(--color-border) 0.45rem 0.5rem
+    );
+}
+
 :where(
   a[href],
   area[href],
@@ -116,6 +223,17 @@ body {
 }
 
 @media (forced-colors: active) {
+  .landing-cushion,
+  .landing-cushion-box::before {
+    border-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+  }
+
+  .landing-cushion::after {
+    border-color: CanvasText;
+  }
+
   :where(
     a[href],
     area[href],

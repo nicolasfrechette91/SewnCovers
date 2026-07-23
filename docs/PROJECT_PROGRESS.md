@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 2 - Frontend visual foundation
-- Current task: 2.4 - Build the responsive, accessible site header and footer
+- Current task: 2.5 - Build the landing page with value proposition, examples, three-step explanation, CTA, and prototype notice
 - Status: Completed
-- Overall progress: 9 / 58 tasks completed
-- Up next: 2.5 - Build the landing page with value proposition, examples, three-step explanation, CTA, and prototype notice
+- Overall progress: 10 / 58 tasks completed
+- Up next: 3.1 - Implement the typed central configuration state with Context and `useReducer`
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -33,7 +33,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 2.2 | Build Button, NumberInput, UnitSelector, LoadingState, and ErrorMessage primitives | Completed |
 | 2.3 | Build StepIndicator, PatternCard, PatternFilter, CushionPreview, and ConfigurationSummary shells | Completed |
 | 2.4 | Build the responsive, accessible site header and footer | Completed |
-| 2.5 | Build the landing page with value proposition, examples, three-step explanation, CTA, and prototype notice | Not started |
+| 2.5 | Build the landing page with value proposition, examples, three-step explanation, CTA, and prototype notice | Completed |
 
 ## Phase 3: Frontend configurator
 
@@ -229,3 +229,15 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - `npm run lint`, `npm run typecheck`, `npm run build`, `$env:GITHUB_ACTIONS = "true"; npm run build`, local HTTP/browser checks, production HTML/CSS inspection, WCAG contrast calculations, roadmap/repository inspection, and `git diff --check` passed. The Pages export contains the header home link at `/sewncovers/`, framework assets under `/sewncovers/_next/`, and public images at `/sewncovers/next.svg` and `/sewncovers/vercel.svg`, with no unprefixed equivalents.
 - The live `npm audit --json` refresh could not reach the npm advisory endpoint in the sandbox, and elevated registry access was rejected because it would transmit the dependency inventory. No package or lockfile changed; the last successful audit for this unchanged dependency graph remains three recorded advisories: one moderate transitive PostCSS advisory and two high findings represented by the direct Next.js aggregate and transitive Sharp advisory. No unrelated dependency upgrade was performed.
 - No backend file, dependency, route, placeholder link, generated output, screenshot, validation harness, credential, environment file, homepage redesign, configurator workflow, product feature, API integration, pricing, persistence, conversion, or business-validation logic was added.
+
+### 2026-07-23 - Landing page
+
+- The `/` route is now a server-compatible SewnCovers landing page inside the preserved global header, single `main#main-content`, and footer frame. Its structure is a value-proposition hero with supporting copy, a distinct prototype-status notice, a visual examples section, a semantic ordered three-step explanation, and a closing CTA band. Metadata now identifies SewnCovers and describes the prototype journey; no client state, provider, route, API call, form, or dependency was added.
+- The primary hero CTA is the real in-page link `#examples`; the supporting link targets `#how-it-works`, and the closing CTA returns to `#examples`. No configurator route exists, so no speculative route, disabled control, `href="#"`, or button without behavior was introduced. The Task 2.2 `Button` primitive was not forced onto these links because it intentionally renders a native button.
+- The examples are three non-interactive studies aligned with the documented square, rectangle, and box / bench shapes. A small reusable `CushionExample` Server Component provides consistent figure and caption semantics. CSS illustrations use the existing semantic palette and visible descriptions, avoid distortion and loading behavior, and are explicitly presented as examples rather than products or accurate previews. The unsuitable default Next.js starter SVGs are no longer referenced, and no remote image, new image asset, catalogue record, filter, selection, price, availability, or data-fetching behavior was added.
+- The prototype notice states that the experience demonstrates a planned design journey and does not take orders, calculate prices, or produce finished covers. Copy avoids customer counts, testimonials, guarantees, delivery promises, environmental claims, pricing, and other unsupported business claims.
+- Browser and DOM checks at 1440x900, 390x844, and a 240px-wide narrow high-zoom equivalent confirmed one banner, labeled primary navigation, main, and contentinfo landmark; one `h1`; a logical `h1`/`h2`/`h3` hierarchy; one ordered list for the three steps; descriptive links; visible captions for every CSS illustration; working header home, `#examples`, and `#main-content` destinations; no `<img>` elements requiring alternative text; and no horizontal overflow or browser warning/error logs. The examples and steps collapse to one column on mobile, and long copy and CTA labels wrap without overlap.
+- Browser automation focused the skip link and confirmed its revealed 44px target, two-color focus ring, and fixed position, then directly activated it to focus `main#main-content`. The examples CTA was directly activated and resolved to the `#examples` target. A complete manual Tab traversal, keyboard Enter activation, screen-reader software, OS-level forced-colors mode, and OS-level reduced-motion mode were not independently exercised. The page adds no animation; its color transitions include `motion-reduce:transition-none`, existing forced-colors focus rules remain intact, important information is textual rather than color-only, and forced-colors CSS gives the cushion outlines system colors.
+- Recalculated WCAG contrast ratios for landing-page combinations are 13.27:1 for primary text on surface, 11.16:1 on subtle surface, 5.64:1 for muted text on surface, 4.75:1 on subtle surface, 8.85:1 for brand text on surface, 8.92:1 for on-brand text on brand, 6.09:1 for text-safe accent on surface, 5.64:1 on the page, and 5.13:1 on subtle surface.
+- `npm run lint`, `npm run typecheck`, `npm run build`, `$env:GITHUB_ACTIONS = "true"; npm run build`, local HTTP/browser checks at `/`, production HTML and referenced-file inspection, contrast calculations, and `git diff --check` passed. Both clean build attempts first reproduced the documented sandboxed Google Fonts connection failure; the required outbound-enabled reruns succeeded. The Pages export contains the header home link at `/sewncovers/`, framework assets and the favicon under `/sewncovers/`, 12 unique referenced asset files with none missing, no unprefixed framework or favicon references, and no default starter SVG references.
+- No package or lockfile changed. A live `npm audit --json` refresh again could not reach the advisory endpoint in the sandbox, and elevated access was rejected because it would transmit the dependency inventory. The unchanged dependency graph therefore retains the last successful record of three advisories: one moderate and two high; no unrelated upgrade was made. No backend file, temporary route, screenshot, generated output, cache, or environment file is tracked.

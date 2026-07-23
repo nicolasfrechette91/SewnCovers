@@ -64,7 +64,7 @@ The visual foundation uses a warm ivory page, warm-neutral surfaces, forest-gree
 
 WCAG 2.2 contrast checks: primary text on the page is 12.28:1; muted text is 5.22:1 on the page and 5.64:1 on cards; light text on the brand is 8.92:1; brand on the page is 8.20:1; text-safe terracotta on the page is 5.64:1; and the focus color is 4.31:1 on the page and 4.65:1 on cards. The strong border is 3.08:1 on the page and 3.32:1 on cards. The inner light focus ring is 8.92:1 against the brand, while the outer terracotta ring is 4.65:1 against the inner ring. Values were checked with the WCAG relative-luminance formula.
 
-Task 2.2 adds semantic disabled-control aliases and an error surface/border/text palette because those concrete component states now require them. Dark mode and a broader status or motion-token system remain deferred. The existing homepage structure and content remain deferred to Task 2.5.
+Task 2.2 adds semantic disabled-control aliases and an error surface/border/text palette because those concrete component states now require them. Dark mode and a broader status or motion-token system remain deferred.
 
 ## UI primitives
 
@@ -100,3 +100,9 @@ Reusable server-compatible layout components live in `components/layout/` and ar
 - Internal `next/link` destinations remain application-relative because Next.js applies the configured `/sewncovers` base path automatically in GitHub Pages builds. Public image paths continue to use the existing build-time base-path strategy.
 
 Legal, contact, social, account, commerce, search, and additional product or configurator links remain deferred until their routes and content are defined.
+
+## Landing page
+
+The `/` route is a server-compatible landing page composed inside the shared header, single `main#main-content`, and footer frame. It introduces the prototype, presents three illustrative studies for the supported cushion shapes, explains the planned journey as an ordered three-step sequence, and links to the existing `#examples` and `#how-it-works` sections. The prototype-status notice explicitly states that the current experience does not take orders, calculate prices, or produce finished covers.
+
+The landing studies are CSS illustrations built from the existing semantic palette and paired with visible captions. They do not create pattern records, product selection, pricing, or configurator state. The default Next.js starter graphics remain in `public/` for now but are not referenced by the landing page; no remote images or new image assets are used.
