@@ -1,26 +1,127 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * SewnCovers design tokens are defined once in Tailwind's CSS-first theme.
+ * Components can use the generated semantic utilities or these variables.
+ */
+@theme static {
+  /* Color */
+  --color-page: #f8f3e8;
+  --color-surface: #fffcf5;
+  --color-surface-subtle: #f0e8d9;
+  --color-text-primary: #243128;
+  --color-text-muted: #5f685f;
+  --color-brand: #24513b;
+  --color-brand-hover: #1d432f;
+  --color-brand-active: #173626;
+  --color-on-brand: #fffdf8;
+  --color-accent: #b75f43;
+  --color-accent-strong: #984a34;
+  --color-border: #d7cbb8;
+  --color-border-strong: #988974;
+  --color-focus: #c04f32;
+  --color-focus-contrast: #fffdf8;
+
+  /* Compatibility aliases for the starter while later UI work is deferred. */
+  --color-background: var(--color-page);
+  --color-foreground: var(--color-text-primary);
+
+  /* Type scale */
+  --text-supporting: 0.875rem;
+  --text-supporting--line-height: 1.5;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.25;
+  --text-button: 0.9375rem;
+  --text-button--line-height: 1.25;
+  --text-body: 1rem;
+  --text-body--line-height: 1.625;
+  --text-section-title: clamp(1.5rem, 1.25rem + 0.8vw, 2rem);
+  --text-section-title--line-height: 1.2;
+  --text-page-title: clamp(2rem, 1.5rem + 1.8vw, 3rem);
+  --text-page-title--line-height: 1.08;
+  --font-weight-body: 400;
+  --font-weight-emphasis: 500;
+  --font-weight-control: 600;
+  --font-weight-heading: 650;
+  --tracking-label: 0.025em;
+  --tracking-heading: -0.025em;
+
+  /* Spacing: a 4px base with semantic responsive steps for layout. */
+  --spacing: 0.25rem;
+  --spacing-icon: 0.5rem;
+  --spacing-control-y: 0.75rem;
+  --spacing-control-x: 1rem;
+  --spacing-component: 1.5rem;
+  --spacing-card: clamp(1.25rem, 1rem + 1vw, 2rem);
+  --spacing-gutter: clamp(1rem, 4vw, 2rem);
+  --spacing-layout: clamp(2rem, 5vw, 4rem);
+  --spacing-section: clamp(3rem, 8vw, 6rem);
+
+  /* Shape */
+  --radius-control-small: 0.375rem;
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-panel: 1rem;
+  --radius-pill: 9999px;
+
+  /* Restrained, warm elevation */
+  --shadow-card:
+    0 1px 2px rgb(78 60 42 / 0.06), 0 6px 18px rgb(78 60 42 / 0.05);
+  --shadow-raised:
+    0 2px 4px rgb(78 60 42 / 0.08), 0 12px 28px rgb(78 60 42 / 0.08);
+  --shadow-overlay:
+    0 8px 18px rgb(78 60 42 / 0.1), 0 24px 60px rgb(78 60 42 / 0.14);
+  --shadow-focus:
+    0 0 0 2px var(--color-focus-contrast), 0 0 0 5px var(--color-focus);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme static inline {
   --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--color-page);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-page);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+:where(
+  a[href],
+  area[href],
+  button,
+  input:not([type="hidden"]),
+  select,
+  textarea,
+  summary,
+  [contenteditable="true"],
+  [tabindex]:not([tabindex="-1"])
+):focus-visible {
+  box-shadow: var(--shadow-focus);
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+}
+
+@media (forced-colors: active) {
+  :where(
+    a[href],
+    area[href],
+    button,
+    input:not([type="hidden"]),
+    select,
+    textarea,
+    summary,
+    [contenteditable="true"],
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible {
+    box-shadow: none;
+    outline-color: Highlight;
+  }
 }

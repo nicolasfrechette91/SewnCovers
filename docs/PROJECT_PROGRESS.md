@@ -8,11 +8,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 ## Current handoff
 
-- Current phase: Phase 1 - Project foundation
-- Current task: 1.5 - Verify both applications run locally and document the repeatable setup
+- Current phase: Phase 2 - Frontend visual foundation
+- Current task: 2.1 - Define warm ivory, forest-green, terracotta, typography, spacing, elevation, and focus tokens
 - Status: Completed
-- Overall progress: 5 / 58 tasks completed
-- Up next: 2.1 - Define warm ivory, forest-green, terracotta, typography, spacing, elevation, and focus tokens
+- Overall progress: 6 / 58 tasks completed
+- Up next: 2.2 - Build Button, NumberInput, UnitSelector, LoadingState, and ErrorMessage primitives
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -29,7 +29,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 | Task | Deliverable | Status |
 | --- | --- | --- |
-| 2.1 | Define warm ivory, forest-green, terracotta, typography, spacing, elevation, and focus tokens | Not started |
+| 2.1 | Define warm ivory, forest-green, terracotta, typography, spacing, elevation, and focus tokens | Completed |
 | 2.2 | Build Button, NumberInput, UnitSelector, LoadingState, and ErrorMessage primitives | Not started |
 | 2.3 | Build StepIndicator, PatternCard, PatternFilter, CushionPreview, and ConfigurationSummary shells | Not started |
 | 2.4 | Build the responsive, accessible site header and footer | Not started |
@@ -180,3 +180,15 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Local frontend HTML did not contain `/sewncovers/`; `/sewncovers/` returned 404 as expected, all discovered `/_next/` assets plus `/next.svg` and `/vercel.svg` returned 200, and the browser rendered both images successfully. The scaffold Vercel logo declaration was corrected from 16x16 to its 16x14 aspect ratio; after the correction, the browser warning/error console was empty and lint, strict type-checking, and the production build passed again.
 - Documentation now includes safe copy-if-absent environment commands, explicit macOS/Linux Python 3.12 virtual-environment creation, backend `pip check`, server shutdown instructions, required versions, and the verified two-terminal workflow. The database remains disconnected, environment examples remain optional for the minimal applications, and frontend/API integration remains deferred.
 - The task-owned development processes were stopped after the smoke test. Ports 3000 and 8000 had no remaining listeners, and no unrelated processes were terminated.
+
+### 2026-07-22 - Frontend design-token foundation
+
+- Tailwind CSS 4.3.3 remains configured through the CSS-first `@theme` approach in `frontend/app/globals.css`; no obsolete JavaScript configuration was added. The static semantic theme is the single source of truth and exposes both CSS variables and Tailwind utilities. Inline theme variables connect the existing `next/font` Geist and Geist Mono variables to the sans, display, and mono roles.
+- The core colors are page `#f8f3e8`, surface `#fffcf5`, subtle surface `#f0e8d9`, primary text `#243128`, muted text `#5f685f`, brand `#24513b`, brand hover `#1d432f`, brand active `#173626`, on-brand `#fffdf8`, accent `#b75f43`, text-safe accent `#984a34`, border `#d7cbb8`, strong border `#988974`, focus `#c04f32`, and focus contrast `#fffdf8`. The regular terracotta accent is restricted to decoration or large text; normal accent-colored text uses the strong variant. Standard borders separate surfaces, while interactive boundaries use the 3:1 strong border.
+- The compact type system retains Geist for body and display work and defines supporting, label, button, body, section-title, and page-title sizes plus semantic weights and tracking. This avoids another remote dependency but preserves the documented limitation that a clean build needs outbound access for `next/font/google` to download and self-host Geist.
+- Spacing keeps a 4px base and adds semantic icon, control, component, card, gutter, layout, and section steps. Radii cover small controls, controls, cards, panels, and intentional pills. Warm `card`, `raised`, and `overlay` shadows provide three restrained elevation levels.
+- The global interactive-element `:focus-visible` fallback uses a two-color 2px light inner ring and 3px terracotta outer ring. This remains visible on light page/card surfaces and forest-green actions, retains a transparent outline for forced-color compatibility, and switches to the system highlight outline in forced-colors mode. Status colors, disabled-state colors, motion tokens, dark mode, and component-specific focus composition remain deferred until a concrete roadmap task requires them.
+- WCAG relative-luminance checks passed for primary text/page at 12.28:1, primary text/surface at 13.27:1, muted text/page at 5.22:1, muted text/surface at 5.64:1, on-brand/brand at 8.92:1, brand/page at 8.20:1, text-safe accent/page at 5.64:1, text-safe accent/surface at 6.09:1, focus/page at 4.31:1, focus/surface at 4.65:1, strong border/page at 3.08:1, and strong border/surface at 3.32:1. The light focus segment is 8.92:1 against the brand and the outer focus segment is 4.65:1 against the light segment. The regular accent is only 4.01:1 on the page and 4.33:1 on a card, and the standard border is decorative at 1.45:1 and 1.56:1 respectively, so neither is approved for normal text or required control boundaries.
+- The body now applies the page, primary-text, and Geist tokens globally. The unchanged starter homepage structure and content use only enough semantic color, border, radius, and state utilities to validate token integration; its full redesign remains Task 2.5. Browser checks at 1440x900 and 390x844 confirmed the responsive scaffold, loaded images, resolved theme variables, visible two-color keyboard focus, no horizontal overflow at mobile width, and no console warnings or errors.
+- Verification passed with `npm run lint`, `npm run typecheck`, `npm run build`, `$env:GITHUB_ACTIONS = "true"; npm run build`, generated-CSS token and utility inspection, WCAG contrast calculations, production-export URL inspection, local HTTP/browser checks at `/`, and `git diff --check`. The Pages export contains `/sewncovers/_next/`, `/sewncovers/next.svg`, and `/sewncovers/vercel.svg` references with no unprefixed equivalents. The first sandboxed build reproduced the known blocked Google Fonts request; the required outbound-enabled builds succeeded. No generated output or dependencies are tracked, no backend file changed, and no credentials or environment files were added.
+- No package versions changed. The three advisories previously reported by `npm ci` remain recorded as one moderate and two high; no unrelated dependency upgrade was performed.
