@@ -135,6 +135,12 @@ body {
     outline: 2px solid CanvasText;
     outline-offset: -2px;
   }
+
+  .pattern-card-input:checked + .pattern-card-label,
+  .pattern-filter-input:checked + .pattern-filter-label {
+    outline: 2px solid CanvasText;
+    outline-offset: -2px;
+  }
 }
 
 .unit-selector-input:focus-visible + .unit-selector-label {
@@ -143,8 +149,31 @@ body {
   outline-offset: 2px;
 }
 
+.pattern-card-input:focus-visible + .pattern-card-label,
+.pattern-filter-input:focus-visible + .pattern-filter-label {
+  box-shadow: var(--shadow-focus);
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+}
+
+.pattern-card-input:checked
+  + .pattern-card-label
+  .pattern-card-selected-marker {
+  display: flex;
+}
+
+.pattern-card-input:checked
+  + .pattern-card-label
+  .pattern-card-control-indicator {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
 @media (forced-colors: active) {
-  .unit-selector-input:focus-visible + .unit-selector-label {
+  .unit-selector-input:focus-visible + .unit-selector-label,
+  .pattern-card-input:focus-visible + .pattern-card-label,
+  .pattern-filter-input:focus-visible + .pattern-filter-label {
     box-shadow: none;
     outline-color: Highlight;
   }

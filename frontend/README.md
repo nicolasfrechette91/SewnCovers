@@ -77,3 +77,15 @@ Reusable typed primitives live in `components/ui/` and are available from the `@
 - `ErrorMessage` remains in document flow, defaults to assertive alert semantics, accepts normal React content and an `id` for form association, and uses the semantic error surface, border, and text tokens.
 
 Business validation, measurement conversion, persistence, retry behavior, overlays, skeletons, toasts, and global error handling remain deferred to their roadmap tasks.
+
+## Configurator component shells
+
+Reusable domain-oriented shells live in `components/configurator/` and are exported through `@/components/configurator`. They consume the semantic design tokens and native form conventions established by the UI layer, but do not own the configurator workflow. The roadmap-aligned parent-supplied step labels are Shape, Measurements, Pattern, Preview, and Review; saving and restoring a design remain later workflow outcomes.
+
+- `StepIndicator` renders a display-only ordered list, derives completed and upcoming states from a validated current step ID, and exposes the current item with `aria-current="step"`.
+- `PatternCard` associates a whole visible card with a native radio input. The caller owns controlled or uncontrolled selection and supplies preview content; previews are decorative by default, while callers may opt into accessible preview content.
+- `PatternFilter` is a controlled generic fieldset. Its explicit selection mode renders native radios for one active value or native checkboxes for combinable values, then reports values without filtering records internally. Product category and color values remain intentionally undefined until the catalogue tasks.
+- `CushionPreview` provides a labeled, contained visual region, a deliberate empty state, and separate descriptive content. Supplied visuals are decorative; accurate proportions, compositing, pattern tiling, and scale rendering remain deferred.
+- `ConfigurationSummary` renders caller-formatted label/value items as a description list, including intentional empty and missing-value fallbacks. It performs no measurement conversion, calculation, validation, pricing, or totals.
+
+Future parent components remain responsible for data fetching, filter logic, configuration state, workflow navigation, business validation, measurement conversion, accurate preview rendering, pricing, persistence, and API integration.
