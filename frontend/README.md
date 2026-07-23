@@ -88,7 +88,15 @@ Reusable domain-oriented shells live in `components/configurator/` and are expor
 - `CushionPreview` provides a labeled, contained visual region, a deliberate empty state, and separate descriptive content. Supplied visuals are decorative; accurate proportions, compositing, pattern tiling, and scale rendering remain deferred.
 - `ConfigurationSummary` renders caller-formatted label/value items as a description list, including intentional empty and missing-value fallbacks. It performs no measurement conversion, calculation, validation, pricing, or totals.
 
-Future parent components remain responsible for data fetching, filter logic, configuration state, workflow navigation, business validation, measurement conversion, accurate preview rendering, pricing, persistence, and API integration.
+Future parent components remain responsible for connecting these shells to configuration state, data fetching, filter logic, workflow navigation, business validation, measurement conversion, accurate preview rendering, pricing, persistence, and API integration.
+
+## Configuration state
+
+The central in-memory configuration state lives in `context/configuration/`. `ConfigurationProvider` owns a `useReducer` instance and wraps route content inside the server-compatible root layout; `useConfiguration()` returns the typed `state` and `dispatch` values and throws a descriptive error outside the provider. Public state, action, reducer, initial-state, provider, and hook exports are available from `@/context/configuration`.
+
+The state follows the documented shared configuration contract: `shape`, `width`, `height`, `thickness`, `unit`, `patternId`, and `patternScale`. Shape, measurements, and pattern selection begin as `null`; the initial unit is centimetres and the documented default pattern scale is `1`. Supported actions set each field independently (`setShape`, `setWidth`, `setHeight`, `setThickness`, `setMeasurementUnit`, `setPatternId`, and `setPatternScale`) or restore the complete initial state with `resetConfiguration`.
+
+The reducer only applies typed immutable transitions. Shape-specific measurement behavior, measurement conversion and validation, pattern data and filtering, workflow navigation, preview calculations, pricing, persistence, API integration, and saved/shared designs remain deferred to their roadmap tasks.
 
 ## Global layout components
 

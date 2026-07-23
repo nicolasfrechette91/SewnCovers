@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { SiteFooter, SiteHeader } from "@/components/layout";
+import { ConfigurationProvider } from "@/context/configuration";
 
 import "./globals.css";
 
@@ -44,7 +45,7 @@ export default function RootLayout({
           tabIndex={-1}
           className="flex min-w-0 flex-1 flex-col"
         >
-          {children}
+          <ConfigurationProvider>{children}</ConfigurationProvider>
         </main>
         <SiteFooter />
       </body>

@@ -8,11 +8,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 ## Current handoff
 
-- Current phase: Phase 2 - Frontend visual foundation
-- Current task: 2.5 - Build the landing page with value proposition, examples, three-step explanation, CTA, and prototype notice
+- Current phase: Phase 3 - Frontend configurator
+- Current task: 3.1 - Implement the typed central configuration state with Context and `useReducer`
 - Status: Completed
-- Overall progress: 10 / 58 tasks completed
-- Up next: 3.1 - Implement the typed central configuration state with Context and `useReducer`
+- Overall progress: 11 / 58 tasks completed
+- Up next: 3.2 - Build the accessible shape-selection step for the first square-cushion vertical slice
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -39,7 +39,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 | Task | Deliverable | Status |
 | --- | --- | --- |
-| 3.1 | Implement the typed central configuration state with Context and `useReducer` | Not started |
+| 3.1 | Implement the typed central configuration state with Context and `useReducer` | Completed |
 | 3.2 | Build the accessible shape-selection step for the first square-cushion vertical slice | Not started |
 | 3.3 | Build measurements, diagrams, inline validation, decimal handling, and unit conversion | Not started |
 | 3.4 | Add three local placeholder patterns and a selectable pattern-browser vertical slice | Not started |
@@ -241,3 +241,13 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Recalculated WCAG contrast ratios for landing-page combinations are 13.27:1 for primary text on surface, 11.16:1 on subtle surface, 5.64:1 for muted text on surface, 4.75:1 on subtle surface, 8.85:1 for brand text on surface, 8.92:1 for on-brand text on brand, 6.09:1 for text-safe accent on surface, 5.64:1 on the page, and 5.13:1 on subtle surface.
 - `npm run lint`, `npm run typecheck`, `npm run build`, `$env:GITHUB_ACTIONS = "true"; npm run build`, local HTTP/browser checks at `/`, production HTML and referenced-file inspection, contrast calculations, and `git diff --check` passed. Both clean build attempts first reproduced the documented sandboxed Google Fonts connection failure; the required outbound-enabled reruns succeeded. The Pages export contains the header home link at `/sewncovers/`, framework assets and the favicon under `/sewncovers/`, 12 unique referenced asset files with none missing, no unprefixed framework or favicon references, and no default starter SVG references.
 - No package or lockfile changed. A live `npm audit --json` refresh again could not reach the advisory endpoint in the sandbox, and elevated access was rejected because it would transmit the dependency inventory. The unchanged dependency graph therefore retains the last successful record of three advisories: one moderate and two high; no unrelated upgrade was made. No backend file, temporary route, screenshot, generated output, cache, or environment file is tracked.
+
+### 2026-07-23 - Typed central configuration state
+
+- The central in-memory state lives in `frontend/context/configuration/`, with separate strictly typed state/action definitions, a pure reducer and initial state, and the client-only Context/provider responsibilities. The compact barrel exports `ConfigurationProvider`, `useConfiguration`, `configurationReducer`, `initialConfigurationState`, and the four public domain types without a dependency or state-management library.
+- `ConfigurationState` follows the documented flat persistence contract: nullable `shape`, `width`, `height`, `thickness`, and `patternId`; `unit` as the shared `"cm" | "in"` measurement type; and numeric `patternScale`. The initial state leaves selections and measurements unset, uses centimetres as the initial display unit, and uses the documented pattern-scale default of `1`. `CushionShape`, `MeasurementUnit`, every state property, and every action payload are narrow and readonly; the existing `UnitSelector` now consumes and re-exports the shared measurement-unit type instead of defining a duplicate.
+- The discriminated action union supports `setShape`, `setWidth`, `setHeight`, `setThickness`, `setMeasurementUnit`, `setPatternId`, `setPatternScale`, and `resetConfiguration`. Each field action returns an immutable copy that preserves unrelated state, while reset returns the complete documented initial state. The reducer contains no side effects, browser APIs, conversion, validation, shape coupling, derived values, fetching, persistence, pricing, navigation, or API behavior.
+- `ConfigurationProvider` owns the `useReducer` instance, and `useConfiguration` returns typed state and dispatch while throwing a descriptive error outside the provider instead of exposing a fabricated default. The server-compatible root layout remains a Server Component and wraps only route content inside `main#main-content` with the client provider, leaving the header, footer, landing page, and independently controlled configurator shells unchanged.
+- `npm run lint`, `npm run typecheck`, `npm run build`, `$env:GITHUB_ACTIONS = "true"; npm run build`, a runtime smoke check covering all eight reducer actions and reset identity, a local HTTP/browser check at `/`, Pages-export URL and file inspection, roadmap row counting, and `git diff --check` passed. The first ordinary sandboxed build reproduced only the documented Google Fonts connection block; its allowed rerun and the Pages build succeeded. The live page retained its title, heading, single main landmark, and width without browser warning, error, or hydration logs.
+- The Pages export contains the `/sewncovers/` home link, 11 framework/font assets under `/sewncovers/_next/`, and the prefixed favicon, with no unprefixed framework or favicon references and no missing referenced files. No frontend test setup exists, so no test framework or test dependency was added. Generated `.next` and `out` output remains ignored and untracked.
+- No package or lockfile changed. A live `npm audit --json` refresh could not reach the advisory service in the sandbox, and external submission of the dependency inventory was rejected. Because the dependency graph is unchanged, the existing verified record remains exactly three advisories: one moderate transitive PostCSS advisory and two high findings represented by the direct Next.js aggregate and transitive Sharp advisory; no unrelated upgrade was made. No backend, dependency, environment, cache, generated-output, or temporary validation file is tracked.

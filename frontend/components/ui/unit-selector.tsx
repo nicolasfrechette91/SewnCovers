@@ -2,6 +2,8 @@
 
 import { useId, type ComponentPropsWithRef, type ReactNode } from "react";
 
+import type { MeasurementUnit } from "@/context/configuration";
+
 import { classNames } from "./class-names";
 
 const unitOptions = [
@@ -9,7 +11,7 @@ const unitOptions = [
   { label: "Inches", shortLabel: "in", value: "in" },
 ] as const;
 
-export type MeasurementUnit = (typeof unitOptions)[number]["value"];
+export type { MeasurementUnit } from "@/context/configuration";
 
 export interface UnitSelectorProps
   extends Omit<ComponentPropsWithRef<"fieldset">, "onChange"> {
