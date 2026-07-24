@@ -1,4 +1,8 @@
 import type { ConfigurationAction, ConfigurationState } from "./types";
+import {
+  convertMeasurement,
+  isNullableCommittedMeasurement,
+} from "./measurements";
 
 export const initialConfigurationState: ConfigurationState = {
   shape: null,
@@ -18,13 +22,44 @@ export function configurationReducer(
     case "setShape":
       return { ...state, shape: action.shape };
     case "setWidth":
-      return { ...state, width: action.width };
+      return isNullableCommittedMeasurement(action.width)
+        ? { ...state, width: action.width }
+        : state;
+    case "setSquareWidth":
+      return isNullableCommittedMeasurement(action.width)
+        ? { ...state, width: action.width, height: action.width }
+        : state;
     case "setHeight":
-      return { ...state, height: action.height };
+      return isNullableCommittedMeasurement(action.height)
+        ? { ...state, height: action.height }
+        : state;
     case "setThickness":
-      return { ...state, thickness: action.thickness };
-    case "setMeasurementUnit":
-      return { ...state, unit: action.unit };
+      return isNullableCommittedMeasurement(action.thickness)
+        ? { ...state, thickness: action.thickness }
+        : state;
+    case "setMeasurementUnit": {
+      if (action.unit === state.unit) {
+        return state;
+      }
+
+      const measurements = [state.width, state.height, state.thickness];
+
+      if (!measurements.every(isNullableCommittedMeasurement)) {
+        return state;
+      }
+
+      return {
+        ...state,
+        width: convertMeasurement(state.width, state.unit, action.unit),
+        height: convertMeasurement(state.height, state.unit, action.unit),
+        thickness: convertMeasurement(
+          state.thickness,
+          state.unit,
+          action.unit,
+        ),
+        unit: action.unit,
+      };
+    }
     case "setPatternId":
       return { ...state, patternId: action.patternId };
     case "setPatternScale":

@@ -265,6 +265,12 @@ body {
     border-color: GrayText;
     color: GrayText;
   }
+
+  .measurement-diagram-geometry {
+    border-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+  }
 }
 
 .unit-selector-input:focus-visible + .unit-selector-label {

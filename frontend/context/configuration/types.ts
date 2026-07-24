@@ -15,6 +15,10 @@ export interface ConfigurationState {
 export type ConfigurationAction =
   | { readonly type: "setShape"; readonly shape: CushionShape | null }
   | { readonly type: "setWidth"; readonly width: number | null }
+  | {
+      readonly type: "setSquareWidth";
+      readonly width: number | null;
+    }
   | { readonly type: "setHeight"; readonly height: number | null }
   | {
       readonly type: "setThickness";

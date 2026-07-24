@@ -18,3 +18,5 @@ export type {
   StepIndicatorStep,
 } from "./step-indicator";
 export { ShapeSelectionStep } from "./shape-selection-step";
+export { SquareConfigurator } from "./square-configurator";
+export { SquareMeasurementStep } from "./square-measurement-step";

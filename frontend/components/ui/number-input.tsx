@@ -10,6 +10,7 @@ export interface NumberInputProps
   invalid?: boolean;
   label: ReactNode;
   supportingText?: ReactNode;
+  type?: "number" | "text";
 }
 
 export function NumberInput({
@@ -23,6 +24,7 @@ export function NumberInput({
   label,
   ref,
   supportingText,
+  type = "number",
   ...inputProps
 }: NumberInputProps) {
   const generatedId = useId();
@@ -44,7 +46,7 @@ export function NumberInput({
         {...inputProps}
         ref={ref}
         id={inputId}
-        type="number"
+        type={type}
         inputMode={inputMode}
         aria-describedby={describedBy || undefined}
         aria-invalid={invalid ? true : ariaInvalid}
