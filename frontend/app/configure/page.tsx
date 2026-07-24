@@ -22,8 +22,8 @@ export default function ConfigurePage() {
           <p className="mt-component break-words text-body text-text-muted">
             Select the available square shape, then record its width and
             thickness before choosing one of three prototype pattern
-            directions. Preview and review steps are shown only for context
-            and are not available yet.
+            directions and exploring the proportional 2D preview. The review
+            step is shown only for context and is not available yet.
           </p>
         </header>
 

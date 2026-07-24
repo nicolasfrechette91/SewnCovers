@@ -1,6 +1,7 @@
 "use client";
 
 import { useConfiguration } from "@/context/configuration";
+import { getPrototypePatternById } from "@/data/patterns";
 
 import { ShapeSelectionStep } from "./shape-selection-step";
 import { SquareMeasurementStep } from "./square-measurement-step";
@@ -8,6 +9,7 @@ import {
   hasValidSquareMeasurements,
   SquarePatternStep,
 } from "./square-pattern-step";
+import { SquarePreviewStep } from "./square-preview-step";
 import {
   StepIndicator,
   type StepIndicatorStep,
@@ -30,11 +32,16 @@ export function SquareConfigurator() {
       state.thickness,
       state.unit,
     );
-  const currentStepId = measurementsAreValid
-    ? "pattern"
-    : state.shape === "square"
-      ? "measurements"
-      : "shape";
+  const patternIsSelected =
+    getPrototypePatternById(state.patternId) !== null;
+  const currentStepId =
+    measurementsAreValid && patternIsSelected
+      ? "preview"
+      : measurementsAreValid
+        ? "pattern"
+        : state.shape === "square"
+          ? "measurements"
+          : "shape";
 
   return (
     <>
@@ -50,6 +57,7 @@ export function SquareConfigurator() {
 
       <SquareMeasurementStep />
       <SquarePatternStep />
+      <SquarePreviewStep />
     </>
   );
 }

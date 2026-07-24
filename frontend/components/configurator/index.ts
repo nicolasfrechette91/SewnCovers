@@ -24,3 +24,13 @@ export {
   hasValidSquareMeasurements,
   SquarePatternStep,
 } from "./square-pattern-step";
+export { SquarePreviewStep } from "./square-preview-step";
+export {
+  calculatePreviewGeometry,
+  PREVIEW_VIEWBOX_HEIGHT,
+  PREVIEW_VIEWBOX_WIDTH,
+} from "./preview-calculations";
+export type {
+  PreviewGeometry,
+  PreviewGeometryInput,
+} from "./preview-calculations";

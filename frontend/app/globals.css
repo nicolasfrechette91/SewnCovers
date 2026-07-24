@@ -207,6 +207,8 @@ body {
 }
 
 .prototype-pattern {
+  --pattern-scale: 1;
+
   background-color: var(--color-surface-subtle);
   background-repeat: repeat;
 }
@@ -233,7 +235,9 @@ body {
       var(--color-accent-strong) 0 7%,
       transparent 8%
     );
-  background-size: 5rem 5rem;
+  background-size:
+    calc(5rem * var(--pattern-scale))
+    calc(5rem * var(--pattern-scale));
 }
 
 .prototype-pattern-geometric {
@@ -253,23 +257,61 @@ body {
     );
   background-position:
     0 0,
-    1.25rem 1.25rem;
-  background-size: 2.5rem 2.5rem;
+    calc(1.25rem * var(--pattern-scale))
+    calc(1.25rem * var(--pattern-scale));
+  background-size:
+    calc(2.5rem * var(--pattern-scale))
+    calc(2.5rem * var(--pattern-scale));
 }
 
 .prototype-pattern-woven {
   background-image:
     repeating-linear-gradient(
       0deg,
-      transparent 0 0.4rem,
-      var(--color-border-strong) 0.45rem 0.5rem
+      transparent 0 calc(0.4rem * var(--pattern-scale)),
+      var(--color-border-strong)
+        calc(0.45rem * var(--pattern-scale))
+        calc(0.5rem * var(--pattern-scale))
     ),
     repeating-linear-gradient(
       90deg,
-      transparent 0 0.4rem,
-      var(--color-border) 0.45rem 0.5rem
+      transparent 0 calc(0.4rem * var(--pattern-scale)),
+      var(--color-border)
+        calc(0.45rem * var(--pattern-scale))
+        calc(0.5rem * var(--pattern-scale))
     );
   background-size: 100% 100%;
+}
+
+.cushion-preview-face {
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.cushion-preview-face-outline {
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 2;
+}
+
+.cushion-preview-side {
+  fill: color-mix(
+    in srgb,
+    var(--color-brand) 76%,
+    var(--color-surface)
+  );
+  stroke: var(--color-brand);
+  stroke-width: 2;
+}
+
+.cushion-preview-bottom {
+  fill: color-mix(
+    in srgb,
+    var(--color-accent-strong) 72%,
+    var(--color-surface)
+  );
+  stroke: var(--color-brand);
+  stroke-width: 2;
 }
 
 :where(
@@ -341,6 +383,13 @@ body {
   .prototype-pattern {
     border: 1px solid CanvasText;
     background: Canvas;
+  }
+
+  .cushion-preview-face-outline,
+  .cushion-preview-side,
+  .cushion-preview-bottom {
+    fill: Canvas;
+    stroke: CanvasText;
   }
 }
 

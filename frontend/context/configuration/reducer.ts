@@ -3,6 +3,10 @@ import {
   convertMeasurement,
   isNullableCommittedMeasurement,
 } from "./measurements";
+import {
+  normalizePatternScale,
+  PATTERN_SCALE_DEFAULT,
+} from "./pattern-scale";
 
 export const initialConfigurationState: ConfigurationState = {
   shape: null,
@@ -11,7 +15,7 @@ export const initialConfigurationState: ConfigurationState = {
   thickness: null,
   unit: "cm",
   patternId: null,
-  patternScale: 1,
+  patternScale: PATTERN_SCALE_DEFAULT,
 };
 
 export function configurationReducer(
@@ -62,8 +66,13 @@ export function configurationReducer(
     }
     case "setPatternId":
       return { ...state, patternId: action.patternId };
-    case "setPatternScale":
-      return { ...state, patternScale: action.patternScale };
+    case "setPatternScale": {
+      const patternScale = normalizePatternScale(action.patternScale);
+
+      return patternScale === null
+        ? state
+        : { ...state, patternScale };
+    }
     case "resetConfiguration":
       return initialConfigurationState;
   }

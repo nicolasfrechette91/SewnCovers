@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { classNames } from "../ui/class-names";
 
 export interface CushionPreviewProps
-  extends Omit<ComponentPropsWithoutRef<"section">, "children" | "title"> {
+  extends Omit<ComponentPropsWithoutRef<"figure">, "children" | "title"> {
   description?: ReactNode;
   emptyMessage?: ReactNode;
   title?: ReactNode;
@@ -20,7 +20,7 @@ export function CushionPreview({
   ...sectionProps
 }: CushionPreviewProps) {
   return (
-    <section
+    <figure
       {...sectionProps}
       aria-label={ariaLabel}
       className={classNames(
@@ -52,10 +52,10 @@ export function CushionPreview({
         )}
       </div>
       {description ? (
-        <div className="mt-component min-w-0 break-words text-supporting text-text-muted">
+        <figcaption className="mt-component min-w-0 break-words text-supporting text-text-muted">
           {description}
-        </div>
+        </figcaption>
       ) : null}
-    </section>
+    </figure>
   );
 }

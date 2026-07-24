@@ -19,6 +19,15 @@ export {
   roundMeasurement,
   toCentimetres,
 } from "./measurements";
+export {
+  formatPatternScale,
+  isPatternScaleWithinRange,
+  normalizePatternScale,
+  PATTERN_SCALE_DEFAULT,
+  PATTERN_SCALE_MAX,
+  PATTERN_SCALE_MIN,
+  PATTERN_SCALE_STEP,
+} from "./pattern-scale";
 export type {
   ConfigurationAction,
   ConfigurationState,
