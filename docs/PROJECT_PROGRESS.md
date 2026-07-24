@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 3 - Frontend configurator
-- Current task: 3.1 - Implement the typed central configuration state with Context and `useReducer`
+- Current task: 3.2 - Build the accessible shape-selection step for the first square-cushion vertical slice
 - Status: Completed
-- Overall progress: 11 / 58 tasks completed
-- Up next: 3.2 - Build the accessible shape-selection step for the first square-cushion vertical slice
+- Overall progress: 12 / 58 tasks completed
+- Up next: 3.3 - Build measurements, diagrams, inline validation, decimal handling, and unit conversion
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -40,7 +40,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | Task | Deliverable | Status |
 | --- | --- | --- |
 | 3.1 | Implement the typed central configuration state with Context and `useReducer` | Completed |
-| 3.2 | Build the accessible shape-selection step for the first square-cushion vertical slice | Not started |
+| 3.2 | Build the accessible shape-selection step for the first square-cushion vertical slice | Completed |
 | 3.3 | Build measurements, diagrams, inline validation, decimal handling, and unit conversion | Not started |
 | 3.4 | Add three local placeholder patterns and a selectable pattern-browser vertical slice | Not started |
 | 3.5 | Build the responsive 2D preview with proportions, thickness, pattern, and scale | Not started |
@@ -251,3 +251,14 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - `npm run lint`, `npm run typecheck`, `npm run build`, `$env:GITHUB_ACTIONS = "true"; npm run build`, a runtime smoke check covering all eight reducer actions and reset identity, a local HTTP/browser check at `/`, Pages-export URL and file inspection, roadmap row counting, and `git diff --check` passed. The first ordinary sandboxed build reproduced only the documented Google Fonts connection block; its allowed rerun and the Pages build succeeded. The live page retained its title, heading, single main landmark, and width without browser warning, error, or hydration logs.
 - The Pages export contains the `/sewncovers/` home link, 11 framework/font assets under `/sewncovers/_next/`, and the prefixed favicon, with no unprefixed framework or favicon references and no missing referenced files. No frontend test setup exists, so no test framework or test dependency was added. Generated `.next` and `out` output remains ignored and untracked.
 - No package or lockfile changed. A live `npm audit --json` refresh could not reach the advisory service in the sandbox, and external submission of the dependency inventory was rejected. Because the dependency graph is unchanged, the existing verified record remains exactly three advisories: one moderate transitive PostCSS advisory and two high findings represented by the direct Next.js aggregate and transitive Sharp advisory; no unrelated upgrade was made. No backend, dependency, environment, cache, generated-output, or temporary validation file is tracked.
+
+### 2026-07-23 - Accessible square shape selection
+
+- The minimum static configurator shell now lives at `frontend/app/configure/page.tsx`. The page remains a Server Component, adds route metadata, renders the existing display-only five-step `StepIndicator` with Shape current, and contains no Continue control, later-step navigation, measurement UI, workflow state, or other Task 3.3+ behavior. The only new client boundary is `ShapeSelectionStep` in `frontend/components/configurator/`, which is exported through the existing barrel.
+- `ShapeSelectionStep` calls `useConfiguration()`, reads `state.shape` as its controlled value, and dispatches the existing narrow `{ type: "setShape", shape }` action. It introduces no local duplicate shape state, casts, broad action, side effect, persistence, or reducer change. A whole-card label click selected the exact `"square"` contract value, rerendered from Context, and exposed the radio as checked with persistent Selected text and a checkmark.
+- The component uses one native `fieldset` and `legend`, three same-name native radio inputs, explicit label associations, per-option descriptions, and native checked and disabled properties. The square option is the only enabled value. The already documented `"rectangle"` and `"box"` values appear only as disabled options with visible Unavailable in this step text, so they are not presented as configurable or production-ready. Supporting copy describes face shape without manufacturing, fit, quality, delivery, or pricing claims.
+- Whole-card labels substantially exceed 44px, while the status targets measure 44px high. Unselected state uses an empty radio marker plus Available text; selected state uses native checked state, a checkmark, Selected text, a stronger boundary, and contrasting surface; disabled state uses native disabled state, a dash, explicit unavailability text, muted surface, and disabled cursor. A visually hidden focused radio transfers the established two-color focus ring to its card. Forced-colors CSS adds system checked, disabled, and focus boundaries; transitions retain the existing reduced-motion suppression.
+- Live browser and accessibility-tree inspection at `/configure/` confirmed the named group, radio names, descriptions, native disabled exposure, whole-card selection, central checked state, visible focus treatment, desktop flow, 390px and 320px wrapping, zero horizontal overflow, and empty warning/error logs. `/` also returned successfully and retained its landmark and heading structure. The selected square remained checked after the Context-driven rerender. The in-app key injector focused the native radio but did not independently dispatch Tab or Space defaults, so a complete keyboard traversal is not claimed; native same-name radio, enabled/disabled, and focus semantics remain intact. Screen-reader software, OS-level forced-colors, OS-level reduced-motion, and actual browser zoom were not used.
+- `npm run lint`, `npm run typecheck`, `npm run build`, and `$env:GITHUB_ACTIONS = "true"; npm run build` passed. The ordinary sandboxed build first reproduced the documented Google Fonts network block; its approved network-enabled rerun and the Pages build passed. Both `/` and `/configure` were statically prerendered. Pages HTML contains 12 or 13 prefixed framework/font/favicon references per page, no unprefixed framework or favicon reference, a `/sewncovers/` home destination, and no missing referenced asset.
+- No frontend test runner exists, so no dependency or speculative test setup was added; the live Context-backed component interaction served as the focused smoke check. A current `npm audit --json` reports three vulnerable packages at high severity: the direct Next.js aggregate, transitive PostCSS, and transitive Sharp. PostCSS now contains one moderate XSS advisory and one high arbitrary-file-read advisory, while Sharp contains one high inherited-libvips advisory. No dependency or lockfile changed and no unrelated upgrade was attempted.
+- No backend, API, dependency, environment, generated-output, cache, temporary validation file, additional functional shape, measurement behavior, conversion, validation, pattern, preview, pricing, persistence, authentication, commerce feature, or landing-page redesign is included.

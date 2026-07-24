@@ -17,3 +17,4 @@ export type {
   StepIndicatorProps,
   StepIndicatorStep,
 } from "./step-indicator";
+export { ShapeSelectionStep } from "./shape-selection-step";

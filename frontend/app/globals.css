@@ -255,9 +255,15 @@ body {
   }
 
   .pattern-card-input:checked + .pattern-card-label,
-  .pattern-filter-input:checked + .pattern-filter-label {
+  .pattern-filter-input:checked + .pattern-filter-label,
+  .shape-option-input:checked + .shape-option-label {
     outline: 2px solid CanvasText;
     outline-offset: -2px;
+  }
+
+  .shape-option-input:disabled + .shape-option-label {
+    border-color: GrayText;
+    color: GrayText;
   }
 }
 
@@ -268,10 +274,19 @@ body {
 }
 
 .pattern-card-input:focus-visible + .pattern-card-label,
-.pattern-filter-input:focus-visible + .pattern-filter-label {
+.pattern-filter-input:focus-visible + .pattern-filter-label,
+.shape-option-input:focus-visible + .shape-option-label {
   box-shadow: var(--shadow-focus);
   outline: 3px solid transparent;
   outline-offset: 2px;
+}
+
+.shape-option-input:checked
+  + .shape-option-label
+  .shape-option-control-indicator {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
 }
 
 .pattern-card-input:checked
@@ -291,7 +306,8 @@ body {
 @media (forced-colors: active) {
   .unit-selector-input:focus-visible + .unit-selector-label,
   .pattern-card-input:focus-visible + .pattern-card-label,
-  .pattern-filter-input:focus-visible + .pattern-filter-label {
+  .pattern-filter-input:focus-visible + .pattern-filter-label,
+  .shape-option-input:focus-visible + .shape-option-label {
     box-shadow: none;
     outline-color: Highlight;
   }

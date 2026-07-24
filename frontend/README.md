@@ -83,12 +83,13 @@ Business validation, measurement conversion, persistence, retry behavior, overla
 Reusable domain-oriented shells live in `components/configurator/` and are exported through `@/components/configurator`. They consume the semantic design tokens and native form conventions established by the UI layer, but do not own the configurator workflow. The roadmap-aligned parent-supplied step labels are Shape, Measurements, Pattern, Preview, and Review; saving and restoring a design remain later workflow outcomes.
 
 - `StepIndicator` renders a display-only ordered list, derives completed and upcoming states from a validated current step ID, and exposes the current item with `aria-current="step"`.
+- `ShapeSelectionStep` owns the shape-selection presentation while the central configuration Context remains the only source of selection state. It renders a native radio group with whole-card labels, visible checked and availability text, native disabled behavior, and the documented square, rectangle, and box / bench identifiers.
 - `PatternCard` associates a whole visible card with a native radio input. The caller owns controlled or uncontrolled selection and supplies preview content; previews are decorative by default, while callers may opt into accessible preview content.
 - `PatternFilter` is a controlled generic fieldset. Its explicit selection mode renders native radios for one active value or native checkboxes for combinable values, then reports values without filtering records internally. Product category and color values remain intentionally undefined until the catalogue tasks.
 - `CushionPreview` provides a labeled, contained visual region, a deliberate empty state, and separate descriptive content. Supplied visuals are decorative; accurate proportions, compositing, pattern tiling, and scale rendering remain deferred.
 - `ConfigurationSummary` renders caller-formatted label/value items as a description list, including intentional empty and missing-value fallbacks. It performs no measurement conversion, calculation, validation, pricing, or totals.
 
-Future parent components remain responsible for connecting these shells to configuration state, data fetching, filter logic, workflow navigation, business validation, measurement conversion, accurate preview rendering, pricing, persistence, and API integration.
+Future parent components remain responsible for measurement and pattern state integration, data fetching, filter logic, workflow navigation, business validation, measurement conversion, accurate preview rendering, pricing, persistence, and API integration.
 
 ## Configuration state
 
@@ -98,12 +99,20 @@ The state follows the documented shared configuration contract: `shape`, `width`
 
 The reducer only applies typed immutable transitions. Shape-specific measurement behavior, measurement conversion and validation, pattern data and filtering, workflow navigation, preview calculations, pricing, persistence, API integration, and saved/shared designs remain deferred to their roadmap tasks.
 
+## Shape selection
+
+The static `/configure/` route provides the minimum server-compatible configurator page shell for Task 3.2. Its display-only `StepIndicator` identifies Shape as the current step, while `ShapeSelectionStep` is the smallest client boundary needed to call `useConfiguration()`. The component reads `state.shape` directly and dispatches the existing typed `setShape` action; it does not duplicate the selected shape in local component state.
+
+The selection group uses a native `fieldset`, `legend`, and same-name radio inputs. Each radio is associated with its complete visible card label and supporting text. Checked state is communicated by the native state, a checkmark, persistent Selected text, and a stronger card boundary; focus moves to the visible card treatment. Disabled options retain native disabled semantics and explicit Unavailable in this step text. Labels and status elements meet or exceed the approximately 44px target, wrap at narrow widths, and retain system-color checked, disabled, and focus boundaries in forced-colors CSS.
+
+Only the exact `square` identifier is selectable in this first vertical slice. The already documented `rectangle` and `box` identifiers are shown only as disabled, explicitly unavailable future options; they do not dispatch configuration changes. Measurement inputs, shape-specific calculations, validation, conversion, later-step navigation, patterns, previews, pricing, and persistence remain deferred.
+
 ## Global layout components
 
 Reusable server-compatible layout components live in `components/layout/` and are exported through `@/components/layout`. The root layout renders the site header and footer around one flexing `<main id="main-content">` landmark and provides a focus-revealed skip link to that stable target. The starter homepage keeps its existing content and now relies on the root layout for its main landmark.
 
 - `SiteHeader` renders a static semantic header and primary navigation with an accessible text-based SewnCovers home link because no approved logo asset exists. Optional typed navigation items use `next/link`; a caller may provide an exact `currentHref` to add `aria-current="page"` and a persistent underline without route-dependent client logic.
-- Navigation stacks and wraps with responsive CSS. The repository currently defines only `/`, so the integrated header does not invent later destinations or render a redundant disclosure menu. The component has no client boundary; a mobile disclosure can be added when multiple real routes make one necessary.
+- Navigation stacks and wraps with responsive CSS. The integrated header continues to expose only the home destination; Task 3.2 adds the minimal `/configure/` page without expanding global navigation or adding a redundant disclosure menu. The component has no client boundary; a mobile disclosure can be added when later navigation work defines the complete destination set.
 - `SiteFooter` renders the documented SewnCovers portfolio-prototype identity and a build-time year. Optional typed footer navigation is omitted from the integrated frame until real destinations are defined.
 - Internal `next/link` destinations remain application-relative because Next.js applies the configured `/sewncovers` base path automatically in GitHub Pages builds. Public image paths continue to use the existing build-time base-path strategy.
 
