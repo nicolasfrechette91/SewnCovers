@@ -8,32 +8,30 @@ import {
   getMeasurementRange,
   parseMeasurementDraft,
   useConfiguration,
+  type CushionShape,
   type MeasurementDraftIssue,
   type MeasurementField,
   type MeasurementUnit,
 } from "@/context/configuration";
+import {
+  getCushionShapeDefinition,
+  getMeasurementLabel,
+} from "@/data/shapes";
 
-interface MeasurementDrafts {
-  readonly thickness: string;
-  readonly width: string;
-}
+import { MeasurementDiagram } from "./measurement-diagram";
 
-interface MeasurementErrors {
-  readonly thickness: string | null;
-  readonly width: string | null;
-}
-
-const measurementLabels: Readonly<Record<MeasurementField, string>> = {
-  thickness: "Thickness",
-  width: "Width",
-};
+type MeasurementDrafts = Readonly<Record<MeasurementField, string>>;
+type MeasurementErrors = Readonly<
+  Record<MeasurementField, string | null>
+>;
 
 function getValidationMessage(
+  shape: CushionShape,
   field: MeasurementField,
   issue: MeasurementDraftIssue,
   unit: MeasurementUnit,
 ): string {
-  const label = measurementLabels[field];
+  const label = getMeasurementLabel(shape, field);
   const range = getMeasurementRange(field, unit);
   const visibleRange = `${formatMeasurement(range.min)}–${formatMeasurement(range.max)} ${unit}`;
 
@@ -54,62 +52,57 @@ function getValidationMessage(
   }
 }
 
-function MeasurementDiagram() {
-  return (
-    <figure className="min-w-0 rounded-card border border-border bg-surface-subtle p-card">
-      <div className="grid min-w-0 gap-component sm:grid-cols-2">
-        <div className="min-w-0 rounded-control border border-border bg-surface p-control-x py-4">
-          <p className="text-label font-control tracking-label text-text-primary">
-            Width
-          </p>
-          <div
-            aria-hidden="true"
-            className="measurement-diagram-geometry mx-auto mt-component aspect-square w-full max-w-40 rounded-panel border-2 border-border-strong bg-page shadow-card"
-          />
-          <p className="mt-3 text-center text-supporting text-text-muted">
-            Across the square face
-          </p>
-        </div>
+function getSupportingText(
+  shape: CushionShape,
+  field: MeasurementField,
+  unit: MeasurementUnit,
+): string {
+  const range = getMeasurementRange(field, unit);
+  const visibleRange = `${formatMeasurement(range.min)}–${formatMeasurement(range.max)} ${unit}`;
 
-        <div className="min-w-0 rounded-control border border-border bg-surface p-control-x py-4">
-          <p className="text-label font-control tracking-label text-text-primary">
-            Thickness
-          </p>
-          <div
-            aria-hidden="true"
-            className="measurement-diagram-geometry mx-auto mt-layout h-12 w-full max-w-48 rounded-control border-2 border-border-strong bg-page shadow-card"
-          />
-          <p className="mt-layout text-center text-supporting text-text-muted">
-            Across the side profile
-          </p>
-        </div>
-      </div>
-      <figcaption className="mt-component text-supporting text-text-muted">
-        Measure width straight across the square face. Measure thickness
-        straight across one side profile. The square face uses the same
-        committed value for width and height.
-      </figcaption>
-    </figure>
-  );
+  if (field === "thickness") {
+    return `Measure straight across the side profile. Enter ${visibleRange}.`;
+  }
+
+  if (field === "height") {
+    return shape === "box"
+      ? `Measure from front to back across the top. Enter ${visibleRange}.`
+      : `Measure from top to bottom across the face. Enter ${visibleRange}.`;
+  }
+
+  if (shape === "square") {
+    return `Measure straight across the face. Enter ${visibleRange}; height will match this value.`;
+  }
+
+  return shape === "box"
+    ? `Measure from side to side across the top. Enter ${visibleRange}.`
+    : `Measure from side to side across the face. Enter ${visibleRange}.`;
 }
 
-function SquareMeasurementForm({
+function ShapeMeasurementForm({
+  height,
+  shape,
   thickness,
   unit,
   width,
 }: Readonly<{
+  height: number | null;
+  shape: CushionShape;
   thickness: number | null;
   unit: MeasurementUnit;
   width: number | null;
 }>) {
   const { dispatch } = useConfiguration();
+  const definition = getCushionShapeDefinition(shape);
   const generatedId = useId();
   const unitDescriptionId = `${generatedId}-unit-description`;
   const [drafts, setDrafts] = useState<MeasurementDrafts>({
+    height: formatMeasurement(height),
     thickness: formatMeasurement(thickness),
     width: formatMeasurement(width),
   });
   const [errors, setErrors] = useState<MeasurementErrors>({
+    height: null,
     thickness: null,
     width: null,
   });
@@ -119,7 +112,16 @@ function SquareMeasurementForm({
     value: number | null,
   ) => {
     if (field === "width") {
-      dispatch({ type: "setSquareWidth", width: value });
+      dispatch(
+        shape === "square"
+          ? { type: "setSquareWidth", width: value }
+          : { type: "setWidth", width: value },
+      );
+      return;
+    }
+
+    if (field === "height") {
+      dispatch({ type: "setHeight", height: value });
       return;
     }
 
@@ -155,15 +157,14 @@ function SquareMeasurementForm({
 
       setErrors((currentErrors) => ({
         ...currentErrors,
-        [field]: getValidationMessage(field, issue, unit),
+        [field]: getValidationMessage(shape, field, issue, unit),
       }));
       return;
     }
 
-    const normalizedDraft = formatMeasurement(result.value);
     setDrafts((currentDrafts) => ({
       ...currentDrafts,
-      [field]: normalizedDraft,
+      [field]: formatMeasurement(result.value),
     }));
     setErrors((currentErrors) => ({
       ...currentErrors,
@@ -173,18 +174,13 @@ function SquareMeasurementForm({
   };
 
   const changeUnit = (nextUnit: MeasurementUnit) => {
-    setErrors({ thickness: null, width: null });
+    setErrors({ height: null, thickness: null, width: null });
     dispatch({ type: "setMeasurementUnit", unit: nextUnit });
   };
 
   const renderMeasurementInput = (field: MeasurementField) => {
-    const label = measurementLabels[field];
+    const label = getMeasurementLabel(shape, field);
     const errorId = `${generatedId}-${field}-error`;
-    const range = getMeasurementRange(field, unit);
-    const supportingText =
-      field === "width"
-        ? `Measure straight across the face. Enter ${formatMeasurement(range.min)}–${formatMeasurement(range.max)} ${unit}; height will match this value.`
-        : `Measure the side profile. Enter ${formatMeasurement(range.min)}–${formatMeasurement(range.max)} ${unit}.`;
 
     return (
       <div className="min-w-0" key={field}>
@@ -198,7 +194,7 @@ function SquareMeasurementForm({
           spellCheck={false}
           value={drafts[field]}
           label={`${label} (${unit})`}
-          supportingText={supportingText}
+          supportingText={getSupportingText(shape, field, unit)}
           invalid={errors[field] !== null}
           aria-describedby={errors[field] ? errorId : undefined}
           onChange={(event) => updateDraft(field, event.currentTarget.value)}
@@ -223,12 +219,12 @@ function SquareMeasurementForm({
   return (
     <fieldset className="min-w-0 rounded-panel border border-border bg-surface p-card shadow-raised">
       <legend className="max-w-full px-1 font-display text-section-title font-heading tracking-heading text-text-primary">
-        Measure your square cushion
+        Measure your {definition.name.toLowerCase()} cushion
       </legend>
       <p className="mt-2 max-w-3xl break-words text-body text-text-muted">
-        Use the same unit for both measurements. Values are committed only
-        when they are complete, finite, within the documented range, and use
-        no more than two decimal places.
+        Use one unit for every measurement. Values are committed only when
+        complete, finite, within the documented range, and no more than two
+        decimal places.
       </p>
 
       <div className="mt-layout grid min-w-0 gap-layout lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.85fr)]">
@@ -248,31 +244,32 @@ function SquareMeasurementForm({
           </p>
 
           <div className="mt-component grid min-w-0 gap-component sm:grid-cols-2">
-            {renderMeasurementInput("width")}
-            {renderMeasurementInput("thickness")}
+            {definition.measurementFields.map(renderMeasurementInput)}
           </div>
         </div>
 
-        <MeasurementDiagram />
+        <MeasurementDiagram shape={shape} />
       </div>
     </fieldset>
   );
 }
 
-export function SquareMeasurementStep() {
+export function MeasurementStep() {
   const { state } = useConfiguration();
 
-  if (state.shape !== "square") {
+  if (state.shape === null) {
     return null;
   }
 
   return (
     <section
-      aria-label="Square cushion measurements"
+      aria-label={`${getCushionShapeDefinition(state.shape).name} cushion measurements`}
       className="mt-layout scroll-mt-layout"
     >
-      <SquareMeasurementForm
-        key={state.unit}
+      <ShapeMeasurementForm
+        key={`${state.shape}-${state.unit}`}
+        height={state.height}
+        shape={state.shape}
         thickness={state.thickness}
         unit={state.unit}
         width={state.width}

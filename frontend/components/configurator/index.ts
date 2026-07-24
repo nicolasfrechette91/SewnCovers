@@ -18,13 +18,10 @@ export type {
   StepIndicatorStep,
 } from "./step-indicator";
 export { ShapeSelectionStep } from "./shape-selection-step";
-export { SquareConfigurator } from "./square-configurator";
-export { SquareMeasurementStep } from "./square-measurement-step";
-export {
-  hasValidSquareMeasurements,
-  SquarePatternStep,
-} from "./square-pattern-step";
-export { SquarePreviewStep } from "./square-preview-step";
+export { Configurator } from "./configurator";
+export { MeasurementStep } from "./measurement-step";
+export { PatternStep } from "./pattern-step";
+export { PreviewStep } from "./preview-step";
 export {
   calculatePreviewGeometry,
   PREVIEW_VIEWBOX_HEIGHT,

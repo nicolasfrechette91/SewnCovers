@@ -11,6 +11,7 @@ export {
   convertMeasurement,
   formatMeasurement,
   getMeasurementRange,
+  hasValidMeasurementsForShape,
   isFinitePositiveMeasurement,
   isMeasurementWithinRange,
   MEASUREMENT_DECIMAL_PLACES,

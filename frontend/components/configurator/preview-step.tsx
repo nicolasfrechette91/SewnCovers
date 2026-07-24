@@ -9,14 +9,20 @@ import {
 import {
   formatMeasurement,
   formatPatternScale,
+  hasValidMeasurementsForShape,
   isMeasurementWithinRange,
   isPatternScaleWithinRange,
   PATTERN_SCALE_MAX,
   PATTERN_SCALE_MIN,
   PATTERN_SCALE_STEP,
   useConfiguration,
+  type CushionShape,
 } from "@/context/configuration";
 import { getPrototypePatternById } from "@/data/patterns";
+import {
+  getCushionShapeDefinition,
+  getMeasurementLabel,
+} from "@/data/shapes";
 
 import { CushionPreview } from "./cushion-preview";
 import {
@@ -30,6 +36,11 @@ type PatternStyle = CSSProperties & {
   "--pattern-scale": number;
 };
 
+interface PreviewDetail {
+  readonly label: string;
+  readonly value: string;
+}
+
 function pointsToString(
   points: readonly (readonly [number, number])[],
 ): string {
@@ -40,10 +51,12 @@ function PreviewVisual({
   geometry,
   patternClassName,
   patternScale,
+  shape,
 }: Readonly<{
   geometry: PreviewGeometry;
   patternClassName: string;
   patternScale: number;
+  shape: CushionShape;
 }>) {
   const {
     faceHeight,
@@ -77,15 +90,10 @@ function PreviewVisual({
       viewBox={`0 0 ${PREVIEW_VIEWBOX_WIDTH} ${PREVIEW_VIEWBOX_HEIGHT}`}
       preserveAspectRatio="xMidYMid meet"
       focusable="false"
+      data-preview-shape={shape}
     >
-      <polygon
-        className="cushion-preview-side"
-        points={sidePoints}
-      />
-      <polygon
-        className="cushion-preview-bottom"
-        points={bottomPoints}
-      />
+      <polygon className="cushion-preview-side" points={sidePoints} />
+      <polygon className="cushion-preview-bottom" points={bottomPoints} />
       <foreignObject
         x={faceX}
         y={faceY}
@@ -103,7 +111,7 @@ function PreviewVisual({
         y={faceY}
         width={faceWidth}
         height={faceHeight}
-        rx="10"
+        rx={shape === "box" ? 4 : 10}
         vectorEffect="non-scaling-stroke"
       />
     </svg>
@@ -111,6 +119,7 @@ function PreviewVisual({
 }
 
 function getEmptyMessage(
+  shape: CushionShape,
   measurementsAreValid: boolean,
   patternIsSelected: boolean,
   patternScaleIsValid: boolean,
@@ -120,7 +129,14 @@ function getEmptyMessage(
   }
 
   if (!measurementsAreValid) {
-    return "Enter a valid width and thickness to build the proportional preview.";
+    const requiredMeasurements =
+      shape === "square"
+        ? "width and thickness"
+        : shape === "rectangle"
+          ? "width, height, and thickness"
+          : "width, depth, and thickness";
+
+    return `Enter a valid ${requiredMeasurements} to build the proportional preview.`;
   }
 
   if (!patternIsSelected) {
@@ -134,7 +150,17 @@ function getEmptyMessage(
   return "The preview is incomplete.";
 }
 
-export function SquarePreviewStep() {
+function formatValidMeasurement(
+  value: number | null,
+  isValid: boolean,
+  unit: string,
+): string {
+  return isValid
+    ? `${formatMeasurement(value)} ${unit}`
+    : "Invalid or incomplete";
+}
+
+export function PreviewStep() {
   const { state, dispatch } = useConfiguration();
   const generatedId = useId();
   const scaleControlId = `${generatedId}-pattern-scale`;
@@ -147,7 +173,7 @@ export function SquarePreviewStep() {
   );
   const heightIsValid = isMeasurementWithinRange(
     state.height,
-    "width",
+    "height",
     state.unit,
   );
   const thicknessIsValid = isMeasurementWithinRange(
@@ -155,14 +181,20 @@ export function SquarePreviewStep() {
     "thickness",
     state.unit,
   );
-  const measurementsAreValid =
-    widthIsValid && heightIsValid && thicknessIsValid;
+  const measurementsAreValid = hasValidMeasurementsForShape(
+    state.shape,
+    state.width,
+    state.height,
+    state.thickness,
+    state.unit,
+  );
   const patternScaleIsValid = isPatternScaleWithinRange(
     state.patternScale,
   );
   const geometry = calculatePreviewGeometry({
     width: state.width,
     height: state.height,
+    shape: state.shape,
     thickness: state.thickness,
     unit: state.unit,
   });
@@ -173,18 +205,48 @@ export function SquarePreviewStep() {
     geometry !== null;
   const formattedScale =
     formatPatternScale(state.patternScale) || "Invalid";
-  const faceDimensions =
-    widthIsValid && heightIsValid
-      ? `${formatMeasurement(state.width)} × ${formatMeasurement(state.height)} ${state.unit}`
-      : "Invalid or incomplete";
-  const thickness =
-    thicknessIsValid
-      ? `${formatMeasurement(state.thickness)} ${state.unit}`
-      : "Invalid or incomplete";
 
-  if (state.shape !== "square") {
+  if (state.shape === null) {
     return null;
   }
+
+  const shape = state.shape;
+  const definition = getCushionShapeDefinition(shape);
+  const width = formatValidMeasurement(
+    state.width,
+    widthIsValid,
+    state.unit,
+  );
+  const height = formatValidMeasurement(
+    state.height,
+    heightIsValid,
+    state.unit,
+  );
+  const thickness = formatValidMeasurement(
+    state.thickness,
+    thicknessIsValid,
+    state.unit,
+  );
+  const dimensionDetails: readonly PreviewDetail[] =
+    shape === "square"
+      ? [
+          {
+            label: "Face dimensions",
+            value:
+              widthIsValid && heightIsValid
+                ? `${formatMeasurement(state.width)} × ${formatMeasurement(state.height)} ${state.unit}`
+                : "Invalid or incomplete",
+          },
+          { label: "Thickness", value: thickness },
+        ]
+      : [
+          { label: "Width", value: width },
+          {
+            label: getMeasurementLabel(shape, "height"),
+            value: height,
+          },
+          { label: "Thickness", value: thickness },
+        ];
 
   const changePatternScale = (
     event: ChangeEvent<HTMLInputElement>,
@@ -206,12 +268,13 @@ export function SquarePreviewStep() {
 
   return (
     <section
-      aria-label="Square cushion preview"
+      aria-label={`${definition.name} cushion preview`}
       className="mt-layout scroll-mt-layout"
     >
       <CushionPreview
-        title="Preview your square cushion"
+        title={`Preview your ${definition.name.toLowerCase()} cushion`}
         emptyMessage={getEmptyMessage(
+          shape,
           measurementsAreValid,
           selectedPattern !== null,
           patternScaleIsValid,
@@ -222,6 +285,7 @@ export function SquarePreviewStep() {
               geometry={geometry}
               patternClassName={selectedPattern.previewClassName}
               patternScale={state.patternScale}
+              shape={shape}
             />
           ) : undefined
         }
@@ -234,6 +298,10 @@ export function SquarePreviewStep() {
             </p>
             <dl className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
               <div className="min-w-0">
+                <dt className="font-control text-text-primary">Shape</dt>
+                <dd className="break-words">{definition.name}</dd>
+              </div>
+              <div className="min-w-0">
                 <dt className="font-control text-text-primary">
                   Pattern
                 </dt>
@@ -241,18 +309,14 @@ export function SquarePreviewStep() {
                   {selectedPattern?.name ?? "Not selected"}
                 </dd>
               </div>
-              <div className="min-w-0">
-                <dt className="font-control text-text-primary">
-                  Face dimensions
-                </dt>
-                <dd className="break-words">{faceDimensions}</dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="font-control text-text-primary">
-                  Thickness
-                </dt>
-                <dd className="break-words">{thickness}</dd>
-              </div>
+              {dimensionDetails.map((detail) => (
+                <div className="min-w-0" key={detail.label}>
+                  <dt className="font-control text-text-primary">
+                    {detail.label}
+                  </dt>
+                  <dd className="break-words">{detail.value}</dd>
+                </div>
+              ))}
               <div className="min-w-0">
                 <dt className="font-control text-text-primary">
                   Pattern scale

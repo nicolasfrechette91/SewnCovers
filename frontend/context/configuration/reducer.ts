@@ -24,17 +24,24 @@ export function configurationReducer(
 ): ConfigurationState {
   switch (action.type) {
     case "setShape":
-      return { ...state, shape: action.shape };
+      return action.shape === "square"
+        ? { ...state, shape: action.shape, height: state.width }
+        : { ...state, shape: action.shape };
     case "setWidth":
-      return isNullableCommittedMeasurement(action.width)
-        ? { ...state, width: action.width }
-        : state;
+      if (!isNullableCommittedMeasurement(action.width)) {
+        return state;
+      }
+
+      return state.shape === "square"
+        ? { ...state, width: action.width, height: action.width }
+        : { ...state, width: action.width };
     case "setSquareWidth":
       return isNullableCommittedMeasurement(action.width)
         ? { ...state, width: action.width, height: action.width }
         : state;
     case "setHeight":
-      return isNullableCommittedMeasurement(action.height)
+      return state.shape !== "square" &&
+        isNullableCommittedMeasurement(action.height)
         ? { ...state, height: action.height }
         : state;
     case "setThickness":

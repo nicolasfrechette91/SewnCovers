@@ -2,7 +2,10 @@ import {
   isMeasurementWithinRange,
   toCentimetres,
 } from "../../context/configuration/measurements";
-import type { MeasurementUnit } from "../../context/configuration/types";
+import type {
+  CushionShape,
+  MeasurementUnit,
+} from "../../context/configuration/types";
 
 export const PREVIEW_VIEWBOX_WIDTH = 360;
 export const PREVIEW_VIEWBOX_HEIGHT = 280;
@@ -11,10 +14,13 @@ const PREVIEW_HORIZONTAL_PADDING = 32;
 const PREVIEW_VERTICAL_PADDING = 28;
 const THICKNESS_HORIZONTAL_PROJECTION = 0.55;
 const THICKNESS_VERTICAL_PROJECTION = 0.35;
+const BOX_THICKNESS_HORIZONTAL_PROJECTION = 0.32;
+const BOX_THICKNESS_VERTICAL_PROJECTION = 0.6;
 const GEOMETRY_DECIMAL_PLACES = 3;
 
 export interface PreviewGeometryInput {
   readonly height: number | null;
+  readonly shape: CushionShape | null;
   readonly thickness: number | null;
   readonly unit: MeasurementUnit;
   readonly width: number | null;
@@ -35,14 +41,17 @@ function roundGeometry(value: number): number {
 
 export function calculatePreviewGeometry({
   height,
+  shape,
   thickness,
   unit,
   width,
 }: PreviewGeometryInput): PreviewGeometry | null {
   if (
+    shape === null ||
     !isMeasurementWithinRange(width, "width", unit) ||
-    !isMeasurementWithinRange(height, "width", unit) ||
-    !isMeasurementWithinRange(thickness, "thickness", unit)
+    !isMeasurementWithinRange(height, "height", unit) ||
+    !isMeasurementWithinRange(thickness, "thickness", unit) ||
+    (shape === "square" && width !== height)
   ) {
     return null;
   }
@@ -50,10 +59,18 @@ export function calculatePreviewGeometry({
   const widthInCentimetres = toCentimetres(width, unit);
   const heightInCentimetres = toCentimetres(height, unit);
   const thicknessInCentimetres = toCentimetres(thickness, unit);
+  const horizontalProjection =
+    shape === "box"
+      ? BOX_THICKNESS_HORIZONTAL_PROJECTION
+      : THICKNESS_HORIZONTAL_PROJECTION;
+  const verticalProjection =
+    shape === "box"
+      ? BOX_THICKNESS_VERTICAL_PROJECTION
+      : THICKNESS_VERTICAL_PROJECTION;
   const projectedThicknessX =
-    thicknessInCentimetres * THICKNESS_HORIZONTAL_PROJECTION;
+    thicknessInCentimetres * horizontalProjection;
   const projectedThicknessY =
-    thicknessInCentimetres * THICKNESS_VERTICAL_PROJECTION;
+    thicknessInCentimetres * verticalProjection;
   const unscaledWidth = widthInCentimetres + projectedThicknessX;
   const unscaledHeight = heightInCentimetres + projectedThicknessY;
   const availableWidth =

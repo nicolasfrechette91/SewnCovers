@@ -1,9 +1,12 @@
-import type { MeasurementUnit } from "./types";
+import type {
+  CushionShape,
+  MeasurementUnit,
+} from "./types";
 
 export const CENTIMETRES_PER_INCH = 2.54;
 export const MEASUREMENT_DECIMAL_PLACES = 2;
 
-export type MeasurementField = "thickness" | "width";
+export type MeasurementField = "height" | "thickness" | "width";
 
 export type MeasurementDraftIssue =
   | "aboveMaximum"
@@ -27,6 +30,7 @@ export interface MeasurementDraftResult {
 export const MEASUREMENT_RANGES_CM: Readonly<
   Record<MeasurementField, MeasurementRange>
 > = {
+  height: { min: 10, max: 300 },
   thickness: { min: 1, max: 60 },
   width: { min: 10, max: 300 },
 };
@@ -111,6 +115,31 @@ export function isMeasurementWithinRange(
     valueInCentimetres >= range.min &&
     valueInCentimetres <= range.max
   );
+}
+
+export function hasValidMeasurementsForShape(
+  shape: CushionShape | null,
+  width: number | null,
+  height: number | null,
+  thickness: number | null,
+  unit: MeasurementUnit,
+): boolean {
+  if (shape === null) {
+    return false;
+  }
+
+  const faceMeasurementsAreValid =
+    isMeasurementWithinRange(width, "width", unit) &&
+    isMeasurementWithinRange(height, "height", unit);
+
+  if (
+    !faceMeasurementsAreValid ||
+    !isMeasurementWithinRange(thickness, "thickness", unit)
+  ) {
+    return false;
+  }
+
+  return shape !== "square" || width === height;
 }
 
 export function getMeasurementRange(

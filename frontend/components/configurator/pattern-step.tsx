@@ -4,34 +4,21 @@ import { useId } from "react";
 
 import { PatternCard } from "@/components/configurator/pattern-card";
 import {
-  isMeasurementWithinRange,
+  hasValidMeasurementsForShape,
   useConfiguration,
-  type MeasurementUnit,
 } from "@/context/configuration";
-import {
-  prototypePatterns,
-} from "@/data/patterns";
+import { prototypePatterns } from "@/data/patterns";
 
-export function hasValidSquareMeasurements(
-  width: number | null,
-  thickness: number | null,
-  unit: MeasurementUnit,
-): boolean {
-  return (
-    isMeasurementWithinRange(width, "width", unit) &&
-    isMeasurementWithinRange(thickness, "thickness", unit)
-  );
-}
-
-export function SquarePatternStep() {
+export function PatternStep() {
   const { state, dispatch } = useConfiguration();
   const generatedId = useId();
   const supportingTextId = `${generatedId}-supporting-text`;
 
   if (
-    state.shape !== "square" ||
-    !hasValidSquareMeasurements(
+    !hasValidMeasurementsForShape(
+      state.shape,
       state.width,
+      state.height,
       state.thickness,
       state.unit,
     )

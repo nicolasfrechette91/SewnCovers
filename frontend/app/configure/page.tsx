@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 
-import { SquareConfigurator } from "@/components/configurator";
+import { Configurator } from "@/components/configurator";
 
 export const metadata: Metadata = {
-  title: "Configure a square cushion | SewnCovers",
+  title: "Configure a cushion | SewnCovers",
   description:
-    "Choose and measure a square cushion, then explore three local prototype patterns with SewnCovers.",
+    "Choose and measure a square, rectangle, or box / bench cushion, then explore three local prototype patterns with SewnCovers.",
 };
 
 export default function ConfigurePage() {
@@ -20,14 +20,15 @@ export default function ConfigurePage() {
             Choose your cushion&apos;s shape, measurements, and pattern.
           </h1>
           <p className="mt-component break-words text-body text-text-muted">
-            Select the available square shape, then record its width and
-            thickness before choosing one of three prototype pattern
-            directions and exploring the proportional 2D preview. The review
-            step is shown only for context and is not available yet.
+            Select Square, Rectangle, or Box / bench, then record the
+            shape-specific measurements before choosing one of three
+            prototype pattern directions and exploring the proportional 2D
+            preview. The review step is shown only for context and is not
+            available yet.
           </p>
         </header>
 
-        <SquareConfigurator />
+        <Configurator />
       </div>
     </div>
   );

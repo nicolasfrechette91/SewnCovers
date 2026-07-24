@@ -213,6 +213,61 @@ body {
   background-repeat: repeat;
 }
 
+.shape-illustration-face,
+.shape-illustration-side,
+.shape-illustration-detail {
+  vector-effect: non-scaling-stroke;
+}
+
+.shape-illustration-face {
+  fill: var(--color-surface);
+  stroke: var(--color-brand);
+  stroke-width: 3;
+}
+
+.shape-illustration-side {
+  fill: var(--color-surface-subtle);
+  stroke: var(--color-brand);
+  stroke-width: 3;
+}
+
+.shape-illustration-detail {
+  stroke: var(--color-accent-strong);
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.measurement-diagram-face,
+.measurement-diagram-side,
+.measurement-diagram-line {
+  vector-effect: non-scaling-stroke;
+}
+
+.measurement-diagram-face {
+  fill: var(--color-page);
+  stroke: var(--color-brand);
+  stroke-width: 2;
+}
+
+.measurement-diagram-side {
+  fill: var(--color-surface-subtle);
+  stroke: var(--color-brand);
+  stroke-width: 2;
+}
+
+.measurement-diagram-line {
+  stroke: var(--color-accent-strong);
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.measurement-diagram-label {
+  fill: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: var(--font-weight-control);
+}
+
 .prototype-pattern-botanical {
   background-image:
     radial-gradient(
@@ -378,6 +433,23 @@ body {
     border-color: CanvasText;
     background: Canvas;
     box-shadow: none;
+  }
+
+  .shape-illustration-face,
+  .shape-illustration-side,
+  .measurement-diagram-face,
+  .measurement-diagram-side {
+    fill: Canvas;
+    stroke: CanvasText;
+  }
+
+  .shape-illustration-detail,
+  .measurement-diagram-line {
+    stroke: CanvasText;
+  }
+
+  .measurement-diagram-label {
+    fill: CanvasText;
   }
 
   .prototype-pattern {
