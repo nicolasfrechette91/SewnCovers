@@ -84,12 +84,12 @@ Reusable domain-oriented shells live in `components/configurator/` and are expor
 
 - `StepIndicator` renders a display-only ordered list, derives completed and upcoming states from a validated current step ID, and exposes the current item with `aria-current="step"`.
 - `ShapeSelectionStep` owns the shape-selection presentation while the central configuration Context remains the only source of selection state. It renders a native radio group with whole-card labels, visible checked and availability text, native disabled behavior, and the documented square, rectangle, and box / bench identifiers.
-- `PatternCard` associates a whole visible card with a native radio input. The caller owns controlled or uncontrolled selection and supplies preview content; previews are decorative by default, while callers may opt into accessible preview content.
+- `PatternCard` associates a whole visible card with a native radio input. The caller owns controlled or uncontrolled selection and supplies preview content; previews are decorative by default, while callers may opt into accessible preview content. The square pattern browser now reuses this shell without moving catalogue data or selection state into it.
 - `PatternFilter` is a controlled generic fieldset. Its explicit selection mode renders native radios for one active value or native checkboxes for combinable values, then reports values without filtering records internally. Product category and color values remain intentionally undefined until the catalogue tasks.
 - `CushionPreview` provides a labeled, contained visual region, a deliberate empty state, and separate descriptive content. Supplied visuals are decorative; accurate proportions, compositing, pattern tiling, and scale rendering remain deferred.
 - `ConfigurationSummary` renders caller-formatted label/value items as a description list, including intentional empty and missing-value fallbacks. It performs no measurement conversion, calculation, validation, pricing, or totals.
 
-Future parent components remain responsible for pattern state integration, data fetching, filter logic, later workflow navigation, accurate preview rendering, pricing, persistence, and API integration. The square measurement vertical slice now owns only its documented validation and conversion behavior.
+Future parent components remain responsible for data fetching, filter logic, later workflow navigation, accurate preview rendering, pricing, persistence, and API integration. The square configurator now integrates only the three-record local pattern vertical slice described below.
 
 ## Configuration state
 
@@ -97,7 +97,7 @@ The central in-memory configuration state lives in `context/configuration/`. `Co
 
 The state follows the documented shared configuration contract: `shape`, `width`, `height`, `thickness`, `unit`, `patternId`, and `patternScale`. Shape, measurements, and pattern selection begin as `null`; the initial unit is centimetres and the documented default pattern scale is `1`. Supported actions set each general field, set square width and mirrored height together with `setSquareWidth`, convert all non-null measurements and change units together with `setMeasurementUnit`, or restore the complete initial state with `resetConfiguration`. Measurement actions ignore non-null values that are not finite and greater than zero, while field-specific range validation remains in the measurement UI.
 
-Pure helpers in `context/configuration/measurements.ts` define the centimetre rules, decimal parsing, two-place display formatting, `1 in = 2.54 cm` conversion, and range presentation. The reducer only applies typed immutable transitions; square width mirroring and conversion are atomic so Context never exposes mixed width, height, thickness, and unit values. Pattern data and filtering, later workflow navigation, preview calculations, pricing, persistence, API integration, and saved/shared designs remain deferred to their roadmap tasks.
+Pure helpers in `context/configuration/measurements.ts` define the centimetre rules, decimal parsing, two-place display formatting, `1 in = 2.54 cm` conversion, and range presentation. The reducer only applies typed immutable transitions; square width mirroring and conversion are atomic so Context never exposes mixed width, height, thickness, and unit values. The local pattern records live separately in `data/patterns.ts`; catalogue expansion and filtering, later workflow navigation, preview calculations, pricing, persistence, API integration, and saved/shared designs remain deferred to their roadmap tasks.
 
 ## Shape selection
 
@@ -105,7 +105,7 @@ The static `/configure/` route provides the minimum server-compatible configurat
 
 The selection group uses a native `fieldset`, `legend`, and same-name radio inputs. Each radio is associated with its complete visible card label and supporting text. Checked state is communicated by the native state, a checkmark, persistent Selected text, and a stronger card boundary; focus moves to the visible card treatment. Disabled options retain native disabled semantics and explicit Unavailable in this step text. Labels and status elements meet or exceed the approximately 44px target, wrap at narrow widths, and retain system-color checked, disabled, and focus boundaries in forced-colors CSS.
 
-Only the exact `square` identifier is selectable in this first vertical slice. The already documented `rectangle` and `box` identifiers are shown only as disabled, explicitly unavailable future options; they do not dispatch configuration changes. Selecting square reveals the measurement step and advances the display-only progress indicator from Shape to Measurements. Additional shape behavior, later-step navigation, patterns, previews, pricing, and persistence remain deferred.
+Only the exact `square` identifier is selectable in this first vertical slice. The already documented `rectangle` and `box` identifiers are shown only as disabled, explicitly unavailable future options; they do not dispatch configuration changes. Selecting square reveals the measurement step and advances the display-only progress indicator from Shape to Measurements. Additional shape behavior, later-step navigation, accurate previews, pricing, and persistence remain deferred.
 
 ## Square measurements
 
@@ -119,7 +119,19 @@ Changing the controlled `UnitSelector` dispatches one typed reducer action. The 
 
 The responsive measurement figure uses semantic HTML, existing color and border tokens, visible Width and Thickness labels, plain-language face/profile descriptions, and a caption that explains the square’s mirrored face dimension. The two CSS geometry blocks are decorative and hidden from assistive technology. They retain a system-color outline and no shadow under forced-colors CSS. Inputs compose their visible labels, supporting descriptions, and field-specific errors programmatically; the native unit radio group keeps its fieldset and legend semantics.
 
-Rectangle and box / bench measurements, complete step navigation, pattern selection, accurate previews, pricing, persistence, and API behavior remain deferred.
+Rectangle and box / bench measurements, complete step navigation, accurate previews, pricing, persistence, and API behavior remain deferred.
+
+## Prototype pattern browser
+
+After the square Width and Thickness contain committed values within the existing unit-aware ranges, the `/configure/` route reveals a three-option pattern fieldset and advances the display-only progress indicator to Pattern. `SquarePatternStep` calls the shared `isMeasurementWithinRange` helper instead of maintaining another measurement ruleset. Clearing a required measurement hides the browser without clearing an already committed pattern, so unrelated central state remains intact.
+
+`data/patterns.ts` is the single typed owner of exactly three stable prototype records: `prototype-botanical`, `prototype-geometric`, and `prototype-woven`. Their visible names are Botanical sample, Geometric sample, and Woven sample, matching the visual directions already introduced on the landing page while explicitly avoiding product, availability, inventory, pricing, or performance claims. Catalogue expansion, category and color metadata, filtering, loading states, and backend replacement remain later roadmap work.
+
+Each preview is a responsive CSS gradient rendered from `app/globals.css`. The browser makes no image or network request for these decorative samples, so they stay sharp at any rendered size and have no public URL that can lose the GitHub Pages `/sewncovers` prefix. The visible pattern name and description carry the meaning; the equivalent preview container is hidden from assistive technology.
+
+The browser reuses `PatternCard` inside one native `fieldset` and `legend`. All three same-name radio inputs have visible associated card labels, concise descriptions, native checked state, and whole-card touch targets. Checked cards expose a checkmark, persistent Selected text, and a stronger boundary; unselected, hover, focus-visible, active, and forced-colors treatments use the established shell and global rules. `state.patternId` is the only selected value and changes only through the typed `setPatternId` reducer action, so selection survives Context-driven rerenders without duplicate local selection state.
+
+Pattern scale remains at the central default and has no control in Task 3.4. Accurate cushion compositing, search, categories, uploads, expanded catalogue data, full step navigation, pricing, persistence, cart, and checkout remain deferred.
 
 ## Global layout components
 

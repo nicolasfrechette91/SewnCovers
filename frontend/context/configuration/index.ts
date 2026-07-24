@@ -12,6 +12,7 @@ export {
   formatMeasurement,
   getMeasurementRange,
   isFinitePositiveMeasurement,
+  isMeasurementWithinRange,
   MEASUREMENT_DECIMAL_PLACES,
   MEASUREMENT_RANGES_CM,
   parseMeasurementDraft,

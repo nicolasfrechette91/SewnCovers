@@ -206,6 +206,72 @@ body {
     );
 }
 
+.prototype-pattern {
+  background-color: var(--color-surface-subtle);
+  background-repeat: repeat;
+}
+
+.prototype-pattern-botanical {
+  background-image:
+    radial-gradient(
+      ellipse at 20% 24%,
+      var(--color-brand) 0 9%,
+      transparent 10%
+    ),
+    radial-gradient(
+      ellipse at 48% 62%,
+      var(--color-accent-strong) 0 8%,
+      transparent 9%
+    ),
+    radial-gradient(
+      ellipse at 78% 28%,
+      var(--color-brand) 0 10%,
+      transparent 11%
+    ),
+    radial-gradient(
+      ellipse at 82% 80%,
+      var(--color-accent-strong) 0 7%,
+      transparent 8%
+    );
+  background-size: 5rem 5rem;
+}
+
+.prototype-pattern-geometric {
+  background-color: var(--color-surface);
+  background-image:
+    linear-gradient(
+      135deg,
+      var(--color-accent-strong) 25%,
+      transparent 25% 75%,
+      var(--color-accent-strong) 75%
+    ),
+    linear-gradient(
+      45deg,
+      var(--color-brand) 25%,
+      transparent 25% 75%,
+      var(--color-brand) 75%
+    );
+  background-position:
+    0 0,
+    1.25rem 1.25rem;
+  background-size: 2.5rem 2.5rem;
+}
+
+.prototype-pattern-woven {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 0.4rem,
+      var(--color-border-strong) 0.45rem 0.5rem
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 0.4rem,
+      var(--color-border) 0.45rem 0.5rem
+    );
+  background-size: 100% 100%;
+}
+
 :where(
   a[href],
   area[href],
@@ -270,6 +336,11 @@ body {
     border-color: CanvasText;
     background: Canvas;
     box-shadow: none;
+  }
+
+  .prototype-pattern {
+    border: 1px solid CanvasText;
+    background: Canvas;
   }
 }
 

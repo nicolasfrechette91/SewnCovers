@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import { SquareConfigurator } from "@/components/configurator";
 
 export const metadata: Metadata = {
-  title: "Measure a square cushion | SewnCovers",
+  title: "Configure a square cushion | SewnCovers",
   description:
-    "Choose and measure a square cushion in centimetres or inches with SewnCovers.",
+    "Choose and measure a square cushion, then explore three local prototype patterns with SewnCovers.",
 };
 
 export default function ConfigurePage() {
@@ -17,12 +17,13 @@ export default function ConfigurePage() {
             Cushion configurator
           </p>
           <h1 className="mt-2 font-display text-page-title font-heading tracking-heading text-text-primary">
-            Start with your cushion&apos;s shape and measurements.
+            Choose your cushion&apos;s shape, measurements, and pattern.
           </h1>
           <p className="mt-component break-words text-body text-text-muted">
             Select the available square shape, then record its width and
-            thickness. Pattern, preview, and review steps are shown only for
-            context and are not available yet.
+            thickness before choosing one of three prototype pattern
+            directions. Preview and review steps are shown only for context
+            and are not available yet.
           </p>
         </header>
 

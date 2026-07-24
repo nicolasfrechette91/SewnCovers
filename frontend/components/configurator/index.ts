@@ -20,3 +20,7 @@ export type {
 export { ShapeSelectionStep } from "./shape-selection-step";
 export { SquareConfigurator } from "./square-configurator";
 export { SquareMeasurementStep } from "./square-measurement-step";
+export {
+  hasValidSquareMeasurements,
+  SquarePatternStep,
+} from "./square-pattern-step";

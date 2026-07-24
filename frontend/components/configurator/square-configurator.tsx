@@ -5,6 +5,10 @@ import { useConfiguration } from "@/context/configuration";
 import { ShapeSelectionStep } from "./shape-selection-step";
 import { SquareMeasurementStep } from "./square-measurement-step";
 import {
+  hasValidSquareMeasurements,
+  SquarePatternStep,
+} from "./square-pattern-step";
+import {
   StepIndicator,
   type StepIndicatorStep,
 } from "./step-indicator";
@@ -19,8 +23,18 @@ const configuratorSteps = [
 
 export function SquareConfigurator() {
   const { state } = useConfiguration();
-  const currentStepId =
-    state.shape === "square" ? "measurements" : "shape";
+  const measurementsAreValid =
+    state.shape === "square" &&
+    hasValidSquareMeasurements(
+      state.width,
+      state.thickness,
+      state.unit,
+    );
+  const currentStepId = measurementsAreValid
+    ? "pattern"
+    : state.shape === "square"
+      ? "measurements"
+      : "shape";
 
   return (
     <>
@@ -35,6 +49,7 @@ export function SquareConfigurator() {
       </section>
 
       <SquareMeasurementStep />
+      <SquarePatternStep />
     </>
   );
 }

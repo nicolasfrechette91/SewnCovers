@@ -95,6 +95,24 @@ export function toCentimetres(
   return unit === "cm" ? value : value * CENTIMETRES_PER_INCH;
 }
 
+export function isMeasurementWithinRange(
+  value: number | null,
+  field: MeasurementField,
+  unit: MeasurementUnit,
+): value is number {
+  if (!isFinitePositiveMeasurement(value)) {
+    return false;
+  }
+
+  const valueInCentimetres = toCentimetres(value, unit);
+  const range = MEASUREMENT_RANGES_CM[field];
+
+  return (
+    valueInCentimetres >= range.min &&
+    valueInCentimetres <= range.max
+  );
+}
+
 export function getMeasurementRange(
   field: MeasurementField,
   unit: MeasurementUnit,
@@ -155,14 +173,13 @@ export function parseMeasurementDraft(
     return { issue: "notPositive", value: null };
   }
 
-  const valueInCentimetres = toCentimetres(value, unit);
   const range = MEASUREMENT_RANGES_CM[field];
 
-  if (valueInCentimetres < range.min) {
+  if (toCentimetres(value, unit) < range.min) {
     return { issue: "belowMinimum", value: null };
   }
 
-  if (valueInCentimetres > range.max) {
+  if (!isMeasurementWithinRange(value, field, unit)) {
     return { issue: "aboveMaximum", value: null };
   }
 
