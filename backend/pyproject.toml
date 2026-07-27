@@ -7,7 +7,7 @@ name = "sewncovers-api"
 version = "0.1.0"
 description = "FastAPI backend for the SewnCovers MVP"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "fastapi==0.139.2",
     "pydantic-settings==2.13.1",
