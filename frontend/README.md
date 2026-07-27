@@ -27,7 +27,9 @@ On macOS or Linux, create it only when it does not already exist:
 test -e .env.local || cp .env.example .env.local
 ```
 
-`NEXT_PUBLIC_API_URL` is the browser-visible FastAPI address and defaults to `http://localhost:8000` in the example. Every `NEXT_PUBLIC_` value is embedded in browser code, so never put credentials, database URLs, API keys, or other private values there. Local environment files are ignored and must not be committed.
+`NEXT_PUBLIC_API_URL` is the only application environment variable owned by the frontend. It is optional until the typed API client is added in Task 6.1; the example provides the safe local value `http://localhost:8000`. When present, it must be an absolute HTTP or HTTPS URL without credentials, a query, or a fragment. The typed configuration boundary trims whitespace and removes trailing slashes before exposing an immutable `{ apiUrl: string | undefined }` object. Invalid values fail with an actionable error naming `NEXT_PUBLIC_API_URL` without echoing its contents.
+
+Next.js reads `NEXT_PUBLIC_API_URL` explicitly at build time and embeds it in browser code. Changing it after `npm run build` does not change an existing static export. Never put credentials, database URLs, API keys, or other private values in `NEXT_PUBLIC_` variables. Backend environment variables are not imported by the frontend. Local environment files are ignored and must not be committed.
 
 ## Run the frontend
 
@@ -48,10 +50,11 @@ Run these commands from the `frontend` directory:
 ```powershell
 npm run lint
 npm run typecheck
+npm run check:config
 npm run build
 ```
 
-`npm run typecheck` performs strict TypeScript checking without emitting files. `npm run build` performs the production build and writes the static export to the ignored `out/` directory. The existing configuration keeps local development and ordinary local builds at the domain root while GitHub Actions builds use the `/sewncovers` base path required by GitHub Pages.
+`npm run typecheck` performs strict TypeScript checking without emitting files. `npm run check:config` exercises valid, missing, normalized, malformed, unsupported, and secret-safe public URL behavior with Node's built-in test runner; no frontend testing framework was added. `npm run build` performs the production build and writes the static export to the ignored `out/` directory. The existing configuration keeps local development and ordinary local builds at the domain root while GitHub Actions builds use the `/sewncovers` base path required by GitHub Pages.
 
 ## Design tokens
 
@@ -87,9 +90,9 @@ Reusable domain-oriented shells live in `components/configurator/` and are expor
 - `PatternCard` associates a whole visible card with a native radio input. The caller owns controlled or uncontrolled selection and supplies preview content; previews are decorative by default, while callers may opt into accessible preview content. The shared pattern browser reuses this shell without moving catalogue data or selection state into it.
 - `PatternFilter` is a controlled generic fieldset. Its explicit selection mode renders native radios for one active value or native checkboxes for combinable values, then reports values without filtering records internally. The pattern browser supplies its typed category and color options from the local catalogue module.
 - `CushionPreview` is a labeled semantic figure with a contained decorative visual region, a deliberate empty state, and caller-supplied `figcaption` content. The shape-aware preview supplies proportional geometry and a textual summary without moving configuration state into the shell.
-- `ConfigurationSummary` renders caller-formatted label/value items as a description list, including intentional empty and missing-value fallbacks. It performs no measurement conversion, calculation, validation, pricing, or totals.
+- `ConfigurationSummary` renders caller-formatted label/value items as a description list, including intentional empty and missing-value fallbacks. The review derives those items before passing them to the shell; the shell performs no measurement conversion, calculation, validation, pricing, or totals.
 
-Future parent components remain responsible for data fetching, later workflow navigation, pricing, persistence, and API integration. `Configurator`, `MeasurementStep`, `PatternStep`, and `PreviewStep` share the completed three-shape flow; the illustration and measurement-diagram components retain shape-specific SVG branches where the geometry or terminology genuinely differs.
+Future parent components remain responsible for data fetching, persistence, and API integration. `Configurator`, `MeasurementStep`, `PatternStep`, `PreviewStep`, and the review components share the completed three-shape flow; the illustration and measurement-diagram components retain shape-specific SVG branches where the geometry or terminology genuinely differs.
 
 ## Configuration state
 
@@ -101,7 +104,7 @@ Pure helpers in `context/configuration/measurements.ts` define the centimetre ru
 
 ## Shape selection
 
-The static `/configure/` route retains a server-rendered page shell around the interactive configurator subtree. Its display-only `StepIndicator` derives Shape, Measurements, Pattern, or Preview from completed central state, while Review remains upcoming. `ShapeSelectionStep` reads `state.shape` directly and dispatches the existing typed `setShape` action; it does not duplicate the selected shape in local component state.
+The static `/configure/` route retains a server-rendered page shell around the interactive configurator subtree. Its display-only `StepIndicator` derives Shape, Measurements, Pattern, or Preview from completed central state and marks Review current only while the review screen is visible. `ShapeSelectionStep` reads `state.shape` directly and dispatches the existing typed `setShape` action; it does not duplicate the selected shape in local component state.
 
 The selection group uses a native `fieldset`, `legend`, and same-name radio inputs. Square, Rectangle, and Box / bench are all enabled. Each radio is associated with its complete visible card label and supporting text. Checked state is communicated by the native state, a checkmark, persistent Selected text, and a stronger card boundary; focus moves to the visible card treatment. Labels and status elements meet or exceed the approximately 44px target, wrap at narrow widths, and retain system-color checked and focus boundaries in forced-colors CSS.
 
@@ -151,7 +154,27 @@ Pattern size uses a labeled native range input plus visible Smaller and Larger n
 
 The preview shell is a semantic figure. Its caption includes Shape, Pattern, shape-specific dimension terms, Thickness, and Pattern scale, so the decorative SVG and gradient are hidden from assistive technology without losing information. Square retains its Face dimensions summary; Rectangle reports Width and Height; Box / bench reports Width and Depth. Before completion, the figure stays visible with an honest shape-specific message and `Invalid or incomplete` or `Not selected` summary values; it never invents measurements or silently chooses a pattern. Forced-colors CSS replaces patterned and projected geometry with system-color outlines and surfaces. The control transitions retain reduced-motion suppression.
 
-Photorealistic or interactive 3D rendering, manufacturing output, complex shapes, complete workflow navigation, review, pricing, persistence, APIs, cart, and checkout remain deferred.
+Photorealistic or interactive 3D rendering, manufacturing output, complex shapes, pricing, persistence, APIs, cart, and checkout remain deferred.
+
+## Configuration review and summary output
+
+The review remains inside `/configure/` and the existing `ConfigurationProvider`. `Configurator` owns only the local configure-versus-review view state; authoritative shape, dimensions, unit, `patternId`, and `patternScale` remain in Context. The editing subtree stays mounted while review is visible, so returning to Pattern preserves its local category and color filters, selected-pattern visibility behavior, and every unrelated configuration value.
+
+The pure `deriveReviewReadiness` helper reuses `hasValidMeasurementsForShape`, the shared field-range helpers, the shared pattern-scale validator, the authoritative shape definitions, and a validated `PatternCatalogueResult`. Review requires a supported shape, every shape-required measurement, a selected ID that resolves in a ready catalogue, and a valid pattern scale. Empty or invalid catalogues, missing or unresolved selections, missing fields, invalid ranges, and an invalid scale return specific section-owned issues instead of a partial summary. Printing and downloading are withheld, the affected edit actions remain named, and pattern editing stays disabled with a visible reason until prerequisite measurements make that existing section available.
+
+Ready summaries use a semantic description list in a stable order: Shape; Width; Equal face dimensions for Square or Height/Depth for Rectangle/Box / bench; Unit; Thickness; Pattern; Pattern category; Pattern colors; and Pattern scale. Square explicitly states that width and height are equal, Rectangle uses Height, and Box / bench uses Depth without exposing its shared-model storage field. All measurements use the existing two-decimal formatter, and the reused shape-aware preview remains decorative alongside the complete textual equivalent.
+
+Review edit actions return to Shape, Measurements, Pattern, or Pattern scale without route navigation or resets. Stable element IDs identify the relevant legend or range control. A layout effect runs only across the review-to-edit view change, focuses that semantic target, and scrolls it to the start without animation; edits made while the configuration view is already visible focus the target directly. A focused Return to review action remains available after editing and disables with a visible reason when a change makes the configuration incomplete. The display-only step indicator remains non-interactive.
+
+The visible Prototype notice states that SewnCovers is a prototype, the summary is not an order, quote, or manufacturing specification, the values are demonstrations, and no purchase, payment, fabrication, delivery, or submission occurs. The notice is a labeled complementary region rather than an error alert and is repeated verbatim in the downloaded summary. System-color boundaries preserve the notice and programmatically focused edit targets in forced-colors mode.
+
+Print summary calls only the browser's native print flow from its button. Focused print CSS removes site navigation, the editing workflow, preview imagery, edit controls, and output buttons; it keeps the summary title, readable black-on-white details, and prototype notice, removes decorative backgrounds and shadows, and avoids page breaks inside the notice and details. Browser Print to PDF is available through the native dialog; no PDF library or generated PDF is included.
+
+Download summary generates `sewncovers-configuration-summary.txt` locally as UTF-8 plain text only after its button is activated. Pure `serializeReviewSummary` uses the same derived fields as the visible description list, a stable order, and the complete notice; it includes no internal identifiers, customer data, price, timestamp, tracking value, or order number. The small client action creates one Blob URL, removes its temporary link immediately, and revokes the URL on the next browser task (or immediately if the click fails). No request, endpoint, persistence layer, dependency, or file storage is involved.
+
+The review heading is programmatically focusable for predictable entry, labels and values retain definition-list relationships, edit and output actions are native buttons, the prototype notice is discoverable without an alert role, and unavailable output has visible and programmatic reasons. The layout wraps at narrow widths, keeps approximately 44-pixel or larger controls, and prints without relying on decorative pattern imagery. Screen-reader software, OS-level forced-colors, physical printers, browser zoom, and complete assistive-technology testing remain outside the automated verification performed for this task.
+
+Orders, quotes, checkout, payment, submission, pricing, availability, manufacturing specifications, customer information, persistence, sharing, server PDFs, and later roadmap work remain deferred.
 
 ## Global layout components
 

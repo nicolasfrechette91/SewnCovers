@@ -52,10 +52,12 @@ const colorFilterOptions: readonly PatternFilterOption<PatternColorFilter>[] =
 
 export interface PatternStepProps {
   catalogueResult?: PatternCatalogueResult;
+  focusTargetId?: string;
 }
 
 export function PatternStep({
   catalogueResult = patternCatalogue,
+  focusTargetId,
 }: PatternStepProps) {
   const { state, dispatch } = useConfiguration();
   const generatedId = useId();
@@ -123,7 +125,11 @@ export function PatternStep({
         aria-describedby={supportingTextId}
         className="min-w-0 rounded-panel border border-border bg-surface p-card shadow-raised"
       >
-        <legend className="max-w-full px-1 font-display text-section-title font-heading tracking-heading text-text-primary">
+        <legend
+          id={focusTargetId}
+          tabIndex={focusTargetId ? -1 : undefined}
+          className="configurator-edit-target max-w-full scroll-mt-layout px-1 font-display text-section-title font-heading tracking-heading text-text-primary"
+        >
           Choose a pattern
         </legend>
         <p

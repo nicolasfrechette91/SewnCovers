@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "check:config": "node --test config/environment.test.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit"
   },

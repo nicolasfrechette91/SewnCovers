@@ -10,7 +10,13 @@ import { cushionShapeDefinitions } from "@/data/shapes";
 
 import { ShapeIllustration } from "./shape-illustration";
 
-export function ShapeSelectionStep() {
+export interface ShapeSelectionStepProps {
+  focusTargetId?: string;
+}
+
+export function ShapeSelectionStep({
+  focusTargetId,
+}: ShapeSelectionStepProps = {}) {
   const { state, dispatch } = useConfiguration();
   const generatedId = useId();
   const supportingTextId = `${generatedId}-supporting-text`;
@@ -24,7 +30,11 @@ export function ShapeSelectionStep() {
       aria-describedby={supportingTextId}
       className="min-w-0 rounded-panel border border-border bg-surface p-card shadow-raised"
     >
-      <legend className="max-w-full px-1 font-display text-section-title font-heading tracking-heading text-text-primary">
+      <legend
+        id={focusTargetId}
+        tabIndex={focusTargetId ? -1 : undefined}
+        className="configurator-edit-target max-w-full scroll-mt-layout px-1 font-display text-section-title font-heading tracking-heading text-text-primary"
+      >
         Choose your cushion shape
       </legend>
       <p

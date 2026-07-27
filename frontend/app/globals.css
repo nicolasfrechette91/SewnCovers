@@ -634,6 +634,17 @@ body {
   stroke-width: 2;
 }
 
+.configurator-edit-target:focus-visible {
+  border-radius: var(--radius-control-small);
+  box-shadow: var(--shadow-focus);
+  outline: 3px solid transparent;
+  outline-offset: 3px;
+}
+
+.review-preview > section {
+  margin-top: 0;
+}
+
 :where(
   a[href],
   area[href],
@@ -728,6 +739,16 @@ body {
     fill: Canvas;
     stroke: CanvasText;
   }
+
+  .prototype-notice {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
+  .configurator-edit-target:focus-visible {
+    box-shadow: none;
+    outline-color: Highlight;
+  }
 }
 
 .unit-selector-input:focus-visible + .unit-selector-label {
@@ -773,5 +794,79 @@ body {
   .shape-option-input:focus-visible + .shape-option-label {
     box-shadow: none;
     outline-color: Highlight;
+  }
+}
+
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  body {
+    font-size: 11pt;
+  }
+
+  body > header,
+  body > footer,
+  .print-hidden {
+    display: none !important;
+  }
+
+  .configuration-page {
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .configuration-page-content {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .configuration-review-screen {
+    display: block !important;
+    margin: 0 !important;
+    color: #000 !important;
+  }
+
+  .configuration-review-screen :where(h2, h3, p, dt, dd) {
+    color: #000 !important;
+  }
+
+  .configuration-review-title,
+  .prototype-notice,
+  .configuration-review-details {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .prototype-notice,
+  .configuration-review-details {
+    border: 1px solid #000 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .configuration-review-details {
+    margin-top: 8mm;
+  }
+
+  .review-summary-layout {
+    display: block !important;
+    margin-top: 0 !important;
+  }
+
+  .configuration-review-details dl,
+  .configuration-review-details div {
+    border-color: #777 !important;
+  }
+
+  .configuration-review-details dd {
+    text-align: left !important;
   }
 }

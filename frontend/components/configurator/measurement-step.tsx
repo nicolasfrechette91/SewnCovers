@@ -80,12 +80,14 @@ function getSupportingText(
 }
 
 function ShapeMeasurementForm({
+  focusTargetId,
   height,
   shape,
   thickness,
   unit,
   width,
 }: Readonly<{
+  focusTargetId?: string;
   height: number | null;
   shape: CushionShape;
   thickness: number | null;
@@ -218,7 +220,11 @@ function ShapeMeasurementForm({
 
   return (
     <fieldset className="min-w-0 rounded-panel border border-border bg-surface p-card shadow-raised">
-      <legend className="max-w-full px-1 font-display text-section-title font-heading tracking-heading text-text-primary">
+      <legend
+        id={focusTargetId}
+        tabIndex={focusTargetId ? -1 : undefined}
+        className="configurator-edit-target max-w-full scroll-mt-layout px-1 font-display text-section-title font-heading tracking-heading text-text-primary"
+      >
         Measure your {definition.name.toLowerCase()} cushion
       </legend>
       <p className="mt-2 max-w-3xl break-words text-body text-text-muted">
@@ -254,7 +260,13 @@ function ShapeMeasurementForm({
   );
 }
 
-export function MeasurementStep() {
+export interface MeasurementStepProps {
+  focusTargetId?: string;
+}
+
+export function MeasurementStep({
+  focusTargetId,
+}: MeasurementStepProps = {}) {
   const { state } = useConfiguration();
 
   if (state.shape === null) {
@@ -268,6 +280,7 @@ export function MeasurementStep() {
     >
       <ShapeMeasurementForm
         key={`${state.shape}-${state.unit}`}
+        focusTargetId={focusTargetId}
         height={state.height}
         shape={state.shape}
         thickness={state.thickness}

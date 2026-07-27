@@ -18,11 +18,27 @@ export type {
   StepIndicatorStep,
 } from "./step-indicator";
 export { ShapeSelectionStep } from "./shape-selection-step";
+export type { ShapeSelectionStepProps } from "./shape-selection-step";
 export { Configurator } from "./configurator";
 export { MeasurementStep } from "./measurement-step";
+export type { MeasurementStepProps } from "./measurement-step";
 export { PatternStep } from "./pattern-step";
 export type { PatternStepProps } from "./pattern-step";
 export { PreviewStep } from "./preview-step";
+export type { PreviewStepProps } from "./preview-step";
+export {
+  deriveReviewReadiness,
+  PROTOTYPE_NOTICE,
+  serializeReviewSummary,
+  SUMMARY_DOWNLOAD_FILENAME,
+} from "./review-summary";
+export type {
+  ReviewIssue,
+  ReviewReadiness,
+  ReviewSection,
+  ReviewSummary,
+  ReviewSummaryField,
+} from "./review-summary";
 export {
   calculatePreviewGeometry,
   PREVIEW_VIEWBOX_HEIGHT,

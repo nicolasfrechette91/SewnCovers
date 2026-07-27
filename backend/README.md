@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the minimal Python and FastAPI service for SewnCovers. It currently provides a temporary root endpoint for scaffold verification only. Database integration, environment-based settings, CORS, database-aware health checks, and business endpoints are intentionally deferred to later roadmap tasks.
+This directory contains the minimal Python and FastAPI service for SewnCovers. It provides a temporary root endpoint for scaffold verification, a typed environment-settings boundary, and lazy SQLAlchemy 2 session infrastructure. Database models, migrations, persistence, CORS, database-aware health checks, and business endpoints are intentionally deferred to later roadmap tasks.
 
 ## Requirements
 
@@ -51,7 +51,31 @@ On macOS or Linux, create it only when it does not already exist:
 test -e .env || cp .env.example .env
 ```
 
-`ENVIRONMENT=development` and `FRONTEND_ORIGIN=http://localhost:3000` are safe local placeholders. `DATABASE_URL` is intentionally empty because database setup is deferred; a developer must supply it privately only when a later task requires it. The current scaffold does not load any of these values, so they are not required to run the minimal application. Never commit `.env`, a Neon connection string, passwords, tokens, or credentials.
+The immutable settings boundary in `app/settings.py` reads backend process variables and, when settings are first requested, the backend `.env` file. Importing the module alone does not instantiate settings or create a network or database connection. Settings are cached only through `get_settings()` and tests can call `reset_settings_cache()` or instantiate `Settings(_env_file=None, ...)` directly for isolated overrides.
+
+| Variable | Status | Expected value | Behavior |
+| --- | --- | --- | --- |
+| `ENVIRONMENT` | Optional, defaults to `development` | `development`, `test`, or `production` | Trimmed and normalized to lowercase at backend process runtime. |
+| `FRONTEND_ORIGIN` | Optional until Task 4.3 | One absolute HTTP(S) origin without credentials, path, query, or fragment | Trimmed and trailing slashes removed at backend process runtime. |
+| `DATABASE_URL` | Optional at startup; required when database functionality is requested | Private SQLAlchemy connection URL | Kept server-only in a secret type and excluded from settings representations and serialization. Missing or invalid configuration produces a value-free error naming only the variable. |
+
+The example values are safe local placeholders. `DATABASE_URL` remains empty because the verification endpoint and automated suite do not need a live database; a developer must supply it privately before using database-backed functionality. Validation errors hide input values, and configuration import does not initialize a Neon or database client. Never commit `.env`, a Neon connection string, passwords, tokens, or credentials.
+
+## Database boundary
+
+The backend uses synchronous SQLAlchemy 2 sessions and Psycopg 3. The current application is small and has no concurrent database workflow that justifies an async driver/session stack. Future synchronous FastAPI handlers can run in FastAPI's worker threadpool while keeping ordinary SQLAlchemy transaction behavior explicit.
+
+`app/persistence/database.py` owns the process-wide `Database`, SQLAlchemy `Engine`, typed `sessionmaker[Session]`, and FastAPI `DatabaseSession` dependency. Importing the module constructs only the lightweight owner. The engine and factory are created on the first database request, and SQLAlchemy does not check out a connection until a session actually issues work. Plain `postgresql://` URLs select the installed `postgresql+psycopg` driver. Engine output masks passwords, while the enclosing database owner represents only whether it has initialized.
+
+Each dependency call opens one session, yields it to the request, explicitly rolls it back if downstream work raises, and closes it in all cases. The dependency never commits. `app/main.py` disposes the application-owned engine pool during FastAPI shutdown if it was initialized. Injected `Database` instances own and dispose their own engines; tests use an in-memory SQLite engine with `StaticPool` and FastAPI dependency overrides, so no Neon credential, internet access, or database file is required.
+
+Repository and service responsibilities stay deliberately narrow:
+
+- Concrete repositories will own SQLAlchemy queries and persistence for one domain concept. They may add and flush through their injected session, but never commit or roll back.
+- Services will own use-case validation and coordination. A service wraps its repository calls in `service_transaction`, which commits only after the whole operation succeeds and rolls back repository, validation, or commit failures without masking the original exception.
+- Routes will depend on services rather than exposing sessions or ORM details outside `app/persistence`. No generic base repository or speculative CRUD layer exists. Concrete repositories are deferred until Task 5.2 supplies actual models.
+
+Neon provisioning, live connection checks, models, tables, Alembic migrations, seed data, and application persistence remain deferred to their roadmap tasks.
 
 ## Run the API
 
@@ -86,4 +110,6 @@ To format Python files after making changes, run:
 python -m ruff format .
 ```
 
-The backend does not connect to Neon or any other database yet, and it does not implement pattern, saved-design, authentication, upload, or commercial endpoints. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) for the staged implementation roadmap.
+`pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
+
+The backend does not connect to Neon during import, startup, the verification endpoint, or tests, and it does not implement pattern, saved-design, authentication, upload, or commercial endpoints. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) for the staged implementation roadmap.

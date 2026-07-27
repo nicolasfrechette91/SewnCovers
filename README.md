@@ -71,7 +71,7 @@ The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. D
 
 ## Current state
 
-The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend now has a compact Python 3.12 and FastAPI scaffold with its setup and quality commands documented in [`backend/README.md`](backend/README.md); database integration and business endpoints are not implemented yet.
+The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend has a compact Python 3.12 and FastAPI scaffold plus lazy SQLAlchemy 2 session infrastructure, documented in [`backend/README.md`](backend/README.md). No database-backed models, migrations, persistence, or business endpoints exist yet.
 
 See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task checklist and current handoff state.
 
@@ -96,7 +96,7 @@ cd frontend
 npm run dev
 ```
 
-The frontend is available at <http://localhost:3000>. Copy `frontend/.env.example` to `frontend/.env.local` and `backend/.env.example` to `backend/.env` as described in the application READMEs. The database is not connected yet, and the current frontend may not consume the API until the later integration phase.
+The frontend is available at <http://localhost:3000>. Copy `frontend/.env.example` to `frontend/.env.local` and `backend/.env.example` to `backend/.env` as described in the application READMEs. The API root and tests do not require a database connection, and the current frontend may not consume the API until the later integration phase.
 
 Press `Ctrl+C` in each terminal to stop both development servers. The application READMEs contain the verified install, lint, format, type-check, test, and build commands for Windows PowerShell and macOS/Linux.
 
@@ -107,8 +107,14 @@ Press `Ctrl+C` in each terminal to stop both development servers. The applicatio
 
 Copy the example files to ignored local environment files. Never commit populated `.env` files.
 
-- Frontend: `NEXT_PUBLIC_API_URL`
-- Backend: `DATABASE_URL`, `FRONTEND_ORIGIN`, and `ENVIRONMENT`
+| Owner | Variable | Required now | Validation and lifecycle |
+| --- | --- | --- | --- |
+| Frontend | `NEXT_PUBLIC_API_URL` | No; API integration is Task 6.1 | Absolute HTTP(S) URL, trimmed with trailing slashes removed, and embedded publicly at Next.js build time. |
+| Backend | `ENVIRONMENT` | No; defaults to `development` | One of `development`, `test`, or `production`, parsed at process runtime. |
+| Backend | `FRONTEND_ORIGIN` | No; CORS is Task 4.3 | Absolute HTTP(S) origin, normalized at process runtime. |
+| Backend | `DATABASE_URL` | Only when database functionality is requested | Server-only SQLAlchemy URL loaded lazily at process runtime and redacted from settings and database-boundary output. |
+
+Frontend and backend configuration are separate. Browser bundles must contain no backend variable or secret. The typed boundaries validate configured values without opening network or database connections; see each application README for override and testing details.
 
 ## Free-tier constraints
 

@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import "./config/environment";
+
 const isGitHubPagesBuild = process.env.GITHUB_ACTIONS === "true";
 const basePath = isGitHubPagesBuild ? "/sewncovers" : "";
 

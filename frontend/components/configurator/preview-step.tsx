@@ -163,10 +163,19 @@ function formatValidMeasurement(
     : "Invalid or incomplete";
 }
 
-export function PreviewStep() {
+export interface PreviewStepProps {
+  focusTargetId?: string;
+  showScaleControls?: boolean;
+}
+
+export function PreviewStep({
+  focusTargetId,
+  showScaleControls = true,
+}: PreviewStepProps = {}) {
   const { state, dispatch } = useConfiguration();
   const generatedId = useId();
-  const scaleControlId = `${generatedId}-pattern-scale`;
+  const scaleControlId =
+    focusTargetId ?? `${generatedId}-pattern-scale`;
   const scaleDescriptionId = `${scaleControlId}-description`;
   const selectedPattern = getPatternById(state.patternId);
   const widthIsValid = isMeasurementWithinRange(
@@ -332,7 +341,7 @@ export function PreviewStep() {
               </div>
             </dl>
 
-            {selectedPattern ? (
+            {selectedPattern && showScaleControls ? (
               <div className="mt-component rounded-card border border-border bg-surface-subtle p-control-x py-4">
                 <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
                   <label
