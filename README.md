@@ -67,11 +67,11 @@ sewncovers/
 `- .github/    Continuous integration and deployment workflows (planned)
 ```
 
-The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. Database credentials and other secrets remain in the FastAPI/Render environment. FastAPI is the only application that connects to PostgreSQL on Neon.
+The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. Database credentials and other secrets remain in the FastAPI/Render environment. FastAPI is the only application that connects to PostgreSQL on Neon. Its CORS policy permits the configured frontend origin to make browser requests; CORS is not authentication or authorization and does not protect endpoints from non-browser clients.
 
 ## Current state
 
-The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend has a compact Python 3.12 and FastAPI scaffold plus lazy SQLAlchemy 2 session infrastructure, documented in [`backend/README.md`](backend/README.md). No database-backed models, migrations, persistence, or business endpoints exist yet.
+The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend has a compact Python 3.12 and FastAPI scaffold, explicit CORS policy, and lazy SQLAlchemy 2 session infrastructure, documented in [`backend/README.md`](backend/README.md). No database-backed models, migrations, persistence, or business endpoints exist yet.
 
 See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task checklist and current handoff state.
 
@@ -111,7 +111,7 @@ Copy the example files to ignored local environment files. Never commit populate
 | --- | --- | --- | --- |
 | Frontend | `NEXT_PUBLIC_API_URL` | No; API integration is Task 6.1 | Absolute HTTP(S) URL, trimmed with trailing slashes removed, and embedded publicly at Next.js build time. |
 | Backend | `ENVIRONMENT` | No; defaults to `development` | One of `development`, `test`, or `production`, parsed at process runtime. |
-| Backend | `FRONTEND_ORIGIN` | No; CORS is Task 4.3 | Absolute HTTP(S) origin, normalized at process runtime. |
+| Backend | `FRONTEND_ORIGIN` | Optional in development/test; required in production | One exact HTTP(S) origin, normalized at process runtime. Missing local/test configuration uses `http://localhost:3000`; production must set `https://nicolasfrechette91.github.io` for the configured Pages deployment. |
 | Backend | `DATABASE_URL` | Only when database functionality is requested | Server-only SQLAlchemy URL loaded lazily at process runtime and redacted from settings and database-boundary output. |
 
 Frontend and backend configuration are separate. Browser bundles must contain no backend variable or secret. The typed boundaries validate configured values without opening network or database connections; see each application README for override and testing details.
@@ -119,6 +119,7 @@ Frontend and backend configuration are separate. Browser bundles must contain no
 ## Free-tier constraints
 
 - GitHub Pages serves only the static Next.js export and requires the `/sewncovers` repository base path.
+- The Pages URL is `https://nicolasfrechette91.github.io/sewncovers/`, but its CORS origin is only `https://nicolasfrechette91.github.io`; origins never contain a path.
 - Render free services may spin down, so the UI must explain and retry a slow first request.
 - Neon and Render limits can change and will be verified immediately before deployment.
 - Pattern images stay in the frontend deployment; PostgreSQL stores their paths rather than image data.

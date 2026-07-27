@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the minimal Python and FastAPI service for SewnCovers. It provides a temporary root endpoint for scaffold verification, a typed environment-settings boundary, and lazy SQLAlchemy 2 session infrastructure. Database models, migrations, persistence, CORS, database-aware health checks, and business endpoints are intentionally deferred to later roadmap tasks.
+This directory contains the minimal Python and FastAPI service for SewnCovers. It provides a temporary root endpoint for scaffold verification, a typed environment-settings boundary, an explicit CORS policy, and lazy SQLAlchemy 2 session infrastructure. Database models, migrations, persistence, database-aware health checks, and business endpoints are intentionally deferred to later roadmap tasks.
 
 ## Requirements
 
@@ -56,10 +56,23 @@ The immutable settings boundary in `app/settings.py` reads backend process varia
 | Variable | Status | Expected value | Behavior |
 | --- | --- | --- | --- |
 | `ENVIRONMENT` | Optional, defaults to `development` | `development`, `test`, or `production` | Trimmed and normalized to lowercase at backend process runtime. |
-| `FRONTEND_ORIGIN` | Optional until Task 4.3 | One absolute HTTP(S) origin without credentials, path, query, or fragment | Trimmed and trailing slashes removed at backend process runtime. |
+| `FRONTEND_ORIGIN` | Optional in `development`/`test`; required in `production` | One absolute HTTP(S) origin without credentials, path, query, or fragment | Missing local/test configuration uses `http://localhost:3000`. A production process must explicitly set the Pages origin `https://nicolasfrechette91.github.io`. Whitespace and trailing root slashes are removed at process runtime. |
 | `DATABASE_URL` | Optional at startup; required when database functionality is requested | Private SQLAlchemy connection URL | Kept server-only in a secret type and excluded from settings representations and serialization. Missing or invalid configuration produces a value-free error naming only the variable. |
 
 The example values are safe local placeholders. `DATABASE_URL` remains empty because the verification endpoint and automated suite do not need a live database; a developer must supply it privately before using database-backed functionality. Validation errors hide input values, and configuration import does not initialize a Neon or database client. Never commit `.env`, a Neon connection string, passwords, tokens, or credentials.
+
+## Browser CORS policy
+
+`app/settings.py` owns an immutable typed CORS configuration and `app/main.py` passes it directly to FastAPI's CORS middleware. Each process allows exactly one frontend origin:
+
+- Local development and tests default to `http://localhost:3000`; a valid `FRONTEND_ORIGIN` can override it for an isolated environment.
+- Production refuses to start without `FRONTEND_ORIGIN`. For this repository's GitHub Pages deployment, set it to `https://nicolasfrechette91.github.io`.
+
+The public Pages URL includes `/sewncovers/`, but that suffix is a path, not part of the origin. Origin matching is exact across scheme, hostname, and optional port. Configuration rejects credentials, non-root paths, queries, fragments, unsupported schemes, malformed URLs, and invalid ports. Surrounding whitespace, hostname case, and trailing root slashes are normalized without converting one origin into another.
+
+The allowed requested methods are `GET` and `POST`, covering the roadmap's read endpoints and JSON design creation. Preflight `OPTIONS` requests are handled by the middleware rather than exposed as an application method. The configured request-header allowlist contains only `Content-Type`, needed for future JSON posts; Starlette also reports the standard CORS-safelisted request headers (`Accept`, `Accept-Language`, and `Content-Language`) in preflight responses. Preflight results may be cached for 600 seconds and no response headers are exposed to scripts beyond the CORS defaults. Origins, methods, and headers never use `*`. Credentials are disabled because the MVP has no cookie, HTTP-auth, or other credential requirement.
+
+CORS tells supporting browsers which cross-origin responses frontend scripts may read. It is not authentication or authorization, and non-browser clients can still call public endpoints.
 
 ## Database boundary
 
@@ -110,6 +123,6 @@ To format Python files after making changes, run:
 python -m ruff format .
 ```
 
-`pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
+`pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. FastAPI's existing Starlette middleware supplies CORS, so Task 4.3 adds no dependency. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
 
 The backend does not connect to Neon during import, startup, the verification endpoint, or tests, and it does not implement pattern, saved-design, authentication, upload, or commercial endpoints. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) for the staged implementation roadmap.

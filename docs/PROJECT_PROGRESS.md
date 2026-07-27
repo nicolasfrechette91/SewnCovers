@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 4 - FastAPI backend
-- Current task: 4.2 - Add SQLAlchemy 2 database session and compact repository/service boundaries
+- Current task: 4.3 - Configure explicit local and production CORS origins, methods, and headers
 - Status: Completed
-- Overall progress: 20 / 58 tasks completed
-- Up next: 4.3 - Configure explicit local and production CORS origins, methods, and headers
+- Overall progress: 21 / 58 tasks completed
+- Up next: 4.4 - Implement `GET /health` with process and database status
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -54,7 +54,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | --- | --- | --- |
 | 4.1 | Add typed environment-based configuration management | Completed |
 | 4.2 | Add SQLAlchemy 2 database session and compact repository/service boundaries | Completed |
-| 4.3 | Configure explicit local and production CORS origins, methods, and headers | Not started |
+| 4.3 | Configure explicit local and production CORS origins, methods, and headers | Completed |
 | 4.4 | Implement `GET /health` with process and database status | Not started |
 | 4.5 | Implement active pattern listing with category and color filters | Not started |
 | 4.6 | Implement design creation and public-ID retrieval endpoints | Not started |
@@ -362,3 +362,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - The application lifespan disposes the process-owned engine pool at shutdown if database use initialized it. Tests and future application factories may inject a separate settings provider, engine creator, session-factory builder, engine options, or override the FastAPI database/session dependencies. Each injected owner is responsible for disposing its engine.
 - No generic repository, CRUD framework, ORM model, table, production query, migration, live connection check, or endpoint was invented. Focused boundary tests use a test-only repository/service collaborator plus an isolated in-memory SQLite engine with `StaticPool`, proving factory configuration, missing configuration, secret-safe output, success cleanup, exception rollback and cleanup, service transaction ownership, injected FastAPI sessions, import-time inactivity, disposal, and unchanged root behavior without Neon credentials, internet access, or a database file.
 - Neon provisioning, models, tables, Alembic migrations, seed data, database health behavior, and application persistence remain deferred to their exact later roadmap tasks. All 58 roadmap rows remain present with valid statuses; progress is 20 / 58 and the exact next task is 4.3.
+
+### 2026-07-27 - Explicit FastAPI CORS boundary
+
+- The local frontend origin comes from the documented Next.js development address and backend example: `http://localhost:3000`. The production origin comes from the configured GitHub remote owner and Pages deployment strategy: `https://nicolasfrechette91.github.io`. The public `/sewncovers/` repository suffix is a path and is intentionally excluded from the CORS origin.
+- `backend/app/settings.py` exposes a frozen typed CORS configuration. Development and test processes use the documented local origin when `FRONTEND_ORIGIN` is absent; production refuses missing `FRONTEND_ORIGIN` and is documented with the exact Pages value. A valid explicit value supports isolated test or deployment configuration. Origin parsing accepts only HTTP(S), rejects credentials, non-root paths, query/fragment delimiters, malformed hosts, and invalid ports, and safely normalizes whitespace, host casing, and trailing root slashes.
+- Each process allows one exact origin, requested methods `GET` and `POST`, and configured request header `Content-Type`. Starlette also reports its standard CORS-safelisted request headers in preflight responses. Preflight results use an explicit 600-second maximum age, no additional response headers are exposed, and no origin, method, or header wildcard is used. Credentials remain disabled because the MVP has no cookie or HTTP-auth requirement.
+- `create_application` applies the settings-owned policy directly to FastAPI's `CORSMiddleware` and supports isolated policy tests. The global application retains the existing root response and database-disposal lifespan. Configuration, application construction, startup, root requests, and CORS preflights do not create a database engine, check out a connection, or open a network connection.
+- Backend Pytest passes 43 tests covering local and production origins and preflights, exact-origin mismatches, rejected methods and headers, same-origin/non-CORS behavior, missing and malformed configuration, immutable wildcard-free credential-free policy, the unchanged root endpoint, and the existing database boundaries and lifecycle. Ruff lint and format checks, `pip check`, roadmap integrity checks, and `git diff --check` pass.
+- CORS is documented as a browser response-access control, not authentication or authorization. No endpoint, frontend API call, authentication, database model, migration, Neon access, persistence, deployment, wildcard policy, or Task 4.4 health behavior is included. All 58 roadmap rows remain present; progress is 21 / 58 and the exact next task is 4.4.

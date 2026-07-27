@@ -5,7 +5,15 @@ import pytest
 from pydantic import ValidationError
 
 import app.settings as settings_module
-from app.settings import Settings, get_settings, reset_settings_cache
+from app.settings import (
+    CORS_ALLOWED_HEADERS,
+    CORS_ALLOWED_METHODS,
+    LOCAL_FRONTEND_ORIGIN,
+    PRODUCTION_FRONTEND_ORIGIN,
+    Settings,
+    get_settings,
+    reset_settings_cache,
+)
 
 KNOWN_VARIABLES = ("ENVIRONMENT", "FRONTEND_ORIGIN", "DATABASE_URL")
 
@@ -25,6 +33,7 @@ def test_settings_defaults_and_missing_optional_values(
     assert settings.environment == "development"
     assert settings.frontend_origin is None
     assert settings.database_url is None
+    assert settings.cors.allowed_origins == (LOCAL_FRONTEND_ORIGIN,)
 
 
 def test_whitespace_only_optional_values_are_absent() -> None:
@@ -36,6 +45,24 @@ def test_whitespace_only_optional_values_are_absent() -> None:
 
     assert settings.frontend_origin is None
     assert settings.database_url is None
+
+
+def test_cors_configuration_is_explicit_typed_and_immutable() -> None:
+    settings = Settings(
+        _env_file=None,
+        environment="production",
+        frontend_origin=PRODUCTION_FRONTEND_ORIGIN,
+    )
+
+    assert settings.cors.allowed_origins == (PRODUCTION_FRONTEND_ORIGIN,)
+    assert settings.cors.allowed_methods == CORS_ALLOWED_METHODS == ("GET", "POST")
+    assert settings.cors.allowed_headers == CORS_ALLOWED_HEADERS == ("Content-Type",)
+    assert settings.cors.exposed_headers == ()
+    assert settings.cors.allow_credentials is False
+    assert settings.cors.preflight_max_age_seconds == 600
+
+    with pytest.raises((AttributeError, TypeError)):
+        settings.cors.allow_credentials = True
 
 
 def test_settings_trim_and_normalize_overrides() -> None:
@@ -61,6 +88,11 @@ def test_settings_trim_and_normalize_overrides() -> None:
         "not a URL",
         "ftp://frontend.example.com",
         "https://frontend.example.com/path",
+        "https://frontend.example.com?",
+        "https://frontend.example.com#",
+        "https://user@frontend.example.com",
+        "https://:password@frontend.example.com",
+        "https://frontend.example.com:invalid",
     ],
 )
 def test_settings_reject_invalid_frontend_origins(value: str) -> None:
@@ -70,6 +102,15 @@ def test_settings_reject_invalid_frontend_origins(value: str) -> None:
     message = str(error.value)
     assert "FRONTEND_ORIGIN" in message
     assert value not in message
+
+
+def test_production_requires_frontend_origin_without_echoing_other_values() -> None:
+    with pytest.raises(ValidationError) as error:
+        Settings(_env_file=None, environment="production")
+
+    message = str(error.value)
+    assert "FRONTEND_ORIGIN" in message
+    assert "required when ENVIRONMENT is production" in message
 
 
 def test_unsupported_environment_error_does_not_echo_input() -> None:
@@ -111,6 +152,7 @@ def test_cached_settings_can_be_reset_for_isolated_overrides(
     monkeypatch.setenv("ENVIRONMENT", "test")
     first = get_settings()
     monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("FRONTEND_ORIGIN", PRODUCTION_FRONTEND_ORIGIN)
     cached = get_settings()
 
     assert first is cached
@@ -121,6 +163,7 @@ def test_cached_settings_can_be_reset_for_isolated_overrides(
 
     assert overridden is not first
     assert overridden.environment == "production"
+    assert overridden.frontend_origin == PRODUCTION_FRONTEND_ORIGIN
 
     reset_settings_cache()
 
