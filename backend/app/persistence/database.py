@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from threading import RLock
 from typing import Annotated, Any
 
@@ -145,10 +146,9 @@ def dispose_application_database() -> None:
     _application_database.dispose()
 
 
-def get_session(
-    database: Annotated[Database, Depends(get_database)],
-) -> Iterator[Session]:
-    """Yield one request session, rolling back failures and always closing it."""
+@contextmanager
+def session_scope(database: Database) -> Iterator[Session]:
+    """Own one session, rolling back failures and always closing it."""
     session = database.open_session()
     try:
         yield session
@@ -160,6 +160,14 @@ def get_session(
         raise
     finally:
         session.close()
+
+
+def get_session(
+    database: Annotated[Database, Depends(get_database)],
+) -> Iterator[Session]:
+    """Yield one request session, rolling back failures and always closing it."""
+    with session_scope(database) as session:
+        yield session
 
 
 DatabaseSession = Annotated[Session, Depends(get_session)]

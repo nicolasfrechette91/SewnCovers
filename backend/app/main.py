@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.health import HealthResponse, read_health
 from app.persistence.database import dispose_application_database
 from app.settings import Settings, get_settings
 
@@ -36,6 +37,18 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         max_age=cors.preflight_max_age_seconds,
     )
     application.add_api_route("/", read_root, methods=["GET"])
+    application.add_api_route(
+        "/health",
+        read_health,
+        methods=["GET"],
+        response_model=HealthResponse,
+        responses={
+            503: {
+                "description": "Database is unconfigured or unavailable",
+                "model": HealthResponse,
+            }
+        },
+    )
     return application
 
 

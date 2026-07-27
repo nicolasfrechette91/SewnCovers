@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 4 - FastAPI backend
-- Current task: 4.3 - Configure explicit local and production CORS origins, methods, and headers
+- Current task: 4.4 - Implement `GET /health` with process and database status
 - Status: Completed
-- Overall progress: 21 / 58 tasks completed
-- Up next: 4.4 - Implement `GET /health` with process and database status
+- Overall progress: 22 / 58 tasks completed
+- Up next: 4.5 - Implement active pattern listing with category and color filters
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -55,7 +55,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 4.1 | Add typed environment-based configuration management | Completed |
 | 4.2 | Add SQLAlchemy 2 database session and compact repository/service boundaries | Completed |
 | 4.3 | Configure explicit local and production CORS origins, methods, and headers | Completed |
-| 4.4 | Implement `GET /health` with process and database status | Not started |
+| 4.4 | Implement `GET /health` with process and database status | Completed |
 | 4.5 | Implement active pattern listing with category and color filters | Not started |
 | 4.6 | Implement design creation and public-ID retrieval endpoints | Not started |
 | 4.7 | Enforce business validation and consistent field-aware API errors | Not started |
@@ -156,7 +156,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 ### 2026-07-22 - FastAPI service scaffold
 
-- The backend supports Python 3.12 (`>=3.12,<3.13`) and uses standard `venv` plus pip for broad local and Render compatibility.
+- The backend supports Python 3.13 (`>=3.13,<3.14`) and uses standard `venv` plus pip for broad local and Render compatibility.
 - `backend/pyproject.toml` is the single dependency source of truth. Runtime and `dev` optional dependencies are separated and direct versions are pinned; no lockfile is included because standard pip does not normally generate one.
 - The compact structure contains `app/main.py`, package markers, one scaffold test, the environment example, project metadata, and backend setup documentation. The application is titled `SewnCovers API` and exposes only a temporary `GET /` verification response.
 - Database connections, settings management, CORS, database-aware health behavior, patterns, saved designs, authentication, uploads, and commercial behavior remain deferred to their roadmap tasks.
@@ -175,10 +175,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ### 2026-07-22 - Repeatable local setup verification
 
 - Node.js 24.15.0 and npm 11.12.1 satisfied Next.js's Node.js 20.9.0 minimum. From `frontend`, `npm ci`, `npm run lint`, `npm run typecheck`, and `npm run build` passed. The static export generated `/` and `/_not-found`; as previously documented, the build required outbound access to download and self-host Geist. `npm ci` reported three audit advisories (one moderate and two high), but no unrelated dependency upgrade was performed during this task.
-- The preserved `backend/.venv` used Python 3.12.13. From `backend`, the equivalent non-activated PowerShell commands `& '.\.venv\Scripts\python.exe' -m pip install -e ".[dev]"`, `& '.\.venv\Scripts\python.exe' -m pip check`, `& '.\.venv\Scripts\python.exe' -m ruff format --check .`, `& '.\.venv\Scripts\python.exe' -m ruff check .`, and `& '.\.venv\Scripts\python.exe' -m pytest` passed; Pytest collected and passed the scaffold test.
+- The preserved `backend/.venv` now uses Python 3.13.2. From `backend`, the equivalent non-activated PowerShell commands `& '.\.venv\Scripts\python.exe' -m pip install -e ".[dev]"`, `& '.\.venv\Scripts\python.exe' -m pip check`, `& '.\.venv\Scripts\python.exe' -m ruff format --check .`, `& '.\.venv\Scripts\python.exe' -m ruff check .`, and `& '.\.venv\Scripts\python.exe' -m pytest` pass.
 - `npm run dev` and `& '.\.venv\Scripts\python.exe' -m uvicorn app.main:app --reload` ran concurrently without a port conflict. While both remained active, `http://localhost:3000/`, `http://127.0.0.1:8000/`, `http://127.0.0.1:8000/docs`, and `http://127.0.0.1:8000/openapi.json` returned HTTP 200. The backend root returned `{"service":"SewnCovers API","status":"ready"}` and OpenAPI identified `SewnCovers API`.
 - Local frontend HTML did not contain `/sewncovers/`; `/sewncovers/` returned 404 as expected, all discovered `/_next/` assets plus `/next.svg` and `/vercel.svg` returned 200, and the browser rendered both images successfully. The scaffold Vercel logo declaration was corrected from 16x16 to its 16x14 aspect ratio; after the correction, the browser warning/error console was empty and lint, strict type-checking, and the production build passed again.
-- Documentation now includes safe copy-if-absent environment commands, explicit macOS/Linux Python 3.12 virtual-environment creation, backend `pip check`, server shutdown instructions, required versions, and the verified two-terminal workflow. The database remains disconnected, environment examples remain optional for the minimal applications, and frontend/API integration remains deferred.
+- Documentation now includes safe copy-if-absent environment commands, explicit macOS/Linux Python 3.13 virtual-environment creation, backend `pip check`, server shutdown instructions, required versions, and the verified two-terminal workflow. The database remains disconnected until database functionality is requested, environment examples remain optional for the minimal applications, and frontend/API integration remains deferred.
 - The task-owned development processes were stopped after the smoke test. Ports 3000 and 8000 had no remaining listeners, and no unrelated processes were terminated.
 
 ### 2026-07-22 - Frontend design-token foundation
@@ -371,3 +371,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - `create_application` applies the settings-owned policy directly to FastAPI's `CORSMiddleware` and supports isolated policy tests. The global application retains the existing root response and database-disposal lifespan. Configuration, application construction, startup, root requests, and CORS preflights do not create a database engine, check out a connection, or open a network connection.
 - Backend Pytest passes 43 tests covering local and production origins and preflights, exact-origin mismatches, rejected methods and headers, same-origin/non-CORS behavior, missing and malformed configuration, immutable wildcard-free credential-free policy, the unchanged root endpoint, and the existing database boundaries and lifecycle. Ruff lint and format checks, `pip check`, roadmap integrity checks, and `git diff --check` pass.
 - CORS is documented as a browser response-access control, not authentication or authorization. No endpoint, frontend API call, authentication, database model, migration, Neon access, persistence, deployment, wildcard policy, or Task 4.4 health behavior is included. All 58 roadmap rows remain present; progress is 21 / 58 and the exact next task is 4.4.
+
+### 2026-07-27 - Python 3.13 baseline and typed health endpoint
+
+- Prerequisite maintenance makes Python 3.13 the sole backend baseline: `requires-python` is `>=3.13,<3.14`, Ruff targets `py313`, setup instructions use `python3.13`, and every legacy baseline reference was updated. The existing Python 3.13.2 environment satisfies every unchanged runtime and development pin; no dependency pin or package version required a change.
+- `GET /health` has one typed response model containing only `process` and `database`. The process status is always `healthy` when the request is handled. A successful minimal SQLAlchemy 2 `select(1)` returns HTTP 200 with database status `healthy`; missing or unusable configuration returns HTTP 503 with `unconfigured`; connection or query failure returns HTTP 503 with `unavailable`.
+- Health work starts only when `/health` is requested. Imports, application creation, startup, the preserved root endpoint, and CORS preflights create no engine, session, connection, or query. The health query reuses the SQLAlchemy `Database` owner and shared session scope; every acquired session closes, failures attempt rollback, no health request commits, and application shutdown still disposes an initialized process engine.
+- Health responses expose no database URL, credentials, host, SQL, exception type, or exception detail. Offline tests inject recording sessions or isolated configuration and require neither Neon, a database file, internet access, nor a populated environment file.
+- Python 3.13.2 Pytest passes 49 tests covering all health states, exact response bodies and HTTP statuses, OpenAPI schema, secret safety, success/failure cleanup, connection/query failure, request-only work, unchanged root and CORS behavior, settings, database lifecycle, and import/startup inactivity. Ruff lint and format checks, `pip check`, dependency compatibility, roadmap integrity, and `git diff --check` pass.
+- No model, migration, persistence, authentication, monitoring infrastructure, frontend integration, deployment, additional endpoint, Task 4.5 behavior, dependency upgrade, generated file, or environment file is included. All 58 roadmap rows and their deliverable wording remain present; progress is 22 / 58 and the exact next task is 4.5.

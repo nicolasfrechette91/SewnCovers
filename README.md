@@ -71,13 +71,13 @@ The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. D
 
 ## Current state
 
-The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend has a compact Python 3.12 and FastAPI scaffold, explicit CORS policy, and lazy SQLAlchemy 2 session infrastructure, documented in [`backend/README.md`](backend/README.md). No database-backed models, migrations, persistence, or business endpoints exist yet.
+The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend has a compact Python 3.13 and FastAPI scaffold, explicit CORS policy, typed database-aware health reporting, and lazy SQLAlchemy 2 session infrastructure, documented in [`backend/README.md`](backend/README.md). No database-backed models, migrations, persistence, or business endpoints exist yet.
 
 See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task checklist and current handoff state.
 
 ## Local development
 
-The frontend and backend are independent applications and run in two terminals. The required tools are Node.js 20.9.0 or newer with npm, plus Python 3.12 with `venv` and pip. Install each application's dependencies once by following its README. Preserve any existing `.env.local`, `.env`, dependency directory, or virtual environment; the safe example files are needed only when the corresponding local file does not already exist.
+The frontend and backend are independent applications and run in two terminals. The required tools are Node.js 20.9.0 or newer with npm, plus Python 3.13 with `venv` and pip. Install each application's dependencies once by following its README. Preserve any existing `.env.local`, `.env`, dependency directory, or virtual environment; the safe example files are needed only when the corresponding local file does not already exist.
 
 In the first Windows PowerShell terminal, run the API:
 
@@ -87,7 +87,7 @@ cd backend
 python -m uvicorn app.main:app --reload
 ```
 
-The API is available at <http://127.0.0.1:8000/> and its interactive documentation is at <http://127.0.0.1:8000/docs>.
+The API is available at <http://127.0.0.1:8000/>, its process/database health endpoint is at <http://127.0.0.1:8000/health>, and its interactive documentation is at <http://127.0.0.1:8000/docs>. Health returns HTTP 200 only when its on-request database query succeeds; missing configuration or database failure returns a fixed, secret-safe HTTP 503 response.
 
 In the second terminal, run the frontend:
 
@@ -96,7 +96,7 @@ cd frontend
 npm run dev
 ```
 
-The frontend is available at <http://localhost:3000>. Copy `frontend/.env.example` to `frontend/.env.local` and `backend/.env.example` to `backend/.env` as described in the application READMEs. The API root and tests do not require a database connection, and the current frontend may not consume the API until the later integration phase.
+The frontend is available at <http://localhost:3000>. Copy `frontend/.env.example` to `frontend/.env.local` and `backend/.env.example` to `backend/.env` as described in the application READMEs. The API root, startup, and tests do not require a database connection; only `/health` performs its database check when requested. The current frontend may not consume the API until the later integration phase.
 
 Press `Ctrl+C` in each terminal to stop both development servers. The application READMEs contain the verified install, lint, format, type-check, test, and build commands for Windows PowerShell and macOS/Linux.
 
