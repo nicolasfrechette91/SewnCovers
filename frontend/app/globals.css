@@ -208,6 +208,10 @@ body {
 
 .prototype-pattern {
   --pattern-scale: 1;
+  --pattern-blue: #3e6c7e;
+  --pattern-gold: #b98235;
+  --pattern-charcoal: #3d4540;
+  --pattern-rose: #aa5b70;
 
   background-color: var(--color-surface-subtle);
   background-repeat: repeat;
@@ -336,6 +340,267 @@ body {
         calc(0.5rem * var(--pattern-scale))
     );
   background-size: 100% 100%;
+}
+
+.pattern-fern-trail {
+  background-color: var(--color-surface);
+  background-image:
+    radial-gradient(
+      ellipse at 24% 25%,
+      var(--color-brand) 0 10%,
+      transparent 11%
+    ),
+    radial-gradient(
+      ellipse at 55% 58%,
+      var(--color-brand) 0 12%,
+      transparent 13%
+    ),
+    radial-gradient(
+      ellipse at 82% 84%,
+      var(--color-brand) 0 9%,
+      transparent 10%
+    ),
+    linear-gradient(
+      42deg,
+      transparent 46%,
+      var(--color-brand) 47% 50%,
+      transparent 51%
+    );
+  background-size:
+    calc(6rem * var(--pattern-scale))
+    calc(6rem * var(--pattern-scale));
+}
+
+.pattern-meadow-sprig {
+  background-color: var(--color-surface);
+  background-image:
+    radial-gradient(
+      circle at 30% 30%,
+      var(--pattern-gold) 0 5%,
+      transparent 6%
+    ),
+    radial-gradient(
+      circle at 65% 62%,
+      var(--pattern-blue) 0 6%,
+      transparent 7%
+    ),
+    linear-gradient(
+      62deg,
+      transparent 45%,
+      var(--pattern-blue) 46% 48%,
+      transparent 49%
+    ),
+    linear-gradient(
+      118deg,
+      transparent 52%,
+      var(--pattern-gold) 53% 55%,
+      transparent 56%
+    );
+  background-size:
+    calc(4.5rem * var(--pattern-scale))
+    calc(4.5rem * var(--pattern-scale));
+}
+
+.pattern-diamond-path {
+  background-color: var(--color-surface);
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent 42%,
+      var(--pattern-blue) 43% 48%,
+      transparent 49% 100%
+    ),
+    linear-gradient(
+      -45deg,
+      transparent 42%,
+      var(--pattern-charcoal) 43% 48%,
+      transparent 49% 100%
+    );
+  background-position:
+    0 0,
+    calc(1.5rem * var(--pattern-scale)) 0;
+  background-size:
+    calc(3rem * var(--pattern-scale))
+    calc(3rem * var(--pattern-scale));
+}
+
+.pattern-arch-grid {
+  background-color: var(--color-surface);
+  background-image:
+    radial-gradient(
+      circle at 50% 100%,
+      transparent 0 34%,
+      var(--pattern-gold) 35% 43%,
+      transparent 44%
+    ),
+    radial-gradient(
+      circle at 50% 0,
+      transparent 0 34%,
+      var(--color-accent-strong) 35% 43%,
+      transparent 44%
+    );
+  background-position:
+    0 0,
+    calc(1.75rem * var(--pattern-scale))
+      calc(1.75rem * var(--pattern-scale));
+  background-size:
+    calc(3.5rem * var(--pattern-scale))
+    calc(3.5rem * var(--pattern-scale));
+}
+
+.pattern-harbor-stripe {
+  background-color: var(--color-surface);
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--pattern-blue) 0 calc(1rem * var(--pattern-scale)),
+    var(--color-surface) calc(1rem * var(--pattern-scale))
+      calc(1.35rem * var(--pattern-scale)),
+    var(--pattern-blue) calc(1.35rem * var(--pattern-scale))
+      calc(1.48rem * var(--pattern-scale)),
+    var(--color-surface) calc(1.48rem * var(--pattern-scale))
+      calc(2rem * var(--pattern-scale))
+  );
+}
+
+.pattern-orchard-stripe {
+  background-color: var(--color-surface);
+  background-image: repeating-linear-gradient(
+    118deg,
+    var(--color-brand) 0 calc(0.28rem * var(--pattern-scale)),
+    transparent calc(0.28rem * var(--pattern-scale))
+      calc(0.7rem * var(--pattern-scale)),
+    var(--pattern-gold) calc(0.7rem * var(--pattern-scale))
+      calc(1.05rem * var(--pattern-scale)),
+    transparent calc(1.05rem * var(--pattern-scale))
+      calc(1.8rem * var(--pattern-scale))
+  );
+}
+
+.pattern-ribbon-stripe {
+  background-color: var(--color-surface);
+  background-image: repeating-linear-gradient(
+    0deg,
+    var(--color-accent-strong) 0 calc(0.65rem * var(--pattern-scale)),
+    var(--pattern-rose) calc(0.65rem * var(--pattern-scale))
+      calc(0.82rem * var(--pattern-scale)),
+    var(--color-surface) calc(0.82rem * var(--pattern-scale))
+      calc(1.4rem * var(--pattern-scale))
+  );
+}
+
+.pattern-basket-check {
+  background-color: var(--color-surface);
+  background-image:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--pattern-blue) 78%, transparent) 50%,
+      transparent 50%
+    ),
+    linear-gradient(
+      color-mix(in srgb, var(--pattern-charcoal) 72%, transparent) 50%,
+      transparent 50%
+    );
+  background-position:
+    0 0,
+    calc(1.25rem * var(--pattern-scale))
+      calc(1.25rem * var(--pattern-scale));
+  background-size:
+    calc(2.5rem * var(--pattern-scale))
+    calc(2.5rem * var(--pattern-scale));
+}
+
+.pattern-linen-crosshatch {
+  background-color: var(--color-surface);
+  background-image:
+    repeating-linear-gradient(
+      12deg,
+      transparent 0 calc(0.34rem * var(--pattern-scale)),
+      color-mix(in srgb, var(--pattern-gold) 62%, transparent)
+        calc(0.36rem * var(--pattern-scale))
+        calc(0.4rem * var(--pattern-scale))
+    ),
+    repeating-linear-gradient(
+      102deg,
+      transparent 0 calc(0.48rem * var(--pattern-scale)),
+      var(--color-border-strong) calc(0.5rem * var(--pattern-scale))
+        calc(0.54rem * var(--pattern-scale))
+    );
+}
+
+.pattern-terrace-wave {
+  background-color: var(--color-surface);
+  background-image:
+    radial-gradient(
+      circle at 0 50%,
+      transparent 0 28%,
+      var(--pattern-blue) 29% 42%,
+      transparent 43%
+    ),
+    radial-gradient(
+      circle at 100% 50%,
+      transparent 0 28%,
+      var(--color-brand) 29% 42%,
+      transparent 43%
+    );
+  background-position:
+    0 0,
+    calc(2rem * var(--pattern-scale))
+      calc(2rem * var(--pattern-scale));
+  background-size:
+    calc(4rem * var(--pattern-scale))
+    calc(4rem * var(--pattern-scale));
+}
+
+.pattern-pebble-drift {
+  background-color: var(--color-surface);
+  background-image:
+    radial-gradient(
+      ellipse at 22% 30%,
+      var(--color-accent-strong) 0 14%,
+      transparent 15%
+    ),
+    radial-gradient(
+      ellipse at 70% 68%,
+      var(--pattern-charcoal) 0 11%,
+      transparent 12%
+    ),
+    radial-gradient(
+      ellipse at 88% 18%,
+      var(--color-accent-strong) 0 7%,
+      transparent 8%
+    );
+  background-size:
+    calc(5.5rem * var(--pattern-scale))
+    calc(4.5rem * var(--pattern-scale));
+}
+
+.pattern-confetti-grid {
+  background-color: var(--color-surface);
+  background-image:
+    radial-gradient(
+      circle at 22% 24%,
+      var(--pattern-rose) 0 5%,
+      transparent 6%
+    ),
+    radial-gradient(
+      circle at 74% 72%,
+      var(--pattern-gold) 0 6%,
+      transparent 7%
+    ),
+    linear-gradient(
+      35deg,
+      transparent 46%,
+      var(--color-brand) 47% 53%,
+      transparent 54%
+    );
+  background-position:
+    0 0,
+    0 0,
+    calc(1.5rem * var(--pattern-scale))
+      calc(1.5rem * var(--pattern-scale));
+  background-size:
+    calc(3rem * var(--pattern-scale))
+    calc(3rem * var(--pattern-scale));
 }
 
 .cushion-preview-face {

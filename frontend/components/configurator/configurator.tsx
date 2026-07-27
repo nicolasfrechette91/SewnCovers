@@ -4,7 +4,7 @@ import {
   hasValidMeasurementsForShape,
   useConfiguration,
 } from "@/context/configuration";
-import { getPrototypePatternById } from "@/data/patterns";
+import { getPatternById } from "@/data/patterns";
 
 import { MeasurementStep } from "./measurement-step";
 import { PatternStep } from "./pattern-step";
@@ -32,8 +32,7 @@ export function Configurator() {
     state.thickness,
     state.unit,
   );
-  const patternIsSelected =
-    getPrototypePatternById(state.patternId) !== null;
+  const patternIsSelected = getPatternById(state.patternId) !== null;
   const currentStepId =
     measurementsAreValid && patternIsSelected
       ? "preview"

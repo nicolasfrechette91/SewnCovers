@@ -20,6 +20,7 @@ export interface PatternCardProps {
   onChange?: ChangeEventHandler<HTMLInputElement>;
   onInvalid?: FormEventHandler<HTMLInputElement>;
   patternCategory?: ReactNode;
+  patternColors?: ReactNode;
   patternName: ReactNode;
   preview?: ReactNode;
   previewDecorative?: boolean;
@@ -41,6 +42,7 @@ export function PatternCard({
   onChange,
   onInvalid,
   patternCategory,
+  patternColors,
   patternName,
   preview,
   previewDecorative = true,
@@ -50,8 +52,14 @@ export function PatternCard({
 }: PatternCardProps) {
   const nameId = `${id}-name`;
   const categoryId = patternCategory ? `${id}-category` : undefined;
+  const colorsId = patternColors ? `${id}-colors` : undefined;
   const descriptionId = description ? `${id}-description` : undefined;
-  const describedBy = [ariaDescribedBy, categoryId, descriptionId]
+  const describedBy = [
+    ariaDescribedBy,
+    categoryId,
+    colorsId,
+    descriptionId,
+  ]
     .filter(Boolean)
     .join(" ");
 
@@ -118,6 +126,14 @@ export function PatternCard({
                 className="mt-1 block break-words text-label font-emphasis text-accent-strong"
               >
                 {patternCategory}
+              </span>
+            ) : null}
+            {patternColors ? (
+              <span
+                id={colorsId}
+                className="mt-1 block break-words text-supporting text-text-muted"
+              >
+                Colors: {patternColors}
               </span>
             ) : null}
             {description ? (

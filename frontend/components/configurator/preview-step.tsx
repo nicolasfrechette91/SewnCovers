@@ -18,7 +18,7 @@ import {
   useConfiguration,
   type CushionShape,
 } from "@/context/configuration";
-import { getPrototypePatternById } from "@/data/patterns";
+import { getPatternById } from "@/data/patterns";
 import {
   getCushionShapeDefinition,
   getMeasurementLabel,
@@ -122,6 +122,7 @@ function getEmptyMessage(
   shape: CushionShape,
   measurementsAreValid: boolean,
   patternIsSelected: boolean,
+  patternIdIsPresent: boolean,
   patternScaleIsValid: boolean,
 ): string {
   if (!measurementsAreValid && !patternIsSelected) {
@@ -140,7 +141,9 @@ function getEmptyMessage(
   }
 
   if (!patternIsSelected) {
-    return "Choose a prototype pattern to apply it to the preview.";
+    return patternIdIsPresent
+      ? "The selected pattern is unavailable. Choose another pattern to build the preview."
+      : "Choose a pattern to apply it to the preview.";
   }
 
   if (!patternScaleIsValid) {
@@ -165,7 +168,7 @@ export function PreviewStep() {
   const generatedId = useId();
   const scaleControlId = `${generatedId}-pattern-scale`;
   const scaleDescriptionId = `${scaleControlId}-description`;
-  const selectedPattern = getPrototypePatternById(state.patternId);
+  const selectedPattern = getPatternById(state.patternId);
   const widthIsValid = isMeasurementWithinRange(
     state.width,
     "width",
@@ -277,6 +280,7 @@ export function PreviewStep() {
           shape,
           measurementsAreValid,
           selectedPattern !== null,
+          state.patternId !== null,
           patternScaleIsValid,
         )}
         visual={
@@ -306,7 +310,10 @@ export function PreviewStep() {
                   Pattern
                 </dt>
                 <dd className="break-words">
-                  {selectedPattern?.name ?? "Not selected"}
+                  {selectedPattern?.name ??
+                    (state.patternId === null
+                      ? "Not selected"
+                      : "Selected pattern unavailable")}
                 </dd>
               </div>
               {dimensionDetails.map((detail) => (

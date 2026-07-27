@@ -21,6 +21,7 @@ export { ShapeSelectionStep } from "./shape-selection-step";
 export { Configurator } from "./configurator";
 export { MeasurementStep } from "./measurement-step";
 export { PatternStep } from "./pattern-step";
+export type { PatternStepProps } from "./pattern-step";
 export { PreviewStep } from "./preview-step";
 export {
   calculatePreviewGeometry,
