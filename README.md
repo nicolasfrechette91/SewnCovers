@@ -71,7 +71,7 @@ The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. D
 
 ## Current state
 
-The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend has a compact Python 3.13 and FastAPI service, explicit CORS policy, typed database-aware health reporting, lazy SQLAlchemy 2 session infrastructure, active-pattern listing, immutable design creation/retrieval by opaque public ID, and a typed field-aware error contract, documented in [`backend/README.md`](backend/README.md). No ORM models, migrations, production seed data, live database integration, or frontend API integration exist yet.
+The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend has a compact Python 3.13 and FastAPI service, explicit CORS policy, typed database-aware health reporting, lazy SQLAlchemy 2 session infrastructure, active-pattern listing, immutable design creation/retrieval by opaque public ID, a typed field-aware error contract, and isolated Neon development/production environments, documented in [`backend/README.md`](backend/README.md). No ORM models, migrations, production seed data, application persistence against Neon, or frontend API integration exist yet.
 
 See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task checklist and current handoff state.
 
@@ -121,9 +121,23 @@ Copy the example files to ignored local environment files. Never commit populate
 | Backend | `ENVIRONMENT` | No; defaults to `development` | One of `development`, `test`, or `production`, parsed at process runtime. |
 | Backend | `FRONTEND_ORIGIN` | Optional in development/test; required in production | One exact HTTP(S) origin, normalized at process runtime. Missing local/test configuration uses `http://localhost:3000`; production must set `https://nicolasfrechette91.github.io` for the configured Pages deployment. |
 | Backend | `PORT` | No; defaults to `8000` | Integer from 1 through 65535, read at production Uvicorn process startup; hosting platforms normally provide it. |
-| Backend | `DATABASE_URL` | Only when database functionality is requested | Server-only SQLAlchemy URL loaded lazily at process runtime and redacted from settings and database-boundary output. |
+| Backend | `DATABASE_URL` | Only when database functionality is requested | Server-only SSL-enabled SQLAlchemy URL loaded lazily at process runtime and redacted from settings and database-boundary output. Local development owns the development-branch value in ignored `backend/.env`; the deployed API owns a different production-branch value in its protected Render secret. |
 
 Frontend and backend configuration are separate. Browser bundles must contain no backend variable or secret. The typed boundaries validate configured values without opening network or database connections; `/health`, `/patterns`, and `/designs` begin database work only when requested. See each application README for override and testing details.
+
+Neon uses one `SewnCovers` project in AWS US East 2 (Ohio), matching the planned
+Render Ohio region. Its isolated `production` and `development` branches each use
+their own `sewncovers` database and environment-specific role so local credentials
+cannot address the deployed database.
+Connection strings must be direct PostgreSQL URLs containing `sslmode=require`
+and `channel_binding=require`. Never put either value in this repository, the
+frontend, documentation, test output, screenshots, or shell commands.
+
+The local development value belongs only in ignored `backend/.env`. The production
+value belongs only in the Render web service's protected `DATABASE_URL` secret once
+that service exists. Do not use the production value locally as a temporary
+substitute. The backend README documents the secure console setup and fixed-output
+verification commands.
 
 ## Free-tier constraints
 

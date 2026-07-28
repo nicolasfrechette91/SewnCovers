@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, and lazy SQLAlchemy 2 session infrastructure. ORM models, migrations, indexes, production seed data, live database integration, and later business endpoints remain deferred to their roadmap tasks.
+This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, lazy SQLAlchemy 2 session infrastructure, and isolated Neon development/production environments. ORM models, migrations, indexes, production seed data, application persistence against Neon, and later business endpoints remain deferred to their roadmap tasks.
 
 ## Requirements
 
@@ -58,7 +58,7 @@ The immutable settings boundary in `app/settings.py` reads backend process varia
 | `ENVIRONMENT` | Optional, defaults to `development` | `development`, `test`, or `production` | Trimmed and normalized to lowercase at backend process runtime. |
 | `FRONTEND_ORIGIN` | Optional in `development`/`test`; required in `production` | One absolute HTTP(S) origin without credentials, path, query, or fragment | Missing local/test configuration uses `http://localhost:3000`. A production process must explicitly set the Pages origin `https://nicolasfrechette91.github.io`. Whitespace and trailing root slashes are removed at process runtime. |
 | `PORT` | Optional; hosting platforms normally provide it | Integer from 1 through 65535; defaults to `8000` | Read once at process startup and used by the production Uvicorn entry point. |
-| `DATABASE_URL` | Optional at startup; required when database functionality is requested | Private SQLAlchemy connection URL | Kept server-only in a secret type and excluded from settings representations and serialization. Missing or invalid configuration produces a value-free error naming only the variable. |
+| `DATABASE_URL` | Optional at startup; required when database functionality is requested | Private SSL-enabled SQLAlchemy connection URL | Kept server-only in a secret type and excluded from settings representations and serialization. Local development reads only the development-branch value from ignored `.env`; Render reads only the production-branch value from its protected secret. Missing or invalid configuration produces a value-free error naming only the variable. |
 
 The example values are safe local placeholders. `DATABASE_URL` remains empty because imports, startup, the root endpoint, and the automated suite do not need a live database; a developer must supply it privately before requesting `/health` or `/patterns` against a deployed schema. Validation errors hide input values, and configuration import does not initialize a Neon or database client. Never commit `.env`, a Neon connection string, passwords, tokens, or credentials.
 
@@ -90,7 +90,59 @@ Repository and service responsibilities stay deliberately narrow:
 - Services own use-case validation and coordination. Pattern and design services wrap repository work in `service_transaction`, which commits only after the complete operation succeeds and rolls back repository, validation, collision, not-found, or commit failures without masking the original exception.
 - Routes depend on services rather than exposing sessions or SQLAlchemy details. No generic base repository or speculative CRUD layer exists.
 
-Tasks 4.5 and 4.6 add only the SQLAlchemy Core `patterns` read contract and minimum `cover_designs` persistence contract needed by their repositories. Neither creates a table at import or startup. The design contract includes an internal integer key plus a separate unique public ID, but only the public ID and configuration fields leave the repository. Neon provisioning, ORM models and the complete constraint set, Alembic migrations, indexes, and production seed data remain deferred to their exact Phase 5 tasks.
+Tasks 4.5 and 4.6 add only the SQLAlchemy Core `patterns` read contract and minimum `cover_designs` persistence contract needed by their repositories. Neither creates a table at import or startup. The design contract includes an internal integer key plus a separate unique public ID, but only the public ID and configuration fields leave the repository. The Neon project and environment isolation are configured below; ORM models and the complete constraint set, Alembic migrations, indexes, and production seed data remain deferred to their exact Phase 5 tasks.
+
+## Neon environment setup
+
+The `SewnCovers` Neon project uses AWS US East 2 (Ohio), matching the planned
+Render Ohio region so the database and API remain colocated. It has a persistent
+`development` child branch derived from the default `production` branch, with
+automatic deletion disabled. The branches are configured independently:
+
+| Branch | Database | Role | Owner and credential destination |
+| --- | --- | --- | --- |
+| `production` | `sewncovers` | `sewncovers_deployed` | Deployed FastAPI service only; store its URL only as Render's protected `DATABASE_URL` secret when the service exists. |
+| `development` | `sewncovers` | `sewncovers_local` | Local FastAPI process only; store its URL only in ignored `backend/.env`. |
+
+The environment-specific roles were created separately on their respective
+branches, and each owns only that branch's `sewncovers` database. The generated
+default role and database remain unused by the application. The branches isolate
+data and computes; the separate roles also prevent a credential from being
+reused against the other branch.
+
+Open Neon's **Connect** dialog for the selected branch, database, and role. Select
+a direct connection because later Alembic work requires session-compatible
+connections. Confirm the generated URL contains both `sslmode=require` and
+`channel_binding=require`. Paste the development URL directly into the
+`DATABASE_URL` line of ignored `backend/.env` using a local editor. Do not put it
+in a shell command or shell history. Do not retrieve or copy the production URL
+until the Render service is available; then paste it directly into that service's
+protected `DATABASE_URL` environment secret. Never paste either value into chat,
+documentation, the frontend, a test snapshot, or a tracked file.
+
+From `backend`, verify the configured local branch without printing its URL:
+
+```powershell
+python -c "from fastapi.testclient import TestClient; from app.main import app; client = TestClient(app); response = client.get('/health'); assert response.status_code == 200 and response.json() == {'process': 'healthy', 'database': 'healthy'}; print('local Neon health: healthy')"
+```
+
+The check performs only the health endpoint's `SELECT 1` query and emits one
+fixed, credential-free success line. Task 5.1 verified this check against the
+development branch and independently ran `SELECT 1` against the production
+`sewncovers` database through Neon's SQL Editor. The production URL remains
+unstored while no Render service exists. After Render and its protected secret
+exist, verify production again through the deployed API's `/health` URL and
+require HTTP 200 with the same two healthy fields. Do not add the deployment URL
+until Render creates it.
+
+Missing and invalid configuration remain covered without a live secret:
+
+```powershell
+python -m pytest tests/test_health.py::test_missing_database_configuration_is_service_unavailable tests/test_database.py::test_invalid_database_url_error_is_secret_safe
+```
+
+These checks require fixed HTTP 503 or value-free configuration behavior and
+assert that private input is absent from application output.
 
 ## Health endpoint
 

@@ -8,11 +8,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 ## Current handoff
 
-- Current phase: Phase 4 - FastAPI backend
-- Current task: 4.8 - Configure production Uvicorn execution and reviewer-accessible API documentation
+- Current phase: Phase 5 - Neon database
+- Current task: 5.1 - Create the Neon project and separate secure local/deployed connection strings
 - Status: Completed
-- Overall progress: 26 / 58 tasks completed
-- Up next: 5.1 - Create the Neon project and separate secure local/deployed connection strings
+- Overall progress: 27 / 58 tasks completed
+- Up next: 5.2 - Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -65,7 +65,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 | Task | Deliverable | Status |
 | --- | --- | --- |
-| 5.1 | Create the Neon project and separate secure local/deployed connection strings | Not started |
+| 5.1 | Create the Neon project and separate secure local/deployed connection strings | Completed |
 | 5.2 | Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints | Not started |
 | 5.3 | Configure Alembic and create the descriptive initial schema migration | Not started |
 | 5.4 | Add indexes for pattern slug/category/activity and design public ID | Not started |
@@ -419,3 +419,14 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Generated schemas expose only the established public root, health, pattern, design, and error contracts. Focused coverage rejects database settings, internal IDs, activity/order fields, credentials, SQLAlchemy/PostgreSQL/Neon details, and FastAPI's incompatible default validation-error schema from the public OpenAPI document.
 - Python 3.13.2 Pytest passes 133 tests covering the production command and platform port, runtime declarations, database-free documentation access, OpenAPI paths/schemas/status/error contracts and public-only fields, actual Uvicorn startup and lifespan shutdown, plus every existing root, health, CORS, pattern, design, settings, database, and error regression. Ruff lint and format checks, `pip check`, a production command smoke test against `/`, `/docs`, and `/openapi.json`, roadmap integrity, and `git diff --check` pass.
 - No deployment, Render/Neon/GitHub secret, endpoint, business behavior, authentication, migration, monitoring infrastructure, Docker change, frontend integration, or Task 5.1 work is included. All 58 roadmap rows and their deliverable wording remain present; progress is 26 / 58 and the exact next task is 5.1.
+
+### 2026-07-28 - Neon project and environment isolation
+
+- Initial inspection found no planned Render region, authenticated Neon session, provider credential, Render service, or deployment configuration, so no region or secret placement was guessed.
+- The user subsequently selected Ohio as the planned Render region and created the `SewnCovers` Neon project. Dashboard verification confirmed AWS US East 2 (Ohio), matching the planned API region.
+- The project now has separate `production` and persistent `development` branches; `development` is a child of `production` and automatic deletion is disabled. Each branch owns an independent `sewncovers` database and environment-specific role: `sewncovers_deployed` on production and `sewncovers_local` on development. The generated default role and database remain unused. Direct connection URLs must contain `sslmode=require` and `channel_binding=require`.
+- `DATABASE_URL` remains the only database variable and remains server-only. Its development value belongs only in ignored `backend/.env`; its production value belongs only in the future Render service's protected secret. Examples, documentation, tracked files, frontend configuration, test snapshots, shell commands, and responses contain no real value.
+- The ignored local value was validated without output: it selects `sewncovers_local`, database `sewncovers`, a direct endpoint, `sslmode=require`, and `channel_binding=require`. The existing FastAPI `/health` endpoint then returned HTTP 200 with both health fields `healthy` using its minimal `SELECT 1` query. Missing and invalid configuration remain covered by value-free tests.
+- The production `sewncovers` database was independently checked with `SELECT 1` in Neon's SQL Editor. Its URL was neither retrieved nor stored because no Render service exists. When Render becomes available, paste the production URL directly into its protected `DATABASE_URL` secret and verify deployed `/health`; this deferred platform placement does not put a secret in the repository or start deployment work.
+- Python 3.13.2 Pytest passes 133 tests; Ruff lint and formatting, editable pip installation, `pip check`, roadmap integrity, environment-ignore checks, tracked/frontend credential scans, and `git diff --check` pass. No schema, table, model, migration, seed, application persistence, endpoint, frontend integration, deployment, authentication, or Task 5.2 work is included.
+- Task 5.1 is `Completed`, progress is 27 / 58, and the exact next task is 5.2 - Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints.
