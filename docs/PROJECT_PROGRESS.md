@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 4 - FastAPI backend
-- Current task: 4.6 - Implement design creation and public-ID retrieval endpoints
+- Current task: 4.7 - Enforce business validation and consistent field-aware API errors
 - Status: Completed
-- Overall progress: 24 / 58 tasks completed
-- Up next: 4.7 - Enforce business validation and consistent field-aware API errors
+- Overall progress: 25 / 58 tasks completed
+- Up next: 4.8 - Configure production Uvicorn execution and reviewer-accessible API documentation
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -58,7 +58,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 4.4 | Implement `GET /health` with process and database status | Completed |
 | 4.5 | Implement active pattern listing with category and color filters | Completed |
 | 4.6 | Implement design creation and public-ID retrieval endpoints | Completed |
-| 4.7 | Enforce business validation and consistent field-aware API errors | Not started |
+| 4.7 | Enforce business validation and consistent field-aware API errors | Completed |
 | 4.8 | Configure production Uvicorn execution and reviewer-accessible API documentation | Not started |
 
 ## Phase 5: Neon database
@@ -400,3 +400,13 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Task 4.6 adds only the Core `cover_designs` persistence contract needed for these endpoints: internal key, unique public ID, and the seven immutable configuration values. It creates no ORM model, migration, production table, index, seed, Neon project, live connection, frontend integration, editing/deletion, authentication, customer data, upload, pricing, order, deployment, or Task 4.7 field-aware error framework.
 - Python 3.13.2 Pytest passes 118 tests covering create/retrieve status and schema, all public fields, unique opaque IDs, exact 404 behavior, malformed IDs, invalid/extra/server-managed input, shape/unit/measurement/scale boundaries, active-pattern validation, immutable retrieval, repository flush/no-commit behavior, service commit/rollback, commit failure, collision precheck and uniqueness race, bounded exhaustion, session cleanup, secret-safe failures, and every existing pattern, health, CORS, root, settings, and database test. Ruff lint and format checks, `pip check`, roadmap row/wording/status integrity, and `git diff --check` pass.
 - All 58 roadmap rows and their deliverable wording remain present; progress is 24 / 58 and the exact next task is 4.7.
+
+### 2026-07-27 - Consistent field-aware API validation errors
+
+- Public API failures now use the frozen typed `APIErrorResponse` envelope with one or more `APIErrorDetail` entries. Every entry has an OpenAPI-enumerated stable snake-case `code`, a fixed safe `message`, and a non-empty segmented `location` such as `["body","width"]`, `["query","category"]`, or `["path","public_id"]`. Supported-field order plus location and code provides deterministic multi-error ordering.
+- Request schemas retain request-shape ownership: required/extra fields, strict JSON types, supported shape and unit literals, normalized pattern-slug syntax, positive finite numbers, and measurement/scale precision. The design service now owns and can report all applicable cross-field rules together: exact 2.54 unit conversion, width/height/thickness centimetre-equivalent bounds, square equality, and active-pattern availability.
+- Application-wide handlers translate FastAPI/Pydantic request failures and safe domain exceptions without route-local duplication. Missing, malformed, extra, unsupported, out-of-range, imprecise, inactive-pattern, malformed-filter, and malformed-public-ID input receives HTTP 422 with field-aware codes. Well-formed absent designs remain 404; database/configuration and public-ID generation failures remain 503; unexpected programming failures use a generic 500 rather than masquerading as validation.
+- The handlers never serialize submitted input, Pydantic context, raw exception text, stack traces, SQL, constraints, connection details, credentials, internal IDs, or secrets. Unknown routes and unsupported methods also use the envelope, and HTTP protocol headers such as `Allow` are preserved. The existing health endpoint deliberately keeps its typed 503 health-state response.
+- OpenAPI documents `APIErrorResponse` for pattern/design 404, 422, 500, and 503 outcomes while preserving all existing success schemas, create status/location behavior, health semantics, and CORS/root behavior. Focused coverage includes body/query/path validation, malformed JSON, unknown fields, unsupported shapes/units, scale and precision, multiple deterministic errors, cross-field dimensions, inactive patterns, error schemas, safe infrastructure failures, and secret-safe unexpected failures.
+- Python 3.13.2 Pytest passes 125 tests covering the new error behavior and every existing root, health, CORS, pattern, design, settings, and database regression. Ruff lint and format checks, `pip check`, roadmap integrity, and `git diff --check` pass.
+- No frontend integration, endpoint, edit/delete behavior, authentication, migration, Neon work, upload, pricing, order, deployment, production execution/documentation configuration, or Task 4.8 implementation is included. All 58 roadmap rows and their deliverable wording remain present; progress is 25 / 58 and the exact next task is 4.8.

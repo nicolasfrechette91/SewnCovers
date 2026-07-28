@@ -313,14 +313,46 @@ def test_malformed_filter_values_are_rejected(
     response = client.get("/patterns", params={name: value})
 
     assert response.status_code == 422
-    assert response.json()["detail"][0]["loc"] == ["query", name]
+    assert response.json() == {
+        "errors": [
+            {
+                "code": "invalid_format",
+                "message": "Filter must be a 1-40 character lowercase slug.",
+                "location": ["query", name],
+            }
+        ]
+    }
 
 
 def test_unknown_query_parameter_is_rejected(client: TestClient) -> None:
     response = client.get("/patterns", params={"active": "true"})
 
     assert response.status_code == 422
-    assert response.json()["detail"][0]["loc"] == ["query", "active"]
+    assert response.json() == {
+        "errors": [
+            {
+                "code": "unknown_field",
+                "message": "Field is not supported.",
+                "location": ["query", "active"],
+            }
+        ]
+    }
+
+
+def test_multiple_query_errors_have_stable_field_order(client: TestClient) -> None:
+    response = client.get(
+        "/patterns",
+        params={"active": "true", "color": "-blue", "category": "blue!"},
+    )
+
+    assert response.status_code == 422
+    assert [
+        (error["code"], error["location"]) for error in response.json()["errors"]
+    ] == [
+        ("invalid_format", ["query", "category"]),
+        ("invalid_format", ["query", "color"]),
+        ("unknown_field", ["query", "active"]),
+    ]
 
 
 def test_openapi_documents_typed_public_list_schema(client: TestClient) -> None:
@@ -348,6 +380,10 @@ def test_openapi_documents_typed_public_list_schema(client: TestClient) -> None:
         "colorIds",
         "previewClassName",
     }
+    for response_status in ("422", "500", "503"):
+        assert operation["responses"][response_status]["content"]["application/json"][
+            "schema"
+        ] == {"$ref": "#/components/schemas/APIErrorResponse"}
 
 
 def test_repository_does_not_commit_and_service_owns_transaction(

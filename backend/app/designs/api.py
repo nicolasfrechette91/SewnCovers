@@ -2,8 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Path, Response, status
-from sqlalchemy.exc import SQLAlchemyError
+from fastapi import Depends, Path, Response
 
 from app.designs.repository import DesignRepository
 from app.designs.schema import (
@@ -11,12 +10,7 @@ from app.designs.schema import (
     DesignResponse,
     PublicDesignId,
 )
-from app.designs.service import (
-    DesignNotFoundError,
-    DesignService,
-    PatternUnavailableError,
-    PublicIdGenerationError,
-)
+from app.designs.service import DesignService
 from app.patterns.repository import PatternRepository
 from app.persistence.database import DatabaseSession
 
@@ -40,24 +34,7 @@ def create_design(
     service: DesignServiceDependency,
 ) -> DesignResponse:
     """Save one validated immutable configuration."""
-    try:
-        design = service.create(request)
-    except PatternUnavailableError:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="Selected pattern is unavailable.",
-        ) from None
-    except PublicIdGenerationError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Unable to generate a public design ID.",
-        ) from None
-    except SQLAlchemyError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Design storage is unavailable.",
-        ) from None
-
+    design = service.create(request)
     response.headers["Location"] = f"/designs/{design.public_id}"
     return design
 
@@ -67,15 +44,4 @@ def get_design(
     service: DesignServiceDependency,
 ) -> DesignResponse:
     """Retrieve one immutable design by its opaque public ID."""
-    try:
-        return service.get(public_id)
-    except DesignNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Design not found.",
-        ) from None
-    except SQLAlchemyError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Design storage is unavailable.",
-        ) from None
+    return service.get(public_id)

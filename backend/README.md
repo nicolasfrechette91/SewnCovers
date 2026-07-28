@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a typed environment-settings boundary, an explicit CORS policy, and lazy SQLAlchemy 2 session infrastructure. ORM models, migrations, indexes, production seed data, live database integration, and later business endpoints remain deferred to their roadmap tasks.
+This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, and lazy SQLAlchemy 2 session infrastructure. ORM models, migrations, indexes, production seed data, live database integration, and later business endpoints remain deferred to their roadmap tasks.
 
 ## Requirements
 
@@ -118,7 +118,7 @@ The database is checked only when `/health` is requested. Application import, ap
 
 Internal `is_active` and `display_order` values are never serialized. Records are ordered by ascending `display_order`, then ascending `id` as a deterministic tie-breaker. The endpoint returns HTTP 200 with `[]` when a valid filter has no matches.
 
-The optional query parameters are `category` and `color`. Each value is trimmed and normalized to lowercase, must be 1-40 characters, and must be a slug beginning with a letter followed by letters, digits, or single hyphen-separated groups. Values such as `BOTANICAL` and surrounding whitespace are accepted and normalized; empty values, underscores, punctuation, leading hyphens, and overlong values receive FastAPI's HTTP 422 validation response. A syntactically valid unknown value is not an error and returns an empty list.
+The optional query parameters are `category` and `color`. Each value is trimmed and normalized to lowercase, must be 1-40 characters, and must be a slug beginning with a letter followed by letters, digits, or single hyphen-separated groups. Values such as `BOTANICAL` and surrounding whitespace are accepted and normalized; empty values, underscores, punctuation, leading hyphens, and overlong values receive the typed HTTP 422 error response documented below. A syntactically valid unknown value is not an error and returns an empty list.
 
 Category matching uses exact normalized category equality. Color matching uses exact membership in `colorIds`. When both filters are present, a record must match both (AND semantics). Active-only selection and stable ordering are always applied before serialization.
 
@@ -126,7 +126,7 @@ The endpoint uses the request session, concrete pattern repository, and pattern 
 
 ## Saved-design endpoints
 
-`POST /designs` accepts exactly the client-owned configuration fields and returns HTTP 201 with the immutable saved design. Its `Location` header is `/designs/{publicId}`. `GET /designs/{public_id}` returns the same public representation with HTTP 200. A well-formed unknown public ID returns HTTP 404 with `{"detail":"Design not found."}`; a malformed path ID receives FastAPI's HTTP 422 validation response.
+`POST /designs` accepts exactly the client-owned configuration fields and returns HTTP 201 with the immutable saved design. Its `Location` header is `/designs/{publicId}`. `GET /designs/{public_id}` returns the same public representation with HTTP 200. A well-formed unknown public ID returns a typed HTTP 404 `design_not_found` error; a malformed path ID returns HTTP 422 with `invalid_public_id`.
 
 | Field | Create request | Response | Validation |
 | --- | --- | --- | --- |
@@ -143,9 +143,61 @@ Every request field is required. Strings are not coerced to numbers, unsupported
 
 Public IDs are independent of the internal integer database key. The service generates 128 random bits with the standard cryptographic token generator and exposes only the resulting 22-character URL-safe value. The minimum table contract also requires uniqueness. Creation checks for an existing ID, relies on database uniqueness for races, rolls back collisions, and retries up to five generated values. Exhaustion returns a generic HTTP 503 without SQL, constraint, internal-ID, host, credential, or exception detail.
 
-The design service owns active-pattern validation, public-ID generation, creation/retrieval coordination, commit, rollback, and collision retry. The repository executes only public-ID queries and immutable inserts and may flush without committing. Database failures from either endpoint become `{"detail":"Design storage is unavailable."}` with HTTP 503; details remain server-side. Task 4.7's consistent field-aware business-error framework is not included.
+The design service owns unit-aware measurement bounds, square equality, active-pattern validation, public-ID generation, creation/retrieval coordination, commit, rollback, and collision retry. Request schemas own required fields, strict types, supported shape/unit values, slug shape, numeric positivity, and precision. The repository executes only public-ID queries and immutable inserts and may flush without committing. Routes contain no duplicated exception translation.
 
 These endpoints require a configured database containing the compatible `patterns` and `cover_designs` tables. This task supplies no migration, production schema creation, seed command, Neon project, or live connection. Offline tests create both contracts in isolated in-memory SQLite, seed only the pattern records needed by each test, and exercise all behavior without a database file, internet, or populated `.env`.
+
+## API error contract
+
+API failures use one typed envelope:
+
+```json
+{
+  "errors": [
+    {
+      "code": "measurement_out_of_range",
+      "message": "Width must be between 10 and 300 cm.",
+      "location": ["body", "width"]
+    }
+  ]
+}
+```
+
+`errors` always contains at least one item. Each item has a stable snake-case `code`, a safe human-readable `message`, and a non-empty `location`. Clients should branch on `code`, not `message`. Codes are enumerated by the OpenAPI `APIErrorDetail` schema.
+
+The first location segment identifies the boundary:
+
+| First segment | Example | Meaning |
+| --- | --- | --- |
+| `body` | `["body","patternId"]` | JSON request field; aliases match the public JSON contract. |
+| `query` | `["query","category"]` | Query parameter. |
+| `path` | `["path","public_id"]` | Path parameter. |
+| `request` | `["request","method"]` | Request-level issue without one data field. |
+| `service` | `["service","storage"]` | Safe service/infrastructure boundary. |
+| `response` | `["response","publicId"]` | Server-generated response value could not be produced. |
+
+Additional string or integer segments can identify nested object fields or array positions. Current errors are sorted centrally by boundary, supported-field order, remaining location, and code. Multiple schema or business-rule issues therefore have deterministic ordering independent of submitted object/query order.
+
+Error codes follow these stable groups:
+
+- Request shape: `field_required`, `unknown_field`, `invalid_type`, `invalid_format`, `invalid_precision`, `invalid_value`, `unsupported_value`, `value_out_of_range`, `invalid_json`, and `invalid_public_id`.
+- Business rules: `measurement_out_of_range`, `square_dimensions_mismatch`, and `pattern_unavailable`.
+- Routing/resources: `design_not_found`, `resource_not_found`, and `method_not_allowed`.
+- Server/infrastructure: `public_id_unavailable`, `storage_unavailable`, and `internal_error`.
+
+Status rules are:
+
+| HTTP status | Meaning |
+| --- | --- |
+| `404` | A syntactically valid requested resource is absent, or the route does not exist. |
+| `405` | The route exists but does not support the request method. |
+| `422` | Request shape, field, filter, public-ID syntax, or expected business validation failed. |
+| `500` | An unexpected programming failure occurred; it is never relabeled as validation. |
+| `503` | Storage or public-ID generation is temporarily unavailable. |
+
+`GET /health` intentionally retains its existing typed `HealthResponse` for both HTTP 200 and 503 because its 503 body describes observed health state rather than an API-processing error.
+
+Central handlers translate Pydantic/FastAPI validation, safe domain issues, known resource failures, SQLAlchemy/configuration failures, routing failures, and unexpected exceptions. Responses never copy submitted values, Pydantic error context, exception strings, SQL, constraint/database details, credentials, internal IDs, stack traces, or secrets. Unknown and infrastructure failures return fixed messages. Unexpected failures remain HTTP 500 so programming defects cannot masquerade as client validation.
 
 ## Run the API
 

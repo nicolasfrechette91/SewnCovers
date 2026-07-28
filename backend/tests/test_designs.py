@@ -214,7 +214,15 @@ def test_unknown_well_formed_public_id_returns_exact_404(client: TestClient) -> 
     response = client.get(f"/designs/{FIRST_PUBLIC_ID}")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Design not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "code": "design_not_found",
+                "message": "Design not found.",
+                "location": ["path", "public_id"],
+            }
+        ]
+    }
 
 
 @pytest.mark.parametrize(
@@ -230,7 +238,15 @@ def test_malformed_public_id_is_rejected(public_id: str, client: TestClient) -> 
     response = client.get(f"/designs/{public_id}")
 
     assert response.status_code == 422
-    assert response.json()["detail"][0]["loc"] == ["path", "public_id"]
+    assert response.json() == {
+        "errors": [
+            {
+                "code": "invalid_public_id",
+                "message": "Public design ID is malformed.",
+                "location": ["path", "public_id"],
+            }
+        ]
+    }
 
 
 @pytest.mark.parametrize(
@@ -311,6 +327,49 @@ def test_out_of_range_or_unsupported_configurations_are_rejected(
     assert count_designs(design_database) == 0
 
 
+def test_cross_field_business_errors_are_field_aware_and_deterministic(
+    client: TestClient,
+    design_database: Database,
+) -> None:
+    payload = valid_payload(
+        shape="square",
+        width=9.99,
+        height=300.01,
+        thickness=0.99,
+    )
+
+    first = client.post("/designs", json=payload)
+    second = client.post("/designs", json=payload)
+
+    expected = {
+        "errors": [
+            {
+                "code": "measurement_out_of_range",
+                "message": "Width must be between 10 and 300 cm.",
+                "location": ["body", "width"],
+            },
+            {
+                "code": "measurement_out_of_range",
+                "message": "Height must be between 10 and 300 cm.",
+                "location": ["body", "height"],
+            },
+            {
+                "code": "square_dimensions_mismatch",
+                "message": "Square width and height must be equal.",
+                "location": ["body", "height"],
+            },
+            {
+                "code": "measurement_out_of_range",
+                "message": "Thickness must be between 1 and 60 cm.",
+                "location": ["body", "thickness"],
+            },
+        ]
+    }
+    assert first.status_code == second.status_code == 422
+    assert first.json() == second.json() == expected
+    assert count_designs(design_database) == 0
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -371,7 +430,15 @@ def test_creation_requires_an_active_known_pattern(
     )
 
     assert response.status_code == 422
-    assert response.json() == {"detail": "Selected pattern is unavailable."}
+    assert response.json() == {
+        "errors": [
+            {
+                "code": "pattern_unavailable",
+                "message": "Selected pattern is unavailable.",
+                "location": ["body", "patternId"],
+            }
+        ]
+    }
     assert count_designs(design_database) == 0
 
 
@@ -401,8 +468,8 @@ def test_openapi_documents_create_retrieve_schemas_and_statuses(
     get_operation = openapi["paths"]["/designs/{public_id}"]["get"]
     schemas = openapi["components"]["schemas"]
 
-    assert set(create_operation["responses"]) == {"201", "422", "503"}
-    assert set(get_operation["responses"]) == {"200", "404", "422", "503"}
+    assert set(create_operation["responses"]) == {"201", "422", "500", "503"}
+    assert set(get_operation["responses"]) == {"200", "404", "422", "500", "503"}
     assert create_operation["requestBody"]["content"]["application/json"]["schema"] == {
         "$ref": "#/components/schemas/CreateDesignRequest"
     }
@@ -412,6 +479,22 @@ def test_openapi_documents_create_retrieve_schemas_and_statuses(
     assert get_operation["responses"]["200"]["content"]["application/json"][
         "schema"
     ] == {"$ref": "#/components/schemas/DesignResponse"}
+    for operation, statuses in (
+        (create_operation, ("422", "500", "503")),
+        (get_operation, ("404", "422", "500", "503")),
+    ):
+        for response_status in statuses:
+            assert operation["responses"][response_status]["content"][
+                "application/json"
+            ]["schema"] == {"$ref": "#/components/schemas/APIErrorResponse"}
+    assert schemas["APIErrorResponse"]["required"] == ["errors"]
+    assert schemas["APIErrorResponse"]["additionalProperties"] is False
+    assert schemas["APIErrorDetail"]["required"] == [
+        "code",
+        "message",
+        "location",
+    ]
+    assert schemas["APIErrorDetail"]["additionalProperties"] is False
     assert schemas["CreateDesignRequest"]["additionalProperties"] is False
     assert schemas["CreateDesignRequest"]["required"] == [
         "shape",
@@ -655,7 +738,15 @@ def test_collision_exhaustion_returns_generic_503() -> None:
         response = test_client.post("/designs", json=valid_payload())
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Unable to generate a public design ID."}
+    assert response.json() == {
+        "errors": [
+            {
+                "code": "public_id_unavailable",
+                "message": "Unable to generate a public design ID.",
+                "location": ["response", "publicId"],
+            }
+        ]
+    }
     assert PRIVATE_DETAIL not in response.text
 
 
@@ -711,6 +802,14 @@ def test_database_failures_return_secret_safe_503(
         )
 
     assert response.status_code == 503
-    assert response.json() == {"detail": "Design storage is unavailable."}
+    assert response.json() == {
+        "errors": [
+            {
+                "code": "storage_unavailable",
+                "message": "Storage is temporarily unavailable.",
+                "location": ["service", "storage"],
+            }
+        ]
+    }
     assert PRIVATE_DETAIL not in response.text
     assert "SQL" not in response.text

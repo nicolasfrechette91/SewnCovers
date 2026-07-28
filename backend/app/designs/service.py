@@ -10,9 +10,17 @@ from sqlalchemy.orm import Session
 
 from app.designs.repository import DesignRepository, SavedDesign
 from app.designs.schema import (
+    CENTIMETRES_PER_INCH,
     PUBLIC_ID_PATTERN,
     CreateDesignRequest,
     DesignResponse,
+)
+from app.errors import (
+    BusinessValidationError,
+    DesignNotFoundError,
+    DomainValidationIssue,
+    PatternUnavailableError,
+    PublicIdGenerationError,
 )
 from app.patterns.repository import PatternRepository
 from app.persistence.transactions import service_transaction
@@ -21,20 +29,8 @@ PUBLIC_ID_ATTEMPTS = 5
 type PublicIdGenerator = Callable[[], str]
 
 
-class DesignNotFoundError(LookupError):
-    """Report an unknown public design ID without database detail."""
-
-
-class PatternUnavailableError(ValueError):
-    """Report a pattern that cannot back a new public design."""
-
-
 class PublicIdCollisionError(RuntimeError):
     """Signal a generated public ID already in use."""
-
-
-class PublicIdGenerationError(RuntimeError):
-    """Report exhausted opaque-ID collision attempts."""
 
 
 def generate_public_id() -> str:
@@ -59,6 +55,8 @@ class DesignService:
         self._public_id_generator = public_id_generator
 
     def create(self, request: CreateDesignRequest) -> DesignResponse:
+        self._validate_configuration(request)
+
         for _attempt in range(PUBLIC_ID_ATTEMPTS):
             public_id = self._public_id_generator()
             if re.fullmatch(PUBLIC_ID_PATTERN, public_id) is None:
@@ -96,6 +94,52 @@ class DesignService:
             if saved is None:
                 raise DesignNotFoundError
         return self._to_response(saved)
+
+    @staticmethod
+    def _validate_configuration(request: CreateDesignRequest) -> None:
+        factor = CENTIMETRES_PER_INCH if request.unit == "in" else Decimal("1")
+        measurements = (
+            (
+                "width",
+                Decimal(str(request.width)) * factor,
+                Decimal("10"),
+                Decimal("300"),
+            ),
+            (
+                "height",
+                Decimal(str(request.height)) * factor,
+                Decimal("10"),
+                Decimal("300"),
+            ),
+            (
+                "thickness",
+                Decimal(str(request.thickness)) * factor,
+                Decimal("1"),
+                Decimal("60"),
+            ),
+        )
+        errors = [
+            DomainValidationIssue(
+                code="measurement_out_of_range",
+                message=(
+                    f"{field.capitalize()} must be between "
+                    f"{minimum:g} and {maximum:g} cm."
+                ),
+                field=field,
+            )
+            for field, value, minimum, maximum in measurements
+            if not minimum <= value <= maximum
+        ]
+        if request.shape == "square" and request.width != request.height:
+            errors.append(
+                DomainValidationIssue(
+                    code="square_dimensions_mismatch",
+                    message="Square width and height must be equal.",
+                    field="height",
+                )
+            )
+        if errors:
+            raise BusinessValidationError(*errors)
 
     @staticmethod
     def _to_response(saved: SavedDesign) -> DesignResponse:

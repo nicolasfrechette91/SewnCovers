@@ -1,7 +1,7 @@
 """Typed public contracts for immutable saved designs."""
 
 from decimal import Decimal
-from typing import Annotated, Literal, Self
+from typing import Annotated, Literal
 
 from pydantic import (
     AfterValidator,
@@ -10,7 +10,6 @@ from pydantic import (
     Field,
     StringConstraints,
     field_validator,
-    model_validator,
 )
 
 type CushionShape = Literal["box", "rectangle", "square"]
@@ -92,23 +91,6 @@ class DesignConfiguration(BaseModel):
         if value != value.strip().lower():
             raise ValueError("patternId must be a normalized lowercase ID")
         return value
-
-    @model_validator(mode="after")
-    def validate_supported_measurements(self) -> Self:
-        factor = CENTIMETRES_PER_INCH if self.unit == "in" else Decimal("1")
-        width_cm = _as_decimal(self.width) * factor
-        height_cm = _as_decimal(self.height) * factor
-        thickness_cm = _as_decimal(self.thickness) * factor
-
-        if not Decimal("10") <= width_cm <= Decimal("300"):
-            raise ValueError("width must be within 10-300 cm")
-        if not Decimal("10") <= height_cm <= Decimal("300"):
-            raise ValueError("height must be within 10-300 cm")
-        if not Decimal("1") <= thickness_cm <= Decimal("60"):
-            raise ValueError("thickness must be within 1-60 cm")
-        if self.shape == "square" and self.width != self.height:
-            raise ValueError("square width and height must be equal")
-        return self
 
 
 class CreateDesignRequest(DesignConfiguration):
