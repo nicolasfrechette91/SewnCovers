@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 5 - Neon database
-- Current task: 5.1 - Create the Neon project and separate secure local/deployed connection strings
+- Current task: 5.2 - Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints
 - Status: Completed
-- Overall progress: 27 / 58 tasks completed
-- Up next: 5.2 - Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints
+- Overall progress: 28 / 58 tasks completed
+- Up next: 5.3 - Configure Alembic and create the descriptive initial schema migration
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -66,7 +66,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | Task | Deliverable | Status |
 | --- | --- | --- |
 | 5.1 | Create the Neon project and separate secure local/deployed connection strings | Completed |
-| 5.2 | Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints | Not started |
+| 5.2 | Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints | Completed |
 | 5.3 | Configure Alembic and create the descriptive initial schema migration | Not started |
 | 5.4 | Add indexes for pattern slug/category/activity and design public ID | Not started |
 | 5.5 | Seed 12-20 pattern records whose assets remain in the frontend | Not started |
@@ -430,3 +430,14 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - The production `sewncovers` database was independently checked with `SELECT 1` in Neon's SQL Editor. Its URL was neither retrieved nor stored because no Render service exists. When Render becomes available, paste the production URL directly into its protected `DATABASE_URL` secret and verify deployed `/health`; this deferred platform placement does not put a secret in the repository or start deployment work.
 - Python 3.13.2 Pytest passes 133 tests; Ruff lint and formatting, editable pip installation, `pip check`, roadmap integrity, environment-ignore checks, tracked/frontend credential scans, and `git diff --check` pass. No schema, table, model, migration, seed, application persistence, endpoint, frontend integration, deployment, authentication, or Task 5.2 work is included.
 - Task 5.1 is `Completed`, progress is 27 / 58, and the exact next task is 5.2 - Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints.
+
+### 2026-07-28 - Declarative pattern and immutable design models
+
+- `app/persistence/models.py` now owns one SQLAlchemy 2 `DeclarativeBase`, one shared metadata object, and the mapped `Pattern` and `CoverDesign` tables. The former Core table and metadata names are compatibility aliases to these exact mapped objects, so repositories retain their existing Core selects/inserts without duplicate tables, metadata, or query behavior.
+- `Pattern` preserves the established eight columns. Named primary-key, exact name/preview uniqueness, normalized-length, nonblank-length, nonnegative-order, and supported-category constraints protect portable catalogue rules; server defaults make new patterns active at display order zero. The repository still filters active records and sorts by ascending display order then ID. Exact slug syntax and supported JSON color-array contents remain controlled application/catalogue validation because no safe identical PostgreSQL/SQLite check exists.
+- `CoverDesign` preserves the internal autoincrementing key, unique 22-character public ID, and seven public configuration values. It adds a named restrictive foreign key plus a typed view-only pattern relationship, exact numeric precision, a 1.0 scale server default, and named checks for supported shapes/units, unit-aware dimension ranges, equal square dimensions, exact URL-safe public-ID format, and scale range. Service/Pydantic validation remains the first boundary; database constraints are final integrity protection for safely portable rules.
+- Saved designs remain append-only: the repository has only insert and public-ID lookup, routes remain POST/GET only, the public schemas remain unchanged, and ORM update/delete flushes are rejected. No internal key, activity/order field, relationship, database field, SQL/constraint detail, or credential enters API schemas or errors.
+- Focused offline model coverage uses foreign-key-enabled in-memory SQLite only. It verifies shared metadata/table identity, mapped columns, relationships, named constraints/defaults/precision, valid centimetre and inch inserts, rejected patterns/designs, duplicate public IDs, missing pattern references, whole-transaction rollback, ORM/repository immutability, and unchanged public OpenAPI fields and route methods.
+- Python 3.13.2 Pytest passes 161 tests. Ruff lint and formatting, `pip check`, PostgreSQL DDL compilation without a connection, roadmap row/wording/status integrity, generated database/migration/seed checks, credential-scope review, and `git diff --check` pass.
+- No Alembic setup or migration, Neon schema access/change, explicit Task 5.4 performance index, seed data, generated database file, endpoint change, frontend work, authentication, deployment, or unrelated dependency/configuration change is included. Alembic and the descriptive initial migration remain deferred to Task 5.3; pattern slug/category/activity and explicit design public-ID indexes remain deferred to Task 5.4.
+- Task 5.2 is `Completed`, progress is 28 / 58, all 58 roadmap rows and their wording remain present, and the exact next task is 5.3 - Configure Alembic and create the descriptive initial schema migration.

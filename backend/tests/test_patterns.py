@@ -175,7 +175,7 @@ def pattern_database() -> Iterator[Database]:
             "category_id": "botanical",
             "color_ids": ["blue"],
             "preview_class_name": "inactive-test-pattern",
-            "display_order": -1,
+            "display_order": len(CANONICAL_PATTERNS),
             "is_active": False,
         }
     )

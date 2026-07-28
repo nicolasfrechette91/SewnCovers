@@ -3,36 +3,14 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from sqlalchemy import (
-    Column,
-    Integer,
-    MetaData,
-    Numeric,
-    String,
-    Table,
-    insert,
-    select,
-)
+from sqlalchemy import insert, select
 from sqlalchemy.engine import RowMapping
 from sqlalchemy.orm import Session
 
-design_metadata = MetaData()
+from app.persistence.models import Base, CoverDesign
 
-# Task 4.6 needs only this persistence contract. Phase 5 remains responsible
-# for ORM models, the complete constraint set, migrations, and indexes.
-cover_designs_table = Table(
-    "cover_designs",
-    design_metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("public_id", String(22), nullable=False, unique=True),
-    Column("shape", String(16), nullable=False),
-    Column("width", Numeric(7, 2), nullable=False),
-    Column("height", Numeric(7, 2), nullable=False),
-    Column("thickness", Numeric(7, 2), nullable=False),
-    Column("unit", String(2), nullable=False),
-    Column("pattern_id", String(64), nullable=False),
-    Column("pattern_scale", Numeric(2, 1), nullable=False),
-)
+design_metadata = Base.metadata
+cover_designs_table = CoverDesign.__table__
 
 
 @dataclass(frozen=True, slots=True)

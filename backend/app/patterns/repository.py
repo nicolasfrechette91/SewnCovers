@@ -2,25 +2,14 @@
 
 from dataclasses import dataclass
 
-from sqlalchemy import JSON, Boolean, Column, Integer, MetaData, String, Table, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-pattern_metadata = MetaData()
+from app.persistence.models import Base
+from app.persistence.models import Pattern as PatternModel
 
-# Task 4.5 needs only the read-side table contract. Phase 5 remains responsible
-# for ORM models, constraints, migrations, indexes, and production seed data.
-patterns_table = Table(
-    "patterns",
-    pattern_metadata,
-    Column("id", String(64), primary_key=True),
-    Column("name", String(120), nullable=False),
-    Column("description", String(500), nullable=False),
-    Column("category_id", String(40), nullable=False),
-    Column("color_ids", JSON, nullable=False),
-    Column("preview_class_name", String(120), nullable=False),
-    Column("is_active", Boolean, nullable=False),
-    Column("display_order", Integer, nullable=False),
-)
+pattern_metadata = Base.metadata
+patterns_table = PatternModel.__table__
 
 
 @dataclass(frozen=True, slots=True)
