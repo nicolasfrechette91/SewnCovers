@@ -48,9 +48,18 @@ class PatternResponse(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
 
-    id: str
-    name: str
-    description: str
-    category_id: str = Field(serialization_alias="categoryId")
-    color_ids: tuple[str, ...] = Field(serialization_alias="colorIds")
-    preview_class_name: str = Field(serialization_alias="previewClassName")
+    id: str = Field(description="Stable public pattern identifier.")
+    name: str = Field(description="Reviewer-visible pattern name.")
+    description: str = Field(description="Reviewer-visible catalogue description.")
+    category_id: str = Field(
+        serialization_alias="categoryId",
+        description="Public category identifier used by the category filter.",
+    )
+    color_ids: tuple[str, ...] = Field(
+        serialization_alias="colorIds",
+        description="Public color identifiers used by the color filter.",
+    )
+    preview_class_name: str = Field(
+        serialization_alias="previewClassName",
+        description="Frontend preview-style handle for this pattern.",
+    )

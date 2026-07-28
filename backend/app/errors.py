@@ -42,9 +42,14 @@ class APIErrorDetail(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    code: ErrorCode
-    message: str
-    location: ErrorLocation = Field(min_length=1)
+    code: ErrorCode = Field(description="Stable machine-readable error code.")
+    message: str = Field(description="Safe human-readable explanation.")
+    location: ErrorLocation = Field(
+        min_length=1,
+        description=(
+            "Request or response boundary followed by public field names or indexes."
+        ),
+    )
 
 
 class APIErrorResponse(BaseModel):
@@ -52,7 +57,10 @@ class APIErrorResponse(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    errors: tuple[APIErrorDetail, ...] = Field(min_length=1)
+    errors: tuple[APIErrorDetail, ...] = Field(
+        min_length=1,
+        description="One or more deterministically ordered API errors.",
+    )
 
 
 @dataclass(frozen=True, slots=True)

@@ -72,18 +72,30 @@ class DesignConfiguration(BaseModel):
         strict=True,
     )
 
-    shape: CushionShape
-    width: Measurement
-    height: Measurement
-    thickness: Measurement
-    unit: MeasurementUnit
+    shape: CushionShape = Field(description="Supported cushion shape.")
+    width: Measurement = Field(
+        description="Face width in the selected unit, with at most two decimals."
+    )
+    height: Measurement = Field(
+        description=(
+            "Face height or box depth in the selected unit, with at most two decimals."
+        )
+    )
+    thickness: Measurement = Field(
+        description="Cushion thickness in the selected unit, with at most two decimals."
+    )
+    unit: MeasurementUnit = Field(description="Measurement unit for all dimensions.")
     pattern_id: str = Field(
         alias="patternId",
         min_length=1,
         max_length=64,
         pattern=r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+        description="Normalized public ID of an active pattern.",
     )
-    pattern_scale: PatternScale = Field(alias="patternScale")
+    pattern_scale: PatternScale = Field(
+        alias="patternScale",
+        description="Preview scale from 0.5 through 2.0 at one-decimal resolution.",
+    )
 
     @field_validator("pattern_id")
     @classmethod
@@ -100,4 +112,7 @@ class CreateDesignRequest(DesignConfiguration):
 class DesignResponse(DesignConfiguration):
     """Stable public representation of a saved immutable design."""
 
-    public_id: PublicDesignId = Field(alias="publicId")
+    public_id: PublicDesignId = Field(
+        alias="publicId",
+        description="Server-generated 22-character opaque public design ID.",
+    )

@@ -15,7 +15,7 @@ from app.settings import (
     reset_settings_cache,
 )
 
-KNOWN_VARIABLES = ("ENVIRONMENT", "FRONTEND_ORIGIN", "DATABASE_URL")
+KNOWN_VARIABLES = ("ENVIRONMENT", "FRONTEND_ORIGIN", "PORT", "DATABASE_URL")
 
 
 def clear_known_environment(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -32,6 +32,7 @@ def test_settings_defaults_and_missing_optional_values(
 
     assert settings.environment == "development"
     assert settings.frontend_origin is None
+    assert settings.port == 8000
     assert settings.database_url is None
     assert settings.cors.allowed_origins == (LOCAL_FRONTEND_ORIGIN,)
 

@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 4 - FastAPI backend
-- Current task: 4.7 - Enforce business validation and consistent field-aware API errors
+- Current task: 4.8 - Configure production Uvicorn execution and reviewer-accessible API documentation
 - Status: Completed
-- Overall progress: 25 / 58 tasks completed
-- Up next: 4.8 - Configure production Uvicorn execution and reviewer-accessible API documentation
+- Overall progress: 26 / 58 tasks completed
+- Up next: 5.1 - Create the Neon project and separate secure local/deployed connection strings
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -59,7 +59,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 4.5 | Implement active pattern listing with category and color filters | Completed |
 | 4.6 | Implement design creation and public-ID retrieval endpoints | Completed |
 | 4.7 | Enforce business validation and consistent field-aware API errors | Completed |
-| 4.8 | Configure production Uvicorn execution and reviewer-accessible API documentation | Not started |
+| 4.8 | Configure production Uvicorn execution and reviewer-accessible API documentation | Completed |
 
 ## Phase 5: Neon database
 
@@ -410,3 +410,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - OpenAPI documents `APIErrorResponse` for pattern/design 404, 422, 500, and 503 outcomes while preserving all existing success schemas, create status/location behavior, health semantics, and CORS/root behavior. Focused coverage includes body/query/path validation, malformed JSON, unknown fields, unsupported shapes/units, scale and precision, multiple deterministic errors, cross-field dimensions, inactive patterns, error schemas, safe infrastructure failures, and secret-safe unexpected failures.
 - Python 3.13.2 Pytest passes 125 tests covering the new error behavior and every existing root, health, CORS, pattern, design, settings, and database regression. Ruff lint and format checks, `pip check`, roadmap integrity, and `git diff --check` pass.
 - No frontend integration, endpoint, edit/delete behavior, authentication, migration, Neon work, upload, pricing, order, deployment, production execution/documentation configuration, or Task 4.8 implementation is included. All 58 roadmap rows and their deliverable wording remain present; progress is 25 / 58 and the exact next task is 4.8.
+
+### 2026-07-27 - Production Uvicorn execution and reviewer API documentation
+
+- `python -m app.production` is the production process command. It reuses `app.main:app`, binds to `0.0.0.0`, reads the validated platform `PORT` with an `8000` default, and explicitly disables reload. FastAPI and Uvicorn remain pinned runtime dependencies under the Python `>=3.13,<3.14` contract; no dependency, Docker file, provider manifest, deployment, worker framework, debug mode, or development behavior was added.
+- The production entry point, application import, startup, root endpoint, Swagger UI, and OpenAPI generation remain independent of `DATABASE_URL` and any live database. Uvicorn handles normal termination through FastAPI's existing lifespan, which disposes the application-owned database-engine pool if request work initialized it.
+- Swagger UI remains at `/docs`, OpenAPI JSON at `/openapi.json`, and ReDoc at `/redoc`; the root response remains unchanged. OpenAPI now explicitly describes the service and health behavior, pattern filter normalization and AND semantics, immutable design request/response fields, the create `Location` header, opaque 22-character public IDs, expected status codes, and the typed field-aware `APIErrorResponse`.
+- Generated schemas expose only the established public root, health, pattern, design, and error contracts. Focused coverage rejects database settings, internal IDs, activity/order fields, credentials, SQLAlchemy/PostgreSQL/Neon details, and FastAPI's incompatible default validation-error schema from the public OpenAPI document.
+- Python 3.13.2 Pytest passes 133 tests covering the production command and platform port, runtime declarations, database-free documentation access, OpenAPI paths/schemas/status/error contracts and public-only fields, actual Uvicorn startup and lifespan shutdown, plus every existing root, health, CORS, pattern, design, settings, database, and error regression. Ruff lint and format checks, `pip check`, a production command smoke test against `/`, `/docs`, and `/openapi.json`, roadmap integrity, and `git diff --check` pass.
+- No deployment, Render/Neon/GitHub secret, endpoint, business behavior, authentication, migration, monitoring infrastructure, Docker change, frontend integration, or Task 5.1 work is included. All 58 roadmap rows and their deliverable wording remain present; progress is 26 / 58 and the exact next task is 5.1.

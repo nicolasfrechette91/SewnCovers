@@ -89,6 +89,14 @@ python -m uvicorn app.main:app --reload
 
 The API is available at <http://127.0.0.1:8000/>, its process/database health endpoint is at <http://127.0.0.1:8000/health>, its active catalogue is at <http://127.0.0.1:8000/patterns>, its immutable saved-design collection is at <http://127.0.0.1:8000/designs>, and its interactive documentation is at <http://127.0.0.1:8000/docs>. Health returns HTTP 200 only when its on-request database query succeeds; missing configuration or database failure returns a fixed, secret-safe HTTP 503 response.
 
+The production API command, run from `backend`, is:
+
+```bash
+python -m app.production
+```
+
+It reuses `app.main:app`, binds to `0.0.0.0`, reads the platform-provided `PORT` with an `8000` default, and does not enable reload or debug behavior. Production also requires `ENVIRONMENT=production` and the exact `FRONTEND_ORIGIN`; `DATABASE_URL` remains optional for startup, `/`, `/docs`, and `/openapi.json`. Swagger UI is served at `/docs`, the generated OpenAPI contract at `/openapi.json`, and ReDoc at `/redoc`. Normal process termination runs FastAPI's shutdown lifespan and disposes an initialized database-engine pool.
+
 In the second terminal, run the frontend:
 
 ```powershell
@@ -112,6 +120,7 @@ Copy the example files to ignored local environment files. Never commit populate
 | Frontend | `NEXT_PUBLIC_API_URL` | No; API integration is Task 6.1 | Absolute HTTP(S) URL, trimmed with trailing slashes removed, and embedded publicly at Next.js build time. |
 | Backend | `ENVIRONMENT` | No; defaults to `development` | One of `development`, `test`, or `production`, parsed at process runtime. |
 | Backend | `FRONTEND_ORIGIN` | Optional in development/test; required in production | One exact HTTP(S) origin, normalized at process runtime. Missing local/test configuration uses `http://localhost:3000`; production must set `https://nicolasfrechette91.github.io` for the configured Pages deployment. |
+| Backend | `PORT` | No; defaults to `8000` | Integer from 1 through 65535, read at production Uvicorn process startup; hosting platforms normally provide it. |
 | Backend | `DATABASE_URL` | Only when database functionality is requested | Server-only SQLAlchemy URL loaded lazily at process runtime and redacted from settings and database-boundary output. |
 
 Frontend and backend configuration are separate. Browser bundles must contain no backend variable or secret. The typed boundaries validate configured values without opening network or database connections; `/health`, `/patterns`, and `/designs` begin database work only when requested. See each application README for override and testing details.

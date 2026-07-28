@@ -57,6 +57,7 @@ The immutable settings boundary in `app/settings.py` reads backend process varia
 | --- | --- | --- | --- |
 | `ENVIRONMENT` | Optional, defaults to `development` | `development`, `test`, or `production` | Trimmed and normalized to lowercase at backend process runtime. |
 | `FRONTEND_ORIGIN` | Optional in `development`/`test`; required in `production` | One absolute HTTP(S) origin without credentials, path, query, or fragment | Missing local/test configuration uses `http://localhost:3000`. A production process must explicitly set the Pages origin `https://nicolasfrechette91.github.io`. Whitespace and trailing root slashes are removed at process runtime. |
+| `PORT` | Optional; hosting platforms normally provide it | Integer from 1 through 65535; defaults to `8000` | Read once at process startup and used by the production Uvicorn entry point. |
 | `DATABASE_URL` | Optional at startup; required when database functionality is requested | Private SQLAlchemy connection URL | Kept server-only in a secret type and excluded from settings representations and serialization. Missing or invalid configuration produces a value-free error naming only the variable. |
 
 The example values are safe local placeholders. `DATABASE_URL` remains empty because imports, startup, the root endpoint, and the automated suite do not need a live database; a developer must supply it privately before requesting `/health` or `/patterns` against a deployed schema. Validation errors hide input values, and configuration import does not initialize a Neon or database client. Never commit `.env`, a Neon connection string, passwords, tokens, or credentials.
@@ -219,6 +220,47 @@ The local addresses are:
 
 Press `Ctrl+C` in this terminal to stop Uvicorn.
 
+## Production execution and API documentation
+
+The production start command is:
+
+```bash
+python -m app.production
+```
+
+This entry point runs the existing `app.main:app` application on `0.0.0.0`, uses the platform-provided `PORT` or defaults to `8000`, and explicitly leaves code reload disabled. It does not enable debug behavior, create a database engine, or contact Neon during import or startup.
+
+A production environment must set `ENVIRONMENT=production` and a valid `FRONTEND_ORIGIN`; the hosting platform normally supplies `PORT`. `DATABASE_URL` is needed only when `/health`, `/patterns`, or `/designs` performs database work. The root endpoint, Swagger UI, and OpenAPI document load without it.
+
+Reviewer documentation is available at stable paths on the running API:
+
+- Swagger UI: `/docs`
+- OpenAPI JSON: `/openapi.json`
+- ReDoc: `/redoc`
+
+The schema documents the root and health behavior, pattern filters, immutable design request/response fields, opaque public IDs, success and error status codes, and the typed field-aware `APIErrorResponse`. It contains only public API models; database fields, internal IDs, settings, credentials, and deployment details are not schema fields.
+
+Uvicorn handles `Ctrl+C` and normal termination signals gracefully. During shutdown FastAPI runs the application lifespan and disposes the process-owned SQLAlchemy engine pool if database work initialized it. Startup and documentation access remain independent of the database.
+
+For a local production-mode smoke test in Windows PowerShell, set a temporary port and the required production origin, then run the production command:
+
+```powershell
+$env:ENVIRONMENT = "production"
+$env:FRONTEND_ORIGIN = "https://nicolasfrechette91.github.io"
+$env:PORT = "8001"
+python -m app.production
+```
+
+From another terminal, verify the public surfaces:
+
+```powershell
+Invoke-WebRequest http://127.0.0.1:8001/
+Invoke-WebRequest http://127.0.0.1:8001/docs
+Invoke-WebRequest http://127.0.0.1:8001/openapi.json
+```
+
+No `DATABASE_URL` is required for these checks. Press `Ctrl+C` in the server terminal and confirm Uvicorn reports application shutdown complete.
+
 ## Quality checks
 
 Run these commands from the `backend` directory:
@@ -236,6 +278,6 @@ To format Python files after making changes, run:
 python -m ruff format .
 ```
 
-`pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. FastAPI's existing Starlette middleware supplies CORS, so Task 4.3 adds no dependency. Tasks 4.4-4.6 reuse FastAPI, Pydantic, SQLAlchemy, and Python's standard library and add no dependency. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
+`pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. FastAPI's existing Starlette middleware supplies CORS, so Task 4.3 adds no dependency. Tasks 4.4-4.8 reuse FastAPI, Uvicorn, Pydantic, SQLAlchemy, and Python's standard library and add no dependency. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
 
 The backend connects to a configured database only when `/health`, `/patterns`, `/designs`, or later database functionality requests it. Import, startup, the root endpoint, and the offline tests do not connect to Neon. Design editing/deletion, authentication, upload, and commercial endpoints remain unimplemented. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) for the staged implementation roadmap.

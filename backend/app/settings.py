@@ -94,6 +94,12 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="FRONTEND_ORIGIN",
     )
+    port: int = Field(
+        default=8000,
+        ge=1,
+        le=65535,
+        validation_alias="PORT",
+    )
     database_url: SecretStr | None = Field(
         default=None,
         exclude=True,
