@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 4 - FastAPI backend
-- Current task: 4.5 - Implement active pattern listing with category and color filters
+- Current task: 4.6 - Implement design creation and public-ID retrieval endpoints
 - Status: Completed
-- Overall progress: 23 / 58 tasks completed
-- Up next: 4.6 - Implement design creation and public-ID retrieval endpoints
+- Overall progress: 24 / 58 tasks completed
+- Up next: 4.7 - Enforce business validation and consistent field-aware API errors
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -57,7 +57,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 4.3 | Configure explicit local and production CORS origins, methods, and headers | Completed |
 | 4.4 | Implement `GET /health` with process and database status | Completed |
 | 4.5 | Implement active pattern listing with category and color filters | Completed |
-| 4.6 | Implement design creation and public-ID retrieval endpoints | Not started |
+| 4.6 | Implement design creation and public-ID retrieval endpoints | Completed |
 | 4.7 | Enforce business validation and consistent field-aware API errors | Not started |
 | 4.8 | Configure production Uvicorn execution and reviewer-accessible API documentation | Not started |
 
@@ -389,3 +389,14 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Task 4.5 adds only the read-side SQLAlchemy Core table contract required to express the repository query. It creates no ORM model, constraint set, table, migration, index, or production seed data, preserving Tasks 5.2-5.5. Import, application construction, startup, root requests, and CORS preflight remain connection-free; only a `/patterns` request begins its lazy database session.
 - Python 3.13.2 Pytest passes 66 tests covering the canonical unfiltered active list, inactive exclusion, category and exact color filtering, normalized combined filters, valid unknown and zero-match filters, stable ordering, typed serialization and OpenAPI, malformed values, extra query rejection, repository/service transaction ownership and rollback, plus all existing root, health, CORS, settings, and database behavior. Offline tests use an isolated in-memory SQLite table and require no Neon access, internet, database file, or populated environment.
 - Ruff lint and format checks, `pip check`, roadmap row/wording/status integrity, and `git diff --check` pass. No frontend API integration, design creation/retrieval, business-error framework, upload, authentication, pricing, order, deployment, live Neon setup, dependency, environment, migration, production catalogue seed, or Task 4.6 behavior is included. All 58 roadmap rows and their deliverable wording remain present; progress is 23 / 58 and the exact next task is 4.6.
+
+### 2026-07-27 - Immutable design creation and public retrieval
+
+- `POST /designs` accepts exactly `shape`, `width`, `height`, `thickness`, `unit`, `patternId`, and `patternScale`, returns HTTP 201 plus a retrieval `Location`, and serializes those fields with the server-generated `publicId`. `GET /designs/{public_id}` returns the same immutable public fields with HTTP 200. No internal integer ID, activity field, timestamp, database value, or other management field is accepted or returned.
+- Typed request validation matches the frontend contract: `square`, `rectangle`, and `box`; `cm` and `in`; width/height 10-300 cm equivalent; thickness 1-60 cm equivalent; exact 2.54 conversion; positive numeric measurements with at most two decimals; equal square width/height; scale 0.5-2.0 at one-decimal resolution; and a normalized pattern slug. Unknown fields, server-managed fields, coercible strings, malformed values, unsupported configurations, and invalid public-ID paths receive FastAPI HTTP 422.
+- The service requires the selected pattern to exist and be active when creating a design; unknown or inactive patterns receive a stable public 422 response and no insert. Retrieval intentionally does not recheck later pattern activity, preserving the immutable saved configuration. A well-formed unknown public ID returns the exact secret-safe HTTP 404 `{"detail":"Design not found."}`.
+- Public IDs are separate from the internal integer key and contain 128 random bits encoded as 22 URL-safe opaque characters. The minimum Core table contract requires uniqueness. The service checks generated IDs, relies on the unique database boundary for concurrent races, rolls back collisions, and retries five times before a generic HTTP 503. Repository/commit/database failures likewise roll back and return only `{"detail":"Design storage is unavailable."}`, never SQL, credentials, hostnames, internal IDs, parameters, constraint text, or exception detail.
+- The concrete design repository owns public-ID lookup and immutable insertion and may flush but never commits or rolls back. The service owns active-pattern validation, ID generation, transaction coordination, commit, rollback, collision retry, and not-found behavior. Import, application construction, startup, root requests, and CORS preflights remain connection-free; only a database endpoint request begins lazy database work.
+- Task 4.6 adds only the Core `cover_designs` persistence contract needed for these endpoints: internal key, unique public ID, and the seven immutable configuration values. It creates no ORM model, migration, production table, index, seed, Neon project, live connection, frontend integration, editing/deletion, authentication, customer data, upload, pricing, order, deployment, or Task 4.7 field-aware error framework.
+- Python 3.13.2 Pytest passes 118 tests covering create/retrieve status and schema, all public fields, unique opaque IDs, exact 404 behavior, malformed IDs, invalid/extra/server-managed input, shape/unit/measurement/scale boundaries, active-pattern validation, immutable retrieval, repository flush/no-commit behavior, service commit/rollback, commit failure, collision precheck and uniqueness race, bounded exhaustion, session cleanup, secret-safe failures, and every existing pattern, health, CORS, root, settings, and database test. Ruff lint and format checks, `pip check`, roadmap row/wording/status integrity, and `git diff --check` pass.
+- All 58 roadmap rows and their deliverable wording remain present; progress is 24 / 58 and the exact next task is 4.7.

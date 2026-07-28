@@ -81,3 +81,10 @@ class PatternRepository:
         if color is None:
             return tuple(patterns)
         return tuple(pattern for pattern in patterns if color in pattern.color_ids)
+
+    def is_active(self, pattern_id: str) -> bool:
+        query = select(patterns_table.c.id).where(
+            patterns_table.c.id == pattern_id,
+            patterns_table.c.is_active.is_(True),
+        )
+        return self._session.scalar(query) is not None

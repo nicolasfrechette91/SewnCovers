@@ -6,6 +6,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.designs.api import create_design, get_design
+from app.designs.schema import DesignResponse
 from app.health import HealthResponse, read_health
 from app.patterns.api import list_patterns
 from app.patterns.schema import PatternResponse
@@ -61,6 +63,29 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             "Returns active patterns in stable display order. Optional category and "
             "color filters are normalized and combined with AND semantics."
         ),
+    )
+    application.add_api_route(
+        "/designs",
+        create_design,
+        methods=["POST"],
+        response_model=DesignResponse,
+        status_code=201,
+        summary="Create a saved design",
+        responses={
+            422: {"description": "Invalid or unsupported configuration"},
+            503: {"description": "Design storage is unavailable"},
+        },
+    )
+    application.add_api_route(
+        "/designs/{public_id}",
+        get_design,
+        methods=["GET"],
+        response_model=DesignResponse,
+        summary="Retrieve a saved design",
+        responses={
+            404: {"description": "Design not found"},
+            503: {"description": "Design storage is unavailable"},
+        },
     )
     return application
 

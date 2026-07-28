@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, a typed environment-settings boundary, an explicit CORS policy, and lazy SQLAlchemy 2 session infrastructure. ORM models, migrations, production seed data, saved-design persistence, and later business endpoints remain deferred to their roadmap tasks.
+This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a typed environment-settings boundary, an explicit CORS policy, and lazy SQLAlchemy 2 session infrastructure. ORM models, migrations, indexes, production seed data, live database integration, and later business endpoints remain deferred to their roadmap tasks.
 
 ## Requirements
 
@@ -85,10 +85,11 @@ The shared `session_scope` opens one session, explicitly rolls it back if downst
 Repository and service responsibilities stay deliberately narrow:
 
 - The concrete pattern repository owns its SQLAlchemy query, exact color-membership filtering, and record mapping. It never commits or rolls back.
-- Services own use-case validation and coordination. The pattern service wraps its repository call in `service_transaction`, which commits only after the operation succeeds and rolls back repository or commit failures without masking the original exception.
+- The concrete design repository owns immutable insert and public-ID lookup statements. It may flush, but never commits or rolls back.
+- Services own use-case validation and coordination. Pattern and design services wrap repository work in `service_transaction`, which commits only after the complete operation succeeds and rolls back repository, validation, collision, not-found, or commit failures without masking the original exception.
 - Routes depend on services rather than exposing sessions or SQLAlchemy details. No generic base repository or speculative CRUD layer exists.
 
-Task 4.5 adds only a SQLAlchemy Core read-side `patterns` table contract so the repository can issue a typed query. It does not create a table at import or startup. Neon provisioning, ORM models and constraints, Alembic migrations, indexes, production seed data, and saved-design persistence remain deferred to their exact Phase 5 tasks.
+Tasks 4.5 and 4.6 add only the SQLAlchemy Core `patterns` read contract and minimum `cover_designs` persistence contract needed by their repositories. Neither creates a table at import or startup. The design contract includes an internal integer key plus a separate unique public ID, but only the public ID and configuration fields leave the repository. Neon provisioning, ORM models and the complete constraint set, Alembic migrations, indexes, and production seed data remain deferred to their exact Phase 5 tasks.
 
 ## Health endpoint
 
@@ -123,6 +124,29 @@ Category matching uses exact normalized category equality. Color matching uses e
 
 The endpoint uses the request session, concrete pattern repository, and pattern service transaction boundary. Importing the application, constructing it, and starting it do not create an engine, session, connection, table, or seed record. Offline tests create an isolated in-memory SQLite table and load the established 15-record frontend metadata plus one inactive test record; they never require Neon, internet access, a database file, or a populated `.env`.
 
+## Saved-design endpoints
+
+`POST /designs` accepts exactly the client-owned configuration fields and returns HTTP 201 with the immutable saved design. Its `Location` header is `/designs/{publicId}`. `GET /designs/{public_id}` returns the same public representation with HTTP 200. A well-formed unknown public ID returns HTTP 404 with `{"detail":"Design not found."}`; a malformed path ID receives FastAPI's HTTP 422 validation response.
+
+| Field | Create request | Response | Validation |
+| --- | --- | --- | --- |
+| `shape` | Yes | Yes | Exactly `square`, `rectangle`, or `box`. |
+| `width` | Yes | Yes | JSON number, positive, at most two decimals, and 10-300 cm equivalent. |
+| `height` | Yes | Yes | JSON number, positive, at most two decimals, and 10-300 cm equivalent; must equal width for `square`. |
+| `thickness` | Yes | Yes | JSON number, positive, at most two decimals, and 1-60 cm equivalent. |
+| `unit` | Yes | Yes | Exactly `cm` or `in`; inch measurements are validated using exactly 2.54 cm per inch. |
+| `patternId` | Yes | Yes | Normalized lowercase slug identifying an active pattern at creation time. |
+| `patternScale` | Yes | Yes | JSON number from 0.5 through 2.0 at the frontend's one-decimal resolution. |
+| `publicId` | No | Yes | Server-generated 22-character URL-safe opaque identifier. |
+
+Every request field is required. Strings are not coerced to numbers, unsupported values are rejected, and extra fields—including `id`, `publicId`, timestamps, activity flags, and other server-managed values—receive HTTP 422. Pattern validation happens in the service through the concrete active-pattern repository. Saved designs remain retrievable without rechecking current pattern activity so their stored configuration stays immutable.
+
+Public IDs are independent of the internal integer database key. The service generates 128 random bits with the standard cryptographic token generator and exposes only the resulting 22-character URL-safe value. The minimum table contract also requires uniqueness. Creation checks for an existing ID, relies on database uniqueness for races, rolls back collisions, and retries up to five generated values. Exhaustion returns a generic HTTP 503 without SQL, constraint, internal-ID, host, credential, or exception detail.
+
+The design service owns active-pattern validation, public-ID generation, creation/retrieval coordination, commit, rollback, and collision retry. The repository executes only public-ID queries and immutable inserts and may flush without committing. Database failures from either endpoint become `{"detail":"Design storage is unavailable."}` with HTTP 503; details remain server-side. Task 4.7's consistent field-aware business-error framework is not included.
+
+These endpoints require a configured database containing the compatible `patterns` and `cover_designs` tables. This task supplies no migration, production schema creation, seed command, Neon project, or live connection. Offline tests create both contracts in isolated in-memory SQLite, seed only the pattern records needed by each test, and exercise all behavior without a database file, internet, or populated `.env`.
+
 ## Run the API
 
 Start the development server from the `backend` directory:
@@ -136,6 +160,8 @@ The local addresses are:
 - API verification endpoint: <http://127.0.0.1:8000/>
 - Process and database health: <http://127.0.0.1:8000/health>
 - Active pattern catalogue: <http://127.0.0.1:8000/patterns>
+- Create an immutable saved design: `POST http://127.0.0.1:8000/designs`
+- Retrieve one saved design: `GET http://127.0.0.1:8000/designs/{public_id}`
 - Interactive API documentation: <http://127.0.0.1:8000/docs>
 - Alternative API documentation: <http://127.0.0.1:8000/redoc>
 
@@ -158,6 +184,6 @@ To format Python files after making changes, run:
 python -m ruff format .
 ```
 
-`pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. FastAPI's existing Starlette middleware supplies CORS, so Task 4.3 adds no dependency. Tasks 4.4 and 4.5 reuse FastAPI, Pydantic, and SQLAlchemy and add no dependency. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
+`pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. FastAPI's existing Starlette middleware supplies CORS, so Task 4.3 adds no dependency. Tasks 4.4-4.6 reuse FastAPI, Pydantic, SQLAlchemy, and Python's standard library and add no dependency. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
 
-The backend connects to a configured database only when `/health`, `/patterns`, or later database functionality requests it. Import, startup, the root endpoint, and the offline tests do not connect to Neon. Saved-design, authentication, upload, and commercial endpoints remain unimplemented. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) for the staged implementation roadmap.
+The backend connects to a configured database only when `/health`, `/patterns`, `/designs`, or later database functionality requests it. Import, startup, the root endpoint, and the offline tests do not connect to Neon. Design editing/deletion, authentication, upload, and commercial endpoints remain unimplemented. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) for the staged implementation roadmap.
