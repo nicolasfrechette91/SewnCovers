@@ -7,6 +7,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.health import HealthResponse, read_health
+from app.patterns.api import list_patterns
+from app.patterns.schema import PatternResponse
 from app.persistence.database import dispose_application_database
 from app.settings import Settings, get_settings
 
@@ -48,6 +50,17 @@ def create_application(settings: Settings | None = None) -> FastAPI:
                 "model": HealthResponse,
             }
         },
+    )
+    application.add_api_route(
+        "/patterns",
+        list_patterns,
+        methods=["GET"],
+        response_model=list[PatternResponse],
+        summary="List active patterns",
+        description=(
+            "Returns active patterns in stable display order. Optional category and "
+            "color filters are normalized and combined with AND semantics."
+        ),
     )
     return application
 

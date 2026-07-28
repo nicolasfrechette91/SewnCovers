@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the minimal Python and FastAPI service for SewnCovers. It provides a temporary root endpoint for scaffold verification, a typed health endpoint, a typed environment-settings boundary, an explicit CORS policy, and lazy SQLAlchemy 2 session infrastructure. Database models, migrations, persistence, and business endpoints are intentionally deferred to later roadmap tasks.
+This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, a typed environment-settings boundary, an explicit CORS policy, and lazy SQLAlchemy 2 session infrastructure. ORM models, migrations, production seed data, saved-design persistence, and later business endpoints remain deferred to their roadmap tasks.
 
 ## Requirements
 
@@ -59,7 +59,7 @@ The immutable settings boundary in `app/settings.py` reads backend process varia
 | `FRONTEND_ORIGIN` | Optional in `development`/`test`; required in `production` | One absolute HTTP(S) origin without credentials, path, query, or fragment | Missing local/test configuration uses `http://localhost:3000`. A production process must explicitly set the Pages origin `https://nicolasfrechette91.github.io`. Whitespace and trailing root slashes are removed at process runtime. |
 | `DATABASE_URL` | Optional at startup; required when database functionality is requested | Private SQLAlchemy connection URL | Kept server-only in a secret type and excluded from settings representations and serialization. Missing or invalid configuration produces a value-free error naming only the variable. |
 
-The example values are safe local placeholders. `DATABASE_URL` remains empty because the root endpoint and automated suite do not need a live database; a developer must supply it privately before requesting a healthy database result. Validation errors hide input values, and configuration import does not initialize a Neon or database client. Never commit `.env`, a Neon connection string, passwords, tokens, or credentials.
+The example values are safe local placeholders. `DATABASE_URL` remains empty because imports, startup, the root endpoint, and the automated suite do not need a live database; a developer must supply it privately before requesting `/health` or `/patterns` against a deployed schema. Validation errors hide input values, and configuration import does not initialize a Neon or database client. Never commit `.env`, a Neon connection string, passwords, tokens, or credentials.
 
 ## Browser CORS policy
 
@@ -84,11 +84,11 @@ The shared `session_scope` opens one session, explicitly rolls it back if downst
 
 Repository and service responsibilities stay deliberately narrow:
 
-- Concrete repositories will own SQLAlchemy queries and persistence for one domain concept. They may add and flush through their injected session, but never commit or roll back.
-- Services will own use-case validation and coordination. A service wraps its repository calls in `service_transaction`, which commits only after the whole operation succeeds and rolls back repository, validation, or commit failures without masking the original exception.
-- Routes will depend on services rather than exposing sessions or ORM details outside `app/persistence`. No generic base repository or speculative CRUD layer exists. Concrete repositories are deferred until Task 5.2 supplies actual models.
+- The concrete pattern repository owns its SQLAlchemy query, exact color-membership filtering, and record mapping. It never commits or rolls back.
+- Services own use-case validation and coordination. The pattern service wraps its repository call in `service_transaction`, which commits only after the operation succeeds and rolls back repository or commit failures without masking the original exception.
+- Routes depend on services rather than exposing sessions or SQLAlchemy details. No generic base repository or speculative CRUD layer exists.
 
-Neon provisioning, models, tables, Alembic migrations, seed data, and application persistence remain deferred to their roadmap tasks.
+Task 4.5 adds only a SQLAlchemy Core read-side `patterns` table contract so the repository can issue a typed query. It does not create a table at import or startup. Neon provisioning, ORM models and constraints, Alembic migrations, indexes, production seed data, and saved-design persistence remain deferred to their exact Phase 5 tasks.
 
 ## Health endpoint
 
@@ -102,6 +102,27 @@ Neon provisioning, models, tables, Alembic migrations, seed data, and applicatio
 
 The database is checked only when `/health` is requested. Application import, application creation, startup, the root endpoint, and CORS preflight do not create an engine or check out a connection. The request-owned session is always closed and query failures are rolled back without committing. Responses never include the database URL, credentials, host, SQL text, or exception details.
 
+## Pattern endpoint
+
+`GET /patterns` returns a bare JSON list containing only active patterns. Each item has the stable public fields:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | string | Stable pattern identifier matching the frontend catalogue. |
+| `name` | string | Visible pattern name. |
+| `description` | string | Concise visible catalogue description. |
+| `categoryId` | string | Category identifier such as `botanical`. |
+| `colorIds` | string array | One or more exact color identifiers. |
+| `previewClassName` | string | Frontend-owned local preview-style handle. |
+
+Internal `is_active` and `display_order` values are never serialized. Records are ordered by ascending `display_order`, then ascending `id` as a deterministic tie-breaker. The endpoint returns HTTP 200 with `[]` when a valid filter has no matches.
+
+The optional query parameters are `category` and `color`. Each value is trimmed and normalized to lowercase, must be 1-40 characters, and must be a slug beginning with a letter followed by letters, digits, or single hyphen-separated groups. Values such as `BOTANICAL` and surrounding whitespace are accepted and normalized; empty values, underscores, punctuation, leading hyphens, and overlong values receive FastAPI's HTTP 422 validation response. A syntactically valid unknown value is not an error and returns an empty list.
+
+Category matching uses exact normalized category equality. Color matching uses exact membership in `colorIds`. When both filters are present, a record must match both (AND semantics). Active-only selection and stable ordering are always applied before serialization.
+
+The endpoint uses the request session, concrete pattern repository, and pattern service transaction boundary. Importing the application, constructing it, and starting it do not create an engine, session, connection, table, or seed record. Offline tests create an isolated in-memory SQLite table and load the established 15-record frontend metadata plus one inactive test record; they never require Neon, internet access, a database file, or a populated `.env`.
+
 ## Run the API
 
 Start the development server from the `backend` directory:
@@ -114,6 +135,7 @@ The local addresses are:
 
 - API verification endpoint: <http://127.0.0.1:8000/>
 - Process and database health: <http://127.0.0.1:8000/health>
+- Active pattern catalogue: <http://127.0.0.1:8000/patterns>
 - Interactive API documentation: <http://127.0.0.1:8000/docs>
 - Alternative API documentation: <http://127.0.0.1:8000/redoc>
 
@@ -136,6 +158,6 @@ To format Python files after making changes, run:
 python -m ruff format .
 ```
 
-`pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. FastAPI's existing Starlette middleware supplies CORS, so Task 4.3 adds no dependency. Task 4.4 reuses FastAPI, Pydantic, and SQLAlchemy and adds no dependency. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
+`pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. FastAPI's existing Starlette middleware supplies CORS, so Task 4.3 adds no dependency. Tasks 4.4 and 4.5 reuse FastAPI, Pydantic, and SQLAlchemy and add no dependency. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
 
-The backend connects to a configured database only when `/health` or later database functionality requests it. Import, startup, the root endpoint, and the offline tests do not connect to Neon. Pattern, saved-design, authentication, upload, and commercial endpoints remain unimplemented. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) for the staged implementation roadmap.
+The backend connects to a configured database only when `/health`, `/patterns`, or later database functionality requests it. Import, startup, the root endpoint, and the offline tests do not connect to Neon. Saved-design, authentication, upload, and commercial endpoints remain unimplemented. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) for the staged implementation roadmap.

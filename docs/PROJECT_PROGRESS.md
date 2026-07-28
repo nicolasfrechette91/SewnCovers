@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 4 - FastAPI backend
-- Current task: 4.4 - Implement `GET /health` with process and database status
+- Current task: 4.5 - Implement active pattern listing with category and color filters
 - Status: Completed
-- Overall progress: 22 / 58 tasks completed
-- Up next: 4.5 - Implement active pattern listing with category and color filters
+- Overall progress: 23 / 58 tasks completed
+- Up next: 4.6 - Implement design creation and public-ID retrieval endpoints
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -56,7 +56,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 4.2 | Add SQLAlchemy 2 database session and compact repository/service boundaries | Completed |
 | 4.3 | Configure explicit local and production CORS origins, methods, and headers | Completed |
 | 4.4 | Implement `GET /health` with process and database status | Completed |
-| 4.5 | Implement active pattern listing with category and color filters | Not started |
+| 4.5 | Implement active pattern listing with category and color filters | Completed |
 | 4.6 | Implement design creation and public-ID retrieval endpoints | Not started |
 | 4.7 | Enforce business validation and consistent field-aware API errors | Not started |
 | 4.8 | Configure production Uvicorn execution and reviewer-accessible API documentation | Not started |
@@ -380,3 +380,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Health responses expose no database URL, credentials, host, SQL, exception type, or exception detail. Offline tests inject recording sessions or isolated configuration and require neither Neon, a database file, internet access, nor a populated environment file.
 - Python 3.13.2 Pytest passes 49 tests covering all health states, exact response bodies and HTTP statuses, OpenAPI schema, secret safety, success/failure cleanup, connection/query failure, request-only work, unchanged root and CORS behavior, settings, database lifecycle, and import/startup inactivity. Ruff lint and format checks, `pip check`, dependency compatibility, roadmap integrity, and `git diff --check` pass.
 - No model, migration, persistence, authentication, monitoring infrastructure, frontend integration, deployment, additional endpoint, Task 4.5 behavior, dependency upgrade, generated file, or environment file is included. All 58 roadmap rows and their deliverable wording remain present; progress is 22 / 58 and the exact next task is 4.5.
+
+### 2026-07-27 - Typed active pattern listing
+
+- `GET /patterns` returns a typed bare JSON list containing only the stable public `id`, `name`, `description`, `categoryId`, `colorIds`, and `previewClassName` fields. Internal activity and ordering fields never serialize. The contract matches all 15 established frontend IDs, names, descriptions, categories, color tags, and preview handles without adding a second production catalogue.
+- Optional `category` and `color` values are trimmed, normalized to lowercase, limited to 1-40 characters, and validated as letter-led hyphen-separated slugs. Malformed values and unknown query parameters receive FastAPI's HTTP 422 response. Syntactically valid unknown values return HTTP 200 with `[]`. Category uses exact equality, color uses exact tag membership, and both filters combine with AND semantics.
+- The concrete SQLAlchemy pattern repository always selects active records and orders them by ascending `display_order`, then ascending `id` as a deterministic tie-breaker. It owns category/color query behavior and mapping but never commits or rolls back. The service coordinates the use case through the existing service transaction, committing only after successful listing and rolling back repository failures.
+- Task 4.5 adds only the read-side SQLAlchemy Core table contract required to express the repository query. It creates no ORM model, constraint set, table, migration, index, or production seed data, preserving Tasks 5.2-5.5. Import, application construction, startup, root requests, and CORS preflight remain connection-free; only a `/patterns` request begins its lazy database session.
+- Python 3.13.2 Pytest passes 66 tests covering the canonical unfiltered active list, inactive exclusion, category and exact color filtering, normalized combined filters, valid unknown and zero-match filters, stable ordering, typed serialization and OpenAPI, malformed values, extra query rejection, repository/service transaction ownership and rollback, plus all existing root, health, CORS, settings, and database behavior. Offline tests use an isolated in-memory SQLite table and require no Neon access, internet, database file, or populated environment.
+- Ruff lint and format checks, `pip check`, roadmap row/wording/status integrity, and `git diff --check` pass. No frontend API integration, design creation/retrieval, business-error framework, upload, authentication, pricing, order, deployment, live Neon setup, dependency, environment, migration, production catalogue seed, or Task 4.6 behavior is included. All 58 roadmap rows and their deliverable wording remain present; progress is 23 / 58 and the exact next task is 4.6.
