@@ -21,6 +21,7 @@ assert.deepEqual(transpiled.diagnostics, []);
 const {
   createPublicEnvironment,
   parsePublicApiUrl,
+  PublicEnvironmentError,
 } = await import(
   `data:text/javascript;base64,${Buffer.from(transpiled.outputText).toString("base64")}`
 );
@@ -58,7 +59,13 @@ test("represents an absent optional API URL explicitly", () => {
 });
 
 test("rejects malformed URLs and unsupported schemes", () => {
-  assert.throws(() => parsePublicApiUrl("not a URL"), /NEXT_PUBLIC_API_URL/);
+  assert.throws(
+    () => parsePublicApiUrl("not a URL"),
+    (error) =>
+      error instanceof PublicEnvironmentError &&
+      error.category === "configuration" &&
+      /NEXT_PUBLIC_API_URL/.test(error.message),
+  );
   assert.throws(
     () => parsePublicApiUrl("ftp://api.example.com"),
     /NEXT_PUBLIC_API_URL/,

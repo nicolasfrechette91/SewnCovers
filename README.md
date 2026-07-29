@@ -71,7 +71,7 @@ The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. D
 
 ## Current state
 
-The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend has a compact Python 3.13 and FastAPI service, explicit CORS policy, typed database-aware health reporting, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history with non-redundant category/activity indexes and the canonical 15-pattern metadata seed, active-pattern listing, immutable design creation/retrieval by opaque public ID, a typed field-aware error contract, and isolated Neon development/production environments, documented in [`backend/README.md`](backend/README.md). The persistent development Neon database is migrated and verified at `20260729_01`; production migration remains deferred until Render owns its protected database secret, and frontend API integration remains deferred.
+The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. Its browser-compatible typed API client validates the established health, pattern, and immutable-design contracts, applies bounded safe retries and cold-start status messaging, and keeps unsafe design creation single-attempt. Screen adoption begins with Task 6.2. The backend has a compact Python 3.13 and FastAPI service, explicit CORS policy, typed database-aware health reporting, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history with non-redundant category/activity indexes and the canonical 15-pattern metadata seed, active-pattern listing, immutable design creation/retrieval by opaque public ID, a typed field-aware error contract, and isolated Neon development/production environments, documented in [`backend/README.md`](backend/README.md). The persistent development Neon database is migrated and verified at `20260729_01`; production migration remains deferred until Render owns its protected database secret.
 
 See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task checklist and current handoff state.
 
@@ -104,7 +104,7 @@ cd frontend
 npm run dev
 ```
 
-The frontend is available at <http://localhost:3000>. Copy `frontend/.env.example` to `frontend/.env.local` and `backend/.env.example` to `backend/.env` as described in the application READMEs. The API root, startup, and tests do not require a database connection; only `/health` performs its database check when requested. The current frontend may not consume the API until the later integration phase.
+The frontend is available at <http://localhost:3000>. Copy `frontend/.env.example` to `frontend/.env.local` and `backend/.env.example` to `backend/.env` as described in the application READMEs. The API root, startup, and tests do not require a database connection; only `/health` performs its database check when requested. The typed client is available now, while the existing catalogue remains local until Task 6.2 adopts it.
 
 Press `Ctrl+C` in each terminal to stop both development servers. The application READMEs contain the verified install, lint, format, type-check, test, and build commands for Windows PowerShell and macOS/Linux.
 
@@ -117,7 +117,7 @@ Copy the example files to ignored local environment files. Never commit populate
 
 | Owner | Variable | Required now | Validation and lifecycle |
 | --- | --- | --- | --- |
-| Frontend | `NEXT_PUBLIC_API_URL` | No; API integration is Task 6.1 | Absolute HTTP(S) URL, trimmed with trailing slashes removed, and embedded publicly at Next.js build time. |
+| Frontend | `NEXT_PUBLIC_API_URL` | Required for API requests; a static build may omit it | Absolute HTTP(S) URL, trimmed with trailing slashes removed, embedded publicly at Next.js build time, and checked before every client request. |
 | Backend | `ENVIRONMENT` | No; defaults to `development` | One of `development`, `test`, or `production`, parsed at process runtime. |
 | Backend | `FRONTEND_ORIGIN` | Optional in development/test; required in production | One exact HTTP(S) origin, normalized at process runtime. Missing local/test configuration uses `http://localhost:3000`; production must set `https://nicolasfrechette91.github.io` for the configured Pages deployment. |
 | Backend | `PORT` | No; defaults to `8000` | Integer from 1 through 65535, read at production Uvicorn process startup; hosting platforms normally provide it. |
@@ -143,6 +143,6 @@ verification commands.
 
 - GitHub Pages serves only the static Next.js export and requires the `/sewncovers` repository base path.
 - The Pages URL is `https://nicolasfrechette91.github.io/sewncovers/`, but its CORS origin is only `https://nicolasfrechette91.github.io`; origins never contain a path.
-- Render free services may spin down, so the UI must explain and retry a slow first request.
+- Render free services may spin down, so delayed requests report that the API may be waking. Safe reads use a 20-second per-attempt timeout and at most two sequential retries; design creation is never retried automatically.
 - Neon's Free plan currently provides 100 CU-hours and 0.5 GB storage per project, 10 branches per project, and 5 GB monthly public network transfer. These limits were verified on 2026-07-29 and can change; the backend README documents the dashboard checks, reset periods, warnings, actions, and official sources. Neon and Render limits will be checked again immediately before deployment.
 - Pattern artwork, gradients, images, and other visual assets stay in the frontend deployment. PostgreSQL stores only the established public catalogue metadata, never image data, URLs, or filesystem paths.

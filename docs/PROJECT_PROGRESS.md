@@ -8,11 +8,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 ## Current handoff
 
-- Current phase: Phase 5 - Neon database
-- Current task: 5.6 - Run migrations against Neon and document free-tier usage monitoring
+- Current phase: Phase 6 - Frontend and backend integration
+- Current task: 6.1 - Add the typed API client using `NEXT_PUBLIC_API_URL`, timeouts, retry limit, and cold-start messaging
 - Status: Completed
-- Overall progress: 32 / 58 tasks completed
-- Up next: 6.1 - Add the typed API client using `NEXT_PUBLIC_API_URL`, timeouts, retry limit, and cold-start messaging
+- Overall progress: 33 / 58 tasks completed
+- Up next: 6.2 - Replace local catalogue data with API pattern loading and filtering
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -76,7 +76,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 | Task | Deliverable | Status |
 | --- | --- | --- |
-| 6.1 | Add the typed API client using `NEXT_PUBLIC_API_URL`, timeouts, retry limit, and cold-start messaging | Not started |
+| 6.1 | Add the typed API client using `NEXT_PUBLIC_API_URL`, timeouts, retry limit, and cold-start messaging | Completed |
 | 6.2 | Replace local catalogue data with API pattern loading and filtering | Not started |
 | 6.3 | Save reviewed configurations and generate the `?design=<public_id>` share URL | Not started |
 | 6.4 | Load and exactly restore shared designs, including unknown/expired ID handling | Not started |
@@ -480,3 +480,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Python 3.13.2 Pytest passes all 182 tests using a task-scoped temporary directory; the directory was removed afterward. Editable pip installation, `pip check`, Ruff lint/format checks, Alembic history/head/current/metadata parity, frontend public-environment tests, ESLint, strict type-checking, static-export build, roadmap integrity, credential/generated-file scans, and `git diff --check` pass.
 - Migration documentation now requires identity and current-revision inspection before change, development-first application, schema/data/API/idempotency verification, protected secret placement, and no live downgrade/reset/recreate/manual DDL/`create_all`. No paid resource, external monitor, scheduled job, credential, generated database file, frontend change, deployment, or Task 6.1 behavior was introduced.
 - Task 5.6 is `Completed`, progress is 32 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 6.1 - Add the typed API client using `NEXT_PUBLIC_API_URL`, timeouts, retry limit, and cold-start messaging.
+
+### 2026-07-29 - Typed browser API client and cold-start policy
+
+- `frontend/services/api-client.ts` is the single dependency-free browser client and reads its base URL only through the existing statically inlined `NEXT_PUBLIC_API_URL` boundary. Missing configuration fails before `fetch`; invalid URLs remain rejected without echoing values. Base paths are preserved, joins are normalized, and filters and public IDs are encoded.
+- The client exposes only the roadmap-required existing backend operations: health, active pattern listing, immutable design creation, and public-ID retrieval. Runtime validators accept the exact public success schemas and non-empty typed `{ errors: [...] }` envelope, reject extra/internal fields, and classify configuration, timeout, network, HTTP, backend-contract, and malformed-response failures without copying exception details, raw response bodies, submitted designs, URLs, secrets, or stack traces into messages or logs.
+- Every attempt owns one `AbortController` and a 20-second timeout. Safe reads retry only transient timeout/network failures or HTTP/backend 408, 425, 429, 500, 502, 503, and 504 responses, with exactly two additional sequential attempts after 500 ms and 1 second. Permanent validation/not-found failures and malformed responses do not retry; unsafe `POST /designs` is always single-attempt. Timers and controllers are cleaned after every outcome and no overlapping retry attempt is scheduled.
+- Optional status callbacks report connecting, a cautious two-second delayed message that the API may be waking, exact bounded retry progress, recovery success, or a fixed useful failure. The messaging never claims a cold start is certain and remains compatible with later screen integration rather than adding Task 6.2 behavior.
+- Node's built-in runner uses mocked fetch and deterministic timers for public URL handling, normalized URL construction, all typed successes, exact backend errors, malformed responses, timeout cancellation, retry eligibility and exclusion, exact limits, cold-start recovery, sequential requests, cleanup, and secret-safe output. ESLint, strict type-checking, ordinary and GitHub Pages static-export builds, environment/credential scans, all 182 backend regressions, Ruff checks, roadmap integrity, and `git diff --check` pass without contacting Render or Neon. Both sandboxed builds first reproduced only the documented Google Fonts connection block; their outbound-enabled reruns passed with all routes statically prerendered.
+- No dependency, lockfile, backend endpoint/schema/database/migration, local catalogue, screen integration, authentication, cache, offline persistence, deployment, Render request, Neon request, or Task 6.2 behavior is included. Task 6.1 is `Completed`, progress is 33 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 6.2 - Replace local catalogue data with API pattern loading and filtering.

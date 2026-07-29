@@ -1,6 +1,6 @@
 # SewnCovers frontend
 
-This directory contains the Next.js 16.2.11, React, and TypeScript App Router frontend. It is configured for static export to GitHub Pages. The current foundation does not call the FastAPI service yet; API integration is deferred to a later roadmap task.
+This directory contains the Next.js 16.2.11, React, and TypeScript App Router frontend. It is configured for static export to GitHub Pages and includes the browser-side typed FastAPI client. Catalogue and configurator screen integration begins in Task 6.2.
 
 ## Requirements
 
@@ -27,7 +27,7 @@ On macOS or Linux, create it only when it does not already exist:
 test -e .env.local || cp .env.example .env.local
 ```
 
-`NEXT_PUBLIC_API_URL` is the only application environment variable owned by the frontend. It is optional until the typed API client is added in Task 6.1; the example provides the safe local value `http://localhost:8000`. When present, it must be an absolute HTTP or HTTPS URL without credentials, a query, or a fragment. The typed configuration boundary trims whitespace and removes trailing slashes before exposing an immutable `{ apiUrl: string | undefined }` object. Invalid values fail with an actionable error naming `NEXT_PUBLIC_API_URL` without echoing its contents.
+`NEXT_PUBLIC_API_URL` is the only application environment variable owned by the frontend. It is required whenever an API client method is called; the example provides the safe local value `http://localhost:8000`. A missing value does not block a static build, but a request fails before `fetch` with a typed configuration error. A configured value must be an absolute HTTP or HTTPS URL without credentials, a query, or a fragment. The typed configuration boundary trims whitespace and removes trailing slashes before exposing an immutable `{ apiUrl: string | undefined }` object. Invalid values fail with an actionable configuration error naming `NEXT_PUBLIC_API_URL` without echoing its contents.
 
 Next.js reads `NEXT_PUBLIC_API_URL` explicitly at build time and embeds it in browser code. Changing it after `npm run build` does not change an existing static export. Never put credentials, database URLs, API keys, or other private values in `NEXT_PUBLIC_` variables. Backend environment variables are not imported by the frontend. Local environment files are ignored and must not be committed.
 
@@ -39,7 +39,7 @@ Start the development server:
 npm run dev
 ```
 
-Open <http://localhost:3000>. Run the backend separately when it is needed; the current frontend does not consume it yet.
+Open <http://localhost:3000>. Run the backend separately when it is needed. Task 6.1 supplies the client boundary but does not replace the local catalogue or connect a screen; that integration starts in Task 6.2.
 
 Press `Ctrl+C` in this terminal to stop the development server.
 
@@ -51,10 +51,19 @@ Run these commands from the `frontend` directory:
 npm run lint
 npm run typecheck
 npm run check:config
+npm test
 npm run build
 ```
 
-`npm run typecheck` performs strict TypeScript checking without emitting files. `npm run check:config` exercises valid, missing, normalized, malformed, unsupported, and secret-safe public URL behavior with Node's built-in test runner; no frontend testing framework was added. `npm run build` performs the production build and writes the static export to the ignored `out/` directory. The existing configuration keeps local development and ordinary local builds at the domain root while GitHub Actions builds use the `/sewncovers` base path required by GitHub Pages.
+`npm run typecheck` performs strict TypeScript checking without emitting files. `npm run check:config` runs the focused environment tests. `npm test` uses Node's built-in test runner with a mocked Fetch API and deterministic timers; it exercises configuration, URL construction, every typed response, backend and malformed errors, timeout cancellation, retry eligibility and bounds, cold-start recovery, cleanup, and secret-safe failures without contacting Render or Neon. No frontend testing dependency was added. `npm run build` performs the production build and writes the static export to the ignored `out/` directory. The existing configuration keeps local development and ordinary local builds at the domain root while GitHub Actions builds use the `/sewncovers` base path required by GitHub Pages.
+
+## Typed API client
+
+`services/api-client.ts` is the single reusable browser client. It reads its base URL only from the statically inlined `NEXT_PUBLIC_API_URL`, preserves an optional base path, safely joins endpoint paths, encodes query/path values, and exposes typed methods only for the established roadmap endpoints: health, pattern listing, immutable design creation, and public-ID retrieval. Runtime validators require the exact public success fields and reject extra fields such as internal database metadata. Non-success responses preserve only a valid non-empty `{ errors: [...] }` contract.
+
+Each attempt owns one `AbortController` and a 20-second timeout. Safe `GET` requests retry only timeout, network, HTTP 408/425/429/500/502/503/504, or documented backend failures with those transient statuses. The retry limit is two additional sequential attempts, delayed by 500 ms and 1 second; permanent 4xx validation/not-found responses and malformed success payloads do not retry. `POST /designs` never retries automatically because a lost response could follow a successful write. Every attempt clears its timer and aborts its controller after completion, and the single sequential loop prevents overlapping attempts.
+
+Callers may supply `onStatus` to receive `connecting`, `cold-start`, `retrying`, `success`, and `failure` states. After two seconds without completion, the message says the API *may* be waking and can take up to a minute; retry messages report the exact bounded retry count. A later response reports recovery, while final failures use fixed, actionable, secret-safe copy. Errors distinguish `configuration`, `timeout`, `network`, `http`, `backend-contract`, and `malformed-response`; caught exception details, response bodies, URLs, submitted designs, credentials, stack traces, and database fields are never logged or copied into client error messages.
 
 ## Design tokens
 
@@ -79,7 +88,7 @@ Reusable typed primitives live in `components/ui/` and are available from the `@
 - `LoadingState` exposes a visible, polite status label and an assistive-technology-hidden CSS spinner. Rotation is limited to users without a reduced-motion preference, while the static indicator remains visible for reduced motion.
 - `ErrorMessage` remains in document flow, defaults to assertive alert semantics, accepts normal React content and an `id` for form association, and uses the semantic error surface, border, and text tokens.
 
-Business validation, measurement conversion, persistence, retry behavior, overlays, skeletons, toasts, and global error handling remain deferred to their roadmap tasks.
+Business validation, measurement conversion, screen-level persistence integration, overlays, skeletons, toasts, and global error handling remain deferred to their roadmap tasks.
 
 ## Configurator component shells
 
@@ -92,7 +101,7 @@ Reusable domain-oriented shells live in `components/configurator/` and are expor
 - `CushionPreview` is a labeled semantic figure with a contained decorative visual region, a deliberate empty state, and caller-supplied `figcaption` content. The shape-aware preview supplies proportional geometry and a textual summary without moving configuration state into the shell.
 - `ConfigurationSummary` renders caller-formatted label/value items as a description list, including intentional empty and missing-value fallbacks. The review derives those items before passing them to the shell; the shell performs no measurement conversion, calculation, validation, pricing, or totals.
 
-Future parent components remain responsible for data fetching, persistence, and API integration. `Configurator`, `MeasurementStep`, `PatternStep`, `PreviewStep`, and the review components share the completed three-shape flow; the illustration and measurement-diagram components retain shape-specific SVG branches where the geometry or terminology genuinely differs.
+Future parent components remain responsible for adopting the typed client for data fetching and persistence. `Configurator`, `MeasurementStep`, `PatternStep`, `PreviewStep`, and the review components share the completed three-shape flow; the illustration and measurement-diagram components retain shape-specific SVG branches where the geometry or terminology genuinely differs.
 
 ## Configuration state
 

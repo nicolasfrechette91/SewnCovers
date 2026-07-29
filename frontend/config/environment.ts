@@ -4,10 +4,19 @@ export type PublicEnvironment = Readonly<{
   apiUrl: string | undefined;
 }>;
 
-function invalidApiUrlError(): Error {
-  return new Error(
+export class PublicEnvironmentError extends Error {
+  readonly category = "configuration";
+
+  constructor() {
+    super(
     `${API_URL_VARIABLE} must be an absolute HTTP or HTTPS URL without credentials, a query, or a fragment.`,
-  );
+    );
+    this.name = "PublicEnvironmentError";
+  }
+}
+
+function invalidApiUrlError(): PublicEnvironmentError {
+  return new PublicEnvironmentError();
 }
 
 export function parsePublicApiUrl(
