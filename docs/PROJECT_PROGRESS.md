@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 5 - Neon database
-- Current task: 5.2 - Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints
+- Current task: 5.3 - Configure Alembic and create the descriptive initial schema migration
 - Status: Completed
-- Overall progress: 28 / 58 tasks completed
-- Up next: 5.3 - Configure Alembic and create the descriptive initial schema migration
+- Overall progress: 29 / 58 tasks completed
+- Up next: 5.4 - Add indexes for pattern slug/category/activity and design public ID
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -67,7 +67,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | --- | --- | --- |
 | 5.1 | Create the Neon project and separate secure local/deployed connection strings | Completed |
 | 5.2 | Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints | Completed |
-| 5.3 | Configure Alembic and create the descriptive initial schema migration | Not started |
+| 5.3 | Configure Alembic and create the descriptive initial schema migration | Completed |
 | 5.4 | Add indexes for pattern slug/category/activity and design public ID | Not started |
 | 5.5 | Seed 12-20 pattern records whose assets remain in the frontend | Not started |
 | 5.6 | Run migrations against Neon and document free-tier usage monitoring | Not started |
@@ -441,3 +441,13 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Python 3.13.2 Pytest passes 161 tests. Ruff lint and formatting, `pip check`, PostgreSQL DDL compilation without a connection, roadmap row/wording/status integrity, generated database/migration/seed checks, credential-scope review, and `git diff --check` pass.
 - No Alembic setup or migration, Neon schema access/change, explicit Task 5.4 performance index, seed data, generated database file, endpoint change, frontend work, authentication, deployment, or unrelated dependency/configuration change is included. Alembic and the descriptive initial migration remain deferred to Task 5.3; pattern slug/category/activity and explicit design public-ID indexes remain deferred to Task 5.4.
 - Task 5.2 is `Completed`, progress is 28 / 58, all 58 roadmap rows and their wording remain present, and the exact next task is 5.3 - Configure Alembic and create the descriptive initial schema migration.
+
+### 2026-07-28 - Descriptive initial Alembic schema migration
+
+- Alembic 1.18.5 is the only new pinned direct dependency and supports the existing Python 3.13 and SQLAlchemy 2.0.51 baseline. `backend/alembic.ini` owns only non-secret migration paths and logging; it contains no `sqlalchemy.url` or fallback connection string. Online commands obtain `DATABASE_URL` through the existing immutable settings and lazy database-engine boundaries, use an unpooled command-owned engine, and convert missing, invalid, or unreachable configuration into fixed value-free errors.
+- `app.persistence.migrations` exposes the exact `Base.metadata` object as Alembic's comparison target without constructing settings, an engine, or a connection at import time. The FastAPI application remains migration-independent during import and startup. History/head inspection and offline SQL generation need no settings or database, while standard `current`, `upgrade`, and `downgrade` commands require valid private online configuration.
+- The single deterministic revision `20260728_01_create_patterns_and_cover_designs.py` creates `patterns` before dependent `cover_designs` and drops them in reverse order. Its explicit operations reproduce every Task 5.2 column, type/precision, nullability rule, server default, named primary/unique/check/foreign-key constraint, restrictive foreign-key action, and integrity structure. URL-safe public IDs, supported values, unit-aware ranges, square equality, pattern scale, and nonnegative deterministic ordering remain protected.
+- The initial revision contains no seed rows and no explicit performance indexes. Only primary keys and named uniqueness constraints establish their normal integrity indexes. Pattern slug/category/activity and explicit design public-ID performance indexes remain exactly deferred to Task 5.4; Neon migration execution and monitoring remain exactly deferred to Task 5.6.
+- Ten focused offline migration tests verify shared metadata discovery, secret-free configuration, exactly one revision/head, dependency order, upgrade from empty SQLite, all expected schema objects and defaults, safe downgrade, upgrade/downgrade/upgrade, Alembic/model no-drift comparison, PostgreSQL DDL, fixed secret-safe configuration failures, history without a connection, and import inactivity. Temporary database files stay under Pytest-owned or task-scoped paths and are not committed.
+- Python 3.13.2 Pytest passes all 171 tests, including every existing API and model regression. Ruff lint and formatting, `pip check`, Alembic history/head/current checks, offline PostgreSQL upgrade and downgrade SQL, a fresh SQLite round-trip, roadmap integrity, credential/generated-file/scope audits, and `git diff --check` pass.
+- Neither Neon branch was contacted or changed; no production schema, development schema, seed record, Task 5.4 index, model, endpoint, frontend behavior, authentication, deployment, or unrelated feature is included. Task 5.3 is `Completed`, progress is 29 / 58, all 58 roadmap rows and their wording remain present, and the exact next task is 5.4 - Add indexes for pattern slug/category/activity and design public ID.

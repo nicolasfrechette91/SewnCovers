@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, and isolated Neon development/production environments. Alembic migrations, planned secondary indexes, production seed data, application persistence against Neon, and later business endpoints remain deferred to their roadmap tasks.
+This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a descriptive Alembic initial migration, and isolated Neon development/production environments. Planned secondary indexes, production seed data, migration execution against Neon, and later business endpoints remain deferred to their roadmap tasks.
 
 ## Requirements
 
@@ -98,7 +98,40 @@ Repository and service responsibilities stay deliberately narrow:
 
 Saved designs are append-only. The repository exposes only insert and public-ID lookup, the API exposes only create and retrieve, and ORM update/delete flushes raise `ImmutableDesignError`. No mutable cascade or reverse design collection is mapped. Internal IDs, activity/order fields, constraint details, SQL, and database settings remain outside public response models and error payloads.
 
-Alembic setup and the descriptive initial schema migration remain Task 5.3. The roadmap's explicit pattern slug/category/activity and design public-ID index work remains Task 5.4; primary-key and unique-constraint backing indexes exist as normal database integrity structures, but this task adds no separate performance index. Production seed data remains Task 5.5. Automated tests call `Base.metadata.create_all()` only against isolated in-memory SQLite engines with foreign-key enforcement; application import, startup, and tests do not create or change Neon tables.
+Alembic 1.18.5 owns schema transitions. Its initial revision creates `patterns` before `cover_designs` and drops them in reverse order. It reproduces the model types, precision, nullability, server defaults, named primary/unique/check/foreign-key constraints, restrictive foreign-key actions, and integrity structures. The roadmap's explicit pattern slug/category/activity and design public-ID index work remains Task 5.4; primary-key and unique-constraint backing indexes exist as normal database integrity structures, but the initial migration adds no separate performance index. Production seed data remains Task 5.5.
+
+## Alembic migrations
+
+Run Alembic from `backend`, where `alembic.ini` points to `migrations/`. The configuration file intentionally has no `sqlalchemy.url`. `migrations/env.py` discovers the exact `Base.metadata` object through the side-effect-free `app.persistence.migrations` boundary. Offline SQL selects the PostgreSQL dialect without loading settings; online commands obtain `DATABASE_URL` only through `get_settings()` and the existing database engine factory. Imports, FastAPI startup, history inspection, head inspection, and offline SQL generation neither create an engine nor open a connection.
+
+Use the standard inspection and migration commands:
+
+```bash
+python -m alembic history --verbose
+python -m alembic heads --verbose
+python -m alembic current
+python -m alembic upgrade head
+python -m alembic downgrade -1
+```
+
+`current`, `upgrade`, and `downgrade` are online commands and require a privately configured valid `DATABASE_URL`. Missing or invalid settings and connection failures produce fixed value-free errors. Alembic, SQLAlchemy logging, tracked configuration, migration files, and generated SQL never receive or print the URL. Never pass a real URL with `-x`, place it in `alembic.ini`, paste it into a command, redirect it into a log, or commit it. Keep the local development URL only in ignored `backend/.env`; do not retrieve or use the production URL for local migration work.
+
+Generate reviewable PostgreSQL SQL without a connection or `DATABASE_URL`:
+
+```bash
+python -m alembic upgrade head --sql
+python -m alembic downgrade head:base --sql
+```
+
+The single deterministic revision is `20260728_01_create_patterns_and_cover_designs.py`. It is an explicit schema snapshot rather than a call to runtime `create_all()`. Automated tests upgrade, downgrade, and re-upgrade temporary SQLite files under Pytest-owned temporary directories, compare the migrated schema with shared model metadata, and compile the same revision as PostgreSQL DDL. They do not require internet, Neon, a populated `.env`, or a committed database file.
+
+For a future model change, update the shared declarative metadata first, choose the next deterministic `YYYYMMDD_NN` revision ID, and create a descriptive revision:
+
+```bash
+python -m alembic revision --autogenerate --rev-id YYYYMMDD_NN -m "describe schema change"
+```
+
+Autogeneration is only a draft and needs an isolated development database. Review and make every operation explicit, confirm upgrade/downgrade dependency order, run the metadata-parity and offline PostgreSQL checks, and ensure only the intended task's schema work is present. Applying migrations to Neon and monitoring its free-tier resources remain Task 5.6; Task 5.3 does not modify either Neon branch.
 
 ## Neon environment setup
 
@@ -206,7 +239,7 @@ Public IDs are independent of the internal integer database key. The service gen
 
 The design service owns unit-aware measurement bounds, square equality, active-pattern validation, public-ID generation, creation/retrieval coordination, commit, rollback, and collision retry. Request schemas own required fields, strict types, supported shape/unit values, slug shape, numeric positivity, and precision. The repository executes only public-ID queries and immutable inserts and may flush without committing. Routes contain no duplicated exception translation.
 
-These endpoints require a configured database containing the compatible `patterns` and `cover_designs` tables. This task supplies no migration, production schema creation, seed command, Neon project, or live connection. Offline tests create both contracts in isolated in-memory SQLite, seed only the pattern records needed by each test, and exercise all behavior without a database file, internet, or populated `.env`.
+These endpoints require a configured database upgraded to the compatible Alembic head and containing `patterns` and `cover_designs`. The initial migration supplies the empty schema only; it does not create a production schema, seed records, connect to Neon, or change endpoint behavior. Existing API tests create both contracts in isolated in-memory SQLite, seed only the pattern records needed by each test, and exercise all behavior without a database file, internet, or populated `.env`.
 
 ## API error contract
 
@@ -340,4 +373,4 @@ python -m ruff format .
 
 `pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. FastAPI's existing Starlette middleware supplies CORS, so Task 4.3 adds no dependency. Tasks 4.4-4.8 reuse FastAPI, Uvicorn, Pydantic, SQLAlchemy, and Python's standard library and add no dependency. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
 
-The backend connects to a configured database only when `/health`, `/patterns`, `/designs`, or later database functionality requests it. Import, startup, the root endpoint, and the offline tests do not connect to Neon. Design editing/deletion, authentication, upload, and commercial endpoints remain unimplemented. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) for the staged implementation roadmap.
+Task 5.3 adds pinned Alembic 1.18.5 as the minimum migration runtime dependency for the Python 3.13 and SQLAlchemy 2.0.51 baseline. The backend connects to a configured database only when `/health`, `/patterns`, `/designs`, or an online Alembic command requests it. Import, startup, the root endpoint, and the offline tests do not connect to Neon. Design editing/deletion, authentication, upload, and commercial endpoints remain unimplemented. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) for the staged implementation roadmap.

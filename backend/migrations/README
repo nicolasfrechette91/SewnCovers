@@ -1,0 +1,4 @@
+Single-database Alembic migration environment for SewnCovers.
+
+Revision files are explicit schema snapshots. The live comparison target is the
+shared SQLAlchemy metadata exposed by app.persistence.migrations.

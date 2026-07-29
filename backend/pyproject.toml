@@ -9,6 +9,7 @@ description = "FastAPI backend for the SewnCovers MVP"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
+    "alembic==1.18.5",
     "fastapi==0.139.2",
     "pydantic-settings==2.13.1",
     "psycopg[binary]==3.3.4",
