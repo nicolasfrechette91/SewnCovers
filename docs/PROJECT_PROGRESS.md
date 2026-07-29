@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 5 - Neon database
-- Current task: 5.5 - Seed 12-20 pattern records whose assets remain in the frontend
+- Current task: 5.6 - Run migrations against Neon and document free-tier usage monitoring
 - Status: Completed
-- Overall progress: 31 / 58 tasks completed
-- Up next: 5.6 - Run migrations against Neon and document free-tier usage monitoring
+- Overall progress: 32 / 58 tasks completed
+- Up next: 6.1 - Add the typed API client using `NEXT_PUBLIC_API_URL`, timeouts, retry limit, and cold-start messaging
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -70,7 +70,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 5.3 | Configure Alembic and create the descriptive initial schema migration | Completed |
 | 5.4 | Add indexes for pattern slug/category/activity and design public ID | Completed |
 | 5.5 | Seed 12-20 pattern records whose assets remain in the frontend | Completed |
-| 5.6 | Run migrations against Neon and document free-tier usage monitoring | Not started |
+| 5.6 | Run migrations against Neon and document free-tier usage monitoring | Completed |
 
 ## Phase 6: Frontend and backend integration
 
@@ -469,3 +469,14 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Upgrade works both from an empty database and incrementally from `20260728_02`. Existing nonconflicting rows are preserved. The targeted downgrade to `20260728_02` issues one delete limited to the 15 seed-owned IDs, preserving independent catalogue rows, both tables, every constraint, and both Task 5.4 indexes. Restrictive foreign keys block the whole downgrade when a saved design references a seeded pattern; no cascade or design deletion occurs. After references are handled deliberately, downgrade and re-upgrade restore the identical catalogue.
 - Python 3.13.2 Pytest passes all 182 tests. Coverage includes exact migration/frontend/Task 4.5 parity, the 12-20 count bound, identity and order uniqueness, all metadata and active states, conflict failure without partial seeding, fresh/incremental SQLite migration execution, migrated `/patterns` responses and filters, targeted downgrade/re-upgrade, independent-row preservation, foreign-key-safe downgrade failure, PostgreSQL offline upgrade/downgrade SQL, one linear head, schema/model parity, import/startup inactivity, and every existing API, model, repository, migration, health, CORS, settings, database, and production regression. Ruff lint and formatting, `pip check`, `alembic check`, history/head inspection, roadmap integrity, credential/generated-file/frontend-asset/schema/scope audits, and `git diff --check` pass.
 - Neither Neon branch was contacted or changed; applying this migration to persistent development Neon and documenting free-tier monitoring remain Task 5.6, and production Neon remains untouched. No credential, generated database file, frontend asset, schema/index change, CRUD, endpoint, upload support, authentication, pricing, order, deployment configuration, or following-task work is included. Task 5.5 is `Completed`, progress is 31 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 5.6 - Run migrations against Neon and document free-tier usage monitoring.
+
+### 2026-07-29 - Development Neon migration and Free-plan monitoring
+
+- Repository and console inspection confirmed Task 5.6's required target is the persistent `development` branch. Its ignored local URL was checked without output against the console-selected endpoint and the intended `sewncovers` database and `sewncovers_local` role; it is a direct connection with required SSL and channel binding. `alembic current` was inspected before change and reported no applied revision.
+- Alembic applied the single linear history in order: `20260728_01`, `20260728_02`, then `20260729_01`. Independent live inspection verifies `alembic_version` at `20260729_01`, exactly the `patterns` and `cover_designs` application tables, every required named primary/unique/check/foreign-key constraint, only the intended category/activity performance indexes beyond integrity indexes, no model/metadata drift, zero saved designs, and exactly the canonical 15 active patterns in deterministic order.
+- Development `/health` returns HTTP 200 with both fields healthy and `/patterns` returns the exact 15-record catalogue. A second `alembic upgrade head` performed no migration and left the verified revision, schema, seed, and empty design table unchanged.
+- Production was deliberately not migrated. Task 5.6 does not require it before Render exists, and the established security boundary requires its URL to remain unstored until it can be pasted directly into Render's protected `DATABASE_URL`. Task 8.3 owns production migration execution and independent deployed verification; no production credential was retrieved or handled here.
+- Free-plan monitoring was verified against the Neon console and official sources on 2026-07-29. The project dashboard exposes compute, storage, history, network transfer, and branch use; branch Monitoring exposes runtime metrics. Documentation records the current 100-project, 10-branch-per-project, 100-CU-hour-per-project/month, 0.5-GB-storage-per-project, 5-GB-transfer/month, 6-hour-or-1-GB-history, one-day-monitoring, database/role, snapshot, and unused Auth allowances, plus billing-cycle/rolling windows, 80%/100% alerts, enforcement, and no-cost mitigation actions.
+- Python 3.13.2 Pytest passes all 182 tests using a task-scoped temporary directory; the directory was removed afterward. Editable pip installation, `pip check`, Ruff lint/format checks, Alembic history/head/current/metadata parity, frontend public-environment tests, ESLint, strict type-checking, static-export build, roadmap integrity, credential/generated-file scans, and `git diff --check` pass.
+- Migration documentation now requires identity and current-revision inspection before change, development-first application, schema/data/API/idempotency verification, protected secret placement, and no live downgrade/reset/recreate/manual DDL/`create_all`. No paid resource, external monitor, scheduled job, credential, generated database file, frontend change, deployment, or Task 6.1 behavior was introduced.
+- Task 5.6 is `Completed`, progress is 32 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 6.1 - Add the typed API client using `NEXT_PUBLIC_API_URL`, timeouts, retry limit, and cold-start messaging.

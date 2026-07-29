@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history through the canonical pattern seed revision, and isolated Neon development/production environments. Applying migrations to Neon and later business endpoints remain deferred to their roadmap tasks.
+This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history through the canonical pattern seed revision, and isolated Neon development/production environments. The development Neon database is migrated and verified at `20260729_01`; production migration and later business endpoints remain deferred to their roadmap tasks.
 
 ## Requirements
 
@@ -135,7 +135,35 @@ For a future model change, update the shared declarative metadata first, choose 
 python -m alembic revision --autogenerate --rev-id YYYYMMDD_NN -m "describe schema change"
 ```
 
-Autogeneration is only a draft and needs an isolated development database. Review and make every operation explicit, confirm upgrade/downgrade dependency order, run the metadata-parity and offline PostgreSQL checks, and ensure only the intended task's schema work is present. Applying migrations to Neon and monitoring its free-tier resources remain Task 5.6; neither current revision modifies either Neon branch by itself.
+Autogeneration is only a draft and needs an isolated development database. Review and make every operation explicit, confirm upgrade/downgrade dependency order, run the metadata-parity and offline PostgreSQL checks, and ensure only the intended task's schema work is present. Task 5.6 applied this reviewed history only to the persistent development Neon branch. A revision file never modifies a database by itself, and production migration remains deferred until the Render-owned execution path exists.
+
+For a live target, first select its exact branch, database, and role in Neon's
+**Connect** dialog, choose a direct connection, and confirm the private URL has
+`sslmode=require` and `channel_binding=require`. Place the development value
+only in ignored `.env`; never pass a URL on the command line. Inspect before
+changing anything, then upgrade and verify:
+
+```powershell
+python -m alembic current
+python -m alembic heads --verbose
+python -m alembic upgrade head
+python -m alembic current
+```
+
+Development must pass first. Confirm `alembic_version`, both application tables,
+all named constraints and required indexes, exact seed parity, and no metadata
+drift; then request `/health` and `/patterns`. A second
+`python -m alembic upgrade head` must be a no-op and leave the same revision,
+schema, and records. Task 5.6 verified this procedure on 2026-07-29: development
+is at the single head `20260729_01`, contains exactly the 15 canonical active
+patterns and no saved designs, and returns healthy/exact catalogue responses.
+
+Never downgrade, reset, recreate, or manually edit a live Neon database. The
+downgrade examples above are for isolated local/test recovery exercises only.
+Before a future production migration, review the forward and reverse SQL, take
+the provider-approved recovery precaution appropriate to the deployment, stop
+on any drift or conflict, and prefer a reviewed forward corrective revision.
+Never use runtime `create_all()` as a migration or rollback mechanism.
 
 ## Neon environment setup
 
@@ -188,6 +216,58 @@ python -m pytest tests/test_health.py::test_missing_database_configuration_is_se
 
 These checks require fixed HTTP 503 or value-free configuration behavior and
 assert that private input is absent from application output.
+
+Task 5.6 did not migrate production. The roadmap does not require a production
+migration before a Render service exists, and the established secret boundary
+prohibits retrieving or storing that URL locally. Task 8.3 will configure the
+production migration execution path. At that time, put the production direct URL
+straight into Render's protected `DATABASE_URL`, run the same identity/revision
+checks in that environment, migrate once, and independently verify the deployed
+API without exposing the value.
+
+## Neon Free plan usage monitoring
+
+Verified against Neon's official documentation and the SewnCovers console on
+2026-07-29. Limits can change, so repeat this check before deployment.
+
+The Neon organization **Projects** page has an organization-wide usage panel.
+Open **SewnCovers** for the per-project usage panel showing Compute, Storage,
+History, and Network transfer against the plan allowance. The project dashboard
+also shows the concurrent branch count. For branch runtime behaviour, select the
+branch and open **Monitoring** to inspect endpoint activity, allocated CU, CPU,
+RAM, connections, and database size. **Organization > Billing** shows the current
+billing period; the project/organization usage panels are the preferred place to
+watch transfer before an overage because Billing may show network transfer only
+after the included allowance is exceeded. Console metrics can lag by about an
+hour and inactive projects may not refresh until they wake.
+
+| Resource | Current Free plan allowance | Reset or window | SewnCovers action |
+| --- | --- | --- | --- |
+| Projects | 100 projects | Concurrent limit; no monthly reset | Keep this application in its single project rather than creating copies. |
+| Branches | 10 branches per project | Concurrent limit; no monthly reset | Keep only the persistent `production` and `development` branches unless a later task explicitly needs a temporary branch; use expiry for future temporary branches. |
+| Compute | 100 CU-hours per project per month; autoscaling from 0.25 through 2 CU (up to 8 GB RAM) | Resets at the start of the project's billing cycle | Keep the 0.25-CU minimum, a conservative maximum, and Free-plan scale-to-zero after five idle minutes. Stop local clients after use and avoid polling or scheduled keep-alive work. |
+| Database storage | 0.5 GB per project | Capacity/GB-month usage does not reset like compute | Keep pattern assets out of Postgres, watch table/index growth, avoid duplicate indexes, and remove only deliberately identified disposable data or branches. Never delete live data merely to silence a warning. |
+| Public network transfer | 5 GB per month | Resets at the start of the billing cycle; reaching the limit suspends compute until the next cycle or an upgrade | Select only needed columns/rows, paginate future large results, avoid repeated catalogue polling, and keep Render in the same Ohio region. |
+| Restore history | Up to 6 hours or 1 GB of data changes, whichever is reached first | Rolling recovery window, not a monthly pool | Treat this as limited recovery protection, not a migration substitute; keep writes controlled and use reviewed forward migrations. |
+| Monitoring retention | 1 day of metrics and logs in the UI | Rolling one-day window | Inspect the built-in dashboard promptly after migrations or incidents; no external monitoring service is added. |
+| Other enforced quotas | 500 databases and 500 roles per branch; one manual snapshot on Free; Neon Auth up to 60,000 MAU | Object caps do not reset; Auth MAU is monthly | SewnCovers uses one application database and role per branch, no Neon Auth, and creates no snapshot or paid resource in this task. |
+
+Neon sends per-project Free-plan alerts for compute, storage, and data transfer at
+80% and 100% usage. Treat an 80% email/console indicator as an action threshold:
+stop unnecessary clients, let computes scale to zero, inspect query and storage
+growth, reduce over-fetching, and remove only verified unused temporary
+resources. At 100%, stop nonessential activity and investigate immediately;
+do not silently enable a paid plan or add paid capacity.
+
+Official references:
+
+- [Neon pricing and current plan comparison](https://neon.com/pricing)
+- [Neon plans and usage metrics](https://neon.com/docs/introduction/plans#usage-metrics)
+- [Network transfer monitoring and Free-plan enforcement](https://neon.com/docs/introduction/network-transfer)
+- [Compute sizing, connections, monitoring, and scale to zero](https://neon.com/docs/manage/endpoints/)
+- [Database-per-branch limit](https://neon.com/docs/manage/databases)
+- [Free-plan 80% and 100% usage alerts](https://neon.com/docs/changelog/2025-09-26)
+- [Snapshot quota](https://neon.com/docs/ai/ai-database-versioning)
 
 ## Health endpoint
 
