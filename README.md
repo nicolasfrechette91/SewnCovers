@@ -71,7 +71,7 @@ The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. D
 
 ## Current state
 
-The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend has a compact Python 3.13 and FastAPI service, explicit CORS policy, typed database-aware health reporting, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history with non-redundant category/activity indexes, active-pattern listing, immutable design creation/retrieval by opaque public ID, a typed field-aware error contract, and isolated Neon development/production environments, documented in [`backend/README.md`](backend/README.md). No production seed data, migration execution against Neon, application persistence against Neon, or frontend API integration exists yet.
+The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. The backend has a compact Python 3.13 and FastAPI service, explicit CORS policy, typed database-aware health reporting, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history with non-redundant category/activity indexes and the canonical 15-pattern metadata seed, active-pattern listing, immutable design creation/retrieval by opaque public ID, a typed field-aware error contract, and isolated Neon development/production environments, documented in [`backend/README.md`](backend/README.md). The seed migration has not been applied to either Neon branch; migration execution against Neon, application persistence against Neon, and frontend API integration remain deferred.
 
 See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task checklist and current handoff state.
 
@@ -145,4 +145,4 @@ verification commands.
 - The Pages URL is `https://nicolasfrechette91.github.io/sewncovers/`, but its CORS origin is only `https://nicolasfrechette91.github.io`; origins never contain a path.
 - Render free services may spin down, so the UI must explain and retry a slow first request.
 - Neon and Render limits can change and will be verified immediately before deployment.
-- Pattern images stay in the frontend deployment; PostgreSQL stores their paths rather than image data.
+- Pattern artwork, gradients, images, and other visual assets stay in the frontend deployment. PostgreSQL stores only the established public catalogue metadata, never image data, URLs, or filesystem paths.

@@ -1,4 +1,5 @@
 import importlib
+import re
 import socket
 from collections.abc import Iterator
 from io import StringIO
@@ -10,6 +11,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
+from fastapi.testclient import TestClient
 from sqlalchemy import (
     JSON,
     URL,
@@ -18,23 +20,43 @@ from sqlalchemy import (
     Numeric,
     String,
     create_engine,
+    event,
     inspect,
+    select,
 )
 from sqlalchemy.engine import Engine
 
 import app.persistence.database as database_module
 import app.persistence.migrations as migrations_module
+from app.main import create_application
+from app.patterns.api import get_pattern_service
+from app.patterns.repository import PatternRepository, patterns_table
+from app.patterns.service import PatternService
+from app.persistence.database import Database, session_scope
 from app.persistence.migrations import (
     MigrationConfigurationError,
     migration_metadata,
 )
-from app.persistence.models import Base
-from app.settings import reset_settings_cache
+from app.persistence.models import Base, CoverDesign
+from app.settings import Settings, reset_settings_cache
+from tests.test_patterns import CANONICAL_PATTERNS, expected_response
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
+FRONTEND_CATALOGUE = BACKEND_ROOT.parent / "frontend" / "data" / "patterns.ts"
 ALEMBIC_INI = BACKEND_ROOT / "alembic.ini"
 BASE_REVISION = "20260728_01"
-REVISION = "20260728_02"
+INDEX_REVISION = "20260728_02"
+REVISION = "20260729_01"
+INDEPENDENT_PATTERN = {
+    "id": "independent-private-pattern",
+    "name": "Independent private pattern",
+    "description": "A non-seed row used to verify migration ownership.",
+    "category_id": "abstract",
+    "color_ids": ["charcoal"],
+    "preview_class_name": "independent-private-pattern",
+    "is_active": False,
+    "display_order": 100,
+}
 
 
 @pytest.fixture(autouse=True)
@@ -111,6 +133,59 @@ def index_definitions(
     }
 
 
+def expected_seed_rows() -> tuple[dict[str, object], ...]:
+    return tuple(
+        {
+            **pattern,
+            "is_active": True,
+            "display_order": display_order,
+        }
+        for display_order, pattern in enumerate(CANONICAL_PATTERNS)
+    )
+
+
+def read_pattern_rows(engine: Engine) -> tuple[dict[str, object], ...]:
+    with engine.connect() as connection:
+        rows = connection.execute(
+            select(patterns_table).order_by(
+                patterns_table.c.display_order,
+                patterns_table.c.id,
+            )
+        ).mappings()
+        return tuple(dict(row) for row in rows)
+
+
+def read_frontend_catalogue() -> tuple[dict[str, object], ...]:
+    source = FRONTEND_CATALOGUE.read_text(encoding="utf-8")
+    catalogue_source = source.split(
+        "export const curatedPatterns = [",
+        maxsplit=1,
+    )[1].split("] as const satisfies readonly PatternDefinition[];", maxsplit=1)[0]
+    record_pattern = re.compile(
+        r"""\{
+        \s*id:\s*"(?P<id>[^"]+)",
+        \s*name:\s*"(?P<name>[^"]+)",
+        \s*description:\s*"(?P<description>[^"]+)",
+        \s*categoryId:\s*"(?P<category_id>[^"]+)",
+        \s*colorIds:\s*\[(?P<color_ids>[^\]]+)\],
+        \s*previewClassName:\s*"(?P<preview_class_name>[^"]+)",
+        \s*\}""",
+        re.VERBOSE,
+    )
+
+    return tuple(
+        {
+            "id": match["id"],
+            "name": match["name"],
+            "description": match["description"],
+            "category_id": match["category_id"],
+            "color_ids": re.findall(r'"([^"]+)"', match["color_ids"]),
+            "preview_class_name": match["preview_class_name"],
+        }
+        for match in record_pattern.finditer(catalogue_source)
+    )
+
+
 def test_alembic_uses_shared_metadata_and_has_no_tracked_url() -> None:
     config = alembic_config()
 
@@ -127,15 +202,19 @@ def test_revisions_form_one_descriptive_linear_history_and_one_head() -> None:
     script = ScriptDirectory.from_config(alembic_config())
     revisions = list(script.walk_revisions())
 
-    assert len(revisions) == 2
+    assert len(revisions) == 3
     assert revisions[0].revision == REVISION
-    assert revisions[0].down_revision == BASE_REVISION
+    assert revisions[0].down_revision == INDEX_REVISION
     assert revisions[0].is_head
-    assert "pattern category and activity filter indexes" in revisions[0].doc
-    assert revisions[1].revision == BASE_REVISION
-    assert revisions[1].down_revision is None
+    assert "canonical public pattern catalogue" in revisions[0].doc
+    assert revisions[1].revision == INDEX_REVISION
+    assert revisions[1].down_revision == BASE_REVISION
     assert revisions[1].is_head is False
-    assert "patterns and immutable cover designs" in revisions[1].doc
+    assert "pattern category and activity filter indexes" in revisions[1].doc
+    assert revisions[2].revision == BASE_REVISION
+    assert revisions[2].down_revision is None
+    assert revisions[2].is_head is False
+    assert "patterns and immutable cover designs" in revisions[2].doc
     assert script.get_heads() == [REVISION]
 
 
@@ -168,7 +247,9 @@ def test_revision_upgrade_and_downgrade_operations_use_dependency_order(
 def test_index_revision_has_exact_ordered_upgrade_and_downgrade_operations(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    revision = ScriptDirectory.from_config(alembic_config()).get_revision(REVISION)
+    revision = ScriptDirectory.from_config(alembic_config()).get_revision(
+        INDEX_REVISION
+    )
     assert revision is not None
 
     created: list[tuple[str, str, tuple[str, ...], bool]] = []
@@ -207,6 +288,42 @@ def test_index_revision_has_exact_ordered_upgrade_and_downgrade_operations(
         ("ix_patterns_is_active", "patterns"),
         ("ix_patterns_category_id", "patterns"),
     ]
+
+
+def test_seed_revision_exactly_matches_frontend_and_task_4_5_catalogues() -> None:
+    revision = ScriptDirectory.from_config(alembic_config()).get_revision(REVISION)
+    assert revision is not None
+
+    seed_rows = revision.module.PATTERN_ROWS
+    frontend_rows = read_frontend_catalogue()
+
+    assert 12 <= len(seed_rows) <= 20
+    assert len(seed_rows) == len(CANONICAL_PATTERNS) == len(frontend_rows) == 15
+    assert (
+        tuple(
+            {
+                key: row[key]
+                for key in (
+                    "id",
+                    "name",
+                    "description",
+                    "category_id",
+                    "color_ids",
+                    "preview_class_name",
+                )
+            }
+            for row in seed_rows
+        )
+        == CANONICAL_PATTERNS
+    )
+    assert frontend_rows == CANONICAL_PATTERNS
+    assert seed_rows == expected_seed_rows()
+
+    assert len({row["id"] for row in seed_rows}) == len(seed_rows)
+    assert len({row["name"] for row in seed_rows}) == len(seed_rows)
+    assert len({row["preview_class_name"] for row in seed_rows}) == len(seed_rows)
+    assert [row["display_order"] for row in seed_rows] == list(range(15))
+    assert all(row["is_active"] is True for row in seed_rows)
 
 
 def test_upgrade_from_empty_database_creates_exact_schema(
@@ -346,6 +463,7 @@ def test_upgrade_from_empty_database_creates_exact_schema(
         "ix_patterns_is_active": (("is_active",), False),
     }
     assert index_definitions(inspector, "cover_designs") == {}
+    assert read_pattern_rows(engine) == expected_seed_rows()
     engine.dispose()
 
 
@@ -376,6 +494,58 @@ def test_upgrade_from_initial_revision_adds_only_expected_indexes(
         "ix_patterns_is_active": (("is_active",), False),
     }
     assert index_definitions(inspector, "cover_designs") == {}
+    engine.dispose()
+
+
+def test_incremental_upgrade_from_index_revision_seeds_without_replacing_other_rows(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "index-to-seed.sqlite3"
+    database_url = configure_test_database(monkeypatch, database_path)
+    command.upgrade(alembic_config(), INDEX_REVISION)
+
+    engine = create_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(patterns_table.insert(), INDEPENDENT_PATTERN)
+    engine.dispose()
+
+    command.upgrade(alembic_config(), REVISION)
+    engine = create_engine(database_url)
+    assert read_pattern_rows(engine) == (
+        *expected_seed_rows(),
+        INDEPENDENT_PATTERN,
+    )
+    engine.dispose()
+
+
+def test_seed_upgrade_rejects_conflicting_records_without_partial_catalogue(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "conflicting-seed.sqlite3"
+    database_url = configure_test_database(monkeypatch, database_path)
+    command.upgrade(alembic_config(), INDEX_REVISION)
+
+    conflict = {
+        **expected_seed_rows()[4],
+        "name": "Independently created conflicting pattern",
+    }
+    engine = create_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(patterns_table.insert(), conflict)
+    engine.dispose()
+
+    with pytest.raises(MigrationConfigurationError):
+        command.upgrade(alembic_config(), REVISION)
+
+    engine = create_engine(database_url)
+    assert read_pattern_rows(engine) == (conflict,)
+    with engine.connect() as connection:
+        current_revision = connection.exec_driver_sql(
+            "SELECT version_num FROM alembic_version"
+        ).scalar_one()
+    assert current_revision == INDEX_REVISION
     engine.dispose()
 
 
@@ -422,6 +592,185 @@ def test_task_index_upgrade_downgrade_upgrade_round_trip_and_current(
     engine.dispose()
 
 
+def test_seed_downgrade_removes_only_owned_rows_and_reupgrade_is_repeatable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "seed-round-trip.sqlite3"
+    database_url = configure_test_database(monkeypatch, database_path)
+    command.upgrade(alembic_config(), REVISION)
+
+    engine = create_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(patterns_table.insert(), INDEPENDENT_PATTERN)
+    engine.dispose()
+
+    command.downgrade(alembic_config(), INDEX_REVISION)
+    engine = create_engine(database_url)
+    inspector = inspect(engine)
+    assert read_pattern_rows(engine) == (INDEPENDENT_PATTERN,)
+    assert set(inspector.get_table_names()) == {
+        "alembic_version",
+        "cover_designs",
+        "patterns",
+    }
+    assert index_definitions(inspector, "patterns") == {
+        "ix_patterns_category_id": (("category_id",), False),
+        "ix_patterns_is_active": (("is_active",), False),
+    }
+    assert constraint_names(
+        inspector,
+        "patterns",
+        "get_unique_constraints",
+    ) == {"uq_patterns_name", "uq_patterns_preview_class_name"}
+    assert constraint_names(
+        inspector,
+        "cover_designs",
+        "get_unique_constraints",
+    ) == {"uq_cover_designs_public_id"}
+    engine.dispose()
+
+    command.upgrade(alembic_config(), REVISION)
+    engine = create_engine(database_url)
+    assert read_pattern_rows(engine) == (
+        *expected_seed_rows(),
+        INDEPENDENT_PATTERN,
+    )
+    engine.dispose()
+
+
+def test_seed_downgrade_is_blocked_when_a_design_references_a_seeded_pattern(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "referenced-seed.sqlite3"
+    database_url = configure_test_database(monkeypatch, database_path)
+    command.upgrade(alembic_config(), REVISION)
+
+    engine = create_engine(database_url)
+    with engine.begin() as connection:
+        connection.execute(
+            CoverDesign.__table__.insert(),
+            {
+                "public_id": "A" * 22,
+                "shape": "square",
+                "width": "40.00",
+                "height": "40.00",
+                "thickness": "8.00",
+                "unit": "cm",
+                "pattern_id": "prototype-botanical",
+                "pattern_scale": "1.0",
+            },
+        )
+    engine.dispose()
+
+    def enable_foreign_keys(
+        dbapi_connection: object,
+        _connection_record: object,
+    ) -> None:
+        dbapi_connection.execute("PRAGMA foreign_keys=ON")  # type: ignore[attr-defined]
+
+    event.listen(Engine, "connect", enable_foreign_keys)
+    try:
+        with pytest.raises(MigrationConfigurationError):
+            command.downgrade(alembic_config(), INDEX_REVISION)
+    finally:
+        event.remove(Engine, "connect", enable_foreign_keys)
+
+    engine = create_engine(database_url)
+    assert read_pattern_rows(engine) == expected_seed_rows()
+    with engine.connect() as connection:
+        assert connection.scalar(select(CoverDesign.__table__.c.id)) is not None
+        assert (
+            connection.exec_driver_sql(
+                "SELECT version_num FROM alembic_version"
+            ).scalar_one()
+            == REVISION
+        )
+    engine.dispose()
+
+
+def test_patterns_endpoint_uses_migrated_seed_data_and_existing_filters(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "seeded-api.sqlite3"
+    database_url = configure_test_database(monkeypatch, database_path)
+    command.upgrade(alembic_config(), REVISION)
+
+    settings = Settings(
+        _env_file=None,
+        database_url=database_url,
+        environment="test",
+    )
+    database = Database(settings_provider=lambda: settings)
+    application = create_application(settings)
+
+    def provide_pattern_service() -> Iterator[PatternService]:
+        with session_scope(database) as session:
+            yield PatternService(session, PatternRepository(session))
+
+    application.dependency_overrides[get_pattern_service] = provide_pattern_service
+
+    with TestClient(application) as client:
+        expected = [expected_response(pattern) for pattern in CANONICAL_PATTERNS]
+        assert client.get("/patterns").json() == expected
+        assert [
+            pattern["id"]
+            for pattern in client.get(
+                "/patterns",
+                params={"category": "botanical"},
+            ).json()
+        ] == [
+            "prototype-botanical",
+            "fern-trail",
+            "meadow-sprig",
+        ]
+        assert [
+            pattern["id"]
+            for pattern in client.get(
+                "/patterns",
+                params={"color": "blue"},
+            ).json()
+        ] == [
+            "meadow-sprig",
+            "diamond-path",
+            "harbor-stripe",
+            "basket-check",
+            "terrace-wave",
+        ]
+        assert [
+            pattern["id"]
+            for pattern in client.get(
+                "/patterns",
+                params={"category": "botanical", "color": "blue"},
+            ).json()
+        ] == ["meadow-sprig"]
+        assert (
+            client.get(
+                "/patterns",
+                params={"category": "unknown"},
+            ).json()
+            == []
+        )
+        assert (
+            client.get(
+                "/patterns",
+                params={"color": "magenta"},
+            ).json()
+            == []
+        )
+        assert (
+            client.get(
+                "/patterns",
+                params={"category": "botanical", "color": "charcoal"},
+            ).json()
+            == []
+        )
+
+    database.dispose()
+
+
 def test_migrated_schema_and_model_metadata_have_no_drift(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -442,7 +791,7 @@ def test_migrated_schema_and_model_metadata_have_no_drift(
     engine.dispose()
 
 
-def test_offline_postgresql_sql_has_only_required_performance_indexes() -> None:
+def test_offline_postgresql_sql_has_schema_indexes_and_exact_seed_inserts() -> None:
     output = StringIO()
     command.upgrade(alembic_config(output_buffer=output), "head", sql=True)
     ddl = output.getvalue()
@@ -467,6 +816,14 @@ def test_offline_postgresql_sql_has_only_required_performance_indexes() -> None:
     assert ddl.count("CREATE INDEX") == 2
     assert "CREATE INDEX ix_patterns_id" not in ddl
     assert "CREATE INDEX ix_cover_designs_public_id" not in ddl
+    assert ddl.count("INSERT INTO patterns") == 15
+    assert "'prototype-botanical'" in ddl
+    assert "'confetti-grid'" in ddl
+    assert '\'["ivory","green","gold","rose"]\'' in ddl
+    assert "ON CONFLICT" not in ddl
+    assert "image" not in ddl.lower()
+    assert "http://" not in ddl
+    assert "https://" not in ddl
     assert "postgresql://" not in ddl
     assert "DATABASE_URL" not in ddl
 
@@ -475,7 +832,7 @@ def test_offline_postgresql_targeted_downgrade_drops_only_task_indexes() -> None
     output = StringIO()
     command.downgrade(
         alembic_config(output_buffer=output),
-        f"{REVISION}:{BASE_REVISION}",
+        f"{INDEX_REVISION}:{BASE_REVISION}",
         sql=True,
     )
     ddl = output.getvalue()
@@ -483,6 +840,25 @@ def test_offline_postgresql_targeted_downgrade_drops_only_task_indexes() -> None
     assert "DROP INDEX ix_patterns_is_active;" in ddl
     assert "DROP INDEX ix_patterns_category_id;" in ddl
     assert "DROP TABLE" not in ddl
+    assert "postgresql://" not in ddl
+    assert "DATABASE_URL" not in ddl
+
+
+def test_offline_postgresql_seed_downgrade_deletes_only_owned_ids() -> None:
+    output = StringIO()
+    command.downgrade(
+        alembic_config(output_buffer=output),
+        f"{REVISION}:{INDEX_REVISION}",
+        sql=True,
+    )
+    ddl = output.getvalue()
+
+    assert ddl.count("DELETE FROM patterns") == 1
+    for pattern in CANONICAL_PATTERNS:
+        assert f"'{pattern['id']}'" in ddl
+    assert "DROP INDEX" not in ddl
+    assert "DROP TABLE" not in ddl
+    assert "cover_designs" not in ddl
     assert "postgresql://" not in ddl
     assert "DATABASE_URL" not in ddl
 
@@ -537,4 +913,5 @@ def test_migration_imports_history_and_application_startup_do_not_connect(
 
     assert reloaded.migration_metadata is Base.metadata
     assert REVISION in history_output.getvalue()
+    assert INDEX_REVISION in history_output.getvalue()
     assert BASE_REVISION in history_output.getvalue()

@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 5 - Neon database
-- Current task: 5.4 - Add indexes for pattern slug/category/activity and design public ID
+- Current task: 5.5 - Seed 12-20 pattern records whose assets remain in the frontend
 - Status: Completed
-- Overall progress: 30 / 58 tasks completed
-- Up next: 5.5 - Seed 12-20 pattern records whose assets remain in the frontend
+- Overall progress: 31 / 58 tasks completed
+- Up next: 5.6 - Run migrations against Neon and document free-tier usage monitoring
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -69,7 +69,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 5.2 | Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints | Completed |
 | 5.3 | Configure Alembic and create the descriptive initial schema migration | Completed |
 | 5.4 | Add indexes for pattern slug/category/activity and design public ID | Completed |
-| 5.5 | Seed 12-20 pattern records whose assets remain in the frontend | Not started |
+| 5.5 | Seed 12-20 pattern records whose assets remain in the frontend | Completed |
 | 5.6 | Run migrations against Neon and document free-tier usage monitoring | Not started |
 
 ## Phase 6: Frontend and backend integration
@@ -460,3 +460,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Thirteen focused migration tests verify the exact names, tables, column order, non-uniqueness, absence of duplicate-equivalent indexes, metadata/migration parity, upgrade from `20260728_01`, full empty-database upgrade, Task 5.4-only downgrade, upgrade/downgrade/upgrade, portable SQLite execution, secret-free PostgreSQL offline upgrade and targeted downgrade DDL, one linear head, and import/startup inactivity.
 - Python 3.13.2 Pytest passes all 175 tests, including existing model, repository, endpoint, settings, database, and migration regressions. Ruff lint and formatting, `pip check`, Alembic history/single-head inspection, offline PostgreSQL upgrade/downgrade SQL, fresh SQLite upgrade and targeted downgrade/re-upgrade, `alembic check` metadata parity, index inspection, roadmap integrity, credential/generated-file/scope audits, and `git diff --check` pass.
 - No credential, Neon access or change, seed record, generated database file, table, column, unrelated constraint, dependency, endpoint, API/schema behavior, frontend integration, authentication, deployment, speculative index, or Task 5.5 work is included. Task 5.4 is `Completed`, progress is 30 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 5.5 - Seed 12-20 pattern records whose assets remain in the frontend.
+
+### 2026-07-29 - Canonical pattern catalogue seed
+
+- `frontend/data/patterns.ts` remains the source of truth, and its `curatedPatterns` array exactly matches the established Task 4.5 fixture: 15 active public records spanning the existing botanical, geometric, striped, woven, and abstract categories. The seed preserves every ID/public slug, name, description, ordered color-ID list, frontend preview-class handle, and array position. IDs remain stable and array position becomes the unique deterministic zero-based `display_order`; no alternative catalogue was introduced.
+- The single new linear head `20260729_01_seed_canonical_patterns.py` follows `20260728_02` and contains one explicit reviewable data migration. It inserts only model/API-supported metadata and relies on existing primary/unique constraints to reject conflicting IDs, names, or preview handles rather than ignoring catalogue drift. It adds or changes no table, column, constraint, index, model, repository, serializer, filter, endpoint, dependency, startup hook, or runtime `create_all` behavior.
+- Pattern artwork, gradients, images, and all other visual assets remain frontend-owned. The database receives no binaries, image URLs, filesystem paths, uploads, asset records, or new frontend files. `/patterns` retains its exact response contract, active-only behavior, normalized category/color filters, AND semantics, unknown-filter empty lists, and ascending display-order/ID ordering.
+- Upgrade works both from an empty database and incrementally from `20260728_02`. Existing nonconflicting rows are preserved. The targeted downgrade to `20260728_02` issues one delete limited to the 15 seed-owned IDs, preserving independent catalogue rows, both tables, every constraint, and both Task 5.4 indexes. Restrictive foreign keys block the whole downgrade when a saved design references a seeded pattern; no cascade or design deletion occurs. After references are handled deliberately, downgrade and re-upgrade restore the identical catalogue.
+- Python 3.13.2 Pytest passes all 182 tests. Coverage includes exact migration/frontend/Task 4.5 parity, the 12-20 count bound, identity and order uniqueness, all metadata and active states, conflict failure without partial seeding, fresh/incremental SQLite migration execution, migrated `/patterns` responses and filters, targeted downgrade/re-upgrade, independent-row preservation, foreign-key-safe downgrade failure, PostgreSQL offline upgrade/downgrade SQL, one linear head, schema/model parity, import/startup inactivity, and every existing API, model, repository, migration, health, CORS, settings, database, and production regression. Ruff lint and formatting, `pip check`, `alembic check`, history/head inspection, roadmap integrity, credential/generated-file/frontend-asset/schema/scope audits, and `git diff --check` pass.
+- Neither Neon branch was contacted or changed; applying this migration to persistent development Neon and documenting free-tier monitoring remain Task 5.6, and production Neon remains untouched. No credential, generated database file, frontend asset, schema/index change, CRUD, endpoint, upload support, authentication, pricing, order, deployment configuration, or following-task work is included. Task 5.5 is `Completed`, progress is 31 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 5.6 - Run migrations against Neon and document free-tier usage monitoring.
