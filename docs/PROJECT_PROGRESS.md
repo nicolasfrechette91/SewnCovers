@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 5 - Neon database
-- Current task: 5.3 - Configure Alembic and create the descriptive initial schema migration
+- Current task: 5.4 - Add indexes for pattern slug/category/activity and design public ID
 - Status: Completed
-- Overall progress: 29 / 58 tasks completed
-- Up next: 5.4 - Add indexes for pattern slug/category/activity and design public ID
+- Overall progress: 30 / 58 tasks completed
+- Up next: 5.5 - Seed 12-20 pattern records whose assets remain in the frontend
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -68,7 +68,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 5.1 | Create the Neon project and separate secure local/deployed connection strings | Completed |
 | 5.2 | Define `patterns` and immutable `cover_designs` SQLAlchemy models and constraints | Completed |
 | 5.3 | Configure Alembic and create the descriptive initial schema migration | Completed |
-| 5.4 | Add indexes for pattern slug/category/activity and design public ID | Not started |
+| 5.4 | Add indexes for pattern slug/category/activity and design public ID | Completed |
 | 5.5 | Seed 12-20 pattern records whose assets remain in the frontend | Not started |
 | 5.6 | Run migrations against Neon and document free-tier usage monitoring | Not started |
 
@@ -451,3 +451,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Ten focused offline migration tests verify shared metadata discovery, secret-free configuration, exactly one revision/head, dependency order, upgrade from empty SQLite, all expected schema objects and defaults, safe downgrade, upgrade/downgrade/upgrade, Alembic/model no-drift comparison, PostgreSQL DDL, fixed secret-safe configuration failures, history without a connection, and import inactivity. Temporary database files stay under Pytest-owned or task-scoped paths and are not committed.
 - Python 3.13.2 Pytest passes all 171 tests, including every existing API and model regression. Ruff lint and formatting, `pip check`, Alembic history/head/current checks, offline PostgreSQL upgrade and downgrade SQL, a fresh SQLite round-trip, roadmap integrity, credential/generated-file/scope audits, and `git diff --check` pass.
 - Neither Neon branch was contacted or changed; no production schema, development schema, seed record, Task 5.4 index, model, endpoint, frontend behavior, authentication, deployment, or unrelated feature is included. Task 5.3 is `Completed`, progress is 29 / 58, all 58 roadmap rows and their wording remain present, and the exact next task is 5.4 - Add indexes for pattern slug/category/activity and design public ID.
+
+### 2026-07-28 - Non-redundant catalogue lookup indexes
+
+- Existing repository queries were audited before index design. Pattern slug equality lookups use `patterns.id`, already covered and kept unique by `pk_patterns`; saved-design public-ID equality retrieval uses `cover_designs.public_id`, already covered and kept unique by `uq_cover_designs_public_id`. Separate indexes with either identical single-column order were intentionally omitted because they would duplicate those integrity-backed indexes.
+- Shared SQLAlchemy metadata adds only the missing non-unique `ix_patterns_category_id` and `ix_patterns_is_active` indexes. They match the existing optional `category_id = ...` and required `is_active IS true` predicates without changing query composition, active/category/color filtering, deterministic result ordering, repository behavior, API schemas, tables, columns, or constraints. No composite, partial, expression, full-text, JSON/color, or ordering index was added.
+- The single linear head `20260728_02_add_pattern_filter_indexes.py` follows `20260728_01`. Its upgrade creates the category index and then the activity index after both tables exist. Its downgrade removes those two indexes in reverse order and leaves both Task 5.3 tables, every constraint, and the uniqueness-backed slug/public-ID coverage intact.
+- Thirteen focused migration tests verify the exact names, tables, column order, non-uniqueness, absence of duplicate-equivalent indexes, metadata/migration parity, upgrade from `20260728_01`, full empty-database upgrade, Task 5.4-only downgrade, upgrade/downgrade/upgrade, portable SQLite execution, secret-free PostgreSQL offline upgrade and targeted downgrade DDL, one linear head, and import/startup inactivity.
+- Python 3.13.2 Pytest passes all 175 tests, including existing model, repository, endpoint, settings, database, and migration regressions. Ruff lint and formatting, `pip check`, Alembic history/single-head inspection, offline PostgreSQL upgrade/downgrade SQL, fresh SQLite upgrade and targeted downgrade/re-upgrade, `alembic check` metadata parity, index inspection, roadmap integrity, credential/generated-file/scope audits, and `git diff --check` pass.
+- No credential, Neon access or change, seed record, generated database file, table, column, unrelated constraint, dependency, endpoint, API/schema behavior, frontend integration, authentication, deployment, speculative index, or Task 5.5 work is included. Task 5.4 is `Completed`, progress is 30 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 5.5 - Seed 12-20 pattern records whose assets remain in the frontend.

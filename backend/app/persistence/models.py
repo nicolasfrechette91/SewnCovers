@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     PrimaryKeyConstraint,
@@ -79,6 +80,16 @@ class Pattern(Base):
         CheckConstraint(
             "display_order >= 0",
             name="ck_patterns_display_order_nonnegative",
+        ),
+        Index(
+            "ix_patterns_category_id",
+            "category_id",
+            unique=False,
+        ),
+        Index(
+            "ix_patterns_is_active",
+            "is_active",
+            unique=False,
         ),
     )
 

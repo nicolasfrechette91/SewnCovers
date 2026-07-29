@@ -3,7 +3,16 @@ from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import StaticPool, create_engine, event, func, inspect, select
+from sqlalchemy import (
+    PrimaryKeyConstraint,
+    StaticPool,
+    UniqueConstraint,
+    create_engine,
+    event,
+    func,
+    inspect,
+    select,
+)
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
@@ -95,6 +104,18 @@ def constraint_names(model: type[Pattern] | type[CoverDesign]) -> set[str | None
     return {constraint.name for constraint in model.__table__.constraints}
 
 
+def index_definitions(
+    model: type[Pattern] | type[CoverDesign],
+) -> dict[str | None, tuple[tuple[str, ...], bool]]:
+    return {
+        index.name: (
+            tuple(column.name for column in index.columns),
+            index.unique,
+        )
+        for index in model.__table__.indexes
+    }
+
+
 def test_declarative_models_reuse_one_metadata_and_existing_table_contracts() -> None:
     assert pattern_metadata is Base.metadata
     assert design_metadata is Base.metadata
@@ -163,6 +184,41 @@ def test_model_columns_relationship_and_named_constraints_are_explicit() -> None
     assert relationship.viewonly is True
     assert relationship.lazy == "raise"
     assert relationship.local_columns == {design_columns.pattern_id}
+
+
+def test_models_define_only_missing_non_redundant_lookup_indexes() -> None:
+    assert index_definitions(Pattern) == {
+        "ix_patterns_category_id": (("category_id",), False),
+        "ix_patterns_is_active": (("is_active",), False),
+    }
+    assert index_definitions(CoverDesign) == {}
+
+    assert tuple(column.name for column in Pattern.__table__.primary_key.columns) == (
+        "id",
+    )
+    public_id_constraint = next(
+        constraint
+        for constraint in CoverDesign.__table__.constraints
+        if isinstance(constraint, UniqueConstraint)
+        and constraint.name == "uq_cover_designs_public_id"
+    )
+    assert tuple(column.name for column in public_id_constraint.columns) == (
+        "public_id",
+    )
+
+    for table in (Pattern.__table__, CoverDesign.__table__):
+        physical_column_orders = [
+            tuple(column.name for column in constraint.columns)
+            for constraint in table.constraints
+            if isinstance(
+                constraint,
+                (PrimaryKeyConstraint, UniqueConstraint),
+            )
+        ]
+        physical_column_orders.extend(
+            tuple(column.name for column in index.columns) for index in table.indexes
+        )
+        assert len(physical_column_orders) == len(set(physical_column_orders))
 
 
 def test_models_compile_for_postgresql_without_connecting() -> None:

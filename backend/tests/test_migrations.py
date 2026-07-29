@@ -33,7 +33,8 @@ from app.settings import reset_settings_cache
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 ALEMBIC_INI = BACKEND_ROOT / "alembic.ini"
-REVISION = "20260728_01"
+BASE_REVISION = "20260728_01"
+REVISION = "20260728_02"
 
 
 @pytest.fixture(autouse=True)
@@ -97,6 +98,19 @@ def constraint_names(
     return {item["name"] for item in method(table_name)}
 
 
+def index_definitions(
+    inspector: object,
+    table_name: str,
+) -> dict[str, tuple[tuple[str, ...], bool]]:
+    return {
+        index["name"]: (
+            tuple(index["column_names"]),
+            bool(index["unique"]),
+        )
+        for index in inspector.get_indexes(table_name)
+    }
+
+
 def test_alembic_uses_shared_metadata_and_has_no_tracked_url() -> None:
     config = alembic_config()
 
@@ -109,22 +123,26 @@ def test_alembic_uses_shared_metadata_and_has_no_tracked_url() -> None:
     assert "sqlalchemy.url" not in ALEMBIC_INI.read_text(encoding="utf-8")
 
 
-def test_exactly_one_descriptive_revision_and_one_head() -> None:
+def test_revisions_form_one_descriptive_linear_history_and_one_head() -> None:
     script = ScriptDirectory.from_config(alembic_config())
     revisions = list(script.walk_revisions())
 
-    assert len(revisions) == 1
+    assert len(revisions) == 2
     assert revisions[0].revision == REVISION
-    assert revisions[0].down_revision is None
+    assert revisions[0].down_revision == BASE_REVISION
     assert revisions[0].is_head
-    assert "patterns and immutable cover designs" in revisions[0].doc
+    assert "pattern category and activity filter indexes" in revisions[0].doc
+    assert revisions[1].revision == BASE_REVISION
+    assert revisions[1].down_revision is None
+    assert revisions[1].is_head is False
+    assert "patterns and immutable cover designs" in revisions[1].doc
     assert script.get_heads() == [REVISION]
 
 
 def test_revision_upgrade_and_downgrade_operations_use_dependency_order(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    revision = ScriptDirectory.from_config(alembic_config()).get_revision(REVISION)
+    revision = ScriptDirectory.from_config(alembic_config()).get_revision(BASE_REVISION)
     assert revision is not None
 
     created: list[str] = []
@@ -145,6 +163,50 @@ def test_revision_upgrade_and_downgrade_operations_use_dependency_order(
 
     assert created == ["patterns", "cover_designs"]
     assert dropped == ["cover_designs", "patterns"]
+
+
+def test_index_revision_has_exact_ordered_upgrade_and_downgrade_operations(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    revision = ScriptDirectory.from_config(alembic_config()).get_revision(REVISION)
+    assert revision is not None
+
+    created: list[tuple[str, str, tuple[str, ...], bool]] = []
+    dropped: list[tuple[str, str | None]] = []
+    monkeypatch.setattr(
+        revision.module.op,
+        "create_index",
+        lambda name, table_name, columns, unique: created.append(
+            (name, table_name, tuple(columns), unique)
+        ),
+    )
+    monkeypatch.setattr(
+        revision.module.op,
+        "drop_index",
+        lambda name, table_name=None: dropped.append((name, table_name)),
+    )
+
+    revision.module.upgrade()
+    revision.module.downgrade()
+
+    assert created == [
+        (
+            "ix_patterns_category_id",
+            "patterns",
+            ("category_id",),
+            False,
+        ),
+        (
+            "ix_patterns_is_active",
+            "patterns",
+            ("is_active",),
+            False,
+        ),
+    ]
+    assert dropped == [
+        ("ix_patterns_is_active", "patterns"),
+        ("ix_patterns_category_id", "patterns"),
+    ]
 
 
 def test_upgrade_from_empty_database_creates_exact_schema(
@@ -279,12 +341,45 @@ def test_upgrade_from_empty_database_creates_exact_schema(
         "onupdate": "RESTRICT",
     }
 
-    assert inspector.get_indexes("patterns") == []
-    assert inspector.get_indexes("cover_designs") == []
+    assert index_definitions(inspector, "patterns") == {
+        "ix_patterns_category_id": (("category_id",), False),
+        "ix_patterns_is_active": (("is_active",), False),
+    }
+    assert index_definitions(inspector, "cover_designs") == {}
     engine.dispose()
 
 
-def test_upgrade_downgrade_upgrade_round_trip_and_current(
+def test_upgrade_from_initial_revision_adds_only_expected_indexes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "initial-to-head.sqlite3"
+    database_url = configure_test_database(monkeypatch, database_path)
+    command.upgrade(alembic_config(), BASE_REVISION)
+
+    engine = create_engine(database_url)
+    inspector = inspect(engine)
+    assert set(inspector.get_table_names()) == {
+        "alembic_version",
+        "cover_designs",
+        "patterns",
+    }
+    assert index_definitions(inspector, "patterns") == {}
+    assert index_definitions(inspector, "cover_designs") == {}
+    engine.dispose()
+
+    command.upgrade(alembic_config(), "head")
+    engine = create_engine(database_url)
+    inspector = inspect(engine)
+    assert index_definitions(inspector, "patterns") == {
+        "ix_patterns_category_id": (("category_id",), False),
+        "ix_patterns_is_active": (("is_active",), False),
+    }
+    assert index_definitions(inspector, "cover_designs") == {}
+    engine.dispose()
+
+
+def test_task_index_upgrade_downgrade_upgrade_round_trip_and_current(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -296,17 +391,33 @@ def test_upgrade_downgrade_upgrade_round_trip_and_current(
     command.current(alembic_config(stdout=current_output), verbose=True)
     assert REVISION in current_output.getvalue()
 
-    command.downgrade(alembic_config(), "base")
+    command.downgrade(alembic_config(), BASE_REVISION)
     engine = create_engine(sqlite_url(database_path))
-    assert inspect(engine).get_table_names() == ["alembic_version"]
+    inspector = inspect(engine)
+    assert set(inspector.get_table_names()) == {
+        "alembic_version",
+        "cover_designs",
+        "patterns",
+    }
+    assert index_definitions(inspector, "patterns") == {}
+    assert constraint_names(
+        inspector,
+        "cover_designs",
+        "get_unique_constraints",
+    ) == {"uq_cover_designs_public_id"}
     engine.dispose()
 
     command.upgrade(alembic_config(), "head")
     engine = create_engine(sqlite_url(database_path))
-    assert set(inspect(engine).get_table_names()) == {
+    inspector = inspect(engine)
+    assert set(inspector.get_table_names()) == {
         "alembic_version",
         "cover_designs",
         "patterns",
+    }
+    assert index_definitions(inspector, "patterns") == {
+        "ix_patterns_category_id": (("category_id",), False),
+        "ix_patterns_is_active": (("is_active",), False),
     }
     engine.dispose()
 
@@ -331,7 +442,7 @@ def test_migrated_schema_and_model_metadata_have_no_drift(
     engine.dispose()
 
 
-def test_offline_postgresql_sql_is_complete_and_has_no_performance_indexes() -> None:
+def test_offline_postgresql_sql_has_only_required_performance_indexes() -> None:
     output = StringIO()
     command.upgrade(alembic_config(output_buffer=output), "head", sql=True)
     ddl = output.getvalue()
@@ -348,7 +459,30 @@ def test_offline_postgresql_sql_is_complete_and_has_no_performance_indexes() -> 
     assert "ck_cover_designs_pattern_scale_range" in ddl
     assert "fk_cover_designs_pattern_id_patterns" in ddl
     assert "ON DELETE RESTRICT ON UPDATE RESTRICT" in ddl
-    assert "CREATE INDEX" not in ddl
+    category_ddl = "CREATE INDEX ix_patterns_category_id ON patterns (category_id);"
+    activity_ddl = "CREATE INDEX ix_patterns_is_active ON patterns (is_active);"
+    assert category_ddl in ddl
+    assert activity_ddl in ddl
+    assert ddl.index(category_ddl) < ddl.index(activity_ddl)
+    assert ddl.count("CREATE INDEX") == 2
+    assert "CREATE INDEX ix_patterns_id" not in ddl
+    assert "CREATE INDEX ix_cover_designs_public_id" not in ddl
+    assert "postgresql://" not in ddl
+    assert "DATABASE_URL" not in ddl
+
+
+def test_offline_postgresql_targeted_downgrade_drops_only_task_indexes() -> None:
+    output = StringIO()
+    command.downgrade(
+        alembic_config(output_buffer=output),
+        f"{REVISION}:{BASE_REVISION}",
+        sql=True,
+    )
+    ddl = output.getvalue()
+
+    assert "DROP INDEX ix_patterns_is_active;" in ddl
+    assert "DROP INDEX ix_patterns_category_id;" in ddl
+    assert "DROP TABLE" not in ddl
     assert "postgresql://" not in ddl
     assert "DATABASE_URL" not in ddl
 
@@ -403,3 +537,4 @@ def test_migration_imports_history_and_application_startup_do_not_connect(
 
     assert reloaded.migration_metadata is Base.metadata
     assert REVISION in history_output.getvalue()
+    assert BASE_REVISION in history_output.getvalue()
