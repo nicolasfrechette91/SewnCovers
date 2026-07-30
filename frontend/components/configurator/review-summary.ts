@@ -20,7 +20,7 @@ import {
 } from "@/data/shapes";
 
 export const PROTOTYPE_NOTICE =
-  "SewnCovers is currently a prototype. This summary is not an order, quote, or manufacturing specification. Measurements and pattern choices are for demonstration purposes only. No purchase, payment, fabrication, delivery, or submission occurs.";
+  "SewnCovers is currently a prototype. This summary is not an order, quote, or manufacturing specification. Measurements and pattern choices are for demonstration purposes only. Saving creates only a public prototype configuration link. No purchase, payment, fabrication, delivery, or order submission occurs.";
 
 export const SUMMARY_DOWNLOAD_FILENAME =
   "sewncovers-configuration-summary.txt";

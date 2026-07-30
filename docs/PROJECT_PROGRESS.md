@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 6 - Frontend and backend integration
-- Current task: 6.2 - Replace local catalogue data with API pattern loading and filtering
+- Current task: 6.3 - Save reviewed configurations and generate the `?design=<public_id>` share URL
 - Status: Completed
-- Overall progress: 34 / 58 tasks completed
-- Up next: 6.3 - Save reviewed configurations and generate the `?design=<public_id>` share URL
+- Overall progress: 35 / 58 tasks completed
+- Up next: 6.4 - Load and exactly restore shared designs, including unknown/expired ID handling
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -78,7 +78,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | --- | --- | --- |
 | 6.1 | Add the typed API client using `NEXT_PUBLIC_API_URL`, timeouts, retry limit, and cold-start messaging | Completed |
 | 6.2 | Replace local catalogue data with API pattern loading and filtering | Completed |
-| 6.3 | Save reviewed configurations and generate the `?design=<public_id>` share URL | Not started |
+| 6.3 | Save reviewed configurations and generate the `?design=<public_id>` share URL | Completed |
 | 6.4 | Load and exactly restore shared designs, including unknown/expired ID handling | Not started |
 | 6.5 | Verify the full local journey and all loading, empty, retry, and failure states | Not started |
 
@@ -498,3 +498,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Initial and filtered requests expose polite loading, delayed cold-start, bounded retry, retryable final error, recovery, complete-catalogue empty, filtered empty, hidden-selection, and unavailable-selection states. Existing configuration values remain intact. The client-side state boundary keeps static export compatibility and passes the resolved API record explicitly into preview and review rather than consulting a bundled catalogue.
 - Node's built-in runner now covers successful ordered loading, category/color/combined requests, complete and filtered empty results, failure and retry recovery, cold-start recovery, stale-response rejection, selection preservation, frontend visual mapping, and semantic incompatibilities with mocked requests only. Together with the typed-client suite, 27 frontend tests pass. ESLint, strict type-checking, ordinary and GitHub Pages builds, all 18 focused backend pattern regressions, Pages-prefix inspection, scope/credential scans, roadmap integrity, and `git diff --check` pass. The sandboxed ordinary build reproduced only the documented Google Fonts connection restriction before its outbound-enabled rerun succeeded.
 - No backend, database, migration, catalogue-content, authentication, cache, deployment, dependency, lockfile, design persistence, sharing, or Task 6.3 change is included. Task 6.2 is `Completed`, progress is 34 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 6.3 - Save reviewed configurations and generate the `?design=<public_id>` share URL.
+
+### 2026-07-29 - Reviewed design saving and share-link creation
+
+- The ready review screen now maps only the seven documented public configuration fields into the typed `CreateDesignRequest`. The boundary rechecks supported shapes, measurement range and precision, square equality, normalized pattern IDs, and pattern-scale range and precision. Pattern validity continues to come exclusively from the resolved `/patterns` catalogue; no local metadata, review-only content, pattern record, filter state, draft value, or internal field enters `POST /designs`.
+- Design creation remains a single-attempt unsafe POST under the existing typed client policy. One controller-owned pending promise prevents simultaneous duplicate submissions, success prevents a second creation from the same review panel, and review edit actions remain disabled while the POST is unresolved so the lock cannot be bypassed by leaving and reopening review. Recovery requires the user to activate **Try saving again**. Connecting, possible cold-start, saving, fixed retryable error, retained-configuration, and success states are announced with native disabled/loading controls, status regions, and alerts. Neither failure nor retry mutates or resets the authoritative Context configuration.
+- Exact client-side runtime validation still rejects malformed 201 responses and extra/internal fields. Before producing a link, the save boundary also requires the returned configuration to exactly equal the submitted request and validates the returned 22-character URL-safe `publicId`. The resulting absolute URL is `<origin><basePath>/configure/?design=<encoded_public_id>`, with `encodeURIComponent` for the query value and the existing build-time empty or `/sewncovers` base path for ordinary and GitHub Pages exports.
+- Success exposes a labeled read-only URL, full-value selection on focus, and a native clipboard action. Copy success is announced politely; missing or rejected Clipboard API access produces a fixed detail-free alert, focuses and selects the URL, and supports manual recovery. Task 6.3 generates and copies the share URL only. It does not read the `design` query, retrieve a design, or begin Task 6.4 restoration.
+- The dependency-free Node suite passes all 36 frontend tests with mocked requests and deterministic async control. New coverage includes exact mapping for Square, Rectangle, and Box / bench; internal-field exclusion; invalid reviewed inputs; successful saving; duplicate-click and post-success protection; single-attempt failure and explicit recovery; configuration preservation; malformed/mismatched response rejection; public-ID URL encoding; ordinary and GitHub Pages paths; clipboard success/failure; and declared accessible UI recovery states. ESLint, strict type-checking, ordinary and GitHub Pages static exports, 70 focused backend design/error/CORS regressions, Ruff checks, exported-link inspection, scope/credential scans, roadmap integrity, and `git diff --check` pass. Both sandboxed builds reproduced only the existing Google Fonts network restriction before their outbound-enabled reruns succeeded.
+- No shared-design loading/restoration, backend, database, migration, catalogue, authentication, editing/deletion, deployment, dependency, lockfile, cache, local persistence, order, or following-task change is included. Task 6.3 is `Completed`, progress is 35 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 6.4 - Load and exactly restore shared designs, including unknown/expired ID handling.

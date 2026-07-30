@@ -379,6 +379,28 @@ test("distinguishes malformed success payloads from unexpected HTTP failures", a
   );
 });
 
+test("rejects a malformed design-creation success without retrying or trusting its public ID", async () => {
+  const { apiClient, ApiClientError } = await loadClient();
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    return jsonResponse(
+      design({
+        publicId: "malformed/public/id",
+      }),
+      201,
+    );
+  };
+
+  await assert.rejects(
+    apiClient.createDesign(createDesignRequest()),
+    (error) =>
+      error instanceof ApiClientError &&
+      error.category === "malformed-response",
+  );
+  assert.equal(fetchCalls, 1);
+});
+
 test("aborts a timed-out request and clears its controller and timers", async () => {
   const { apiClient, ApiClientError, API_REQUEST_TIMEOUT_MS } =
     await loadClient();

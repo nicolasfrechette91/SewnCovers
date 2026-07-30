@@ -199,6 +199,7 @@ export function Configurator() {
       reviewReadiness.status === "ready" &&
       selectedPattern !== null ? (
         <ReviewScreen
+          configuration={state}
           readiness={reviewReadiness}
           selectedPattern={selectedPattern}
           onEdit={editSection}

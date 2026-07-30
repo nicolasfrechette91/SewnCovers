@@ -1,4 +1,7 @@
+import { useState } from "react";
+
 import { Button } from "@/components/ui";
+import type { ConfigurationState } from "@/context/configuration";
 import type { PatternDefinition } from "@/data/patterns";
 
 import { ConfigurationSummary } from "./configuration-summary";
@@ -7,6 +10,7 @@ import {
   type ReviewReadiness,
   type ReviewSection,
 } from "./review-summary";
+import { SaveSharePanel } from "./save-share-panel";
 import { SummaryOutputActions } from "./summary-output-actions";
 
 const editActionLabels = {
@@ -132,17 +136,20 @@ export function ReviewEntry({ onReview }: ReviewEntryProps) {
 }
 
 interface ReviewScreenProps {
+  configuration: ConfigurationState;
   onEdit: (section: ReviewSection) => void;
   readiness: Extract<ReviewReadiness, { status: "ready" }>;
   selectedPattern: PatternDefinition;
 }
 
 export function ReviewScreen({
+  configuration,
   onEdit,
   readiness,
   selectedPattern,
 }: ReviewScreenProps) {
   const { summary } = readiness;
+  const [saveIsPending, setSaveIsPending] = useState(false);
 
   return (
     <section
@@ -205,6 +212,10 @@ export function ReviewScreen({
             <Button
               key={section}
               variant="secondary"
+              disabled={saveIsPending}
+              aria-describedby={
+                saveIsPending ? "configuration-save-status" : undefined
+              }
               onClick={() => onEdit(section)}
             >
               {editActionLabels[section]}
@@ -216,6 +227,11 @@ export function ReviewScreen({
       <div className="mt-component">
         <SummaryOutputActions summary={summary} />
       </div>
+
+      <SaveSharePanel
+        configuration={configuration}
+        onSavingChange={setSaveIsPending}
+      />
     </section>
   );
 }
