@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 6 - Frontend and backend integration
-- Current task: 6.4 - Load and exactly restore shared designs, including unknown/expired ID handling
+- Current task: 6.5 - Verify the full local journey and all loading, empty, retry, and failure states
 - Status: Completed
-- Overall progress: 36 / 58 tasks completed
-- Up next: 6.5 - Verify the full local journey and all loading, empty, retry, and failure states
+- Overall progress: 37 / 58 tasks completed
+- Up next: 7.1 - Add frontend unit/component tests for validation, conversion, state, selection, preview, and save failures
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -80,7 +80,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 6.2 | Replace local catalogue data with API pattern loading and filtering | Completed |
 | 6.3 | Save reviewed configurations and generate the `?design=<public_id>` share URL | Completed |
 | 6.4 | Load and exactly restore shared designs, including unknown/expired ID handling | Completed |
-| 6.5 | Verify the full local journey and all loading, empty, retry, and failure states | Not started |
+| 6.5 | Verify the full local journey and all loading, empty, retry, and failure states | Completed |
 
 ## Phase 7: Testing and validation
 
@@ -517,3 +517,13 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - The dependency-free Node suite passes all 48 frontend tests with mocked requests and deterministic asynchronous control. New coverage spans every shape and both units, decimal values, encoded IDs, ordinary and `/sewncovers` paths, design/catalogue arrival order, cold-start status, stale responses, user edits before and after retrieval, malformed and mismatched responses, unknown/expired IDs, explicit retrieval retry, catalogue retry, unavailable-pattern recovery, exact atomic reduction, public-field-only mapping, and accessible recovery declarations.
 - ESLint, strict type-checking, ordinary and GitHub Pages static-export builds, all 70 focused backend design/error/CORS regressions, Ruff lint/format checks, Pages-prefix and exported restoration inspection, scope/credential scans, roadmap integrity, and `git diff --check` pass. The sandboxed ordinary build reproduced only the documented Google Fonts connection restriction before its outbound-enabled rerun succeeded; the Pages build also succeeded with all routes statically prerendered.
 - No backend, database, migration, authentication, deployment, dependency, lockfile, editing/deletion, automatic saving, local catalogue fallback, Task 6.5 behavior, or following-task change is included. Task 6.4 is `Completed`, progress is 36 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 6.5 - Verify the full local journey and all loading, empty, retry, and failure states.
+
+### 2026-07-30 - Full local Phase 6 journey and state verification
+
+- The browser journey ran against a task-scoped in-memory HTTP API and created only disposable local designs; neither the development nor production Neon branch was contacted. The verified path loaded all 15 ordered patterns, exercised rapid category/color changes and zero-result recovery, configured and reviewed Square, Rectangle, and Box / bench with exact decimal centimetre and inch values, adjusted pattern scale, saved once under a deliberate double activation, copied and opened the ordinary share URL, and exactly restored every public configuration field.
+- Visible integration coverage includes initial loading, delayed possible-cold-start messaging and recovery, a genuinely empty catalogue, empty filtered results, bounded transient retries, final catalogue failure, explicit retry recovery, malformed catalogue and design responses, single-attempt save failure and recovery, unknown/expired designs, selected-pattern retention while filtered out, user edits superseding delayed restoration, and successful clipboard copying. Existing deterministic tests also cover missing/rejected Clipboard API access, malformed/duplicate design query values, stale filter responses, ordinary and `/sewncovers` share paths, and catalogue/design arrival in either order.
+- The 320-pixel mobile and 768-pixel tablet browser audits found no horizontal overflow. At 320 pixels, visible control or associated-label targets remained at least 40 pixels in both dimensions. The inspected pages had one main landmark, labeled navigation, complete input labels, no duplicate IDs, no broken ARIA references, no skipped heading levels, named buttons, polite/assertive live regions, and no browser console warnings or errors. Desktop review, preview, filter, save, and restore layouts were also exercised.
+- One integration-regression defect was fixed: the backend migration test still parsed the frontend `curatedPatterns` metadata array removed by Task 6.2. The corrected test preserves the Phase 6 ownership boundary by comparing complete seed metadata with the established backend fixture and comparing only seed IDs/preview handles with the frontend artwork registry. Product behavior did not require a change. The other uncovered gap was cross-boundary regression coverage, so `phase-6-integration.test.mjs` now locks together complete catalogue loading, duplicate-safe saving, ordinary and GitHub Pages share URL construction, and exact restoration for all three shapes without adding a dependency.
+- Remaining manual checks are the assistive-technology and platform passes already owned by later roadmap tasks: NVDA/VoiceOver announcements, OS forced-colors, browser zoom and reduced motion, physical touch devices, native print/download dialogs, an actually denied browser clipboard permission, and the deployed GitHub Pages/Render cold-start journey. These do not block the verified local Phase 6 contract.
+- The final gate passes 49 frontend tests, ESLint, strict TypeScript checking, ordinary and GitHub Pages static-export builds, backend `pip check`, Ruff format/lint, all 182 isolated backend regressions, exported root and `/sewncovers` route/share-path inspection, accessibility structure and responsive audits, tracked-secret/scope/generated-file scans, roadmap integrity checks, and `git diff --check`.
+- No endpoint, schema, migration, authentication, deployment, dependency, lockfile, catalogue, production data, or following-task work is included. Task 6.5 is `Completed`, progress is 37 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 7.1 - Add frontend unit/component tests for validation, conversion, state, selection, preview, and save failures.

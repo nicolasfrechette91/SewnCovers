@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "check:config": "node --test config/environment.test.mjs",
-    "test": "node --test config/environment.test.mjs services/api-client.test.mjs services/design-save.test.mjs services/pattern-catalogue.test.mjs services/shared-design.test.mjs",
+    "test": "node --test config/environment.test.mjs services/api-client.test.mjs services/design-save.test.mjs services/pattern-catalogue.test.mjs services/phase-6-integration.test.mjs services/shared-design.test.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit"
   },

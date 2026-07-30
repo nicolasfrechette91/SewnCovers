@@ -155,34 +155,22 @@ def read_pattern_rows(engine: Engine) -> tuple[dict[str, object], ...]:
         return tuple(dict(row) for row in rows)
 
 
-def read_frontend_catalogue() -> tuple[dict[str, object], ...]:
+def read_frontend_artwork_registry() -> dict[str, str]:
     source = FRONTEND_CATALOGUE.read_text(encoding="utf-8")
-    catalogue_source = source.split(
-        "export const curatedPatterns = [",
+    registry_source = source.split(
+        "const patternArtworkById = {",
         maxsplit=1,
-    )[1].split("] as const satisfies readonly PatternDefinition[];", maxsplit=1)[0]
-    record_pattern = re.compile(
-        r"""\{
-        \s*id:\s*"(?P<id>[^"]+)",
-        \s*name:\s*"(?P<name>[^"]+)",
-        \s*description:\s*"(?P<description>[^"]+)",
-        \s*categoryId:\s*"(?P<category_id>[^"]+)",
-        \s*colorIds:\s*\[(?P<color_ids>[^\]]+)\],
-        \s*previewClassName:\s*"(?P<preview_class_name>[^"]+)",
-        \s*\}""",
-        re.VERBOSE,
-    )
+    )[1].split(
+        "} as const satisfies Readonly<Record<string, string>>;",
+        maxsplit=1,
+    )[0]
 
-    return tuple(
-        {
-            "id": match["id"],
-            "name": match["name"],
-            "description": match["description"],
-            "category_id": match["category_id"],
-            "color_ids": re.findall(r'"([^"]+)"', match["color_ids"]),
-            "preview_class_name": match["preview_class_name"],
-        }
-        for match in record_pattern.finditer(catalogue_source)
+    return dict(
+        re.findall(
+            r'^\s*"(?P<id>[^"]+)":\s*"(?P<preview_class_name>[^"]+)",$',
+            registry_source,
+            re.MULTILINE,
+        )
     )
 
 
@@ -290,15 +278,15 @@ def test_index_revision_has_exact_ordered_upgrade_and_downgrade_operations(
     ]
 
 
-def test_seed_revision_exactly_matches_frontend_and_task_4_5_catalogues() -> None:
+def test_seed_revision_matches_task_4_5_catalogue_and_frontend_artwork() -> None:
     revision = ScriptDirectory.from_config(alembic_config()).get_revision(REVISION)
     assert revision is not None
 
     seed_rows = revision.module.PATTERN_ROWS
-    frontend_rows = read_frontend_catalogue()
+    frontend_artwork = read_frontend_artwork_registry()
 
     assert 12 <= len(seed_rows) <= 20
-    assert len(seed_rows) == len(CANONICAL_PATTERNS) == len(frontend_rows) == 15
+    assert len(seed_rows) == len(CANONICAL_PATTERNS) == len(frontend_artwork) == 15
     assert (
         tuple(
             {
@@ -316,7 +304,9 @@ def test_seed_revision_exactly_matches_frontend_and_task_4_5_catalogues() -> Non
         )
         == CANONICAL_PATTERNS
     )
-    assert frontend_rows == CANONICAL_PATTERNS
+    assert frontend_artwork == {
+        row["id"]: row["preview_class_name"] for row in CANONICAL_PATTERNS
+    }
     assert seed_rows == expected_seed_rows()
 
     assert len({row["id"] for row in seed_rows}) == len(seed_rows)
