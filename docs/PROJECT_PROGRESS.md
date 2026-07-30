@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 6 - Frontend and backend integration
-- Current task: 6.1 - Add the typed API client using `NEXT_PUBLIC_API_URL`, timeouts, retry limit, and cold-start messaging
+- Current task: 6.2 - Replace local catalogue data with API pattern loading and filtering
 - Status: Completed
-- Overall progress: 33 / 58 tasks completed
-- Up next: 6.2 - Replace local catalogue data with API pattern loading and filtering
+- Overall progress: 34 / 58 tasks completed
+- Up next: 6.3 - Save reviewed configurations and generate the `?design=<public_id>` share URL
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -77,7 +77,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | Task | Deliverable | Status |
 | --- | --- | --- |
 | 6.1 | Add the typed API client using `NEXT_PUBLIC_API_URL`, timeouts, retry limit, and cold-start messaging | Completed |
-| 6.2 | Replace local catalogue data with API pattern loading and filtering | Not started |
+| 6.2 | Replace local catalogue data with API pattern loading and filtering | Completed |
 | 6.3 | Save reviewed configurations and generate the `?design=<public_id>` share URL | Not started |
 | 6.4 | Load and exactly restore shared designs, including unknown/expired ID handling | Not started |
 | 6.5 | Verify the full local journey and all loading, empty, retry, and failure states | Not started |
@@ -489,3 +489,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Optional status callbacks report connecting, a cautious two-second delayed message that the API may be waking, exact bounded retry progress, recovery success, or a fixed useful failure. The messaging never claims a cold start is certain and remains compatible with later screen integration rather than adding Task 6.2 behavior.
 - Node's built-in runner uses mocked fetch and deterministic timers for public URL handling, normalized URL construction, all typed successes, exact backend errors, malformed responses, timeout cancellation, retry eligibility and exclusion, exact limits, cold-start recovery, sequential requests, cleanup, and secret-safe output. ESLint, strict type-checking, ordinary and GitHub Pages static-export builds, environment/credential scans, all 182 backend regressions, Ruff checks, roadmap integrity, and `git diff --check` pass without contacting Render or Neon. Both sandboxed builds first reproduced only the documented Google Fonts connection block; their outbound-enabled reruns passed with all routes statically prerendered.
 - No dependency, lockfile, backend endpoint/schema/database/migration, local catalogue, screen integration, authentication, cache, offline persistence, deployment, Render request, Neon request, or Task 6.2 behavior is included. Task 6.1 is `Completed`, progress is 33 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 6.2 - Replace local catalogue data with API pattern loading and filtering.
+
+### 2026-07-29 - API-backed pattern catalogue and filtering
+
+- The configurator now loads its complete ordered catalogue through the typed client's `GET /patterns` operation. Category, color, and combined selections issue new API requests using the established query fields; response order is preserved without client sorting. A monotonically increasing request version ignores late statuses and data from superseded filter requests.
+- API/database data owns pattern IDs, names, descriptions, category IDs, color IDs, and deterministic order. The frontend owns only facet labels and a stable pattern-ID-to-CSS-class registry; `app/globals.css` remains the artwork implementation. Rendering ignores the API transport handle as a CSS selector and resolves artwork by stable ID, so an unmapped pattern fails visibly instead of allowing response data to select a class. The duplicated 15-record frontend metadata array and local filtering helper were removed.
+- The initial unfiltered result remains the complete resolution set used by selection, preview, and review, while filtered responses control only visible cards. Filtering therefore never clears or invalidates a still-present selected pattern. Clearing filters refreshes the complete API catalogue, and no error, empty result, incompatible response, or missing configuration path falls back to local metadata.
+- Initial and filtered requests expose polite loading, delayed cold-start, bounded retry, retryable final error, recovery, complete-catalogue empty, filtered empty, hidden-selection, and unavailable-selection states. Existing configuration values remain intact. The client-side state boundary keeps static export compatibility and passes the resolved API record explicitly into preview and review rather than consulting a bundled catalogue.
+- Node's built-in runner now covers successful ordered loading, category/color/combined requests, complete and filtered empty results, failure and retry recovery, cold-start recovery, stale-response rejection, selection preservation, frontend visual mapping, and semantic incompatibilities with mocked requests only. Together with the typed-client suite, 27 frontend tests pass. ESLint, strict type-checking, ordinary and GitHub Pages builds, all 18 focused backend pattern regressions, Pages-prefix inspection, scope/credential scans, roadmap integrity, and `git diff --check` pass. The sandboxed ordinary build reproduced only the documented Google Fonts connection restriction before its outbound-enabled rerun succeeded.
+- No backend, database, migration, catalogue-content, authentication, cache, deployment, dependency, lockfile, design persistence, sharing, or Task 6.3 change is included. Task 6.2 is `Completed`, progress is 34 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 6.3 - Save reviewed configurations and generate the `?design=<public_id>` share URL.

@@ -7,10 +7,9 @@ import {
   hasValidMeasurementsForShape,
   useConfiguration,
 } from "@/context/configuration";
-import {
-  patternCatalogue,
-  type PatternCatalogueResult,
-} from "@/data/patterns";
+import { getPatternById } from "@/data/patterns";
+import { getCompleteCatalogueResult } from "@/services/pattern-catalogue";
+import { usePatternCatalogue } from "@/services/use-pattern-catalogue";
 
 import { MeasurementStep } from "./measurement-step";
 import { PatternStep } from "./pattern-step";
@@ -56,14 +55,13 @@ function focusEditTarget(targetId: string) {
   target.scrollIntoView({ block: "start" });
 }
 
-export interface ConfiguratorProps {
-  catalogueResult?: PatternCatalogueResult;
-}
-
-export function Configurator({
-  catalogueResult = patternCatalogue,
-}: ConfiguratorProps = {}) {
+export function Configurator() {
   const { state } = useConfiguration();
+  const {
+    retry: retryPatternCatalogue,
+    setFilters: setPatternFilters,
+    state: patternCatalogue,
+  } = usePatternCatalogue();
   const [activeView, setActiveView] =
     useState<"configure" | "review">("configure");
   const [reviewHasBeenOpened, setReviewHasBeenOpened] =
@@ -76,16 +74,17 @@ export function Configurator({
     state.thickness,
     state.unit,
   );
+  const catalogueResult =
+    getCompleteCatalogueResult(patternCatalogue);
+  const selectedPattern = getPatternById(
+    patternCatalogue.allPatterns,
+    state.patternId,
+  );
   const reviewReadiness = deriveReviewReadiness(
     state,
     catalogueResult,
   );
-  const patternIsSelected =
-    catalogueResult.status === "ready" &&
-    state.patternId !== null &&
-    catalogueResult.patterns.some(
-      (pattern) => pattern.id === state.patternId,
-    );
+  const patternIsSelected = selectedPattern !== null;
   const reviewIsVisible =
     activeView === "review" && reviewReadiness.status === "ready";
   const currentStepId =
@@ -175,11 +174,14 @@ export function Configurator({
           focusTargetId={editTargetIds.measurements}
         />
         <PatternStep
-          catalogueResult={catalogueResult}
+          catalogue={patternCatalogue}
           focusTargetId={editTargetIds.pattern}
+          onFiltersChange={setPatternFilters}
+          onRetry={retryPatternCatalogue}
         />
         <PreviewStep
           focusTargetId={editTargetIds.patternScale}
+          selectedPattern={selectedPattern}
         />
 
         {reviewReadiness.status === "ready" ? (
@@ -193,9 +195,12 @@ export function Configurator({
         )}
       </div>
 
-      {reviewIsVisible && reviewReadiness.status === "ready" ? (
+      {reviewIsVisible &&
+      reviewReadiness.status === "ready" &&
+      selectedPattern !== null ? (
         <ReviewScreen
           readiness={reviewReadiness}
+          selectedPattern={selectedPattern}
           onEdit={editSection}
         />
       ) : null}

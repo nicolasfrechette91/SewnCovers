@@ -1,3 +1,5 @@
+import type { PatternResponse } from "@/services/api-client";
+
 export const PATTERN_CATALOGUE_MINIMUM = 12;
 export const PATTERN_CATALOGUE_MAXIMUM = 20;
 
@@ -22,141 +24,35 @@ export const patternColors = [
 export type PatternCategoryId = (typeof patternCategories)[number]["id"];
 export type PatternColorId = (typeof patternColors)[number]["id"];
 
+const patternArtworkById = {
+  "prototype-botanical": "prototype-pattern-botanical",
+  "fern-trail": "pattern-fern-trail",
+  "meadow-sprig": "pattern-meadow-sprig",
+  "prototype-geometric": "prototype-pattern-geometric",
+  "diamond-path": "pattern-diamond-path",
+  "arch-grid": "pattern-arch-grid",
+  "harbor-stripe": "pattern-harbor-stripe",
+  "orchard-stripe": "pattern-orchard-stripe",
+  "ribbon-stripe": "pattern-ribbon-stripe",
+  "prototype-woven": "prototype-pattern-woven",
+  "basket-check": "pattern-basket-check",
+  "linen-crosshatch": "pattern-linen-crosshatch",
+  "terrace-wave": "pattern-terrace-wave",
+  "pebble-drift": "pattern-pebble-drift",
+  "confetti-grid": "pattern-confetti-grid",
+} as const satisfies Readonly<Record<string, string>>;
+
+export type PatternPreviewClassName =
+  (typeof patternArtworkById)[keyof typeof patternArtworkById];
+
 export interface PatternDefinition {
   readonly categoryId: PatternCategoryId;
   readonly colorIds: readonly PatternColorId[];
   readonly description: string;
   readonly id: string;
   readonly name: string;
-  readonly previewClassName: string;
+  readonly previewClassName: PatternPreviewClassName;
 }
-
-export const curatedPatterns = [
-  {
-    id: "prototype-botanical",
-    name: "Botanical sample",
-    description: "An organic, leaf-inspired prototype direction.",
-    categoryId: "botanical",
-    colorIds: ["ivory", "green", "terracotta"],
-    previewClassName: "prototype-pattern-botanical",
-  },
-  {
-    id: "fern-trail",
-    name: "Fern trail",
-    description: "Layered fronds arranged along a gentle diagonal trail.",
-    categoryId: "botanical",
-    colorIds: ["ivory", "green"],
-    previewClassName: "pattern-fern-trail",
-  },
-  {
-    id: "meadow-sprig",
-    name: "Meadow sprig",
-    description: "Small branching sprigs scattered across an open ground.",
-    categoryId: "botanical",
-    colorIds: ["ivory", "blue", "gold"],
-    previewClassName: "pattern-meadow-sprig",
-  },
-  {
-    id: "prototype-geometric",
-    name: "Geometric sample",
-    description: "A warm, structured prototype direction.",
-    categoryId: "geometric",
-    colorIds: ["ivory", "green", "terracotta"],
-    previewClassName: "prototype-pattern-geometric",
-  },
-  {
-    id: "diamond-path",
-    name: "Diamond path",
-    description: "Nested diamonds repeat in crisp offset rows.",
-    categoryId: "geometric",
-    colorIds: ["ivory", "blue", "charcoal"],
-    previewClassName: "pattern-diamond-path",
-  },
-  {
-    id: "arch-grid",
-    name: "Arch grid",
-    description: "Rounded arches alternate within a compact tiled grid.",
-    categoryId: "geometric",
-    colorIds: ["ivory", "terracotta", "gold"],
-    previewClassName: "pattern-arch-grid",
-  },
-  {
-    id: "harbor-stripe",
-    name: "Harbor stripe",
-    description: "Broad blue bands alternate with fine light pinstripes.",
-    categoryId: "striped",
-    colorIds: ["ivory", "blue"],
-    previewClassName: "pattern-harbor-stripe",
-  },
-  {
-    id: "orchard-stripe",
-    name: "Orchard stripe",
-    description: "Uneven green and gold lines form a relaxed rhythm.",
-    categoryId: "striped",
-    colorIds: ["ivory", "green", "gold"],
-    previewClassName: "pattern-orchard-stripe",
-  },
-  {
-    id: "ribbon-stripe",
-    name: "Ribbon stripe",
-    description: "Slim rose bands cross wider terracotta ribbons.",
-    categoryId: "striped",
-    colorIds: ["ivory", "terracotta", "rose"],
-    previewClassName: "pattern-ribbon-stripe",
-  },
-  {
-    id: "prototype-woven",
-    name: "Woven sample",
-    description: "A quiet, small-scale prototype direction.",
-    categoryId: "woven",
-    colorIds: ["ivory", "charcoal"],
-    previewClassName: "prototype-pattern-woven",
-  },
-  {
-    id: "basket-check",
-    name: "Basket check",
-    description: "Alternating blocks suggest an oversized basket weave.",
-    categoryId: "woven",
-    colorIds: ["ivory", "blue", "charcoal"],
-    previewClassName: "pattern-basket-check",
-  },
-  {
-    id: "linen-crosshatch",
-    name: "Linen crosshatch",
-    description: "Fine crossing lines create a loose textured grid.",
-    categoryId: "woven",
-    colorIds: ["ivory", "gold"],
-    previewClassName: "pattern-linen-crosshatch",
-  },
-  {
-    id: "terrace-wave",
-    name: "Terrace wave",
-    description: "Layered waves move in alternating cool bands.",
-    categoryId: "abstract",
-    colorIds: ["ivory", "green", "blue"],
-    previewClassName: "pattern-terrace-wave",
-  },
-  {
-    id: "pebble-drift",
-    name: "Pebble drift",
-    description: "Soft-edged pebble forms gather in offset clusters.",
-    categoryId: "abstract",
-    colorIds: ["ivory", "terracotta", "charcoal"],
-    previewClassName: "pattern-pebble-drift",
-  },
-  {
-    id: "confetti-grid",
-    name: "Confetti grid",
-    description: "Playful dashes and dots repeat on a spacious grid.",
-    categoryId: "abstract",
-    colorIds: ["ivory", "green", "gold", "rose"],
-    previewClassName: "pattern-confetti-grid",
-  },
-] as const satisfies readonly PatternDefinition[];
-
-export type CuratedPattern = (typeof curatedPatterns)[number];
-export type PatternId = CuratedPattern["id"];
-export type PatternPreviewClassName = CuratedPattern["previewClassName"];
 
 export const ALL_PATTERN_CATEGORIES = "all-categories";
 export const ALL_PATTERN_COLORS = "all-colors";
@@ -173,14 +69,18 @@ export interface PatternFilters {
   readonly colorId: PatternColorFilter;
 }
 
-export type PatternCatalogueResult<
-  Pattern extends PatternDefinition = PatternDefinition,
-> =
+export type PatternCatalogueResult =
   | { readonly status: "empty" }
   | { readonly issues: readonly string[]; readonly status: "error" }
-  | { readonly patterns: readonly Pattern[]; readonly status: "ready" };
+  | { readonly status: "loading" }
+  | {
+      readonly patterns: readonly PatternDefinition[];
+      readonly status: "ready";
+    };
 
-function findDuplicateValues(values: readonly string[]): readonly string[] {
+function findDuplicateValues(
+  values: readonly string[],
+): readonly string[] {
   const seen = new Set<string>();
   const duplicates = new Set<string>();
 
@@ -195,100 +95,131 @@ function findDuplicateValues(values: readonly string[]): readonly string[] {
   return Array.from(duplicates);
 }
 
-export function validatePatternCatalogue<
-  Pattern extends PatternDefinition,
->(
-  patterns: readonly Pattern[],
-): PatternCatalogueResult<Pattern> {
+function isPatternCategoryId(value: string): value is PatternCategoryId {
+  return patternCategories.some((category) => category.id === value);
+}
+
+function isPatternColorId(value: string): value is PatternColorId {
+  return patternColors.some((color) => color.id === value);
+}
+
+export function resolvePatternResponses(
+  patterns: readonly PatternResponse[],
+  options: {
+    readonly completeCatalogue: boolean;
+    readonly filters?: PatternFilters;
+  },
+): PatternCatalogueResult {
   if (patterns.length === 0) {
     return { status: "empty" };
   }
 
   const issues: string[] = [];
-  const categoryIds = new Set<string>(
-    patternCategories.map((category) => category.id),
-  );
-  const colorIds = new Set<string>(
-    patternColors.map((color) => color.id),
-  );
 
   if (
-    patterns.length < PATTERN_CATALOGUE_MINIMUM ||
-    patterns.length > PATTERN_CATALOGUE_MAXIMUM
+    options.completeCatalogue &&
+    (patterns.length < PATTERN_CATALOGUE_MINIMUM ||
+      patterns.length > PATTERN_CATALOGUE_MAXIMUM)
   ) {
     issues.push(
-      `The catalogue must contain ${PATTERN_CATALOGUE_MINIMUM}-${PATTERN_CATALOGUE_MAXIMUM} patterns.`,
+      `The API catalogue must contain ${PATTERN_CATALOGUE_MINIMUM}-${PATTERN_CATALOGUE_MAXIMUM} patterns.`,
     );
   }
 
-  const identityFields = [
-    {
-      label: "IDs",
-      values: patterns.map((pattern) => pattern.id),
-    },
-    {
-      label: "names",
-      values: patterns.map((pattern) => pattern.name.toLocaleLowerCase()),
-    },
-    {
-      label: "preview style handles",
-      values: patterns.map((pattern) => pattern.previewClassName),
-    },
-  ] as const;
+  if (findDuplicateValues(patterns.map((pattern) => pattern.id)).length) {
+    issues.push("API pattern IDs must be unique.");
+  }
 
-  identityFields.forEach(({ label, values }) => {
-    const duplicates = findDuplicateValues(values);
+  if (
+    findDuplicateValues(
+      patterns.map((pattern) => pattern.name.toLocaleLowerCase()),
+    ).length
+  ) {
+    issues.push("API pattern names must be unique.");
+  }
 
-    if (duplicates.length > 0) {
-      issues.push(`Pattern ${label} must be unique.`);
-    }
-  });
+  const resolvedPatterns: PatternDefinition[] = [];
 
   patterns.forEach((pattern) => {
+    const artwork =
+      patternArtworkById[
+        pattern.id as keyof typeof patternArtworkById
+      ];
+
     if (
       pattern.id.trim() === "" ||
       pattern.name.trim() === "" ||
       pattern.description.trim() === "" ||
       pattern.previewClassName.trim() === ""
     ) {
-      issues.push("Every pattern requires complete display metadata.");
+      issues.push("Every API pattern requires complete display metadata.");
+    }
+
+    if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(pattern.id)) {
+      issues.push(`API pattern "${pattern.id}" has an invalid ID.`);
+    }
+
+    if (!isPatternCategoryId(pattern.categoryId)) {
+      issues.push(`API pattern "${pattern.id}" has an unknown category.`);
     }
 
     if (pattern.colorIds.length === 0) {
-      issues.push(`Pattern "${pattern.id}" requires at least one color.`);
+      issues.push(`API pattern "${pattern.id}" requires at least one color.`);
     }
 
-    if (!categoryIds.has(pattern.categoryId)) {
-      issues.push(`Pattern "${pattern.id}" has an unknown category.`);
-    }
-
-    if (pattern.colorIds.some((colorId) => !colorIds.has(colorId))) {
-      issues.push(`Pattern "${pattern.id}" has an unknown color.`);
+    if (pattern.colorIds.some((colorId) => !isPatternColorId(colorId))) {
+      issues.push(`API pattern "${pattern.id}" has an unknown color.`);
     }
 
     if (findDuplicateValues(pattern.colorIds).length > 0) {
-      issues.push(`Pattern "${pattern.id}" has duplicate color tags.`);
+      issues.push(`API pattern "${pattern.id}" has duplicate color tags.`);
+    }
+
+    if (
+      options.filters?.categoryId !== undefined &&
+      options.filters.categoryId !== ALL_PATTERN_CATEGORIES &&
+      pattern.categoryId !== options.filters.categoryId
+    ) {
+      issues.push(
+        `API pattern "${pattern.id}" does not match the requested category.`,
+      );
+    }
+
+    if (
+      options.filters?.colorId !== undefined &&
+      options.filters.colorId !== ALL_PATTERN_COLORS &&
+      !pattern.colorIds.includes(options.filters.colorId)
+    ) {
+      issues.push(
+        `API pattern "${pattern.id}" does not match the requested color.`,
+      );
+    }
+
+    if (artwork === undefined) {
+      issues.push(
+        `API pattern "${pattern.id}" has no frontend artwork mapping.`,
+      );
+    }
+
+    if (
+      artwork !== undefined &&
+      isPatternCategoryId(pattern.categoryId) &&
+      pattern.colorIds.every(isPatternColorId)
+    ) {
+      resolvedPatterns.push({
+        categoryId: pattern.categoryId,
+        colorIds: pattern.colorIds,
+        description: pattern.description,
+        id: pattern.id,
+        name: pattern.name,
+        previewClassName: artwork,
+      });
     }
   });
 
   return issues.length > 0
     ? { status: "error", issues: Array.from(new Set(issues)) }
-    : { status: "ready", patterns };
-}
-
-export const patternCatalogue = validatePatternCatalogue(curatedPatterns);
-
-export function filterPatterns<Pattern extends PatternDefinition>(
-  patterns: readonly Pattern[],
-  filters: PatternFilters,
-): readonly Pattern[] {
-  return patterns.filter(
-    (pattern) =>
-      (filters.categoryId === ALL_PATTERN_CATEGORIES ||
-        pattern.categoryId === filters.categoryId) &&
-      (filters.colorId === ALL_PATTERN_COLORS ||
-        pattern.colorIds.includes(filters.colorId)),
-  );
+    : { status: "ready", patterns: resolvedPatterns };
 }
 
 export function getPatternCategoryLabel(
@@ -311,15 +242,14 @@ export function getPatternColorLabels(
 }
 
 export function getPatternById(
+  patterns: readonly PatternDefinition[],
   patternId: string | null,
-): CuratedPattern | null {
-  if (patternId === null || patternCatalogue.status !== "ready") {
+): PatternDefinition | null {
+  if (patternId === null) {
     return null;
   }
 
   return (
-    patternCatalogue.patterns.find(
-      (pattern) => pattern.id === patternId,
-    ) ?? null
+    patterns.find((pattern) => pattern.id === patternId) ?? null
   );
 }

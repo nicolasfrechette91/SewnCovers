@@ -11,7 +11,6 @@ import {
 import {
   getPatternCategoryLabel,
   getPatternColorLabels,
-  patternCatalogue,
   type PatternCatalogueResult,
   type PatternDefinition,
 } from "@/data/patterns";
@@ -206,7 +205,7 @@ function buildSummary(
 
 export function deriveReviewReadiness(
   state: ConfigurationState,
-  catalogueResult: PatternCatalogueResult = patternCatalogue,
+  catalogueResult: PatternCatalogueResult,
 ): ReviewReadiness {
   if (state.shape === null) {
     return {
@@ -242,11 +241,18 @@ export function deriveReviewReadiness(
 
   let selectedPattern: PatternDefinition | null = null;
 
-  if (catalogueResult.status === "error") {
+  if (catalogueResult.status === "loading") {
+    issues.push({
+      id: "catalogue-loading",
+      message:
+        "Wait for the pattern catalogue to finish loading.",
+      section: "pattern",
+    });
+  } else if (catalogueResult.status === "error") {
     issues.push({
       id: "catalogue-invalid",
       message:
-        "The pattern catalogue is invalid, so a selected pattern cannot be verified.",
+        "The API pattern catalogue is unavailable, so a selected pattern cannot be verified.",
       section: "pattern",
     });
   } else if (catalogueResult.status === "empty") {

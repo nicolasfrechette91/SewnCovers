@@ -1,13 +1,13 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useRef } from "react";
 
 import { PatternCard } from "@/components/configurator/pattern-card";
 import {
   PatternFilter,
   type PatternFilterOption,
 } from "@/components/configurator/pattern-filter";
-import { Button, ErrorMessage } from "@/components/ui";
+import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import {
   hasValidMeasurementsForShape,
   useConfiguration,
@@ -15,16 +15,16 @@ import {
 import {
   ALL_PATTERN_CATEGORIES,
   ALL_PATTERN_COLORS,
-  filterPatterns,
+  getPatternById,
   getPatternCategoryLabel,
   getPatternColorLabels,
-  patternCatalogue,
   patternCategories,
   patternColors,
-  type PatternCatalogueResult,
   type PatternCategoryFilter,
   type PatternColorFilter,
+  type PatternFilters,
 } from "@/data/patterns";
+import type { PatternCatalogueState } from "@/services/pattern-catalogue";
 
 const categoryFilterOptions: readonly PatternFilterOption<PatternCategoryFilter>[] =
   [
@@ -51,23 +51,42 @@ const colorFilterOptions: readonly PatternFilterOption<PatternColorFilter>[] =
   ];
 
 export interface PatternStepProps {
-  catalogueResult?: PatternCatalogueResult;
+  catalogue: PatternCatalogueState;
   focusTargetId?: string;
+  onFiltersChange: (filters: PatternFilters) => void;
+  onRetry: () => void;
 }
 
 export function PatternStep({
-  catalogueResult = patternCatalogue,
+  catalogue,
   focusTargetId,
+  onFiltersChange,
+  onRetry,
 }: PatternStepProps) {
   const { state, dispatch } = useConfiguration();
   const generatedId = useId();
   const supportingTextId = `${generatedId}-supporting-text`;
   const resultCountId = `${generatedId}-result-count`;
   const categoryFilterRef = useRef<HTMLFieldSetElement>(null);
-  const [categoryId, setCategoryId] =
-    useState<PatternCategoryFilter>(ALL_PATTERN_CATEGORIES);
-  const [colorId, setColorId] =
-    useState<PatternColorFilter>(ALL_PATTERN_COLORS);
+  const { categoryId, colorId } = catalogue.filters;
+  const filtersAreActive =
+    categoryId !== ALL_PATTERN_CATEGORIES ||
+    colorId !== ALL_PATTERN_COLORS;
+  const hasCompleteCatalogue = catalogue.allPatterns.length > 0;
+  const selectedPattern = getPatternById(
+    catalogue.allPatterns,
+    state.patternId,
+  );
+  const selectedPatternIsHidden =
+    selectedPattern !== null &&
+    (catalogue.phase === "ready" || catalogue.phase === "empty") &&
+    !catalogue.visiblePatterns.some(
+      (pattern) => pattern.id === selectedPattern.id,
+    );
+  const selectedPatternIsUnavailable =
+    hasCompleteCatalogue &&
+    state.patternId !== null &&
+    selectedPattern === null;
 
   if (
     !hasValidMeasurementsForShape(
@@ -81,40 +100,38 @@ export function PatternStep({
     return null;
   }
 
-  const filtersAreActive =
-    categoryId !== ALL_PATTERN_CATEGORIES ||
-    colorId !== ALL_PATTERN_COLORS;
-  const availablePatterns =
-    catalogueResult.status === "ready"
-      ? catalogueResult.patterns
-      : [];
-  const visiblePatterns = filterPatterns(availablePatterns, {
-    categoryId,
-    colorId,
-  });
-  const selectedPattern =
-    state.patternId === null
-      ? null
-      : availablePatterns.find(
-          (pattern) => pattern.id === state.patternId,
-        ) ?? null;
-  const selectedPatternIsHidden =
-    selectedPattern !== null &&
-    !visiblePatterns.some(
-      (pattern) => pattern.id === selectedPattern.id,
-    );
-  const selectedPatternIsUnavailable =
-    state.patternId !== null && selectedPattern === null;
-
   const clearFilters = () => {
-    setCategoryId(ALL_PATTERN_CATEGORIES);
-    setColorId(ALL_PATTERN_COLORS);
+    onFiltersChange({
+      categoryId: ALL_PATTERN_CATEGORIES,
+      colorId: ALL_PATTERN_COLORS,
+    });
     requestAnimationFrame(() => {
       categoryFilterRef.current
         ?.querySelector<HTMLInputElement>("input")
         ?.focus();
     });
   };
+
+  const errorState = (
+    <ErrorMessage className="mt-component">
+      <div>
+        <h3 className="text-body font-control">
+          Pattern catalogue unavailable
+        </h3>
+        <p className="mt-1">{catalogue.message}</p>
+        {catalogue.issues.length > 0 ? (
+          <ul className="mt-2 list-disc pl-5">
+            {catalogue.issues.map((issue) => (
+              <li key={issue}>{issue}</li>
+            ))}
+          </ul>
+        ) : null}
+        <Button className="mt-3" variant="secondary" onClick={onRetry}>
+          Try loading patterns again
+        </Button>
+      </div>
+    </ErrorMessage>
+  );
 
   return (
     <section
@@ -136,43 +153,42 @@ export function PatternStep({
           id={supportingTextId}
           className="mt-2 max-w-3xl break-words text-body text-text-muted"
         >
-          Compare locally rendered pattern directions. Choose one pattern
-          for this configuration, then adjust its scale in the preview.
+          Compare pattern directions loaded from SewnCovers. Choose one
+          pattern for this configuration, then adjust its scale in the
+          preview.
         </p>
 
-        {catalogueResult.status === "error" ? (
-          <ErrorMessage className="mt-component">
-            <div>
-              <h3 className="text-body font-control">
-                Pattern catalogue unavailable
-              </h3>
-              <p className="mt-1">
-                The local catalogue contains conflicting or incomplete
-                records, so no pattern cards or previews were shown.
-              </p>
-              <ul className="mt-2 list-disc pl-5">
-                {catalogueResult.issues.map((issue) => (
-                  <li key={issue}>{issue}</li>
-                ))}
-              </ul>
+        {!hasCompleteCatalogue ? (
+          catalogue.phase === "loading" ? (
+            <div className="mt-component rounded-card border border-border bg-surface-subtle p-card">
+              <LoadingState label={catalogue.message} />
             </div>
-          </ErrorMessage>
-        ) : catalogueResult.status === "empty" ? (
-          <div
-            className="mt-component rounded-card border border-border-strong bg-surface-subtle p-card"
-            aria-labelledby={`${generatedId}-empty-catalogue-title`}
-          >
-            <h3
-              id={`${generatedId}-empty-catalogue-title`}
-              className="text-body font-control text-text-primary"
+          ) : catalogue.phase === "error" ? (
+            errorState
+          ) : (
+            <div
+              className="mt-component rounded-card border border-border-strong bg-surface-subtle p-card"
+              aria-labelledby={`${generatedId}-empty-catalogue-title`}
             >
-              No patterns are available
-            </h3>
-            <p className="mt-1 break-words text-supporting text-text-muted">
-              The local catalogue is empty. Your current configuration has
-              been preserved; try again after catalogue patterns are added.
-            </p>
-          </div>
+              <h3
+                id={`${generatedId}-empty-catalogue-title`}
+                className="text-body font-control text-text-primary"
+              >
+                No patterns are available
+              </h3>
+              <p className="mt-1 break-words text-supporting text-text-muted">
+                The API returned an empty catalogue. Your current
+                configuration has been preserved.
+              </p>
+              <Button
+                className="mt-3"
+                variant="secondary"
+                onClick={onRetry}
+              >
+                Check for patterns again
+              </Button>
+            </div>
+          )
         ) : (
           <>
             <div className="mt-component rounded-card border border-border bg-surface-subtle p-control-x py-4">
@@ -183,14 +199,24 @@ export function PatternStep({
                   name={`${generatedId}-pattern-category`}
                   options={categoryFilterOptions}
                   value={categoryId}
-                  onChange={setCategoryId}
+                  onChange={(nextCategoryId) =>
+                    onFiltersChange({
+                      categoryId: nextCategoryId,
+                      colorId,
+                    })
+                  }
                 />
                 <PatternFilter
                   legend="Filter by color"
                   name={`${generatedId}-pattern-color`}
                   options={colorFilterOptions}
                   value={colorId}
-                  onChange={setColorId}
+                  onChange={(nextColorId) =>
+                    onFiltersChange({
+                      categoryId,
+                      colorId: nextColorId,
+                    })
+                  }
                 />
               </div>
               <div className="mt-component flex min-w-0 flex-wrap items-center justify-between gap-3">
@@ -201,9 +227,13 @@ export function PatternStep({
                   aria-atomic="true"
                   className="min-w-0 break-words text-supporting text-text-muted"
                 >
-                  {filtersAreActive
-                    ? `Showing ${visiblePatterns.length} of ${availablePatterns.length} patterns.`
-                    : `Showing all ${availablePatterns.length} patterns.`}
+                  {catalogue.phase === "loading"
+                    ? catalogue.message
+                    : catalogue.phase === "error"
+                      ? "Pattern results could not be loaded."
+                      : filtersAreActive
+                        ? `Showing ${catalogue.visiblePatterns.length} of ${catalogue.allPatterns.length} patterns.`
+                        : `Showing all ${catalogue.allPatterns.length} patterns.`}
                 </p>
                 <Button
                   variant="secondary"
@@ -228,7 +258,7 @@ export function PatternStep({
                 </h3>
                 <p className="mt-1 break-words text-supporting text-text-muted">
                   {selectedPattern.name} remains selected for your
-                  configuration.
+                  configuration and preview.
                 </p>
                 <Button
                   className="mt-3"
@@ -251,7 +281,7 @@ export function PatternStep({
                     Selected pattern unavailable
                   </h3>
                   <p className="mt-1">
-                    The current pattern identifier does not match this
+                    The current pattern identifier does not match the API
                     catalogue. Your other configuration choices remain
                     unchanged; choose any available pattern below to replace
                     it.
@@ -260,7 +290,13 @@ export function PatternStep({
               </ErrorMessage>
             ) : null}
 
-            {visiblePatterns.length === 0 ? (
+            {catalogue.phase === "loading" ? (
+              <div className="mt-component rounded-card border border-border bg-surface-subtle p-card">
+                <LoadingState label={catalogue.message} />
+              </div>
+            ) : catalogue.phase === "error" ? (
+              errorState
+            ) : catalogue.visiblePatterns.length === 0 ? (
               <div
                 className="mt-component rounded-card border border-border-strong bg-surface-subtle p-card"
                 aria-labelledby={`${generatedId}-no-matches-title`}
@@ -273,7 +309,7 @@ export function PatternStep({
                 </h3>
                 <p className="mt-1 break-words text-supporting text-text-muted">
                   Your current pattern selection has not changed. Clear both
-                  filters to see the complete catalogue.
+                  filters to request the complete catalogue.
                 </p>
                 <Button
                   className="mt-3"
@@ -288,7 +324,7 @@ export function PatternStep({
                 aria-describedby={resultCountId}
                 className="mt-layout grid min-w-0 gap-component sm:grid-cols-2 lg:grid-cols-3"
               >
-                {visiblePatterns.map((pattern) => {
+                {catalogue.visiblePatterns.map((pattern) => {
                   const optionId = `${generatedId}-${pattern.id}`;
                   const colorLabels = getPatternColorLabels(
                     pattern.colorIds,

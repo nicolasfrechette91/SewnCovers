@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui";
+import type { PatternDefinition } from "@/data/patterns";
 
 import { ConfigurationSummary } from "./configuration-summary";
 import { PreviewStep } from "./preview-step";
@@ -133,11 +134,13 @@ export function ReviewEntry({ onReview }: ReviewEntryProps) {
 interface ReviewScreenProps {
   onEdit: (section: ReviewSection) => void;
   readiness: Extract<ReviewReadiness, { status: "ready" }>;
+  selectedPattern: PatternDefinition;
 }
 
 export function ReviewScreen({
   onEdit,
   readiness,
+  selectedPattern,
 }: ReviewScreenProps) {
   const { summary } = readiness;
 
@@ -186,7 +189,10 @@ export function ReviewScreen({
           items={summary.fields}
         />
         <div className="review-preview print-hidden min-w-0">
-          <PreviewStep showScaleControls={false} />
+          <PreviewStep
+            selectedPattern={selectedPattern}
+            showScaleControls={false}
+          />
         </div>
       </div>
 

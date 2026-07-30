@@ -40,7 +40,7 @@ Validation is enforced independently in React and FastAPI using the same contrac
 In scope:
 
 - Exact measurements with clear inline validation and unit conversion.
-- A curated local pattern catalogue that later comes from the API.
+- A curated API-backed pattern catalogue with frontend-owned artwork.
 - Category and color filtering.
 - A fast, responsive 2D preview using HTML/CSS or SVG.
 - Review, design saving, shareable links, and exact restoration.
@@ -71,7 +71,7 @@ The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. D
 
 ## Current state
 
-The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. Its browser-compatible typed API client validates the established health, pattern, and immutable-design contracts, applies bounded safe retries and cold-start status messaging, and keeps unsafe design creation single-attempt. Screen adoption begins with Task 6.2. The backend has a compact Python 3.13 and FastAPI service, explicit CORS policy, typed database-aware health reporting, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history with non-redundant category/activity indexes and the canonical 15-pattern metadata seed, active-pattern listing, immutable design creation/retrieval by opaque public ID, a typed field-aware error contract, and isolated Neon development/production environments, documented in [`backend/README.md`](backend/README.md). The persistent development Neon database is migrated and verified at `20260729_01`; production migration remains deferred until Render owns its protected database secret.
+The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. Its browser-compatible typed API client validates the established health, pattern, and immutable-design contracts, applies bounded safe retries and cold-start status messaging, and keeps unsafe design creation single-attempt. The configurator now loads ordered pattern metadata and category/color filter results from `/patterns`, rejects stale or malformed responses, and keeps artwork in the static frontend bundle. The backend has a compact Python 3.13 and FastAPI service, explicit CORS policy, typed database-aware health reporting, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history with non-redundant category/activity indexes and the canonical 15-pattern metadata seed, active-pattern listing, immutable design creation/retrieval by opaque public ID, a typed field-aware error contract, and isolated Neon development/production environments, documented in [`backend/README.md`](backend/README.md). The persistent development Neon database is migrated and verified at `20260729_01`; production migration remains deferred until Render owns its protected database secret.
 
 See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task checklist and current handoff state.
 
@@ -104,7 +104,7 @@ cd frontend
 npm run dev
 ```
 
-The frontend is available at <http://localhost:3000>. Copy `frontend/.env.example` to `frontend/.env.local` and `backend/.env.example` to `backend/.env` as described in the application READMEs. The API root, startup, and tests do not require a database connection; only `/health` performs its database check when requested. The typed client is available now, while the existing catalogue remains local until Task 6.2 adopts it.
+The frontend is available at <http://localhost:3000>. Copy `frontend/.env.example` to `frontend/.env.local` and `backend/.env.example` to `backend/.env` as described in the application READMEs. The configurator requires the API and its configured pattern database to load catalogue metadata; it never falls back to bundled metadata. The API root, startup, and mocked tests do not require a database connection, while `/health`, `/patterns`, and `/designs` use the configured database when requested.
 
 Press `Ctrl+C` in each terminal to stop both development servers. The application READMEs contain the verified install, lint, format, type-check, test, and build commands for Windows PowerShell and macOS/Linux.
 

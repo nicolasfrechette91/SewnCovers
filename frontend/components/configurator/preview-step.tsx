@@ -18,7 +18,7 @@ import {
   useConfiguration,
   type CushionShape,
 } from "@/context/configuration";
-import { getPatternById } from "@/data/patterns";
+import type { PatternDefinition } from "@/data/patterns";
 import {
   getCushionShapeDefinition,
   getMeasurementLabel,
@@ -165,19 +165,20 @@ function formatValidMeasurement(
 
 export interface PreviewStepProps {
   focusTargetId?: string;
+  selectedPattern: PatternDefinition | null;
   showScaleControls?: boolean;
 }
 
 export function PreviewStep({
   focusTargetId,
+  selectedPattern,
   showScaleControls = true,
-}: PreviewStepProps = {}) {
+}: PreviewStepProps) {
   const { state, dispatch } = useConfiguration();
   const generatedId = useId();
   const scaleControlId =
     focusTargetId ?? `${generatedId}-pattern-scale`;
   const scaleDescriptionId = `${scaleControlId}-description`;
-  const selectedPattern = getPatternById(state.patternId);
   const widthIsValid = isMeasurementWithinRange(
     state.width,
     "width",
