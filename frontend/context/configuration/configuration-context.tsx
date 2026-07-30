@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  useCallback,
   createContext,
   useContext,
+  useRef,
   useReducer,
   type Dispatch,
   type ReactNode,
@@ -17,6 +19,7 @@ import type { ConfigurationAction, ConfigurationState } from "./types";
 interface ConfigurationContextValue {
   readonly state: ConfigurationState;
   readonly dispatch: Dispatch<ConfigurationAction>;
+  readonly getRevision: () => number;
 }
 
 const ConfigurationContext = createContext<
@@ -26,13 +29,21 @@ const ConfigurationContext = createContext<
 export function ConfigurationProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const [state, dispatch] = useReducer(
+  const [state, reducerDispatch] = useReducer(
     configurationReducer,
     initialConfigurationState,
   );
+  const revision = useRef(0);
+  const dispatch = useCallback<Dispatch<ConfigurationAction>>((action) => {
+    revision.current += 1;
+    reducerDispatch(action);
+  }, []);
+  const getRevision = useCallback(() => revision.current, []);
 
   return (
-    <ConfigurationContext.Provider value={{ state, dispatch }}>
+    <ConfigurationContext.Provider
+      value={{ state, dispatch, getRevision }}
+    >
       {children}
     </ConfigurationContext.Provider>
   );

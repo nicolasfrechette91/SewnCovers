@@ -13,6 +13,10 @@ export interface ConfigurationState {
 }
 
 export type ConfigurationAction =
+  | {
+      readonly type: "restoreConfiguration";
+      readonly configuration: Readonly<ConfigurationState>;
+    }
   | { readonly type: "setShape"; readonly shape: CushionShape | null }
   | { readonly type: "setWidth"; readonly width: number | null }
   | {

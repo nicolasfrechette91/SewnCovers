@@ -1,6 +1,6 @@
 # SewnCovers frontend
 
-This directory contains the Next.js 16.2.11, React, and TypeScript App Router frontend. It is configured for static export to GitHub Pages and uses the browser-side typed FastAPI client to load configurator pattern metadata and filters.
+This directory contains the Next.js 16.2.11, React, and TypeScript App Router frontend. It is configured for static export to GitHub Pages and uses the browser-side typed FastAPI client to load configurator pattern metadata, filters, and immutable shared designs.
 
 ## Requirements
 
@@ -55,7 +55,7 @@ npm test
 npm run build
 ```
 
-`npm run typecheck` performs strict TypeScript checking without emitting files. `npm run check:config` runs the focused environment tests. `npm test` uses Node's built-in test runner with mocked requests and deterministic timers; it exercises configuration, URL construction, typed responses, backend and malformed errors, timeout and retry policy, cold-start recovery, API filters, empty results, stale-response protection, selection retention, frontend artwork mapping, cleanup, and secret-safe failures without contacting Render or Neon. No frontend testing dependency was added. `npm run build` performs the production build and writes the static export to the ignored `out/` directory. The existing configuration keeps local development and ordinary local builds at the domain root while GitHub Actions builds use the `/sewncovers` base path required by GitHub Pages.
+`npm run typecheck` performs strict TypeScript checking without emitting files. `npm run check:config` runs the focused environment tests. `npm test` uses Node's built-in test runner with mocked requests and deterministic timers; it exercises configuration, URL construction, typed responses, backend and malformed errors, timeout and retry policy, cold-start recovery, API filters, empty results, stale-response protection, selection retention, frontend artwork mapping, exact shared-design restoration, recovery, cleanup, and secret-safe failures without contacting Render or Neon. No frontend testing dependency was added. `npm run build` performs the production build and writes the static export to the ignored `out/` directory. The existing configuration keeps local development and ordinary local builds at the domain root while GitHub Actions builds use the `/sewncovers` base path required by GitHub Pages.
 
 ## Typed API client
 
@@ -185,7 +185,7 @@ Download summary generates `sewncovers-configuration-summary.txt` locally as UTF
 
 The review heading is programmatically focusable for predictable entry, labels and values retain definition-list relationships, edit and output actions are native buttons, the prototype notice is discoverable without an alert role, and unavailable output has visible and programmatic reasons. The layout wraps at narrow widths, keeps approximately 44-pixel or larger controls, and prints without relying on decorative pattern imagery. Screen-reader software, OS-level forced-colors, physical printers, browser zoom, and complete assistive-technology testing remain outside the automated verification performed for this task.
 
-Orders, quotes, checkout, payment, pricing, availability, manufacturing specifications, customer information, server PDFs, shared-design loading, and later roadmap work remain deferred.
+Orders, quotes, checkout, payment, pricing, availability, manufacturing specifications, customer information, server PDFs, and later roadmap work remain deferred.
 
 ## Saving and sharing reviewed configurations
 
@@ -193,9 +193,19 @@ Saving is available only on the ready review screen. The save boundary maps the 
 
 Design creation is deliberately single-attempt because retrying an unsafe POST could create a second immutable record after an ambiguous network failure. The save controller admits one in-flight request, ignores duplicate clicks and any repeat action after success, and exposes connecting, possible cold-start, saving, retryable error, and success states. Review edit actions are disabled while the POST is unresolved, so the saving panel and its duplicate-submission lock cannot be bypassed by leaving and reopening review. A failure never resets or mutates Context. Recovery is an explicit **Try saving again** action, and the interface states that no automatic retry occurred.
 
-The typed client accepts only the exact documented 201 response, including a URL-safe 22-character `publicId`; the save boundary additionally requires the returned public configuration to exactly match the submitted request and rejects extra fields, mismatches, or malformed IDs. Only then does it generate `<origin><basePath>/configure/?design=<encoded_public_id>`. `NEXT_PUBLIC_BASE_PATH` is statically inlined as empty for ordinary exports and `/sewncovers` for GitHub Pages, while `encodeURIComponent` protects the query value. Task 6.3 creates and displays the link only; reading `design` and restoring a shared configuration remain Task 6.4.
+The typed client accepts only the exact documented 201 response, including a URL-safe 22-character `publicId`; the save boundary additionally requires the returned public configuration to exactly match the submitted request and rejects extra fields, mismatches, or malformed IDs. Only then does it generate `<origin><basePath>/configure/?design=<encoded_public_id>`. `NEXT_PUBLIC_BASE_PATH` is statically inlined as empty for ordinary exports and `/sewncovers` for GitHub Pages, while `encodeURIComponent` protects the query value.
 
 The success region announces that the design is saved, labels a read-only URL input, selects the full URL on focus, and provides a native **Copy share link** button. Clipboard success is announced politely. Missing or rejected Clipboard API access exposes a fixed error, focuses and selects the URL for manual copying, and never includes browser exception details. Save errors use an assertive alert with the retained-configuration and explicit-retry recovery instructions.
+
+## Restoring shared designs
+
+On `/configure/`, the client reads exactly one `design` query value with `URLSearchParams`, which safely decodes the value independently of whether the route is served at the domain root or beneath `/sewncovers`. Only the established 22-character URL-safe public-ID format reaches `GET /designs/{public_id}`. Empty, duplicate, malformed, truncated, or incorrectly encoded values fail locally and do not make a request.
+
+The retrieval boundary accepts only the exact public response fields, requires the returned `publicId` to match the requested value, and rechecks supported shapes, square equality, measurement ranges and two-decimal precision, units, normalized pattern IDs, and pattern-scale range and precision. It creates a new seven-field configuration object and never reads or displays database IDs, timestamps, catalogue records, or other internal fields. Restoration dispatches one atomic Context action, preserving the response's exact shape, numeric values, unit, `patternId`, and `patternScale` without conversion, rounding, local catalogue substitution, a POST request, or automatic saving.
+
+Design retrieval and the complete API-backed pattern catalogue may finish in either order. A retrieved design waits until its pattern resolves in the validated complete catalogue; no bundled pattern metadata is used as a fallback. Catalogue failures and temporarily unavailable patterns retain the pending public configuration so an explicit pattern retry can finish restoration. A synchronous Context revision counter and request generation invalidate pending work as soon as the visitor changes any configuration field, so neither a late design response nor later pattern loading can overwrite that edit.
+
+The labeled shared-design region announces connecting, possible cold-start, bounded retry, pattern-waiting, and success states. Malformed links, malformed responses, unknown or expired IDs, request failures, catalogue failures, unavailable patterns, and superseded loads use fixed detail-free messages and keep the current local configuration. Retryable retrieval failures offer an explicit design retry; catalogue failures offer a pattern retry. **Continue with my configuration** cancels pending restoration and removes only the `design` parameter with `history.replaceState`, preserving the current pathname, GitHub Pages base path, other query values, hash, and valid Context state.
 
 ## Global layout components
 

@@ -1,7 +1,9 @@
 import type { ConfigurationAction, ConfigurationState } from "./types";
 import {
   convertMeasurement,
+  hasValidMeasurementsForShape,
   isNullableCommittedMeasurement,
+  roundMeasurement,
 } from "./measurements";
 import {
   normalizePatternScale,
@@ -23,6 +25,52 @@ export function configurationReducer(
   action: ConfigurationAction,
 ): ConfigurationState {
   switch (action.type) {
+    case "restoreConfiguration": {
+      const configuration = action.configuration;
+      const patternScale = normalizePatternScale(
+        configuration.patternScale,
+      );
+
+      if (
+        configuration.shape === null ||
+        !["box", "rectangle", "square"].includes(
+          configuration.shape,
+        ) ||
+        !hasValidMeasurementsForShape(
+          configuration.shape,
+          configuration.width,
+          configuration.height,
+          configuration.thickness,
+          configuration.unit,
+        ) ||
+        configuration.width === null ||
+        roundMeasurement(configuration.width) !==
+          configuration.width ||
+        configuration.height === null ||
+        roundMeasurement(configuration.height) !==
+          configuration.height ||
+        configuration.thickness === null ||
+        roundMeasurement(configuration.thickness) !==
+          configuration.thickness ||
+        configuration.patternId === null ||
+        !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(
+          configuration.patternId,
+        ) ||
+        patternScale !== configuration.patternScale
+      ) {
+        return state;
+      }
+
+      return {
+        shape: configuration.shape,
+        width: configuration.width,
+        height: configuration.height,
+        thickness: configuration.thickness,
+        unit: configuration.unit,
+        patternId: configuration.patternId,
+        patternScale: configuration.patternScale,
+      };
+    }
     case "setShape":
       return action.shape === "square"
         ? { ...state, shape: action.shape, height: state.width }

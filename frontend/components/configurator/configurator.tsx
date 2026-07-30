@@ -24,6 +24,7 @@ import {
   type ReviewSection,
 } from "./review-summary";
 import { ShapeSelectionStep } from "./shape-selection-step";
+import { SharedDesignLoader } from "./shared-design-loader";
 import {
   StepIndicator,
   type StepIndicatorStep,
@@ -135,6 +136,11 @@ export function Configurator() {
         className="configurator-progress print-hidden mt-layout"
         currentStepId={currentStepId}
         steps={configuratorSteps}
+      />
+
+      <SharedDesignLoader
+        catalogue={catalogueResult}
+        onRetryPatterns={retryPatternCatalogue}
       />
 
       <div

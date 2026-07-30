@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 6 - Frontend and backend integration
-- Current task: 6.3 - Save reviewed configurations and generate the `?design=<public_id>` share URL
+- Current task: 6.4 - Load and exactly restore shared designs, including unknown/expired ID handling
 - Status: Completed
-- Overall progress: 35 / 58 tasks completed
-- Up next: 6.4 - Load and exactly restore shared designs, including unknown/expired ID handling
+- Overall progress: 36 / 58 tasks completed
+- Up next: 6.5 - Verify the full local journey and all loading, empty, retry, and failure states
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -79,7 +79,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 6.1 | Add the typed API client using `NEXT_PUBLIC_API_URL`, timeouts, retry limit, and cold-start messaging | Completed |
 | 6.2 | Replace local catalogue data with API pattern loading and filtering | Completed |
 | 6.3 | Save reviewed configurations and generate the `?design=<public_id>` share URL | Completed |
-| 6.4 | Load and exactly restore shared designs, including unknown/expired ID handling | Not started |
+| 6.4 | Load and exactly restore shared designs, including unknown/expired ID handling | Completed |
 | 6.5 | Verify the full local journey and all loading, empty, retry, and failure states | Not started |
 
 ## Phase 7: Testing and validation
@@ -507,3 +507,13 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Success exposes a labeled read-only URL, full-value selection on focus, and a native clipboard action. Copy success is announced politely; missing or rejected Clipboard API access produces a fixed detail-free alert, focuses and selects the URL, and supports manual recovery. Task 6.3 generates and copies the share URL only. It does not read the `design` query, retrieve a design, or begin Task 6.4 restoration.
 - The dependency-free Node suite passes all 36 frontend tests with mocked requests and deterministic async control. New coverage includes exact mapping for Square, Rectangle, and Box / bench; internal-field exclusion; invalid reviewed inputs; successful saving; duplicate-click and post-success protection; single-attempt failure and explicit recovery; configuration preservation; malformed/mismatched response rejection; public-ID URL encoding; ordinary and GitHub Pages paths; clipboard success/failure; and declared accessible UI recovery states. ESLint, strict type-checking, ordinary and GitHub Pages static exports, 70 focused backend design/error/CORS regressions, Ruff checks, exported-link inspection, scope/credential scans, roadmap integrity, and `git diff --check` pass. Both sandboxed builds reproduced only the existing Google Fonts network restriction before their outbound-enabled reruns succeeded.
 - No shared-design loading/restoration, backend, database, migration, catalogue, authentication, editing/deletion, deployment, dependency, lockfile, cache, local persistence, order, or following-task change is included. Task 6.3 is `Completed`, progress is 35 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 6.4 - Load and exactly restore shared designs, including unknown/expired ID handling.
+
+### 2026-07-29 - Exact shared-design restoration and recovery
+
+- The static `/configure/` client now reads exactly one safely decoded `design` query value and accepts only the established 22-character URL-safe public-ID format before calling the typed `GET /designs/{public_id}` client. Empty, duplicate, malformed, truncated, and incorrectly encoded values make no request. Runtime and restoration boundaries require the exact public response keys, the requested/returned public-ID match, supported shapes and units, valid shape-specific ranges, square equality, measurement and scale precision, and a normalized pattern ID; internal or extra fields are rejected without being displayed.
+- A valid response is mapped to a new frozen object containing only shape, width, height, thickness, unit, pattern ID, and pattern scale. One atomic reducer action restores those exact numeric values without unit conversion, rounding, partial updates, a create request, automatic saving, or local catalogue metadata. Design and complete API catalogue results may arrive in either order; restoration waits until the selected pattern resolves through the validated API-loaded catalogue.
+- Each load captures the synchronous Context revision and owns a monotonically increasing request generation. Any user dispatch immediately invalidates pending restoration, so a late design response or later catalogue recovery cannot overwrite subsequent edits. Catalogue failures and unavailable-pattern states retain the pending public configuration for explicit pattern retry, while explicit design retry starts from the current revision.
+- The labeled shared-design region exposes polite connecting, possible cold-start, bounded retry, pattern-waiting, and success announcements. Fixed detail-free alerts distinguish malformed links, malformed responses, unknown or expired designs, retryable retrieval failure, catalogue failure, unavailable patterns, and superseded loads. Every failure preserves valid local state. Recovery can retry the relevant read or continue configuring; continuing removes only `design` with `history.replaceState`, preserving the ordinary or GitHub Pages pathname, other query values, hash, and Context state.
+- The dependency-free Node suite passes all 48 frontend tests with mocked requests and deterministic asynchronous control. New coverage spans every shape and both units, decimal values, encoded IDs, ordinary and `/sewncovers` paths, design/catalogue arrival order, cold-start status, stale responses, user edits before and after retrieval, malformed and mismatched responses, unknown/expired IDs, explicit retrieval retry, catalogue retry, unavailable-pattern recovery, exact atomic reduction, public-field-only mapping, and accessible recovery declarations.
+- ESLint, strict type-checking, ordinary and GitHub Pages static-export builds, all 70 focused backend design/error/CORS regressions, Ruff lint/format checks, Pages-prefix and exported restoration inspection, scope/credential scans, roadmap integrity, and `git diff --check` pass. The sandboxed ordinary build reproduced only the documented Google Fonts connection restriction before its outbound-enabled rerun succeeded; the Pages build also succeeded with all routes statically prerendered.
+- No backend, database, migration, authentication, deployment, dependency, lockfile, editing/deletion, automatic saving, local catalogue fallback, Task 6.5 behavior, or following-task change is included. Task 6.4 is `Completed`, progress is 36 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 6.5 - Verify the full local journey and all loading, empty, retry, and failure states.
