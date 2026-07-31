@@ -1,4 +1,5 @@
 from typing import cast
+from unittest.mock import Mock
 
 import pytest
 from fastapi import FastAPI
@@ -49,6 +50,16 @@ class RecordingHealthDatabase:
             raise self.failure
         assert self.session is not None
         return cast(Session, self.session)
+
+
+class SequencedHealthDatabase:
+    def __init__(self, *sessions: RecordingHealthSession) -> None:
+        self._sessions = iter(sessions)
+        self.open_calls = 0
+
+    def open_session(self) -> Session:
+        self.open_calls += 1
+        return cast(Session, next(self._sessions))
 
 
 @pytest.fixture
@@ -149,6 +160,54 @@ def test_connection_setup_failure_is_secret_safe(
     assert response.json() == {"process": "healthy", "database": "unavailable"}
     assert private_detail not in response.text
     assert database.open_calls == 1
+
+
+def test_unexpected_probe_result_is_unavailable_and_session_still_closes(
+    application: FastAPI,
+) -> None:
+    session = RecordingHealthSession()
+    session.scalar = Mock(return_value=0)
+    database = RecordingHealthDatabase(session)
+    install_database(application, database)
+
+    with TestClient(application) as client:
+        response = client.get("/health")
+
+    assert response.status_code == 503
+    assert response.json() == {"process": "healthy", "database": "unavailable"}
+    assert session.rollback_calls == 0
+    assert session.closed is True
+
+
+def test_health_recovers_after_a_failed_database_probe(
+    application: FastAPI,
+) -> None:
+    private_detail = "private-user:private-pass@private-host"
+    failed_session = RecordingHealthSession(
+        failure=OperationalError(
+            "SELECT private_health_probe",
+            {"password": private_detail},
+            RuntimeError(private_detail),
+        )
+    )
+    recovered_session = RecordingHealthSession()
+    database = SequencedHealthDatabase(failed_session, recovered_session)
+    install_database(application, database)
+
+    with TestClient(application) as client:
+        failed = client.get("/health")
+        recovered = client.get("/health")
+
+    assert failed.status_code == 503
+    assert failed.json() == {"process": "healthy", "database": "unavailable"}
+    assert private_detail not in failed.text
+    assert recovered.status_code == 200
+    assert recovered.json() == {"process": "healthy", "database": "healthy"}
+    assert database.open_calls == 2
+    assert failed_session.rollback_calls == 1
+    assert failed_session.closed is True
+    assert recovered_session.rollback_calls == 0
+    assert recovered_session.closed is True
 
 
 def test_health_response_schema_and_documented_statuses(

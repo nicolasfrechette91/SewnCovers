@@ -7,7 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import StaticPool, func, select, update
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.designs.api import get_design_service
@@ -198,6 +198,46 @@ def test_create_returns_201_location_and_public_fields_then_retrieves(
 
     assert retrieved.status_code == 200
     assert retrieved.json() == created
+
+
+@pytest.mark.parametrize(
+    ("shape", "unit", "width", "height", "thickness"),
+    [
+        ("square", "cm", 45.5, 45.5, 8.25),
+        ("rectangle", "cm", 45.5, 55.25, 8.25),
+        ("box", "cm", 70.0, 35.25, 12.5),
+        ("square", "in", 18.25, 18.25, 3.25),
+        ("rectangle", "in", 18.25, 22.5, 3.25),
+        ("box", "in", 27.5, 13.75, 4.75),
+    ],
+)
+def test_creation_and_retrieval_support_every_shape_and_unit_combination(
+    shape: str,
+    unit: str,
+    width: float,
+    height: float,
+    thickness: float,
+    client: TestClient,
+) -> None:
+    payload = valid_payload(
+        shape=shape,
+        unit=unit,
+        width=width,
+        height=height,
+        thickness=thickness,
+    )
+
+    created = client.post("/designs", json=payload)
+
+    assert created.status_code == 201
+    expected = {"publicId": created.json()["publicId"], **payload}
+    assert created.json() == expected
+    assert created.headers["location"] == f"/designs/{expected['publicId']}"
+
+    retrieved = client.get(created.headers["location"])
+
+    assert retrieved.status_code == 200
+    assert retrieved.json() == expected
 
 
 def test_each_creation_gets_a_unique_opaque_public_id(client: TestClient) -> None:
@@ -458,6 +498,34 @@ def test_saved_design_remains_retrievable_after_pattern_deactivation(
 
     assert response.status_code == 200
     assert response.json() == created
+
+
+def test_saved_design_routes_are_immutable_and_failed_mutations_change_nothing(
+    client: TestClient,
+    design_database: Database,
+) -> None:
+    created = client.post("/designs", json=valid_payload()).json()
+    location = f"/designs/{created['publicId']}"
+
+    patched = client.patch(location, json={"width": 99.0})
+    deleted = client.delete(location)
+    retrieved = client.get(location)
+
+    for response in (patched, deleted):
+        assert response.status_code == 405
+        assert response.json() == {
+            "errors": [
+                {
+                    "code": "method_not_allowed",
+                    "message": "Method is not allowed for this resource.",
+                    "location": ["request", "method"],
+                }
+            ]
+        }
+        assert response.headers["allow"] == "GET"
+    assert retrieved.status_code == 200
+    assert retrieved.json() == created
+    assert count_designs(design_database) == 1
 
 
 def test_openapi_documents_create_retrieve_schemas_and_statuses(
@@ -813,3 +881,105 @@ def test_database_failures_return_secret_safe_503(
     }
     assert PRIVATE_DETAIL not in response.text
     assert "SQL" not in response.text
+
+
+def test_database_write_failure_rolls_back_and_same_session_recovers(
+    design_database: Database,
+) -> None:
+    class FailOnceDesignRepository(DesignRepository):
+        def __init__(self, session: Session) -> None:
+            super().__init__(session)
+            self.failed = False
+
+        def add(self, design: SavedDesign) -> SavedDesign:
+            if not self.failed:
+                self.failed = True
+                raise OperationalError(
+                    "INSERT private_design_table",
+                    {"password": PRIVATE_DETAIL},
+                    RuntimeError(PRIVATE_DETAIL),
+                )
+            return super().add(design)
+
+    application = create_application(Settings(_env_file=None))
+    with design_database.open_session() as session:
+        commit = Mock(wraps=session.commit)
+        rollback = Mock(wraps=session.rollback)
+        session.commit = commit
+        session.rollback = rollback
+        service = DesignService(
+            session,
+            FailOnceDesignRepository(session),
+            PatternRepository(session),
+            public_id_generator=iter([FIRST_PUBLIC_ID, SECOND_PUBLIC_ID]).__next__,
+        )
+        application.dependency_overrides[get_design_service] = lambda: service
+
+        with TestClient(application) as test_client:
+            failed = test_client.post("/designs", json=valid_payload())
+            assert count_designs(design_database) == 0
+            recovered = test_client.post("/designs", json=valid_payload())
+
+        assert failed.status_code == 503
+        assert failed.json()["errors"][0]["code"] == "storage_unavailable"
+        assert PRIVATE_DETAIL not in failed.text
+        assert "INSERT" not in failed.text
+        assert recovered.status_code == 201
+        assert recovered.json() == {
+            "publicId": SECOND_PUBLIC_ID,
+            **valid_payload(),
+        }
+        assert recovered.headers["location"] == f"/designs/{SECOND_PUBLIC_ID}"
+        rollback.assert_called_once_with()
+        commit.assert_called_once_with()
+    assert count_designs(design_database) == 1
+
+
+def test_database_read_failure_rolls_back_and_same_session_recovers(
+    design_database: Database,
+) -> None:
+    class FailOnceDesignRepository(DesignRepository):
+        def __init__(self, session: Session) -> None:
+            super().__init__(session)
+            self.failed = False
+
+        def find_by_public_id(self, public_id: str) -> SavedDesign | None:
+            if not self.failed:
+                self.failed = True
+                raise OperationalError(
+                    "SELECT private_design_table",
+                    {"password": PRIVATE_DETAIL},
+                    RuntimeError(PRIVATE_DETAIL),
+                )
+            return super().find_by_public_id(public_id)
+
+    insert_design(design_database)
+    application = create_application(Settings(_env_file=None))
+    with design_database.open_session() as session:
+        commit = Mock(wraps=session.commit)
+        rollback = Mock(wraps=session.rollback)
+        session.commit = commit
+        session.rollback = rollback
+        service = DesignService(
+            session,
+            FailOnceDesignRepository(session),
+            PatternRepository(session),
+        )
+        application.dependency_overrides[get_design_service] = lambda: service
+
+        with TestClient(application) as test_client:
+            failed = test_client.get(f"/designs/{FIRST_PUBLIC_ID}")
+            recovered = test_client.get(f"/designs/{FIRST_PUBLIC_ID}")
+
+        assert failed.status_code == 503
+        assert failed.json()["errors"][0]["code"] == "storage_unavailable"
+        assert PRIVATE_DETAIL not in failed.text
+        assert "SELECT" not in failed.text
+        assert recovered.status_code == 200
+        assert recovered.json() == {
+            "publicId": FIRST_PUBLIC_ID,
+            **valid_payload(),
+        }
+        rollback.assert_called_once_with()
+        commit.assert_called_once_with()
+    assert count_designs(design_database) == 1

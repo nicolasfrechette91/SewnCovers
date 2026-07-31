@@ -6,6 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import StaticPool
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.main import create_application
@@ -430,3 +431,62 @@ def test_service_rolls_back_repository_failure() -> None:
 
     session.commit.assert_not_called()
     session.rollback.assert_called_once_with()
+
+
+def test_database_read_failure_is_safe_rolls_back_and_session_recovers(
+    pattern_database: Database,
+) -> None:
+    private_detail = "private-user:private-pass@private-host/secret-db"
+
+    class FailOncePatternRepository(PatternRepository):
+        def __init__(self, session: Session) -> None:
+            super().__init__(session)
+            self.failed = False
+
+        def list_active(
+            self,
+            *,
+            category: str | None = None,
+            color: str | None = None,
+        ) -> tuple:
+            if not self.failed:
+                self.failed = True
+                raise OperationalError(
+                    "SELECT private_pattern_table",
+                    {"password": private_detail},
+                    RuntimeError(private_detail),
+                )
+            return super().list_active(category=category, color=color)
+
+    application = create_application(Settings(_env_file=None))
+    with pattern_database.open_session() as session:
+        commit = Mock(wraps=session.commit)
+        rollback = Mock(wraps=session.rollback)
+        session.commit = commit
+        session.rollback = rollback
+        service = PatternService(session, FailOncePatternRepository(session))
+        application.dependency_overrides[get_pattern_service] = lambda: service
+
+        with TestClient(application) as test_client:
+            failed = test_client.get("/patterns", params={"category": "botanical"})
+            recovered = test_client.get(
+                "/patterns",
+                params={"category": "botanical", "color": "blue"},
+            )
+
+        assert failed.status_code == 503
+        assert failed.json() == {
+            "errors": [
+                {
+                    "code": "storage_unavailable",
+                    "message": "Storage is temporarily unavailable.",
+                    "location": ["service", "storage"],
+                }
+            ]
+        }
+        assert private_detail not in failed.text
+        assert "SELECT" not in failed.text
+        assert recovered.status_code == 200
+        assert [pattern["id"] for pattern in recovered.json()] == ["meadow-sprig"]
+        rollback.assert_called_once_with()
+        commit.assert_called_once_with()

@@ -449,6 +449,13 @@ python -m ruff check .
 python -m pytest
 ```
 
+Task 7.2's offline endpoint coverage uses deterministic dependency overrides,
+failure-injecting repositories, and isolated in-memory SQLite. It verifies every
+supported shape/unit combination, exact creation and retrieval contracts,
+immutable saved designs, health and filter behavior, validation boundaries,
+secret-safe database read/write failures, rollback, and same-session recovery.
+The test suite never uses the ignored local `DATABASE_URL` or contacts Neon.
+
 To format Python files after making changes, run:
 
 ```bash

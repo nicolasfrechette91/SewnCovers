@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 7 - Testing and validation
-- Current task: 7.1 - Add frontend unit/component tests for validation, conversion, state, selection, preview, and save failures
+- Current task: 7.2 - Add backend tests for health, filters, design creation/retrieval, validation, and database failures
 - Status: Completed
-- Overall progress: 38 / 58 tasks completed
-- Up next: 7.2 - Add backend tests for health, filters, design creation/retrieval, validation, and database failures
+- Overall progress: 39 / 58 tasks completed
+- Up next: 7.3 - Add a Playwright journey from shape selection through restored shared design
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -87,7 +87,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | Task | Deliverable | Status |
 | --- | --- | --- |
 | 7.1 | Add frontend unit/component tests for validation, conversion, state, selection, preview, and save failures | Completed |
-| 7.2 | Add backend tests for health, filters, design creation/retrieval, validation, and database failures | Not started |
+| 7.2 | Add backend tests for health, filters, design creation/retrieval, validation, and database failures | Completed |
 | 7.3 | Add a Playwright journey from shape selection through restored shared design | Not started |
 | 7.4 | Perform responsive, keyboard, screen-reader, contrast, and reduced-motion validation | Not started |
 | 7.5 | Run and document the complete format, lint, type-check, test, and build quality gate | Not started |
@@ -536,3 +536,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Save component coverage uses deterministic mocked clients and controlled promises. It verifies pre-request validation, API rejection, typed timeout and network messages, disabled duplicate-submit behavior, one in-flight POST, preserved configuration, explicit retry, recovery to success, and saving-state callbacks. The existing typed-client suite continues to provide deterministic mocked-fetch and timer coverage for timeout abortion, timer cleanup, retry limits, cold-start messaging, and unsafe-POST non-retry behavior.
 - The complete frontend suite passes 63 tests. ESLint and strict TypeScript checking pass, and no coverage command is configured. Ordinary and GitHub Pages static-export builds pass after the expected sandboxed Google Fonts connection restriction is retried with outbound access. Backend `pip check`, Ruff format/lint, and all 182 isolated backend regressions pass; Pytest used a verified task-scoped workspace temp directory because the default Windows Pytest temp root denied access, and that directory was removed after the run.
 - Tracked-secret, changed-file scope, generated-file, dependency-pin, roadmap row/wording/status, and `git diff --check` scans pass. No feature, backend, database, migration, deployment, catalogue, authentication, production data, or Task 7.2 work is included. Task 7.1 is `Completed`, progress is 38 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 7.2 - Add backend tests for health, filters, design creation/retrieval, validation, and database failures.
+
+### 2026-07-30 - Backend API and database failure coverage
+
+- The existing backend suite was audited before adding coverage. Established health success/configuration/query failures, category/color/combined/unknown filters, stable active-pattern ordering, valid/unknown/malformed public IDs, boundary and cross-field validation, malformed JSON and payload fields, public OpenAPI contracts, repository transaction ownership, collision handling, and generic secret-safe storage errors remain unchanged and were not duplicated.
+- Focused endpoint coverage now exercises all six supported shape/unit combinations through creation and exact retrieval, including the unchanged `201`, `Location`, and public response fields. Saved designs remain immutable: unsupported `PATCH` and `DELETE` requests return the established field-aware `405`, do not alter or remove the row, and subsequent retrieval returns the exact original representation.
+- Health coverage now includes a non-successful probe result and recovery on the request after a failed SQLAlchemy probe. Pattern and design failure-injection tests drive the real service/repository transaction boundaries against isolated in-memory SQLite: pattern reads, design writes, and design reads return secret-safe `503` responses, roll back once, preserve ordering or stored rows, and reuse the same recovered session successfully on the next request.
+- Python 3.13.2 Pytest passes all 194 offline tests. Ruff lint and formatting, `pip check`, all 63 frontend regressions, ESLint, strict TypeScript checking, tracked-secret/changed-file/generated-file scans, roadmap row and wording integrity, and `git diff --check` pass.
+- No production application behavior, endpoint, schema, migration, seed, dependency, frontend, authentication, deployment, Neon data, generated database file, or Task 7.3 work changed. Task 7.2 is `Completed`, progress is 39 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 7.3 - Add a Playwright journey from shape selection through restored shared design.
