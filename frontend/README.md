@@ -215,6 +215,18 @@ The visible browser checks also covered connecting, delayed possible-cold-start,
 
 Remaining platform checks belong to the later dedicated accessibility and deployment tasks: named screen-reader passes, OS forced-colors, browser zoom and reduced motion, physical touch devices, native print/download dialogs, an actually denied browser clipboard permission, and the deployed GitHub Pages/Render cold-start journey.
 
+## Frontend unit and component tests
+
+Run the complete deterministic frontend suite with:
+
+```powershell
+npm test
+```
+
+The existing Node runner remains responsible for environment, typed-client, catalogue, save/share, restoration, and Phase 6 integration tests. Exact-pinned `tsx`, `jsdom`, and React Testing Library development dependencies add client-component interaction coverage without changing the production dependency set. No coverage-report command is currently configured.
+
+The 63-test suite covers shape-specific measurement validation and boundaries, decimal parsing, metric/imperial conversion and representative round trips, reducer and Context initialization/update/reset invariants, accessible shape and pattern selection, hidden/unavailable/empty filtered pattern states, proportional preview geometry and all three rendered shapes, pattern-scale output and controls, save validation, API rejection, timeout/network messages, duplicate-submit prevention, retained configuration, explicit retry, and successful recovery. Component assertions prefer accessible names, roles, controls, and visible recovery text; mocked clients, controlled promises, mocked fetch, and deterministic timers keep all request and failure paths local and repeatable.
+
 ## Global layout components
 
 Reusable server-compatible layout components live in `components/layout/` and are exported through `@/components/layout`. The root layout renders the site header and footer around one flexing `<main id="main-content">` landmark and provides a focus-revealed skip link to that stable target. The starter homepage keeps its existing content and now relies on the root layout for its main landmark.

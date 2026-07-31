@@ -20,6 +20,7 @@ type CopyState = "copying" | "error" | "idle" | "success";
 
 interface SaveSharePanelProps {
   configuration: ConfigurationState;
+  controllerFactory?: () => DesignSaveController;
   onSavingChange: (saving: boolean) => void;
 }
 
@@ -37,11 +38,14 @@ function createShareUrl(publicId: string): string {
 
 export function SaveSharePanel({
   configuration,
+  controllerFactory,
   onSavingChange,
 }: SaveSharePanelProps) {
   const controller = useMemo(
-    () => new DesignSaveController(apiClient, createShareUrl),
-    [],
+    () =>
+      controllerFactory?.() ??
+      new DesignSaveController(apiClient, createShareUrl),
+    [controllerFactory],
   );
   const saveState = useSyncExternalStore(
     controller.subscribe,

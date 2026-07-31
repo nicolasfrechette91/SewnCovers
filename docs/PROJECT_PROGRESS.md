@@ -8,11 +8,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 ## Current handoff
 
-- Current phase: Phase 6 - Frontend and backend integration
-- Current task: 6.5 - Verify the full local journey and all loading, empty, retry, and failure states
+- Current phase: Phase 7 - Testing and validation
+- Current task: 7.1 - Add frontend unit/component tests for validation, conversion, state, selection, preview, and save failures
 - Status: Completed
-- Overall progress: 37 / 58 tasks completed
-- Up next: 7.1 - Add frontend unit/component tests for validation, conversion, state, selection, preview, and save failures
+- Overall progress: 38 / 58 tasks completed
+- Up next: 7.2 - Add backend tests for health, filters, design creation/retrieval, validation, and database failures
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -86,7 +86,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 | Task | Deliverable | Status |
 | --- | --- | --- |
-| 7.1 | Add frontend unit/component tests for validation, conversion, state, selection, preview, and save failures | Not started |
+| 7.1 | Add frontend unit/component tests for validation, conversion, state, selection, preview, and save failures | Completed |
 | 7.2 | Add backend tests for health, filters, design creation/retrieval, validation, and database failures | Not started |
 | 7.3 | Add a Playwright journey from shape selection through restored shared design | Not started |
 | 7.4 | Perform responsive, keyboard, screen-reader, contrast, and reduced-motion validation | Not started |
@@ -527,3 +527,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Remaining manual checks are the assistive-technology and platform passes already owned by later roadmap tasks: NVDA/VoiceOver announcements, OS forced-colors, browser zoom and reduced motion, physical touch devices, native print/download dialogs, an actually denied browser clipboard permission, and the deployed GitHub Pages/Render cold-start journey. These do not block the verified local Phase 6 contract.
 - The final gate passes 49 frontend tests, ESLint, strict TypeScript checking, ordinary and GitHub Pages static-export builds, backend `pip check`, Ruff format/lint, all 182 isolated backend regressions, exported root and `/sewncovers` route/share-path inspection, accessibility structure and responsive audits, tracked-secret/scope/generated-file scans, roadmap integrity checks, and `git diff --check`.
 - No endpoint, schema, migration, authentication, deployment, dependency, lockfile, catalogue, production data, or following-task work is included. Task 6.5 is `Completed`, progress is 37 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 7.1 - Add frontend unit/component tests for validation, conversion, state, selection, preview, and save failures.
+
+### 2026-07-30 - Frontend unit and component coverage
+
+- The frontend keeps its established Node test runner and adds exact-pinned `tsx`, `jsdom`, and React Testing Library development dependencies for synchronous client-component interaction tests. The production dependency set is unchanged. `SaveSharePanel` accepts one optional controller factory solely as a deterministic test seam; normal application construction and behavior remain unchanged.
+- Pure unit coverage now locks shape-specific measurement requirements, inclusive centimetre and derived inch boundaries, comma and period decimals, required/incomplete/malformed/non-positive/over-precision input, exact metric/imperial conversions, representative display round trips, initial state, every relevant reducer update, reset identity, square equality, rejected invalid updates, atomic restore invariants, preview containment, proportions, unit equivalence, and invalid geometry.
+- Component coverage queries accessible names, roles, visible messages, and controls. It verifies all shape radios and Context reset, shape-specific measurement fields and inline validation, decimal commits and square synchronization, selected-pattern retention while filtered, unavailable selections, empty filtered results, recovery actions, textual preview dimensions, every shape rendering, proportional faces, pattern artwork scale, and accessible scale adjustment.
+- Save component coverage uses deterministic mocked clients and controlled promises. It verifies pre-request validation, API rejection, typed timeout and network messages, disabled duplicate-submit behavior, one in-flight POST, preserved configuration, explicit retry, recovery to success, and saving-state callbacks. The existing typed-client suite continues to provide deterministic mocked-fetch and timer coverage for timeout abortion, timer cleanup, retry limits, cold-start messaging, and unsafe-POST non-retry behavior.
+- The complete frontend suite passes 63 tests. ESLint and strict TypeScript checking pass, and no coverage command is configured. Ordinary and GitHub Pages static-export builds pass after the expected sandboxed Google Fonts connection restriction is retried with outbound access. Backend `pip check`, Ruff format/lint, and all 182 isolated backend regressions pass; Pytest used a verified task-scoped workspace temp directory because the default Windows Pytest temp root denied access, and that directory was removed after the run.
+- Tracked-secret, changed-file scope, generated-file, dependency-pin, roadmap row/wording/status, and `git diff --check` scans pass. No feature, backend, database, migration, deployment, catalogue, authentication, production data, or Task 7.2 work is included. Task 7.1 is `Completed`, progress is 38 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 7.2 - Add backend tests for health, filters, design creation/retrieval, validation, and database failures.
