@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 7 - Testing and validation
-- Current task: 7.2 - Add backend tests for health, filters, design creation/retrieval, validation, and database failures
+- Current task: 7.3 - Add a Playwright journey from shape selection through restored shared design
 - Status: Completed
-- Overall progress: 39 / 58 tasks completed
-- Up next: 7.3 - Add a Playwright journey from shape selection through restored shared design
+- Overall progress: 40 / 58 tasks completed
+- Up next: 7.4 - Perform responsive, keyboard, screen-reader, contrast, and reduced-motion validation
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -88,7 +88,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | --- | --- | --- |
 | 7.1 | Add frontend unit/component tests for validation, conversion, state, selection, preview, and save failures | Completed |
 | 7.2 | Add backend tests for health, filters, design creation/retrieval, validation, and database failures | Completed |
-| 7.3 | Add a Playwright journey from shape selection through restored shared design | Not started |
+| 7.3 | Add a Playwright journey from shape selection through restored shared design | Completed |
 | 7.4 | Perform responsive, keyboard, screen-reader, contrast, and reduced-motion validation | Not started |
 | 7.5 | Run and document the complete format, lint, type-check, test, and build quality gate | Not started |
 
@@ -544,3 +544,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Health coverage now includes a non-successful probe result and recovery on the request after a failed SQLAlchemy probe. Pattern and design failure-injection tests drive the real service/repository transaction boundaries against isolated in-memory SQLite: pattern reads, design writes, and design reads return secret-safe `503` responses, roll back once, preserve ordering or stored rows, and reuse the same recovered session successfully on the next request.
 - Python 3.13.2 Pytest passes all 194 offline tests. Ruff lint and formatting, `pip check`, all 63 frontend regressions, ESLint, strict TypeScript checking, tracked-secret/changed-file/generated-file scans, roadmap row and wording integrity, and `git diff --check` pass.
 - No production application behavior, endpoint, schema, migration, seed, dependency, frontend, authentication, deployment, Neon data, generated database file, or Task 7.3 work changed. Task 7.2 is `Completed`, progress is 39 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 7.3 - Add a Playwright journey from shape selection through restored shared design.
+
+### 2026-07-31 - Playwright shared-design journey
+
+- The minimum browser layer adds exact-pinned `@playwright/test` 1.62.1, one Chromium project, one journey, a task-owned output directory, and a portable `npm run test:e2e` runner. The runner builds the real static export, supplies test-only local Google Fonts responses, serves `out/` from a single-process loopback server, and closes it deterministically on Windows. Production dependencies, configuration, and behavior remain unchanged.
+- The journey selects Box / bench through the visible accessible choice, enters exact `72.25 × 48.5 × 12.75 cm` measurements, selects Fern trail from the API-backed catalogue, sets `1.3×` pattern scale, verifies the proportional preview, opens the focused review screen, and asserts the authoritative visible summary. It deliberately dispatches two save activations before React can rerender while holding the mocked response, proves exactly one `POST /designs`, verifies the exact seven-field body, confirms the disabled saving state and absence of another save action after success, and checks the generated share URL.
+- Opening the share URL in a new browser page performs fresh mocked `GET /patterns` and `GET /designs/{public_id}` requests, announces successful restoration, makes no automatic save, and exactly restores the native shape/unit/pattern controls, three decimal measurements, scale slider, preview text, and review readiness. Browser routing permits only the loopback export and the intercepted reserved `.test` API origin; unexpected paths or external origins fail the test before any Neon, Render, Google Fonts, or other service can be contacted.
+- The identical journey passes for ordinary `/configure/` and GitHub Pages `/sewncovers/configure/` static exports. The final gate passes both Playwright variants, all 63 frontend regressions, ESLint, strict TypeScript checking, ordinary and Pages production builds, backend `pip check`, Ruff format/lint, all 194 backend regressions, dependency/secret/scope/generated-file scans, roadmap integrity, and `git diff --check`. The existing npm audit baseline remains 12 high-severity package entries overall and three in the production tree; Task 7.3 does not change production dependencies.
+- No backend, database, migration, catalogue, deployment, authentication, feature, production behavior, or Task 7.4 work is included. Task 7.3 is `Completed`, progress is 40 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 7.4 - Perform responsive, keyboard, screen-reader, contrast, and reduced-motion validation.

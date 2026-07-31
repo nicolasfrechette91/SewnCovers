@@ -253,6 +253,9 @@ cython_debug/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
 
+# Playwright
+/frontend/.playwright/
+
 # Ruff stuff:
 .ruff_cache/
 
