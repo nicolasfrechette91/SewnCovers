@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -55,6 +56,15 @@ export function SaveSharePanel({
   const shareUrlInput = useRef<HTMLInputElement>(null);
   const copyPending = useRef(false);
   const [copyState, setCopyState] = useState<CopyState>("idle");
+
+  useEffect(() => {
+    if (saveState.phase !== "success") {
+      return;
+    }
+
+    shareUrlInput.current?.focus();
+    shareUrlInput.current?.select();
+  }, [saveState.phase]);
 
   const saveDesign = () => {
     onSavingChange(true);
@@ -174,7 +184,7 @@ export function SaveSharePanel({
             readOnly
             aria-describedby="configuration-share-url-help"
             onFocus={(event) => event.currentTarget.select()}
-            className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface-subtle px-control-x py-control-y text-body text-text-primary outline-none focus-visible:border-focus focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface-subtle px-control-x py-control-y text-body text-text-primary"
           />
           <p
             id="configuration-share-url-help"
