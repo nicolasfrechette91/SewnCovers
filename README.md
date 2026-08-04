@@ -71,7 +71,7 @@ The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. D
 
 ## Current state
 
-The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. Its browser-compatible typed API client validates the established health, pattern, and immutable-design contracts, applies bounded safe retries and cold-start status messaging, and keeps unsafe design creation single-attempt. The configurator loads ordered pattern metadata and category/color filter results from `/patterns`, rejects stale or malformed responses, and keeps artwork in the static frontend bundle. Encoded shared-design links retrieve only the public immutable configuration, coordinate it with the API-loaded catalogue, and atomically restore exact values only while local state remains untouched; malformed, unknown, expired, unavailable-pattern, retryable, and superseded states preserve the visitor's current configuration. The complete Phase 6 local journey and its loading, cold-start, empty, retry, malformed, failure, duplicate-submission, clipboard, responsive, and recovery states are verified against disposable isolated data, with an automated cross-boundary regression for every shape and both share-path forms. The backend has a compact Python 3.13 and FastAPI service, explicit CORS policy, typed database-aware health reporting, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history with non-redundant category/activity indexes and the canonical 15-pattern metadata seed, active-pattern listing, immutable design creation/retrieval by opaque public ID, a typed field-aware error contract, and isolated Neon development/production environments, documented in [`backend/README.md`](backend/README.md). The persistent development Neon database is migrated and verified at `20260729_01`; production migration remains deferred until Render owns its protected database secret.
+The frontend retains the existing strict Next.js + React + TypeScript App Router application. It is configured for static export so local development runs at the domain root while GitHub Actions builds use the `/sewncovers` repository base path. Its browser-compatible typed API client validates the established health, pattern, and immutable-design contracts, applies bounded safe retries and cold-start status messaging, and keeps unsafe design creation single-attempt. The configurator loads ordered pattern metadata and category/color filter results from `/patterns`, rejects stale or malformed responses, and keeps artwork in the static frontend bundle. Encoded shared-design links retrieve only the public immutable configuration, coordinate it with the API-loaded catalogue, and atomically restore exact values only while local state remains untouched; malformed, unknown, expired, unavailable-pattern, retryable, and superseded states preserve the visitor's current configuration. The complete Phase 6 local journey and its loading, cold-start, empty, retry, malformed, failure, duplicate-submission, clipboard, responsive, and recovery states are verified against disposable isolated data, with an automated cross-boundary regression for every shape and both share-path forms. The backend has a compact Python 3.13 and FastAPI service, explicit CORS policy, typed database-aware health reporting, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history with non-redundant category/activity indexes and the canonical 15-pattern metadata seed, active-pattern listing, immutable design creation/retrieval by opaque public ID, a typed field-aware error contract, and isolated Neon development/production environments, documented in [`backend/README.md`](backend/README.md). The development and production Neon databases are migrated and verified at `20260729_01`; Render alone owns the protected production connection.
 
 See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the persistent task checklist and current handoff state.
 
@@ -95,7 +95,7 @@ The production API command, run from `backend`, is:
 python -m app.production
 ```
 
-It reuses `app.main:app`, binds to `0.0.0.0`, reads the platform-provided `PORT` with an `8000` default, and does not enable reload or debug behavior. Production also requires `ENVIRONMENT=production` and the exact `FRONTEND_ORIGIN`; `DATABASE_URL` remains optional for startup, `/`, `/docs`, and `/openapi.json`. Swagger UI is served at `/docs`, the generated OpenAPI contract at `/openapi.json`, and ReDoc at `/redoc`. Normal process termination runs FastAPI's shutdown lifespan and disposes an initialized database-engine pool.
+This command is reserved for the deployed production process. It requires `ENVIRONMENT=production`, the exact `FRONTEND_ORIGIN`, and Render's protected `DATABASE_URL`; applies `alembic upgrade head`; verifies revision `20260729_01`, the reviewed named constraints/indexes, and exactly 15 pattern rows; and only then starts `app.main:app` on the platform-provided `PORT`. Any migration or verification failure exits with a fixed secret-safe error before Uvicorn starts. Ordinary imports, tests, local development, and direct `uvicorn app.main:app --reload` execution do not run migrations.
 
 In the second terminal, run the frontend:
 
@@ -159,17 +159,19 @@ settings:
 | Root directory | `backend` |
 | Python version | `PYTHON_VERSION=3.13.2` |
 | Build / start | `python -m pip install .` / `python -m app.production` |
-| Render health check / auto-deploy | `/` / after CI checks pass |
+| Render health check / auto-deploy | `/health` / after CI checks pass |
 | Non-secret runtime configuration | `ENVIRONMENT=production`; `FRONTEND_ORIGIN=https://nicolasfrechette91.github.io` |
+| Protected runtime configuration | Render-owned `DATABASE_URL`; value never stored in the repository |
 
-Render supplies `PORT`; the production command binds it on `0.0.0.0`. No
-`DATABASE_URL`, migration command, secret file, persistent disk, custom domain,
-or paid resource is configured by Task 8.2. Render checks `/` because it is the
-existing process-only HTTP 200 contract. The public database-aware
-[`/health`](https://sewncovers-api.onrender.com/health) endpoint therefore
-returns HTTP 503 with
-`{"process":"healthy","database":"unconfigured"}` until the explicitly
-separate production database and migration task is completed.
+Render supplies `PORT`; the production command binds it on `0.0.0.0`. The
+protected direct Neon URL targets the `production` branch's `sewncovers`
+database and `sewncovers_deployed` role with `sslmode=require` and
+`channel_binding=require`. The value was transferred directly from Neon to
+Render and is never stored in tracked configuration. Because Render Free does
+not provide the paid pre-deploy command, the repository-owned production entry
+point performs the forward migration and compatibility check before Uvicorn.
+Render checks [`/health`](https://sewncovers-api.onrender.com/health), which now
+returns HTTP 200 only when both process and database are healthy.
 
 Render's current documentation requires an HTTP health endpoint to return 2xx
 or 3xx within five seconds, supports an exact `PYTHON_VERSION`, and documents
@@ -180,15 +182,16 @@ filesystem. See the official [health check](https://render.com/docs/health-check
 [Free service](https://render.com/docs/free) references. Do not add keep-alive
 traffic: a normal first request is allowed to wake the service.
 
-Deployment verification passed on 2026-08-03/04 EDT. The initial deploy of
-commit `ca351e2` completed successfully, its GitHub Actions CI run passed, and
-TLS-verified requests returned HTTP 200 from `/` and `/openapi.json`. A warm
-`/health` request returned the expected HTTP 503 unconfigured-database body in
-0.24 seconds. After more than 15 minutes without public traffic, Render logged
-the Free instance's graceful shutdown; the next `/health` request woke the
-service and returned the same typed body in 32.25 seconds, followed by a
-0.12-second recovered request. Full-window Render log searches found no
-PostgreSQL URL, `DATABASE_URL`, or password text.
+Task 8.3 production verification passed on 2026-08-04 EDT at commit `8b5f215`.
+The first deployment logged the three ordered forward upgrades through
+`20260729_01` before Uvicorn started. The subsequent health-path redeploy ran
+Alembic with no pending upgrade, reverified the same schema and seed, started
+Uvicorn, and received repeated HTTP 200 `/health` probes. TLS-verified requests
+after that restart returned HTTP 200 from `/`, `/health`, `/patterns`, and
+`/openapi.json`; the catalogue contained exactly 15 unique patterns and OpenAPI
+contained the five established paths. Full-window log searches found no
+database URL, `DATABASE_URL`, password, production role, or Neon endpoint text;
+the only `postgresql` matches were Alembic's `PostgresqlImpl` context lines.
 
 ## Environment contract
 
@@ -200,7 +203,7 @@ Copy the example files to ignored local environment files. Never commit populate
 | Backend | `ENVIRONMENT` | No; defaults to `development` | One of `development`, `test`, or `production`, parsed at process runtime. |
 | Backend | `FRONTEND_ORIGIN` | Optional in development/test; required in production | One exact HTTP(S) origin, normalized at process runtime. Missing local/test configuration uses `http://localhost:3000`; production must set `https://nicolasfrechette91.github.io` for the configured Pages deployment. |
 | Backend | `PORT` | No; defaults to `8000` | Integer from 1 through 65535, read at production Uvicorn process startup; hosting platforms normally provide it. |
-| Backend | `DATABASE_URL` | Only when database functionality is requested | Server-only SSL-enabled SQLAlchemy URL loaded lazily at process runtime and redacted from settings and database-boundary output. Local development owns the development-branch value in ignored `backend/.env`; the deployed API owns a different production-branch value in its protected Render secret. |
+| Backend | `DATABASE_URL` | Required by the migration-gated production command; locally only when database functionality is requested | Server-only SSL-enabled SQLAlchemy URL loaded at production entry or lazily at the request boundary and redacted from settings and database output. Local development owns the development-branch value in ignored `backend/.env`; the deployed API owns a different production-branch value only in its protected Render secret. |
 
 Frontend and backend configuration are separate. Browser bundles must contain no backend variable or secret. The typed boundaries validate configured values without opening network or database connections; `/health`, `/patterns`, and `/designs` begin database work only when requested. See each application README for override and testing details.
 

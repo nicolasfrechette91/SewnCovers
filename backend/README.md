@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history through the canonical pattern seed revision, and isolated Neon development/production environments. The development Neon database is migrated and verified at `20260729_01`; production migration and later business endpoints remain deferred to their roadmap tasks.
+This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history through the canonical pattern seed revision, and isolated Neon development/production environments. Both Neon databases are migrated and verified at `20260729_01`; Render alone owns the protected production connection.
 
 ## Requirements
 
@@ -58,9 +58,9 @@ The immutable settings boundary in `app/settings.py` reads backend process varia
 | `ENVIRONMENT` | Optional, defaults to `development` | `development`, `test`, or `production` | Trimmed and normalized to lowercase at backend process runtime. |
 | `FRONTEND_ORIGIN` | Optional in `development`/`test`; required in `production` | One absolute HTTP(S) origin without credentials, path, query, or fragment | Missing local/test configuration uses `http://localhost:3000`. A production process must explicitly set the Pages origin `https://nicolasfrechette91.github.io`. Whitespace and trailing root slashes are removed at process runtime. |
 | `PORT` | Optional; hosting platforms normally provide it | Integer from 1 through 65535; defaults to `8000` | Read once at process startup and used by the production Uvicorn entry point. |
-| `DATABASE_URL` | Optional at startup; required when database functionality is requested | Private SSL-enabled SQLAlchemy connection URL | Kept server-only in a secret type and excluded from settings representations and serialization. Local development reads only the development-branch value from ignored `.env`; Render reads only the production-branch value from its protected secret. Missing or invalid configuration produces a value-free error naming only the variable. |
+| `DATABASE_URL` | Required by the migration-gated production command; locally required only when database functionality is requested | Private SSL-enabled SQLAlchemy connection URL | Kept server-only in a secret type and excluded from settings representations and serialization. Local development reads only the development-branch value from ignored `.env`; Render reads only the production-branch value from its protected secret. Missing or invalid configuration produces a value-free error naming only the variable. |
 
-The example values are safe local placeholders. `DATABASE_URL` remains empty because imports, startup, the root endpoint, and the automated suite do not need a live database; a developer must supply it privately before requesting `/health` or `/patterns` against a deployed schema. Validation errors hide input values, and configuration import does not initialize a Neon or database client. Never commit `.env`, a Neon connection string, passwords, tokens, or credentials.
+The example values are safe local placeholders. `DATABASE_URL` remains empty because imports, ordinary local FastAPI startup, the root endpoint, and the automated suite do not need a live database; a developer must supply the development value privately before requesting `/health` or `/patterns` against that branch. Render's production command requires its separately protected value before it can migrate or start. Validation errors hide input values, and configuration import does not initialize a Neon or database client. Never commit `.env`, a Neon connection string, passwords, tokens, or credentials.
 
 ## Browser CORS policy
 
@@ -135,7 +135,7 @@ For a future model change, update the shared declarative metadata first, choose 
 python -m alembic revision --autogenerate --rev-id YYYYMMDD_NN -m "describe schema change"
 ```
 
-Autogeneration is only a draft and needs an isolated development database. Review and make every operation explicit, confirm upgrade/downgrade dependency order, run the metadata-parity and offline PostgreSQL checks, and ensure only the intended task's schema work is present. Task 5.6 applied this reviewed history only to the persistent development Neon branch. A revision file never modifies a database by itself, and production migration remains deferred until the Render-owned execution path exists.
+Autogeneration is only a draft and needs an isolated development database. Review and make every operation explicit, confirm upgrade/downgrade dependency order, run the metadata-parity and offline PostgreSQL checks, and ensure only the intended task's schema work is present. Task 5.6 applied this reviewed history to the persistent development Neon branch; Task 8.3 later applied the same unchanged history through the Render-owned production execution path. A revision file never modifies a database by itself.
 
 For a live target, first select its exact branch, database, and role in Neon's
 **Connect** dialog, choose a direct connection, and confirm the private URL has
@@ -160,7 +160,7 @@ patterns and no saved designs, and returns healthy/exact catalogue responses.
 
 Never downgrade, reset, recreate, or manually edit a live Neon database. The
 downgrade examples above are for isolated local/test recovery exercises only.
-Before a future production migration, review the forward and reverse SQL, take
+Before any future production migration, review the forward and reverse SQL, take
 the provider-approved recovery precaution appropriate to the deployment, stop
 on any drift or conflict, and prefer a reviewed forward corrective revision.
 Never use runtime `create_all()` as a migration or rollback mechanism.
@@ -217,18 +217,17 @@ python -m pytest tests/test_health.py::test_missing_database_configuration_is_se
 These checks require fixed HTTP 503 or value-free configuration behavior and
 assert that private input is absent from application output.
 
-Task 5.6 did not migrate production. The roadmap does not require a production
-migration before a Render service exists, and the established secret boundary
-prohibits retrieving or storing that URL locally. Task 8.3 will configure the
-production migration execution path. At that time, put the production direct URL
-straight into Render's protected `DATABASE_URL`, run the same identity/revision
-checks in that environment, migrate once, and independently verify the deployed
-API without exposing the value.
+Task 5.6 intentionally did not migrate production before the Render service
+existed. Task 8.3 selected the direct production URL in Neon's protected UI,
+transferred it directly to Render's protected `DATABASE_URL`, applied the exact
+reviewed history to `20260729_01`, and verified the deployed API without
+exposing or locally storing the value. Future production changes keep this same
+Render-owned, forward-only boundary.
 
 ## Neon Free plan usage monitoring
 
 Verified against Neon's official documentation and the SewnCovers console on
-2026-07-29. Limits can change, so repeat this check before deployment.
+2026-08-04. Limits can change, so repeat this check before deployment.
 
 The Neon organization **Projects** page has an organization-wide usage panel.
 Open **SewnCovers** for the per-project usage panel showing Compute, Storage,
@@ -405,9 +404,21 @@ The production start command is:
 python -m app.production
 ```
 
-This entry point runs the existing `app.main:app` application on `0.0.0.0`, uses the platform-provided `PORT` or defaults to `8000`, and explicitly leaves code reload disabled. It does not enable debug behavior, create a database engine, or contact Neon during import or startup.
+This entry point is migration-gated and reserved for Render. It loads settings,
+requires `ENVIRONMENT=production`, runs `alembic upgrade head`, verifies the
+exact `20260729_01` revision, expected tables and named primary/unique/check/
+foreign-key constraints, the two intentional pattern indexes, no extra explicit
+design index, and exactly 15 pattern rows, then starts the existing
+`app.main:app` application on `0.0.0.0` using the platform-provided `PORT` or
+`8000`. Uvicorn is never called when migration or verification fails, and the
+raised errors are fixed messages that do not copy exception or connection data.
 
-A production environment must set `ENVIRONMENT=production` and a valid `FRONTEND_ORIGIN`; the hosting platform normally supplies `PORT`. `DATABASE_URL` is needed only when `/health`, `/patterns`, or `/designs` performs database work. The root endpoint, Swagger UI, and OpenAPI document load without it.
+The production environment must also set a valid `FRONTEND_ORIGIN` and the
+protected production `DATABASE_URL`; Render normally supplies `PORT`. Importing
+`app.production`, importing/creating the FastAPI application, running tests, and
+ordinary local `uvicorn app.main:app --reload` execution do not call Alembic,
+create a migration engine, or contact Neon. Calling the production module while
+`ENVIRONMENT` is `development` or `test` fails before migration.
 
 Reviewer documentation is available at stable paths on the running API:
 
@@ -417,31 +428,18 @@ Reviewer documentation is available at stable paths on the running API:
 
 The schema documents the root and health behavior, pattern filters, immutable design request/response fields, opaque public IDs, success and error status codes, and the typed field-aware `APIErrorResponse`. It contains only public API models; database fields, internal IDs, settings, credentials, and deployment details are not schema fields.
 
-Uvicorn handles `Ctrl+C` and normal termination signals gracefully. During shutdown FastAPI runs the application lifespan and disposes the process-owned SQLAlchemy engine pool if database work initialized it. Startup and documentation access remain independent of the database.
-
-For a local production-mode smoke test in Windows PowerShell, set a temporary port and the required production origin, then run the production command:
-
-```powershell
-$env:ENVIRONMENT = "production"
-$env:FRONTEND_ORIGIN = "https://nicolasfrechette91.github.io"
-$env:PORT = "8001"
-python -m app.production
-```
-
-From another terminal, verify the public surfaces:
-
-```powershell
-Invoke-WebRequest http://127.0.0.1:8001/
-Invoke-WebRequest http://127.0.0.1:8001/docs
-Invoke-WebRequest http://127.0.0.1:8001/openapi.json
-```
-
-No `DATABASE_URL` is required for these checks. Press `Ctrl+C` in the server terminal and confirm Uvicorn reports application shutdown complete.
+Uvicorn handles `Ctrl+C` and normal termination signals gracefully. During
+shutdown FastAPI runs the application lifespan and disposes the process-owned
+SQLAlchemy engine pool if database work initialized it. Use the documented
+direct Uvicorn command for local development; do not copy the production URL or
+invoke the migration-gated production command locally. The isolated startup
+tests exercise ordering, failure blocking, repeated starts, environment gating,
+migrated-schema verification, and secret-safe errors without Neon.
 
 ## Render deployment
 
 The deployed service URL is <https://sewncovers-api.onrender.com>. Its exact
-Task 8.2 settings are:
+Task 8.3 settings are:
 
 | Setting | Value |
 | --- | --- |
@@ -452,23 +450,26 @@ Task 8.2 settings are:
 | Root directory | `backend` |
 | Build command | `python -m pip install .` |
 | Start command | `python -m app.production` |
-| Health check path | `/` |
+| Health check path | `/health` |
 | Auto-deploy | After CI checks pass |
-| Environment values | `PYTHON_VERSION=3.13.2`, `ENVIRONMENT=production`, `FRONTEND_ORIGIN=https://nicolasfrechette91.github.io` |
+| Non-secret environment values | `PYTHON_VERSION=3.13.2`, `ENVIRONMENT=production`, `FRONTEND_ORIGIN=https://nicolasfrechette91.github.io` |
+| Protected environment value | Render-owned `DATABASE_URL`; never shown or stored in the repository |
 
 The root [`render.yaml`](../render.yaml) is the repository record for these
-settings. It contains no credential value. Render provides `PORT`, and the
-existing production entry point binds it on `0.0.0.0`. The service has no
-`DATABASE_URL`, pre-deploy or migration command, secret file, persistent disk,
-custom domain, or paid resource in Task 8.2.
+settings. It declares only `DATABASE_URL` with `sync: false` and contains no
+credential value. Render provides `PORT`, and the production entry point binds
+it on `0.0.0.0`. The protected direct URL was selected for the Neon
+`production` branch, `sewncovers` database, and `sewncovers_deployed` role with
+`sslmode=require` and `channel_binding=require`, then transferred directly into
+Render without being printed, copied into a shell, or written to a file.
 
-The Render health check uses `/` because Render requires a 2xx or 3xx response
-within five seconds and the root route is the established process-only HTTP 200
-contract. `GET /health` retains its established process-and-database contract:
-without the intentionally deferred production database configuration it returns
-HTTP 503 with `{"process":"healthy","database":"unconfigured"}`. This keeps
-startup, Render readiness, public verification, and logs secret-free without
-weakening the database-aware endpoint or starting Task 8.3.
+Render Free does not support the paid separate pre-deploy command. The start
+command therefore owns this fail-closed sequence: validate production settings;
+run the ordinary Alembic forward upgrade to `head`; independently verify the
+revision, schema boundaries, explicit indexes, and seed count; then and only
+then call Uvicorn. Alembic's transactional, idempotent upgrade makes restarts
+safe. Render uses `/health` only after the database-aware endpoint returned HTTP
+200, so consecutive database failures prevent unhealthy instances from serving.
 
 The settings were checked against Render's official
 [FastAPI deployment](https://render.com/docs/deploy-fastapi),
@@ -476,21 +477,21 @@ The settings were checked against Render's official
 [web service](https://render.com/docs/web-services),
 [health check](https://render.com/docs/health-checks),
 [Blueprint](https://render.com/docs/blueprint-spec), and
-[Free service](https://render.com/docs/free) documentation on 2026-08-03.
+[Free service](https://render.com/docs/free) documentation on 2026-08-04.
 Free services spin down after 15 minutes without inbound traffic and can take
 about a minute to wake; their filesystem is ephemeral. Do not add keep-alive
 traffic or store application data locally.
 
-The initial deployment of commit `ca351e2` completed successfully and bound
-Uvicorn to Render's provided port `10000`. TLS-verified public checks returned
-HTTP 200 from `/` and `/openapi.json`; a warm `/health` request returned the
-expected HTTP 503 unconfigured-database body in 0.24 seconds. After the Free
-service had no public traffic for more than 15 minutes, Render logged graceful
-application shutdown at 00:02:51 EDT. The next `/health` request started the
-process at 00:03:33, completed application startup at 00:03:47, and served the
-expected response at 00:03:50 in 32.25 seconds. An immediate second request
-completed in 0.12 seconds. Full-hour Render log searches for `postgresql`,
-`DATABASE_URL`, and `password` each returned no matches.
+Task 8.3 deployed commit `8b5f215`. Its first process logged the ordered
+`20260728_01`, `20260728_02`, and `20260729_01` upgrades, then started Uvicorn.
+The health-path settings redeploy ran Alembic again with no pending upgrade,
+passed the same revision/schema/index/seed verification, started Uvicorn, and
+received repeated HTTP 200 `/health` probes. After that restart, TLS-verified
+`/`, `/health`, `/patterns`, and `/openapi.json` requests all returned HTTP 200;
+health reported `healthy`/`healthy`, `/patterns` returned exactly 15 unique
+records, and OpenAPI retained the five established paths. Render log searches
+found no database URL, `DATABASE_URL`, password, production role, or endpoint;
+the two `postgresql` matches were only Alembic `PostgresqlImpl` context lines.
 
 ## Quality checks
 
