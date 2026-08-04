@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: sewncovers-api
+    runtime: python
+    plan: free
+    region: ohio
+    branch: main
+    rootDir: backend
+    buildCommand: python -m pip install .
+    startCommand: python -m app.production
+    healthCheckPath: /
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.2
+      - key: ENVIRONMENT
+        value: production
+      - key: FRONTEND_ORIGIN
+        value: https://nicolasfrechette91.github.io
