@@ -52,14 +52,23 @@ jobs:
       - name: Build ordinary static export
         run: npm run build
         env:
-          GITHUB_ACTIONS: "false"
           NEXT_FONT_GOOGLE_MOCKED_RESPONSES: ${{ github.workspace }}/frontend/e2e/font-responses.cjs
+
+      - name: Verify ordinary static export
+        run: npm run verify:export
 
       - name: Build GitHub Pages static export
         run: npm run build
         env:
-          GITHUB_ACTIONS: "true"
           NEXT_FONT_GOOGLE_MOCKED_RESPONSES: ${{ github.workspace }}/frontend/e2e/font-responses.cjs
+          NEXT_PUBLIC_API_URL: https://sewncovers-api.onrender.com
+          SEWNCOVERS_GITHUB_PAGES: "true"
+
+      - name: Verify GitHub Pages static export
+        run: npm run verify:export
+        env:
+          NEXT_PUBLIC_API_URL: https://sewncovers-api.onrender.com
+          SEWNCOVERS_GITHUB_PAGES: "true"
 
   backend:
     name: Backend - Ruff, tests, and dependency check

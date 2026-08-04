@@ -7,7 +7,9 @@ import { fileURLToPath } from "node:url";
 const host = "127.0.0.1";
 const port = 3100;
 const basePath =
-  process.env.GITHUB_ACTIONS === "true" ? "/sewncovers" : "";
+  process.env.SEWNCOVERS_GITHUB_PAGES === "true"
+    ? "/sewncovers"
+    : "";
 const exportDirectory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../out",

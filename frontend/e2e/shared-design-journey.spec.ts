@@ -3,7 +3,9 @@ import { expect, test, type Route } from "@playwright/test";
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
-  process.env.GITHUB_ACTIONS === "true" ? "/sewncovers" : "";
+  process.env.SEWNCOVERS_GITHUB_PAGES === "true"
+    ? "/sewncovers"
+    : "";
 const configurePath = `${basePath}/configure/`;
 const publicId = "AbCdEfGhIjKlMnOpQrStUv";
 
@@ -272,11 +274,27 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await expect(
       restoredPage.getByRole("button", { name: "Review configuration" }),
     ).toBeEnabled();
+
+    await restoredPage.reload();
+    await expect(
+      restoredPage.getByRole("status").filter({
+        hasText:
+          "Shared design restored. You can keep configuring it without saving a new copy.",
+      }),
+    ).toBeVisible();
+    await expect(
+      restoredPage.getByRole("textbox", { name: "Width (cm)" }),
+    ).toHaveValue("72.25");
+
+    await restoredPage
+      .getByRole("link", { name: "SewnCovers home" })
+      .click();
+    await expect(restoredPage).toHaveURL(`${appOrigin}${basePath}/`);
   });
 
   expect(requests).toEqual({
-    designGets: 1,
-    patternGets: 2,
+    designGets: 2,
+    patternGets: 3,
     posts: 1,
   });
   expect(unexpectedRequests).toEqual([]);

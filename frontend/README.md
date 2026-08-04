@@ -54,9 +54,10 @@ npm run check:config
 npm test
 npm run test:e2e
 npm run build
+npm run verify:export
 ```
 
-`npm run typecheck` performs strict TypeScript checking without emitting files. `npm run check:config` runs the focused environment tests. `npm test` uses Node's built-in test runner with mocked requests and deterministic timers; it exercises configuration, URL construction, typed responses, backend and malformed errors, timeout and retry policy, cold-start recovery, API filters, empty results, stale-response protection, selection retention, frontend artwork mapping, duplicate-safe saving, ordinary and GitHub Pages share paths, exact shared-design restoration for every shape, recovery, cleanup, and secret-safe failures without contacting Render or Neon. `npm run test:e2e` runs the pinned Playwright journey described below. `npm run build` performs the production build and writes the static export to the ignored `out/` directory. The existing configuration keeps local development and ordinary local builds at the domain root while GitHub Actions builds use the `/sewncovers` base path required by GitHub Pages.
+`npm run typecheck` performs strict TypeScript checking without emitting files. `npm run check:config` runs the focused environment tests. `npm test` uses Node's built-in test runner with mocked requests and deterministic timers; it exercises configuration, URL construction, typed responses, backend and malformed errors, timeout and retry policy, cold-start recovery, API filters, empty results, stale-response protection, selection retention, frontend artwork mapping, duplicate-safe saving, ordinary and GitHub Pages share paths, exact shared-design restoration for every shape, recovery, cleanup, and secret-safe failures without contacting Render or Neon. `npm run test:e2e` runs the pinned Playwright journey described below. `npm run build` performs the production build and writes the static export to the ignored `out/` directory. The project-specific `SEWNCOVERS_GITHUB_PAGES=true` build flag applies the `/sewncovers` base path required by GitHub Pages; local development, ordinary local builds, and unrelated GitHub Actions builds remain at the domain root. `npm run verify:export` checks the generated routes, metadata, local asset/link targets, deployment-path prefix, configured public API URL, and absence of the browser-test API origin.
 
 ## Typed API client
 
@@ -240,11 +241,11 @@ npm run test:e2e
 Run the same journey against the GitHub Pages repository path from PowerShell with:
 
 ```powershell
-$env:GITHUB_ACTIONS = "true"
+$env:SEWNCOVERS_GITHUB_PAGES = "true"
 npm run test:e2e
 ```
 
-On macOS or Linux, use `GITHUB_ACTIONS=true npm run test:e2e`. The runner builds the real static export with a local test-only Google Fonts response, serves `out/` from a single-process loopback server, and blocks every browser origin except that server and `api.sewncovers.test`. Playwright intercepts the reserved `.test` origin before DNS and fulfills patterns, design creation, and design retrieval entirely in memory, so the journey cannot contact Neon, Render, Google Fonts, or another external service.
+On macOS or Linux, use `SEWNCOVERS_GITHUB_PAGES=true npm run test:e2e`. The runner builds the real static export with a local test-only Google Fonts response, serves `out/` from a single-process loopback server, and blocks every browser origin except that server and `api.sewncovers.test`. Playwright intercepts the reserved `.test` origin before DNS and fulfills patterns, design creation, and design retrieval entirely in memory, so the journey cannot contact Neon, Render, Google Fonts, or another external service.
 
 The single Chromium journey uses accessible roles, names, status regions, visible values, and native controls to select Box / bench, enter exact decimal measurements, select Fern trail, change pattern scale, verify the proportional preview, open review, and inspect the authoritative summary. It issues two save activations in the same browser task while the mocked POST is deliberately held, proves that only one creation request occurs and that further saving disappears after success, verifies the exact public request and base-path-aware share URL, opens that URL in a new page, and checks exact restoration of shape, unit, all three measurements, pattern, scale, preview text, and review readiness. The same spec passes at `/configure/` and `/sewncovers/configure/` without a production hook or behavior change.
 

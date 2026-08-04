@@ -9,11 +9,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 8 - Deployment
-- Current task: 8.3 - Configure safe migration execution before the Render Uvicorn process
-- Status: Completed
+- Current task: 8.4 - Configure Next.js static export, repository `basePath`/asset paths, and deploy `out` to GitHub Pages
+- Status: In progress
 - Overall progress: 45 / 58 tasks completed
 - Up next: 8.4 - Configure Next.js static export, repository `basePath`/asset paths, and deploy `out` to GitHub Pages
-- Blockers: None
+- Blockers: Manual GitHub publishing and live deployment verification are required
 
 ## Phase 1: Project foundation
 
@@ -99,7 +99,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 8.1 | Add CI for frontend install/type-check/test/build and backend install/Ruff/tests | Completed |
 | 8.2 | Deploy the FastAPI service to a free Render web service with `/health` | Completed |
 | 8.3 | Configure safe migration execution before the Render Uvicorn process | Completed |
-| 8.4 | Configure Next.js static export, repository `basePath`/asset paths, and deploy `out` to GitHub Pages | Not started |
+| 8.4 | Configure Next.js static export, repository `basePath`/asset paths, and deploy `out` to GitHub Pages | In progress |
 | 8.5 | Configure production API URL and exact GitHub Pages/Render CORS origins | Not started |
 | 8.6 | Smoke-test the deployed journey, cold start, mobile/keyboard behavior, docs, health, and browser bundle secrets | Not started |
 
@@ -603,3 +603,9 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - GitHub Actions passed for deployment commit `8b5f215`. The first Render deployment logged the ordered `20260728_01`, `20260728_02`, and `20260729_01` upgrades before the Uvicorn process started. TLS-verified `/`, `/health`, `/patterns`, and `/openapi.json` requests then returned HTTP 200; health reported process/database healthy, the catalogue contained exactly 15 unique patterns, and OpenAPI retained the five established paths. Only after that proof, Render's platform health path was changed from `/` to `/health`.
 - The health-path settings redeploy restarted the same commit. Alembic initialized transactionally with no pending `Running upgrade` entry, the revision/schema/index/seed verification passed again, Uvicorn started, and Render recorded repeated HTTP 200 `/health` probes. Post-restart checks again returned HTTP 200 from all four required endpoints with 15 unique patterns. Full-window Render searches found no `DATABASE_URL`, password, production role, or Neon endpoint text; the two `postgresql` matches were only the fixed Alembic `PostgresqlImpl` context lines. Tracked and workspace scans found no production endpoint or credential, and credential-shaped tracked strings remain limited to deliberate fake test fixtures.
 - No frontend deployment, schema change, new migration, dependency or lockfile change, paid resource, authentication, custom domain, downgrade, reset, recreate, manual database edit, or following-task work is included. Task 8.3 is `Completed`, progress is 45 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 8.4 - Configure Next.js static export, repository `basePath`/asset paths, and deploy `out` to GitHub Pages.
+
+### 2026-08-04 - GitHub Pages deployment prepared locally
+
+- Task 8.4 is `In progress` at 45 / 58. The explicit `SEWNCOVERS_GITHUB_PAGES=true` build mode applies `/sewncovers` only to the Pages export, while ordinary development, local production builds, and unrelated GitHub Actions builds remain at the domain root. Next.js continues to own framework-asset and `next/link` prefixing through `basePath`; no separate `assetPrefix` or CDN was added.
+- The Pages workflow builds the static export with the public `https://sewncovers-api.onrender.com` URL and the existing deterministic font fixture, scans generated routes, metadata, local link/asset targets, API embedding, and test-origin absence, uploads only `frontend/out`, and deploys through GitHub's `github-pages` environment. All third-party actions are pinned to reviewed release commits, checkout credentials are not persisted, and Pages/OIDC write permissions are limited to the workflow jobs that configure or deploy Pages.
+- Local verification passed ESLint, strict TypeScript checking, all 63 frontend tests, ordinary and Pages production builds, and generated-export scans covering 46 files and five HTML outputs in each mode. Both complete four-test Playwright suites passed before the final refresh/navigation assertion was added; the updated shared-design journey then passed again in both modes, including direct `?design=` loading, browser refresh with exact restoration, and home navigation at `/` and `/sewncovers/`. Workflow YAML parsing, action/permission/trigger structure, roadmap wording/counts, generated-file hygiene, and `git diff --check` also passed. No workflow was triggered and no commit, push, repository setting, backend behavior, migration, database data, dependency, authentication, or following-task work was performed. Manual publication and live verification remain required before Task 8.4 can be marked `Completed` or progress can advance to 46 / 58.

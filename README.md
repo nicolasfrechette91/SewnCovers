@@ -128,11 +128,10 @@ npm run lint
 npm run typecheck
 npm test
 $env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES = (Resolve-Path e2e\font-responses.cjs).Path
-$env:GITHUB_ACTIONS = "false"
 npm run build
-$env:GITHUB_ACTIONS = "true"
+$env:SEWNCOVERS_GITHUB_PAGES = "true"
 npm run build
-Remove-Item Env:GITHUB_ACTIONS, Env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES
+Remove-Item Env:SEWNCOVERS_GITHUB_PAGES, Env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES
 
 cd ..\backend
 python -m pip install -e ".[dev]"
@@ -143,6 +142,27 @@ python -m pip check
 ```
 
 The CI jobs do not run Playwright; Task 8.1 requires the 63-test frontend suite and the 194-test backend suite, while browser CI remains out of scope.
+
+## Frontend deployment
+
+The repository-owned [GitHub Pages workflow](.github/workflows/deploy-pages.yml)
+builds `frontend/out` for `https://nicolasfrechette91.github.io/sewncovers/`
+on pushes to `main` or an explicit manual dispatch. It uses the project-specific
+`SEWNCOVERS_GITHUB_PAGES=true` build flag so ordinary local and CI exports stay
+at the domain root, while the Pages export receives `/sewncovers` through
+Next.js `basePath`. Next.js applies that base path to framework assets and
+`next/link` navigation; `assetPrefix` remains intentionally unset because the
+site does not use a separate asset CDN.
+
+The workflow embeds the public, non-secret Render address
+`https://sewncovers-api.onrender.com` as `NEXT_PUBLIC_API_URL`, builds with the
+existing deterministic font fixture, verifies every exported HTML route and
+local `href`/`src` target, uploads only `frontend/out`, and deploys through the
+protected `github-pages` environment. GitHub Pages must use **GitHub Actions**
+as its publishing source before the first run. Task 8.4 remains in progress
+until the workflow has run from reviewed repository changes and the live site,
+navigation, refresh behavior, assets, API catalogue, and share URL have been
+verified.
 
 ## Backend deployment
 
