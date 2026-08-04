@@ -144,6 +144,52 @@ python -m pip check
 
 The CI jobs do not run Playwright; Task 8.1 requires the 63-test frontend suite and the 194-test backend suite, while browser CI remains out of scope.
 
+## Backend deployment
+
+The FastAPI service is deployed at <https://sewncovers-api.onrender.com> on a
+Render Free web service. The repository-owned [`render.yaml`](render.yaml)
+records the deployable configuration, and the Render dashboard uses the same
+settings:
+
+| Setting | Value |
+| --- | --- |
+| Project / environment / service | `SewnCovers` / `Production` / `sewncovers-api` |
+| Repository / branch | `nicolasfrechette91/SewnCovers` / `main` |
+| Runtime / region / instance | Python 3 / Ohio / Free |
+| Root directory | `backend` |
+| Python version | `PYTHON_VERSION=3.13.2` |
+| Build / start | `python -m pip install .` / `python -m app.production` |
+| Render health check / auto-deploy | `/` / after CI checks pass |
+| Non-secret runtime configuration | `ENVIRONMENT=production`; `FRONTEND_ORIGIN=https://nicolasfrechette91.github.io` |
+
+Render supplies `PORT`; the production command binds it on `0.0.0.0`. No
+`DATABASE_URL`, migration command, secret file, persistent disk, custom domain,
+or paid resource is configured by Task 8.2. Render checks `/` because it is the
+existing process-only HTTP 200 contract. The public database-aware
+[`/health`](https://sewncovers-api.onrender.com/health) endpoint therefore
+returns HTTP 503 with
+`{"process":"healthy","database":"unconfigured"}` until the explicitly
+separate production database and migration task is completed.
+
+Render's current documentation requires an HTTP health endpoint to return 2xx
+or 3xx within five seconds, supports an exact `PYTHON_VERSION`, and documents
+that Free services spin down after 15 idle minutes and use an ephemeral
+filesystem. See the official [health check](https://render.com/docs/health-checks),
+[Python version](https://render.com/docs/python-version),
+[Blueprint](https://render.com/docs/blueprint-spec), and
+[Free service](https://render.com/docs/free) references. Do not add keep-alive
+traffic: a normal first request is allowed to wake the service.
+
+Deployment verification passed on 2026-08-03/04 EDT. The initial deploy of
+commit `ca351e2` completed successfully, its GitHub Actions CI run passed, and
+TLS-verified requests returned HTTP 200 from `/` and `/openapi.json`. A warm
+`/health` request returned the expected HTTP 503 unconfigured-database body in
+0.24 seconds. After more than 15 minutes without public traffic, Render logged
+the Free instance's graceful shutdown; the next `/health` request woke the
+service and returned the same typed body in 32.25 seconds, followed by a
+0.12-second recovered request. Full-window Render log searches found no
+PostgreSQL URL, `DATABASE_URL`, or password text.
+
 ## Environment contract
 
 Copy the example files to ignored local environment files. Never commit populated `.env` files.

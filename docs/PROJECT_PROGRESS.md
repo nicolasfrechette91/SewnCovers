@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 8 - Deployment
-- Current task: 8.1 - Add CI for frontend install/type-check/test/build and backend install/Ruff/tests
+- Current task: 8.2 - Deploy the FastAPI service to a free Render web service with `/health`
 - Status: Completed
-- Overall progress: 43 / 58 tasks completed
-- Up next: 8.2 - Deploy the FastAPI service to a free Render web service with `/health`
+- Overall progress: 44 / 58 tasks completed
+- Up next: 8.3 - Configure safe migration execution before the Render Uvicorn process
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -97,7 +97,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | Task | Deliverable | Status |
 | --- | --- | --- |
 | 8.1 | Add CI for frontend install/type-check/test/build and backend install/Ruff/tests | Completed |
-| 8.2 | Deploy the FastAPI service to a free Render web service with `/health` | Not started |
+| 8.2 | Deploy the FastAPI service to a free Render web service with `/health` | Completed |
 | 8.3 | Configure safe migration execution before the Render Uvicorn process | Not started |
 | 8.4 | Configure Next.js static export, repository `basePath`/asset paths, and deploy `out` to GitHub Pages | Not started |
 | 8.5 | Configure production API URL and exact GitHub Pages/Render CORS origins | Not started |
@@ -583,3 +583,13 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Every check is a normal fail-fast workflow step with no ignored exit status or `continue-on-error`. Default `npm ci` audit reporting remains enabled, so the known Task 7.5 baseline of four high-severity entries overall and three in the production tree is visible rather than suppressed; audit remediation and dependency upgrades remain out of scope. Root documentation records triggers, job boundaries, exact commands, runtime/cache inputs, local equivalents, and the intentional Playwright exclusion.
 - Local validation passed the locked `npm ci` install with its visible four-high advisory summary, ESLint, strict TypeScript, all 63 frontend tests, and both build modes using the offline font fixture. The backend pinned editable install, Ruff format/lint, all 194 tests under the same task-scoped Windows temp workaround recorded in Task 7.5, and `pip check` passed under Python 3.13.2. The ordinary plain pytest command first reproduced only the host's pre-existing unreadable global pytest temp-directory condition; the clean Ubuntu CI job does not use that Windows directory. YAML parsing plus rendered-structure assertions verified triggers, permissions, concurrency, full action digests, runtime pins, working directories, cache dependency paths, commands, and distinct build environments. Pages output inspection verified `/sewncovers/_next/` asset paths with no unprefixed `/_next/` references.
 - Task 8.1 is `Completed`, progress is 43 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 8.2 - Deploy the FastAPI service to a free Render web service with `/health`.
+
+### 2026-08-03 - Render FastAPI deployment
+
+- Root `render.yaml` defines one `sewncovers-api` Python web service on the Free plan in Ohio, sourced from `main` with `backend` as its monorepo root. It pins `PYTHON_VERSION=3.13.2`, installs the project with `python -m pip install .`, starts the established `python -m app.production` entry point, checks `/`, and deploys after linked CI checks pass. The only other declared values are the non-secret `ENVIRONMENT=production` and exact `FRONTEND_ORIGIN=https://nicolasfrechette91.github.io`; Render provides `PORT`. No `DATABASE_URL`, secret placeholder or value, pre-deploy or migration command, persistent disk, custom domain, paid resource, dependency, or application behavior was added.
+- The Render `SewnCovers` project / `Production` environment now contains the Free `sewncovers-api` web service at `https://sewncovers-api.onrender.com`, deployed from public repository `nicolasfrechette91/SewnCovers`, branch `main`, commit `ca351e2`. Dashboard settings match the repository record: Python 3, Ohio (US East), `backend`, the exact build/start commands, `/` health check, after-CI auto-deploy, and the three non-secret environment values. Render's official FastAPI, web-service, Blueprint, Python-version, health-check, and Free-tier documentation was rechecked immediately before creation; HTTP checks require 2xx/3xx within five seconds, Python environment pins require a fully qualified version, and Free services document 15-minute idle spin-down, wake delay, and ephemeral filesystems.
+- The platform health path is `/`, whose established process-only response is HTTP 200 and does not initialize the database. The public `/health` endpoint preserves its established database-aware contract and, because production Neon connection and migrations are explicitly Task 8.3 work, returns the fixed secret-free HTTP 503 body `{"process":"healthy","database":"unconfigured"}`. The initial deploy became live after Render installed Python 3.13.2 and the pinned direct dependencies, ran the production command, bound Uvicorn to `0.0.0.0:10000`, and received successful `/` probes. TLS-verified public requests returned HTTP 200 from `/` and `/openapi.json`; warm `/health` returned the expected body in 0.24 seconds.
+- Cold-start verification left the service without public traffic for more than 15 minutes. Render logged graceful application shutdown at 00:02:51 EDT on 2026-08-04, began the next `python -m app.production` process at 00:03:33, completed startup at 00:03:47, and served the waking `/health` request at 00:03:50. The TLS-verified request returned the expected HTTP 503 body in 32.254 seconds; an immediate follow-up returned the same body in 0.124 seconds, proving recovery. Full-hour Render log searches for `postgresql`, `DATABASE_URL`, and `password` each returned no matches.
+- Local CI-equivalent verification passed under the pinned toolchains: backend editable install, Ruff formatting and lint, all 194 backend tests, and `pip check`; frontend `npm ci`, ESLint, strict TypeScript, all 63 tests, and ordinary plus GitHub Pages production builds using the existing local font fixture. A production-mode local smoke test returned `/` 200, `/health` 503 with the exact unconfigured body, `/docs` 200, and `/openapi.json` 200, with no secret-pattern log match. The public GitHub Actions run for deployed commit `ca351e2` also completed successfully.
+- Configuration, tracked-secret, generated-file, dependency, scope, roadmap-integrity, and whitespace scans passed. Credential-shaped PostgreSQL strings remain limited to deliberate test fixtures; no non-fixture credential URI or known token signature is tracked. Only the Render configuration and deployment/progress documentation changed. No production Neon connection or migration, frontend deployment, schema or dependency change, paid resource, custom domain, authentication, or Task 8.3 implementation is included.
+- Task 8.2 is `Completed`, progress is 44 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 8.3 - Configure safe migration execution before the Render Uvicorn process.

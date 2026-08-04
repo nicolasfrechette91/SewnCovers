@@ -438,6 +438,60 @@ Invoke-WebRequest http://127.0.0.1:8001/openapi.json
 
 No `DATABASE_URL` is required for these checks. Press `Ctrl+C` in the server terminal and confirm Uvicorn reports application shutdown complete.
 
+## Render deployment
+
+The deployed service URL is <https://sewncovers-api.onrender.com>. Its exact
+Task 8.2 settings are:
+
+| Setting | Value |
+| --- | --- |
+| Render project / environment | `SewnCovers` / `Production` |
+| Service / type / plan | `sewncovers-api` / Web Service / Free |
+| Source / branch | `https://github.com/nicolasfrechette91/SewnCovers` / `main` |
+| Language / region | Python 3 / Ohio (US East) |
+| Root directory | `backend` |
+| Build command | `python -m pip install .` |
+| Start command | `python -m app.production` |
+| Health check path | `/` |
+| Auto-deploy | After CI checks pass |
+| Environment values | `PYTHON_VERSION=3.13.2`, `ENVIRONMENT=production`, `FRONTEND_ORIGIN=https://nicolasfrechette91.github.io` |
+
+The root [`render.yaml`](../render.yaml) is the repository record for these
+settings. It contains no credential value. Render provides `PORT`, and the
+existing production entry point binds it on `0.0.0.0`. The service has no
+`DATABASE_URL`, pre-deploy or migration command, secret file, persistent disk,
+custom domain, or paid resource in Task 8.2.
+
+The Render health check uses `/` because Render requires a 2xx or 3xx response
+within five seconds and the root route is the established process-only HTTP 200
+contract. `GET /health` retains its established process-and-database contract:
+without the intentionally deferred production database configuration it returns
+HTTP 503 with `{"process":"healthy","database":"unconfigured"}`. This keeps
+startup, Render readiness, public verification, and logs secret-free without
+weakening the database-aware endpoint or starting Task 8.3.
+
+The settings were checked against Render's official
+[FastAPI deployment](https://render.com/docs/deploy-fastapi),
+[Python version](https://render.com/docs/python-version),
+[web service](https://render.com/docs/web-services),
+[health check](https://render.com/docs/health-checks),
+[Blueprint](https://render.com/docs/blueprint-spec), and
+[Free service](https://render.com/docs/free) documentation on 2026-08-03.
+Free services spin down after 15 minutes without inbound traffic and can take
+about a minute to wake; their filesystem is ephemeral. Do not add keep-alive
+traffic or store application data locally.
+
+The initial deployment of commit `ca351e2` completed successfully and bound
+Uvicorn to Render's provided port `10000`. TLS-verified public checks returned
+HTTP 200 from `/` and `/openapi.json`; a warm `/health` request returned the
+expected HTTP 503 unconfigured-database body in 0.24 seconds. After the Free
+service had no public traffic for more than 15 minutes, Render logged graceful
+application shutdown at 00:02:51 EDT. The next `/health` request started the
+process at 00:03:33, completed application startup at 00:03:47, and served the
+expected response at 00:03:50 in 32.25 seconds. An immediate second request
+completed in 0.12 seconds. Full-hour Render log searches for `postgresql`,
+`DATABASE_URL`, and `password` each returned no matches.
+
 ## Quality checks
 
 Run these commands from the `backend` directory:
