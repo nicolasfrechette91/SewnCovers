@@ -64,7 +64,7 @@ sewncovers/
 |- frontend/   Next.js, React, and TypeScript; statically exported to GitHub Pages
 |- backend/    Python and FastAPI; deployed to Render
 |- docs/       Roadmap progress and project decisions
-`- .github/    Continuous integration and deployment workflows (planned)
+`- .github/    Continuous integration workflows
 ```
 
 The browser may receive only the public API URL through `NEXT_PUBLIC_API_URL`. Database credentials and other secrets remain in the FastAPI/Render environment. FastAPI is the only application that connects to PostgreSQL on Neon. Its CORS policy permits the configured frontend origin to make browser requests; CORS is not authentication or authorization and does not protect endpoints from non-browser clients.
@@ -110,6 +110,39 @@ Press `Ctrl+C` in each terminal to stop both development servers. The applicatio
 
 - [Frontend setup and commands](frontend/README.md)
 - [Backend setup and commands](backend/README.md)
+
+## Continuous integration
+
+GitHub Actions runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for every pull request targeting `main` and every push to `main`. Superseded runs for the same pull request or branch are cancelled. The workflow grants only read access to repository contents, does not persist checkout credentials, and does not use secrets, Neon, Render, or another application service.
+
+The independent **Frontend - lint, type-check, test, and build** job uses Node.js 24.15.0, npm caching keyed from `frontend/package-lock.json`, and `npm ci`. It runs ESLint, strict TypeScript checking, all 63 frontend tests, an ordinary root static export, and a `/sewncovers` GitHub Pages static export. Both CI builds use the existing local font-response fixture so build validation does not depend on Google Fonts. The default `npm ci` audit report remains visible; CI does not suppress it or misrepresent the documented Task 7.5 baseline of four high-severity entries overall and three in the production tree.
+
+The independent **Backend - Ruff, tests, and dependency check** job uses Python 3.13.2, pip caching keyed from `backend/pyproject.toml`, and the project's pinned direct dependencies through `python -m pip install -e ".[dev]"`. It checks Ruff formatting and lint, runs all 194 backend tests, and finishes with `pip check`. The checks are offline from the application infrastructure and need no populated environment file or database.
+
+The local equivalents, run from each application directory after its documented setup, are:
+
+```powershell
+cd frontend
+npm ci
+npm run lint
+npm run typecheck
+npm test
+$env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES = (Resolve-Path e2e\font-responses.cjs).Path
+$env:GITHUB_ACTIONS = "false"
+npm run build
+$env:GITHUB_ACTIONS = "true"
+npm run build
+Remove-Item Env:GITHUB_ACTIONS, Env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES
+
+cd ..\backend
+python -m pip install -e ".[dev]"
+python -m ruff format --check .
+python -m ruff check .
+python -m pytest
+python -m pip check
+```
+
+The CI jobs do not run Playwright; Task 8.1 requires the 63-test frontend suite and the 194-test backend suite, while browser CI remains out of scope.
 
 ## Environment contract
 

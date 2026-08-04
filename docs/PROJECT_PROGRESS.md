@@ -8,11 +8,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 ## Current handoff
 
-- Current phase: Phase 7 - Testing and validation
-- Current task: 7.5 - Run and document the complete format, lint, type-check, test, and build quality gate
+- Current phase: Phase 8 - Deployment
+- Current task: 8.1 - Add CI for frontend install/type-check/test/build and backend install/Ruff/tests
 - Status: Completed
-- Overall progress: 42 / 58 tasks completed
-- Up next: 8.1 - Add CI for frontend install/type-check/test/build and backend install/Ruff/tests
+- Overall progress: 43 / 58 tasks completed
+- Up next: 8.2 - Deploy the FastAPI service to a free Render web service with `/health`
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -96,7 +96,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 | Task | Deliverable | Status |
 | --- | --- | --- |
-| 8.1 | Add CI for frontend install/type-check/test/build and backend install/Ruff/tests | Not started |
+| 8.1 | Add CI for frontend install/type-check/test/build and backend install/Ruff/tests | Completed |
 | 8.2 | Deploy the FastAPI service to a free Render web service with `/health` | Not started |
 | 8.3 | Configure safe migration execution before the Render Uvicorn process | Not started |
 | 8.4 | Configure Next.js static export, repository `basePath`/asset paths, and deploy `out` to GitHub Pages | Not started |
@@ -574,3 +574,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Repository scans and results: tracked secret-pattern scans found six deliberately fake PostgreSQL credentials in backend/frontend test fixtures and no non-fixture matches; the tracked generated-file scan found no `.next`, `out`, Playwright output, cache, virtual-environment, bytecode, build, or TypeScript-build artifacts; the dependency/scope scan found no manifest, lockfile, backend, database, migration, deployment, or feature change; and the roadmap integrity scan found 58 rows, 58 unique task IDs, the preserved deliverable wording, 42 `Completed` tasks, and 16 `Not started` tasks. The repository has no CI workflow yet because its creation is exactly Task 8.1. Final `git diff --check`, changed-file scope, roadmap integrity, and clean generated-file scans pass after this documentation update.
 - Remaining platform-specific manual checks are NVDA with Firefox/Chrome, VoiceOver with Safari, Windows High Contrast without emulation, physical touch-target comfort, native print/PDF and download dialogs, an actually denied clipboard permission, and the deployed GitHub Pages/Render cold-start journey. Live Neon revision/drift verification also remains environment-specific. None was performed because this task does not contact Neon/Render or begin deployment work.
 - No gate-blocking product defect was found. Task 7.5 is `Completed`, progress is 42 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 8.1 - Add CI for frontend install/type-check/test/build and backend install/Ruff/tests.
+
+### 2026-08-03 - GitHub Actions continuous integration
+
+- `.github/workflows/ci.yml` runs for pull requests targeting `main` and pushes to `main`. Workflow-level `contents: read` is the only token permission, checkout credentials are not persisted, and concurrency cancels only superseded runs for the same pull request or branch. The workflow contains no secret references, deployment steps, database migrations, service containers, Neon/Render access, or external application calls.
+- The independent frontend job uses Ubuntu 24.04, exact Node.js 24.15.0, npm's cache keyed from `frontend/package-lock.json`, and the reproducible `npm ci` install. It runs the existing ESLint script, strict no-emit TypeScript script, all 63 tests, an ordinary domain-root static export with `GITHUB_ACTIONS=false`, and the `/sewncovers` GitHub Pages export with `GITHUB_ACTIONS=true`. Both builds use the established local Next.js Google-font response fixture so CI does not depend on Google Fonts. Playwright remains intentionally outside Task 8.1.
+- The independent backend job uses Ubuntu 24.04, exact Python 3.13.2, pip's cache keyed from `backend/pyproject.toml`, and `python -m pip install -e ".[dev]"`, preserving the documented pinned-direct-dependency/no-lockfile contract. It runs Ruff format checking, Ruff lint, all 194 offline tests, and `pip check`; no populated `.env` or database is required.
+- Every check is a normal fail-fast workflow step with no ignored exit status or `continue-on-error`. Default `npm ci` audit reporting remains enabled, so the known Task 7.5 baseline of four high-severity entries overall and three in the production tree is visible rather than suppressed; audit remediation and dependency upgrades remain out of scope. Root documentation records triggers, job boundaries, exact commands, runtime/cache inputs, local equivalents, and the intentional Playwright exclusion.
+- Local validation passed the locked `npm ci` install with its visible four-high advisory summary, ESLint, strict TypeScript, all 63 frontend tests, and both build modes using the offline font fixture. The backend pinned editable install, Ruff format/lint, all 194 tests under the same task-scoped Windows temp workaround recorded in Task 7.5, and `pip check` passed under Python 3.13.2. The ordinary plain pytest command first reproduced only the host's pre-existing unreadable global pytest temp-directory condition; the clean Ubuntu CI job does not use that Windows directory. YAML parsing plus rendered-structure assertions verified triggers, permissions, concurrency, full action digests, runtime pins, working directories, cache dependency paths, commands, and distinct build environments. Pages output inspection verified `/sewncovers/_next/` asset paths with no unprefixed `/_next/` references.
+- Task 8.1 is `Completed`, progress is 43 / 58, all 58 roadmap rows and deliverable wording remain present, and the exact next task is 8.2 - Deploy the FastAPI service to a free Render web service with `/health`.
