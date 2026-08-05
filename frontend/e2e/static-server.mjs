@@ -8,7 +8,7 @@ const host = "127.0.0.1";
 const port = 3100;
 const basePath =
   process.env.SEWNCOVERS_GITHUB_PAGES === "true"
-    ? "/sewncovers"
+    ? "/SewnCovers"
     : "";
 const exportDirectory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

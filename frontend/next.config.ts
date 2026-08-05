@@ -4,7 +4,7 @@ import "./config/environment";
 
 const isGitHubPagesBuild =
   process.env.SEWNCOVERS_GITHUB_PAGES === "true";
-const basePath = isGitHubPagesBuild ? "/sewncovers" : "";
+const basePath = isGitHubPagesBuild ? "/SewnCovers" : "";
 
 const nextConfig: NextConfig = {
   output: "export",

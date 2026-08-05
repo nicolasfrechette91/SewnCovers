@@ -10,7 +10,7 @@ const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
   process.env.SEWNCOVERS_GITHUB_PAGES === "true"
-    ? "/sewncovers"
+    ? "/SewnCovers"
     : "";
 const configurePath = `${basePath}/configure/`;
 const publicId = "AbCdEfGhIjKlMnOpQrStUv";

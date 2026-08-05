@@ -10,7 +10,7 @@ const frontendDirectory = path.resolve(
 const exportDirectory = path.join(frontendDirectory, "out");
 const isPagesExport =
   process.env.SEWNCOVERS_GITHUB_PAGES === "true";
-const basePath = isPagesExport ? "/sewncovers" : "";
+const basePath = isPagesExport ? "/SewnCovers" : "";
 const expectedApiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(
   /\/+$/,
   "",
@@ -88,7 +88,7 @@ for (const htmlFile of htmlFiles) {
       );
     } else {
       assert.equal(
-        url === "/sewncovers" || url.startsWith("/sewncovers/"),
+        url === "/SewnCovers" || url.startsWith("/SewnCovers/"),
         false,
         `${path.relative(frontendDirectory, htmlFile)} unexpectedly contains the Pages base path: ${url}`,
       );
