@@ -11,10 +11,20 @@ const exportDirectory = path.join(frontendDirectory, "out");
 const isPagesExport =
   process.env.SEWNCOVERS_GITHUB_PAGES === "true";
 const basePath = isPagesExport ? "/SewnCovers" : "";
-const expectedApiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(
+const productionApiUrl = "https://sewncovers-api.onrender.com";
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(
   /\/+$/,
   "",
 );
+const expectedApiUrl = isPagesExport ? productionApiUrl : configuredApiUrl;
+
+if (isPagesExport) {
+  assert.equal(
+    configuredApiUrl,
+    productionApiUrl,
+    "The GitHub Pages export must be built with the exact production API URL.",
+  );
+}
 
 const expectedFiles = [
   "404.html",
@@ -138,6 +148,20 @@ assert.equal(
   false,
   "The browser-test API URL must not appear in a deployable export.",
 );
+
+if (isPagesExport) {
+  for (const forbiddenApiUrl of [
+    "http://localhost:8000",
+    "https://sewncovers-api.onrender.com.example",
+    "http://sewncovers-api.onrender.com",
+  ]) {
+    assert.equal(
+      textBundle.includes(forbiddenApiUrl),
+      false,
+      `The Pages export contains an unapproved API URL: ${forbiddenApiUrl}`,
+    );
+  }
+}
 
 console.log(
   `Verified ${isPagesExport ? "GitHub Pages" : "ordinary"} static export (${files.length} files, ${htmlFiles.length} HTML routes).`,

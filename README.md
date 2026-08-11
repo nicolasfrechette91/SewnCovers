@@ -219,9 +219,9 @@ Copy the example files to ignored local environment files. Never commit populate
 
 | Owner | Variable | Required now | Validation and lifecycle |
 | --- | --- | --- | --- |
-| Frontend | `NEXT_PUBLIC_API_URL` | Required for API requests; a static build may omit it | Absolute HTTP(S) URL, trimmed with trailing slashes removed, embedded publicly at Next.js build time, and checked before every client request. |
+| Frontend | `NEXT_PUBLIC_API_URL` | Required for API requests; an ordinary static build may omit it | Absolute HTTP(S) URL, trimmed with trailing slashes removed, embedded publicly at Next.js build time, and checked before every client request. Deployable Pages builds require exactly `https://sewncovers-api.onrender.com`. |
 | Backend | `ENVIRONMENT` | No; defaults to `development` | One of `development`, `test`, or `production`, parsed at process runtime. |
-| Backend | `FRONTEND_ORIGIN` | Optional in development/test; required in production | One exact HTTP(S) origin, normalized at process runtime. Missing local/test configuration uses `http://localhost:3000`; production must set `https://nicolasfrechette91.github.io` for the configured Pages deployment. |
+| Backend | `FRONTEND_ORIGIN` | Optional in development/test; required in production | One exact HTTP(S) origin, normalized at process runtime. Missing local/test configuration uses `http://localhost:3000`; production accepts only `https://nicolasfrechette91.github.io` for the configured Pages deployment. |
 | Backend | `PORT` | No; defaults to `8000` | Integer from 1 through 65535, read at production Uvicorn process startup; hosting platforms normally provide it. |
 | Backend | `DATABASE_URL` | Required by the migration-gated production command; locally only when database functionality is requested | Server-only SSL-enabled SQLAlchemy URL loaded at production entry or lazily at the request boundary and redacted from settings and database output. Local development owns the development-branch value in ignored `backend/.env`; the deployed API owns a different production-branch value only in its protected Render secret. |
 

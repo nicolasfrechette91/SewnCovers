@@ -123,10 +123,18 @@ class Settings(BaseSettings):
         return _normalize_http_origin(value)
 
     @model_validator(mode="after")
-    def require_production_frontend_origin(self) -> Self:
+    def require_exact_production_frontend_origin(self) -> Self:
         if self.environment == "production" and self.frontend_origin is None:
             raise ValueError(
                 "FRONTEND_ORIGIN is required when ENVIRONMENT is production"
+            )
+        if (
+            self.environment == "production"
+            and self.frontend_origin != PRODUCTION_FRONTEND_ORIGIN
+        ):
+            raise ValueError(
+                "FRONTEND_ORIGIN must be the configured GitHub Pages origin when "
+                "ENVIRONMENT is production"
             )
         return self
 

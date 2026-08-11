@@ -114,6 +114,32 @@ def test_production_requires_frontend_origin_without_echoing_other_values() -> N
     assert "required when ENVIRONMENT is production" in message
 
 
+@pytest.mark.parametrize(
+    "value",
+    [
+        "http://localhost:3000",
+        "https://nicolasfrechette91.github.io.example",
+        "http://nicolasfrechette91.github.io",
+        "https://nicolasfrechette91.github.io:4430",
+        "https://sewncovers-api.onrender.com",
+    ],
+)
+def test_production_rejects_every_non_pages_origin_without_echoing_input(
+    value: str,
+) -> None:
+    with pytest.raises(ValidationError) as error:
+        Settings(
+            _env_file=None,
+            environment="production",
+            frontend_origin=value,
+        )
+
+    message = str(error.value)
+    assert "FRONTEND_ORIGIN" in message
+    assert "configured GitHub Pages origin" in message
+    assert value not in message
+
+
 def test_unsupported_environment_error_does_not_echo_input() -> None:
     private_input = "production-private-token"
 

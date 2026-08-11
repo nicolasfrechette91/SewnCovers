@@ -91,3 +91,12 @@ test("returns a frozen public configuration object", () => {
   assert.deepEqual(configuration, { apiUrl: "https://api.example.com" });
   assert.equal(Object.isFrozen(configuration), true);
 });
+
+test("keeps ordinary development and test API URLs isolated from Pages", () => {
+  assert.deepEqual(createPublicEnvironment("http://localhost:8000"), {
+    apiUrl: "http://localhost:8000",
+  });
+  assert.deepEqual(createPublicEnvironment("http://api.sewncovers.test"), {
+    apiUrl: "http://api.sewncovers.test",
+  });
+});

@@ -7,9 +7,10 @@ export type PublicEnvironment = Readonly<{
 export class PublicEnvironmentError extends Error {
   readonly category = "configuration";
 
-  constructor() {
+  constructor(message?: string) {
     super(
-    `${API_URL_VARIABLE} must be an absolute HTTP or HTTPS URL without credentials, a query, or a fragment.`,
+      message ??
+        `${API_URL_VARIABLE} must be an absolute HTTP or HTTPS URL without credentials, a query, or a fragment.`,
     );
     this.name = "PublicEnvironmentError";
   }
@@ -55,8 +56,10 @@ export function parsePublicApiUrl(
 export function createPublicEnvironment(
   apiUrlValue: string | undefined,
 ): PublicEnvironment {
+  const apiUrl = parsePublicApiUrl(apiUrlValue);
+
   return Object.freeze({
-    apiUrl: parsePublicApiUrl(apiUrlValue),
+    apiUrl,
   });
 }
 

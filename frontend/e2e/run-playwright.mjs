@@ -45,6 +45,7 @@ const buildExitCode = await run([nextCli, "build"], {
   ...process.env,
   NEXT_FONT_GOOGLE_MOCKED_RESPONSES: fontResponses,
   NEXT_PUBLIC_API_URL: "http://api.sewncovers.test",
+  SEWNCOVERS_E2E: "true",
 });
 
 if (buildExitCode !== 0) {

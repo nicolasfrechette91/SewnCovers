@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "check:config": "node --test config/environment.test.mjs",
-    "test": "node --test config/environment.test.mjs services/api-client.test.mjs services/design-save.test.mjs services/pattern-catalogue.test.mjs services/phase-6-integration.test.mjs services/shared-design.test.mjs && tsx --import ./tests/setup-dom.mjs --test tests/*.test.ts tests/*.test.tsx",
+    "check:config": "node --test config/build-environment.test.mjs config/deployment-config.test.mjs config/environment.test.mjs",
+    "test": "node --test config/build-environment.test.mjs config/deployment-config.test.mjs config/environment.test.mjs services/api-client.test.mjs services/design-save.test.mjs services/pattern-catalogue.test.mjs services/phase-6-integration.test.mjs services/shared-design.test.mjs && tsx --import ./tests/setup-dom.mjs --test tests/*.test.ts tests/*.test.tsx",
     "test:e2e": "node e2e/run-playwright.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",

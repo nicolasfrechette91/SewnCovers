@@ -9,11 +9,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 8 - Deployment
-- Current task: 8.4 - Configure Next.js static export, repository `basePath`/asset paths, and deploy `out` to GitHub Pages
+- Current task: 8.5 - Configure production API URL and exact GitHub Pages/Render CORS origins
 - Status: In progress
-- Overall progress: 45 / 58 tasks completed
-- Up next: 8.4 - Configure Next.js static export, repository `basePath`/asset paths, and deploy `out` to GitHub Pages
-- Blockers: Manual GitHub publishing and live deployment verification are required
+- Overall progress: 46 / 58 tasks completed
+- Up next: 8.5 - Configure production API URL and exact GitHub Pages/Render CORS origins
+- Blockers: Manual publication and live Pages/Render CORS verification are required
 
 ## Phase 1: Project foundation
 
@@ -99,8 +99,8 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 8.1 | Add CI for frontend install/type-check/test/build and backend install/Ruff/tests | Completed |
 | 8.2 | Deploy the FastAPI service to a free Render web service with `/health` | Completed |
 | 8.3 | Configure safe migration execution before the Render Uvicorn process | Completed |
-| 8.4 | Configure Next.js static export, repository `basePath`/asset paths, and deploy `out` to GitHub Pages | In progress |
-| 8.5 | Configure production API URL and exact GitHub Pages/Render CORS origins | Not started |
+| 8.4 | Configure Next.js static export, repository `basePath`/asset paths, and deploy `out` to GitHub Pages | Completed |
+| 8.5 | Configure production API URL and exact GitHub Pages/Render CORS origins | In progress |
 | 8.6 | Smoke-test the deployed journey, cold start, mobile/keyboard behavior, docs, health, and browser bundle secrets | Not started |
 
 ## Phase 9: Portfolio documentation and polish
@@ -611,3 +611,12 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Local verification passed ESLint, strict TypeScript checking, all 63 frontend tests, ordinary and Pages production builds, and generated-export scans covering 46 files and five HTML outputs in each mode. Both complete four-test Playwright suites passed before the final refresh/navigation assertion was added; the updated shared-design journey then passed again in both modes, including direct `?design=` loading, browser refresh with exact restoration, and home navigation at `/` and `/SewnCovers/`. Workflow YAML parsing, action/permission/trigger structure, roadmap wording/counts, generated-file hygiene, and `git diff --check` also passed. No workflow was triggered and no commit, push, repository setting, backend behavior, migration, database data, dependency, authentication, or following-task work was performed. Manual publication and live verification remain required before Task 8.4 can be marked `Completed` or progress can advance to 46 / 58.
 - The first live deployment exposed the case-sensitive path mismatch: `https://nicolasfrechette91.github.io/SewnCovers/` returned the expected semantic HTML, but its generated stylesheet, scripts, favicon, and home link targeted lowercase `/sewncovers/`. The live browser therefore rendered default Times New Roman text, transparent body styling, and zero-radius cards with no hydrated configurator available. The Pages base path and deployment-path checks were corrected to `/SewnCovers`; another reviewed commit, push, successful Pages run, and all three live checks are required.
 - After the case correction, ESLint, strict TypeScript checking, all 63 frontend tests, ordinary and Pages production builds, both export scans, and the complete four-test Pages Playwright suite passed locally. The corrected Pages export contains only `/SewnCovers`-prefixed framework, metadata, navigation, and share-route URLs, while the ordinary export remains at the domain root. Task 8.4 remains `In progress` at 45 / 58 until the corrected deployment and all three live checks pass.
+- The corrected deployment from commit `bffd78b` is live at `https://nicolasfrechette91.github.io/SewnCovers/`. Live browser verification confirmed the landing page uses the expected Geist typography, forest-green/ivory styling, rounded cards, cushion artwork, uppercase repository navigation, and successfully loaded prefixed framework assets without horizontal overflow.
+- The deployed configurator loaded all 15 patterns from `https://sewncovers-api.onrender.com`, and the same catalogue loaded again after a direct browser refresh. A public Square / Fern trail test design with 55.25 cm equal face dimensions, 12.5 cm thickness, centimetres, and 1.0x pattern scale saved successfully; opening its `/SewnCovers/configure/?design=` URL restored every value exactly and retained the uppercase repository path. Task 8.4 is `Completed`, progress is 46 / 58, all roadmap wording remains present, and the exact next task is 8.5 - Configure production API URL and exact GitHub Pages/Render CORS origins.
+
+### 2026-08-05 - Production API and exact CORS configuration prepared locally
+
+- Task 8.5 is `In progress` at 46 / 58 pending publication and live browser verification. Deployable Pages builds fail before compilation unless `NEXT_PUBLIC_API_URL` resolves to exactly `https://sewncovers-api.onrender.com`; the workflow and CI Pages build declare that public value directly, and the export verifier independently requires its embedding. The production-only check lives outside the shared browser environment module, so ordinary development exports contain only `http://localhost:8000`, Playwright artifacts contain only the intercepted `http://api.sewncovers.test`, and production Pages exports contain only the Render API origin.
+- Render's repository blueprint retains `ENVIRONMENT=production` and the exact path-free `FRONTEND_ORIGIN=https://nicolasfrechette91.github.io`. Backend settings now reject every other production origin even when it is otherwise a valid URL. The single-origin middleware still permits only `GET` and `POST` with configured `Content-Type`, a 600-second preflight cache, no exposed headers, no wildcard or regex, and credentials disabled. Focused coverage proves allowed local/production simple requests and preflights; required pattern listing, design creation, and design retrieval; rejected lookalikes, malformed values, wrong schemes/ports, paths, `null`, the Render API itself, unsupported methods/headers, and unconfigured origins; plus ordinary origin-free root and health requests.
+- Local verification passed all 70 frontend tests, ESLint, strict TypeScript checking, exact deployment-configuration tests, ordinary and Pages production builds, and both 46-file/five-route export scans. The ordinary artifact contained the localhost API and no production/test/backend configuration; the Pages artifact contained only the exact Render API and no development/test/backend configuration. The complete four-test Playwright journey passed at both `/` and `/SewnCovers/`; one earlier ordinary run missed a transient `Connecting` assertion and its immediate clean rerun passed all four without a code change.
+- Python 3.13.2 verification passed Ruff formatting and lint, all 222 isolated backend tests, `pip check`, the focused 52-test settings/CORS selection, tracked secret/configuration and generated-file scans, dependency/scope checks, roadmap row/wording/status integrity, and `git diff --check`. No commit, push, workflow, deployment, remote setting, dependency, schema, migration, catalogue, endpoint, authentication, redesign, or following-task work was performed. Manual publication and live Pages/Render verification remain required before Task 8.5 can become `Completed` or progress can advance to 47 / 58.
