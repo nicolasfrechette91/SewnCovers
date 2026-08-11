@@ -215,8 +215,6 @@ Task 6.5 ran the complete browser journey against a disposable in-memory local A
 
 The visible browser checks also covered connecting, delayed possible-cold-start, empty catalogue, bounded retry and final API failure, explicit recovery, malformed catalogue/design responses, single-attempt save failure, unknown designs, filtered-but-retained selections, edits during delayed restoration, and clipboard success. Mocked regressions cover the unavailable/rejected clipboard fallback and the remaining deterministic races. At 320 and 768 pixels the inspected layouts had no horizontal overflow; visible controls or their associated labels retained at least 40-pixel targets. Input labels, landmarks, heading order, ARIA references, live regions, duplicate IDs, and browser console output were inspected.
 
-Remaining platform checks belong to the later dedicated accessibility and deployment tasks: named screen-reader passes, OS forced-colors, browser zoom and reduced motion, physical touch devices, native print/download dialogs, an actually denied browser clipboard permission, and the deployed GitHub Pages/Render cold-start journey.
-
 ## Frontend unit and component tests
 
 Run the complete deterministic frontend suite with:
@@ -227,7 +225,7 @@ npm test
 
 The existing Node runner remains responsible for environment, typed-client, catalogue, save/share, restoration, and Phase 6 integration tests. Exact-pinned `tsx`, `jsdom`, and React Testing Library development dependencies add client-component interaction coverage without changing the production dependency set. No coverage-report command is currently configured.
 
-The 63-test suite covers shape-specific measurement validation and boundaries, decimal parsing, metric/imperial conversion and representative round trips, reducer and Context initialization/update/reset invariants, accessible shape and pattern selection, hidden/unavailable/empty filtered pattern states, proportional preview geometry and all three rendered shapes, pattern-scale output and controls, save validation, API rejection, timeout/network messages, duplicate-submit prevention, retained configuration, explicit retry, and successful recovery. Component assertions prefer accessible names, roles, controls, and visible recovery text; mocked clients, controlled promises, mocked fetch, and deterministic timers keep all request and failure paths local and repeatable.
+The 70-test suite covers shape-specific measurement validation and boundaries, decimal parsing, metric/imperial conversion and representative round trips, reducer and Context initialization/update/reset invariants, accessible shape and pattern selection, hidden/unavailable/empty filtered pattern states, proportional preview geometry and all three rendered shapes, pattern-scale output and controls, save validation, API rejection, timeout/network messages, duplicate-submit prevention, retained configuration, explicit retry, and successful recovery. Component assertions prefer accessible names, roles, controls, and visible recovery text; mocked clients, controlled promises, mocked fetch, and deterministic timers keep all request and failure paths local and repeatable.
 
 ## Playwright shared-design journey
 

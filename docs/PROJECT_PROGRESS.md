@@ -8,11 +8,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 ## Current handoff
 
-- Current phase: Phase 8 - Deployment
-- Current task: 8.6 - Smoke-test the deployed journey, cold start, mobile/keyboard behavior, docs, health, and browser bundle secrets
+- Current phase: Phase 9 - Portfolio documentation and polish
+- Current task: 9.1 - Expand the README with final setup, architecture, schema, decisions, and trade-offs
 - Status: Completed
-- Overall progress: 48 / 58 tasks completed
-- Up next: 9.1 - Expand the README with final setup, architecture, schema, decisions, and trade-offs
+- Overall progress: 49 / 58 tasks completed
+- Up next: 9.2 - Add polished screenshots and an understandable live-demo walkthrough
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -107,7 +107,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 
 | Task | Deliverable | Status |
 | --- | --- | --- |
-| 9.1 | Expand the README with final setup, architecture, schema, decisions, and trade-offs | Not started |
+| 9.1 | Expand the README with final setup, architecture, schema, decisions, and trade-offs | Completed |
 | 9.2 | Add polished screenshots and an understandable live-demo walkthrough | Not started |
 | 9.3 | Write the case study: problem, constraints, decisions, outcome, and lessons | Not started |
 | 9.4 | Document verified free-tier behavior, limitations, security boundaries, and commercial direction | Not started |
@@ -642,3 +642,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Read-only inspection of the existing implementation, tests, OpenAPI assertions, backend and frontend documentation, and roadmap found no idempotency or content-deduplication promise. `POST /designs` is an HTTP 201 create operation; each successful service call generates a new random 22-character opaque public ID and inserts one immutable record, consulting existing records only for a generated-ID collision. The backend contract test explicitly requires each creation to receive a unique opaque public ID, while the frontend documents the POST as unsafe because an ambiguous retry can create a second immutable record. Therefore `fzlGCyCVpfiMf96geBq_jg` is the expected result of a separate successful create, not a defect or contradiction. Both it and `5IxBJ_pJdNg2BeP987lt9A` remain preserved.
 - The native-keyboard save verification is accepted as complete. The new public share URL `https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg` restored successfully after the deployed API's bounded cold-start retry, announcing `Shared design restored.` and showing Box / bench, centimetres, Width `73.25`, Depth `49.75`, Thickness `13.5`, Terrace wave (`terrace-wave`), and pattern scale `1.6×`. A direct browser refresh restored the same checked shape, unit, and pattern plus the same three input values and slider value. This verification was read-only and sent no POST.
 - Task 8.6 is `Completed`, progress is 48 / 58, all 58 roadmap tasks and their exact deliverable wording remain present, and the exact next task is 9.1 - Expand the README with final setup, architecture, schema, decisions, and trade-offs. Only this progress document remains modified locally; no production or test code, existing design record, dependency, configuration, remote, workflow, deployment, schema, migration, catalogue, authentication, or following-task behavior changed, and no commit, push, pull, merge, rebase, tag, release, PR, workflow, or remote-setting operation was performed.
+
+### 2026-08-11 - Portfolio README and final project guide
+
+- The root README is now a portfolio-quality guide to the live product, supported journey and measurements, exact technology responsibilities, static Pages/browser/Render/Neon architecture, repository map, reproducible frontend/backend/database setup, public-versus-secret environment boundary, migration head and workflow, schema relationship and integrity rules, all 15 seeded patterns, everyday and CI-equivalent commands, five-path OpenAPI contract, deployment configuration, troubleshooting, present limitations, and explicitly unimplemented production improvements. Detailed component behavior remains linked to the frontend and backend guides instead of being duplicated in full.
+- The immutable-create contract is explicit: every successful `POST /designs` generates and inserts a new opaque 22-character public ID, so repeated identical bodies intentionally create separate records. Design creation remains single-attempt in the browser because an ambiguous retry could duplicate a successful write; safe GETs retain bounded transient retries. Share restoration remains exact and atomic, and public IDs and CORS are explicitly not authentication or privacy controls.
+- Repository evidence was rechecked across instructions, roadmap wording, READMEs, source, settings, models, repositories/services, migrations, tests, workflows, deployment configuration, package manifests/lockfile, and OpenAPI assertions. The component frontend guide's stale 63-test count and obsolete pending-verification paragraph were corrected to match the completed 70-test state.
+- The complete frontend gate passed locked `npm ci`, ESLint, strict TypeScript, all 70 tests, ordinary and `/SewnCovers` static builds, both 46-file/five-HTML export scans, and all four Playwright tests in both base-path modes. The install audit reported six high-severity findings; dependency remediation was out of scope and no manifest or lockfile changed. The complete Python 3.13.2 gate passed Ruff formatting/lint, all 222 tests, and `pip check`; the first pytest attempt was blocked only by an inaccessible host temp/cache directory, and the unchanged suite passed with a new task-scoped base temp and cache disabled before that generated directory was removed. Documentation link/heading/fence/Mermaid, secret, stale-reference, generated-file, scope, roadmap-integrity, consistency, and `git diff --check` scans passed.
+- Only `README.md`, `frontend/README.md`, and this progress document changed; no product or test code, dependency/lockfile, schema/migration/data, environment value, deployment/workflow/remote, authentication, redesign, or following-task work changed. Task 9.1 is `Completed`, progress is 49 / 58, all 58 roadmap tasks and exact deliverable wording remain present, and the exact next task is 9.2 - Add polished screenshots and an understandable live-demo walkthrough. All changes remain local and uncommitted.
