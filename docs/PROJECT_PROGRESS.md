@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 9 - Portfolio documentation and polish
-- Current task: 9.2 - Add polished screenshots and an understandable live-demo walkthrough
+- Current task: 9.3 - Write the case study: problem, constraints, decisions, outcome, and lessons
 - Status: Completed
-- Overall progress: 50 / 58 tasks completed
-- Up next: 9.3 - Write the case study: problem, constraints, decisions, outcome, and lessons
+- Overall progress: 51 / 58 tasks completed
+- Up next: 9.4 - Document verified free-tier behavior, limitations, security boundaries, and commercial direction
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -109,7 +109,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | --- | --- | --- |
 | 9.1 | Expand the README with final setup, architecture, schema, decisions, and trade-offs | Completed |
 | 9.2 | Add polished screenshots and an understandable live-demo walkthrough | Completed |
-| 9.3 | Write the case study: problem, constraints, decisions, outcome, and lessons | Not started |
+| 9.3 | Write the case study: problem, constraints, decisions, outcome, and lessons | Completed |
 | 9.4 | Document verified free-tier behavior, limitations, security boundaries, and commercial direction | Not started |
 | 9.5 | Complete the final accessibility, reliability, repository, and reviewer-experience audit | Not started |
 
@@ -657,3 +657,11 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - The root README now leads reviewers through starting the configurator and choosing a shape; entering shape-specific measurements, choosing a pattern, adjusting Pattern size, and reading the preview; then reviewing, saving, copying a share URL, and restoring it directly or after refresh. It links the live frontend, configurator, existing immutable Box / bench demonstration share, public API, interactive API documentation, OpenAPI document, and health endpoint, while explaining that every successful save creates a new immutable public ID and an identical repeat intentionally creates another record.
 - Full-resolution image review, README Markdown/heading/fence/alt-text/local-link/path-case checks, JPEG signature/dimension/size checks, all seven public HTTP URLs, ESLint, strict TypeScript, and all 70 frontend tests passed. Secret, stale-reference, broken-link, generated-file, scope, roadmap wording/status/count, and `git diff --check` scans also passed.
 - Only `README.md`, `docs/PROJECT_PROGRESS.md`, and the four `docs/images/*.jpg` screenshot assets changed for Task 9.2. No product or test code, dependency/lockfile, database/schema/migration/data, environment value, deployment/workflow/remote, authentication, redesign, or Task 9.3 work changed; no production design was created or modified. Task 9.2 is `Completed`, progress is 50 / 58, all 58 roadmap tasks and exact deliverable wording remain present, and the exact next task is 9.3 - Write the case study: problem, constraints, decisions, outcome, and lessons. All changes remain local, unstaged, and uncommitted.
+
+### 2026-08-11 - Portfolio case study
+
+- `docs/CASE_STUDY.md` presents the project as a cohesive engineering case study rather than a task diary. It covers the user communication problem, measurable goals, hosting and product constraints, static Pages/browser/Render/Neon architecture, key decisions and costs, implementation challenges, verification strategy, demonstrated outcomes, lessons, and clearly unimplemented future improvements. The root README links the standalone document from its public-resource table.
+- The narrative makes the system and security boundaries explicit: Next.js is a static export; the browser receives only the public API URL; FastAPI alone connects to Neon; production CORS accepts only the exact path-free Pages origin; public IDs and CORS are not authentication; every successful design creation receives a separate random immutable ID; automatic POST retry remains unsafe; and Render Free wake-up latency is an acknowledged limitation. It makes no adoption, revenue, traffic, performance, scale, or accessibility-certification claim.
+- Two existing Task 9.2 screenshots support the story without duplicating the complete README walkthrough. Read-only public verification returned HTTP 200 for the landing, configurator, demonstration share, API root, health, pattern catalogue, Swagger UI, and OpenAPI document. Health reported process/database healthy, the catalogue exposed 15 unique pattern IDs, the demonstration ID returned the expected eight-field Box / bench record, OpenAPI retained the five application paths, and allowed/disallowed-origin checks matched the documented CORS boundary. No production POST or other write was sent.
+- Documentation structure, heading, local-link, image, caption, alt-text, code-fence, Mermaid, path-case, secret/local-path, stale-reference, duplication, generated-file, scope, roadmap-integrity, and whitespace checks passed. Frontend ESLint, strict TypeScript, and all 70 deterministic frontend tests passed; no product-code build or backend test rerun was necessary for the documentation-only change, and the implementation evidence and recorded full gates remain unchanged. Final `git diff --check` also passed.
+- Only `README.md`, `docs/PROJECT_PROGRESS.md`, and the new `docs/CASE_STUDY.md` changed for Task 9.3; the existing Task 9.1 documentation and Task 9.2 screenshots/walkthrough remain intact. No product or test code, dependency/lockfile, database/schema/migration/data, environment value, deployment/workflow/remote, authentication, redesign, production record, or following-task work changed. Task 9.3 is `Completed`, progress is 51 / 58, all 58 roadmap tasks and their exact deliverable wording remain present, and the exact next task is 9.4 - Document verified free-tier behavior, limitations, security boundaries, and commercial direction. All changes remain local, unstaged, and uncommitted.
