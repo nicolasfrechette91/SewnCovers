@@ -10,6 +10,7 @@ purchase.
 | Public resource | URL |
 | --- | --- |
 | Case study | [Problem, constraints, decisions, outcome, and lessons](docs/CASE_STUDY.md) |
+| Production boundaries | [Verified behavior, limitations, security boundaries, and commercial direction](docs/PRODUCTION_BOUNDARIES.md) |
 | Live frontend | [nicolasfrechette91.github.io/SewnCovers/](https://nicolasfrechette91.github.io/SewnCovers/) |
 | Configurator | [Open the configurator](https://nicolasfrechette91.github.io/SewnCovers/configure/) |
 | Demonstration share | [Restore the Box / bench design](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg) |

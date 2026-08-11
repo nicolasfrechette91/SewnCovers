@@ -298,7 +298,7 @@ the current project:
 | Live application | [Open SewnCovers](https://nicolasfrechette91.github.io/SewnCovers/) |
 | Configurator | [Configure a cover](https://nicolasfrechette91.github.io/SewnCovers/configure/) |
 | Demonstration share URL | [Restore the Box / bench example](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg) |
-| Repository documentation | [Project README](../README.md), [frontend guide](../frontend/README.md), [backend guide](../backend/README.md), and [project roadmap](PROJECT_PROGRESS.md) |
+| Repository documentation | [Project README](../README.md), [production boundaries](PRODUCTION_BOUNDARIES.md), [frontend guide](../frontend/README.md), [backend guide](../backend/README.md), and [project roadmap](PROJECT_PROGRESS.md) |
 | Production API | [SewnCovers API](https://sewncovers-api.onrender.com) |
 | API docs | [Swagger UI](https://sewncovers-api.onrender.com/docs) and [OpenAPI JSON](https://sewncovers-api.onrender.com/openapi.json) |
 | Health endpoint | [Process and database health](https://sewncovers-api.onrender.com/health) |
