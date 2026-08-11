@@ -9,10 +9,60 @@ purchase.
 
 | Public resource | URL |
 | --- | --- |
-| Live configurator | [nicolasfrechette91.github.io/SewnCovers/](https://nicolasfrechette91.github.io/SewnCovers/) |
+| Live frontend | [nicolasfrechette91.github.io/SewnCovers/](https://nicolasfrechette91.github.io/SewnCovers/) |
+| Configurator | [Open the configurator](https://nicolasfrechette91.github.io/SewnCovers/configure/) |
+| Demonstration share | [Restore the Box / bench design](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg) |
 | Production API | [sewncovers-api.onrender.com](https://sewncovers-api.onrender.com) |
+| API health | [sewncovers-api.onrender.com/health](https://sewncovers-api.onrender.com/health) |
 | Swagger UI | [sewncovers-api.onrender.com/docs](https://sewncovers-api.onrender.com/docs) |
 | OpenAPI JSON | [sewncovers-api.onrender.com/openapi.json](https://sewncovers-api.onrender.com/openapi.json) |
+
+## Live-demo walkthrough
+
+### 1. Start with the cushion
+
+Visit the [live frontend](https://nicolasfrechette91.github.io/SewnCovers/), then
+[open the configurator](https://nicolasfrechette91.github.io/SewnCovers/configure/)
+and choose Square cushion, Rectangle cushion, or Box / bench cushion. The shape
+sets the measurement terms used in the next step.
+
+![SewnCovers landing page introducing a measurement-led cushion-cover design prototype](docs/images/landing-page.jpg)
+
+*The landing page introduces the project, its portfolio-prototype boundary, and
+the measurement-first design idea.*
+
+### 2. Configure and preview the cover
+
+Enter the shape-specific measurements, choose a catalogue pattern, and adjust
+Pattern size from `0.5×` to `2.0×` with the slider or Smaller and Larger
+buttons. The demonstration below uses Box / bench, `73.25 × 49.75 × 13.5 cm`,
+Terrace wave, and `1.6×`; the proportional preview and visible text summary
+update together.
+
+![Configured Box or bench cushion preview with Terrace wave, measurements, and 1.6 times pattern scale](docs/images/configured-preview.jpg)
+
+*The preview is a planning aid; its text summary remains the authoritative
+description of the prototype configuration.*
+
+### 3. Review, save, share, and restore
+
+Choose **Review configuration**, check the summary, then use **Save and create
+share link** and **Copy share link**. Every successful save creates a new
+immutable public ID; saving identical values again intentionally creates a
+separate record with another ID. Open the
+[existing demonstration share](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg)
+directly—or refresh it—to restore the same seven configuration fields before
+reviewing them again.
+
+| Restored share | Mobile review |
+| --- | --- |
+| ![Mobile configurator announcing that the shared design was restored](docs/images/shared-design-mobile.jpg) | ![Mobile review showing the restored Box or bench configuration summary](docs/images/review-mobile.jpg) |
+| The immutable link restores the saved design without creating a new copy. | The responsive review keeps the configuration readable on a narrow screen. |
+
+The [public API](https://sewncovers-api.onrender.com),
+[interactive API documentation](https://sewncovers-api.onrender.com/docs), and
+[health endpoint](https://sewncovers-api.onrender.com/health) are available for
+reviewers who want to inspect the deployed service behind the walkthrough.
 
 ## What the MVP does
 

@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 9 - Portfolio documentation and polish
-- Current task: 9.1 - Expand the README with final setup, architecture, schema, decisions, and trade-offs
+- Current task: 9.2 - Add polished screenshots and an understandable live-demo walkthrough
 - Status: Completed
-- Overall progress: 49 / 58 tasks completed
-- Up next: 9.2 - Add polished screenshots and an understandable live-demo walkthrough
+- Overall progress: 50 / 58 tasks completed
+- Up next: 9.3 - Write the case study: problem, constraints, decisions, outcome, and lessons
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -108,7 +108,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | Task | Deliverable | Status |
 | --- | --- | --- |
 | 9.1 | Expand the README with final setup, architecture, schema, decisions, and trade-offs | Completed |
-| 9.2 | Add polished screenshots and an understandable live-demo walkthrough | Not started |
+| 9.2 | Add polished screenshots and an understandable live-demo walkthrough | Completed |
 | 9.3 | Write the case study: problem, constraints, decisions, outcome, and lessons | Not started |
 | 9.4 | Document verified free-tier behavior, limitations, security boundaries, and commercial direction | Not started |
 | 9.5 | Complete the final accessibility, reliability, repository, and reviewer-experience audit | Not started |
@@ -650,3 +650,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Repository evidence was rechecked across instructions, roadmap wording, READMEs, source, settings, models, repositories/services, migrations, tests, workflows, deployment configuration, package manifests/lockfile, and OpenAPI assertions. The component frontend guide's stale 63-test count and obsolete pending-verification paragraph were corrected to match the completed 70-test state.
 - The complete frontend gate passed locked `npm ci`, ESLint, strict TypeScript, all 70 tests, ordinary and `/SewnCovers` static builds, both 46-file/five-HTML export scans, and all four Playwright tests in both base-path modes. The install audit reported six high-severity findings; dependency remediation was out of scope and no manifest or lockfile changed. The complete Python 3.13.2 gate passed Ruff formatting/lint, all 222 tests, and `pip check`; the first pytest attempt was blocked only by an inaccessible host temp/cache directory, and the unchanged suite passed with a new task-scoped base temp and cache disabled before that generated directory was removed. Documentation link/heading/fence/Mermaid, secret, stale-reference, generated-file, scope, roadmap-integrity, consistency, and `git diff --check` scans passed.
 - Only `README.md`, `frontend/README.md`, and this progress document changed; no product or test code, dependency/lockfile, schema/migration/data, environment value, deployment/workflow/remote, authentication, redesign, or following-task work changed. Task 9.1 is `Completed`, progress is 49 / 58, all 58 roadmap tasks and exact deliverable wording remain present, and the exact next task is 9.2 - Add polished screenshots and an understandable live-demo walkthrough. All changes remain local and uncommitted.
+
+### 2026-08-11 - Production screenshots and live-demo walkthrough
+
+- Four screenshots captured the real deployed application with loaded production data: the landing page at a consistent desktop viewport, the configured Terrace wave preview and its exact measurements/scale at desktop, and responsive mobile views of immutable share restoration and the review summary. The files use lowercase JPEG names in `docs/images/`, omit browser chrome and unrelated desktop content, and remain between 41.1 and 86.6 KiB at 375 Ã— 844, 1410 Ã— 990, or 1420 Ã— 1000 pixels.
+- The root README now leads reviewers through starting the configurator and choosing a shape; entering shape-specific measurements, choosing a pattern, adjusting Pattern size, and reading the preview; then reviewing, saving, copying a share URL, and restoring it directly or after refresh. It links the live frontend, configurator, existing immutable Box / bench demonstration share, public API, interactive API documentation, OpenAPI document, and health endpoint, while explaining that every successful save creates a new immutable public ID and an identical repeat intentionally creates another record.
+- Full-resolution image review, README Markdown/heading/fence/alt-text/local-link/path-case checks, JPEG signature/dimension/size checks, all seven public HTTP URLs, ESLint, strict TypeScript, and all 70 frontend tests passed. Secret, stale-reference, broken-link, generated-file, scope, roadmap wording/status/count, and `git diff --check` scans also passed.
+- Only `README.md`, `docs/PROJECT_PROGRESS.md`, and the four `docs/images/*.jpg` screenshot assets changed for Task 9.2. No product or test code, dependency/lockfile, database/schema/migration/data, environment value, deployment/workflow/remote, authentication, redesign, or Task 9.3 work changed; no production design was created or modified. Task 9.2 is `Completed`, progress is 50 / 58, all 58 roadmap tasks and exact deliverable wording remain present, and the exact next task is 9.3 - Write the case study: problem, constraints, decisions, outcome, and lessons. All changes remain local, unstaged, and uncommitted.
