@@ -153,9 +153,9 @@ export function PatternStep({
           id={supportingTextId}
           className="mt-2 max-w-3xl break-words text-body text-text-muted"
         >
-          Compare pattern directions loaded from SewnCovers. Choose one
-          pattern for this configuration, then adjust its scale in the
-          preview.
+          This choice is required. Compare pattern directions loaded from
+          SewnCovers. Choose one pattern for this configuration, then adjust
+          its scale in the preview.
         </p>
 
         {!hasCompleteCatalogue ? (
@@ -336,6 +336,7 @@ export function PatternStep({
                       id={optionId}
                       name="cushion-pattern"
                       value={pattern.id}
+                      required
                       checked={state.patternId === pattern.id}
                       patternName={pattern.name}
                       patternCategory={getPatternCategoryLabel(

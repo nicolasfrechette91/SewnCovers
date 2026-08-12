@@ -204,6 +204,8 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await expect(page.locator("#main-content")).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "Square cushion" })).toBeFocused();
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("radio", { name: "Square cushion" })).toBeChecked();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("radio", { name: "Rectangle cushion" })).toBeChecked();
 
@@ -216,10 +218,13 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await page.keyboard.press("Tab");
   await expect(width).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByRole("status").filter({ hasText: "two decimal places" })).toBeVisible();
-  await width.fill("72.25");
-  await width.press("Tab");
-
   const height = page.getByRole("textbox", { name: "Height (cm)" });
+  await expect(height).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(width).toBeFocused();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.type("72.25");
+  await page.keyboard.press("Tab");
   await expect(height).toBeFocused();
   await page.keyboard.type("48.5");
   await page.keyboard.press("Tab");

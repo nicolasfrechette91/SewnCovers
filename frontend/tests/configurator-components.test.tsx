@@ -141,6 +141,10 @@ test("selects accessible shape choices and resets context state", () => {
   assert.equal(square.checked, false);
   assert.equal(rectangle.checked, false);
   assert.equal(box.checked, false);
+  assert.equal(square.required, true);
+  assert.equal(rectangle.required, true);
+  assert.equal(box.required, true);
+  assert.ok(screen.getByText(/this choice is required/i));
 
   fireEvent.click(square);
   assert.equal(square.checked, true);
@@ -213,7 +217,11 @@ test("preserves a selected pattern when filters hide it and exposes recovery", (
   );
   assert.ok(screen.getByText(/Fern Trail remains selected/i));
   assert.equal(screen.getByTestId("current-pattern").textContent, "fern-trail");
-  assert.ok(screen.getByRole("radio", { name: "Diamond Path" }));
+  const diamond = screen.getByRole("radio", {
+    name: "Diamond Path",
+  }) as HTMLInputElement;
+  assert.equal(diamond.required, true);
+  assert.ok(screen.getByText(/this choice is required/i));
   assert.equal(screen.queryByRole("radio", { name: "Fern Trail" }), null);
 
   fireEvent.click(

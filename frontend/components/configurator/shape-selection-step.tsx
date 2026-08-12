@@ -41,8 +41,9 @@ export function ShapeSelectionStep({
         id={supportingTextId}
         className="mt-2 max-w-2xl break-words text-body text-text-muted"
       >
-        Start with the overall shape of the cushion you already have. Each
-        option uses its own documented measurement terms in the next step.
+        This choice is required. Start with the overall shape of the cushion
+        you already have. Each option uses its own documented measurement
+        terms in the next step.
       </p>
 
       <div className="mt-layout grid min-w-0 gap-component md:grid-cols-3">
@@ -61,6 +62,7 @@ export function ShapeSelectionStep({
                 type="radio"
                 name="cushion-shape"
                 value={option.id}
+                required
                 checked={isSelected}
                 aria-labelledby={titleId}
                 aria-describedby={`${descriptionId} ${statusId}`}
