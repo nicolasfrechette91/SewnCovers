@@ -6,8 +6,16 @@ import {
   isPatternScaleWithinRange,
   type ConfigurationState,
   type CushionShape,
+  type MeasurementField,
   type MeasurementUnit,
 } from "@/context/configuration";
+import {
+  closureOptions,
+  findCoverOption,
+  fitOptions,
+  materialOptions,
+  seamOptions,
+} from "@/data/cover-options";
 import {
   getPatternCategoryLabel,
   getPatternColorLabels,
@@ -26,6 +34,7 @@ export const SUMMARY_DOWNLOAD_FILENAME =
   "sewncovers-configuration-summary.txt";
 
 export type ReviewSection =
+  | "coverDetails"
   | "measurements"
   | "pattern"
   | "patternScale"
@@ -81,17 +90,17 @@ function getInvalidMeasurementMessage(
   const definition = getCushionShapeDefinition(shape);
   const invalidLabels: string[] = definition.measurementFields
     .filter(
-      (field) =>
+      ({ field }) =>
         !isMeasurementWithinRange(
           state[field],
           field,
           state.unit,
         ),
     )
-    .map((field) => getMeasurementLabel(shape, field));
+    .map(({ field }) => getMeasurementLabel(shape, field));
 
   if (
-    shape === "square" &&
+    (shape === "square" || shape === "round") &&
     isMeasurementWithinRange(state.width, "width", state.unit) &&
     (state.height !== state.width ||
       !isMeasurementWithinRange(
@@ -116,8 +125,13 @@ function getInvalidMeasurementMessage(
 }
 
 interface ReviewSummaryInput {
+  readonly backWidth: number | null;
+  readonly closureType: ConfigurationState["closureType"];
+  readonly fitPreference: ConfigurationState["fitPreference"];
   readonly height: number;
+  readonly materialId: ConfigurationState["materialId"];
   readonly patternScale: number;
+  readonly seamStyle: ConfigurationState["seamStyle"];
   readonly shape: CushionShape;
   readonly thickness: number;
   readonly unit: MeasurementUnit;
@@ -129,38 +143,46 @@ function buildSummary(
   pattern: PatternDefinition,
 ): ReviewSummary {
   const {
+    backWidth,
+    closureType,
+    fitPreference,
     height,
+    materialId,
     patternScale,
+    seamStyle,
     shape,
     thickness,
     unit,
     width,
   } = configuration;
   const definition = getCushionShapeDefinition(shape);
+  const measurementValues: Readonly<
+    Record<MeasurementField, number | null>
+  > = { backWidth, height, thickness, width };
   const fields: ReviewSummaryField[] = [
     {
       id: "shape",
       label: "Shape",
       value: definition.name,
     },
-    {
-      id: "width",
-      label: "Width",
-      value: formatMeasurementWithUnit(width, unit),
-    },
   ];
 
-  if (shape === "square") {
+  definition.measurementFields.forEach(({ field, label }) => {
+    const value = measurementValues[field];
+    if (value !== null) {
+      fields.push({
+        id: field,
+        label,
+        value: formatMeasurementWithUnit(value, unit),
+      });
+    }
+  });
+
+  if (definition.equalFaceDimensions) {
     fields.push({
       id: "equal-face-dimensions",
-      label: "Equal face dimensions",
-      value: `${formatMeasurement(width)} × ${formatMeasurement(height)} ${unit} (width × height)`,
-    });
-  } else {
-    fields.push({
-      id: "second-dimension",
-      label: getMeasurementLabel(shape, "height"),
-      value: formatMeasurementWithUnit(height, unit),
+      label: "Face relationship",
+      value: `${formatMeasurement(width)} × ${formatMeasurement(height)} ${unit} (equal dimensions)`,
     });
   }
 
@@ -171,9 +193,24 @@ function buildSummary(
       value: unitLabels[unit],
     },
     {
-      id: "thickness",
-      label: "Thickness",
-      value: formatMeasurementWithUnit(thickness, unit),
+      id: "material",
+      label: "Material",
+      value: findCoverOption(materialOptions, materialId).name,
+    },
+    {
+      id: "fit-preference",
+      label: "Fit preference",
+      value: findCoverOption(fitOptions, fitPreference).name,
+    },
+    {
+      id: "closure-type",
+      label: "Closure / access",
+      value: findCoverOption(closureOptions, closureType).name,
+    },
+    {
+      id: "seam-style",
+      label: "Edge finish",
+      value: findCoverOption(seamOptions, seamStyle).name,
     },
     {
       id: "pattern",
@@ -227,6 +264,7 @@ export function deriveReviewReadiness(
     state.height,
     state.thickness,
     state.unit,
+    state.backWidth,
   );
 
   if (!measurementsAreValid) {
@@ -315,8 +353,13 @@ export function deriveReviewReadiness(
     status: "ready",
     summary: buildSummary(
       {
+        backWidth: state.backWidth,
+        closureType: state.closureType,
+        fitPreference: state.fitPreference,
         height,
+        materialId: state.materialId,
         patternScale: state.patternScale,
+        seamStyle: state.seamStyle,
         shape: state.shape,
         thickness,
         unit: state.unit,

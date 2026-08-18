@@ -1,12 +1,16 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
+import { Button } from "@/components/ui";
 import {
   useConfiguration,
   type CushionShape,
 } from "@/context/configuration";
-import { cushionShapeDefinitions } from "@/data/shapes";
+import {
+  cushionShapeDefinitions,
+  getCushionShapeDefinition,
+} from "@/data/shapes";
 
 import { ShapeIllustration } from "./shape-illustration";
 
@@ -20,8 +24,27 @@ export function ShapeSelectionStep({
   const { state, dispatch } = useConfiguration();
   const generatedId = useId();
   const supportingTextId = `${generatedId}-supporting-text`;
+  const [pendingShape, setPendingShape] = useState<CushionShape | null>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (pendingShape !== null) {
+      confirmButtonRef.current?.focus();
+    }
+  }, [pendingShape]);
 
   const selectShape = (shape: CushionShape) => {
+    const makesDimensionsEqual = shape === "square" || shape === "round";
+    if (
+      makesDimensionsEqual &&
+      state.width !== null &&
+      state.height !== null &&
+      state.width !== state.height
+    ) {
+      setPendingShape(shape);
+      return;
+    }
+
     dispatch({ type: "setShape", shape });
   };
 
@@ -46,7 +69,7 @@ export function ShapeSelectionStep({
         terms in the next step.
       </p>
 
-      <div className="mt-layout grid min-w-0 gap-component md:grid-cols-3">
+      <div className="mt-layout grid min-w-0 gap-component sm:grid-cols-2 lg:grid-cols-5">
         {cushionShapeDefinitions.map((option) => {
           const optionId = `${generatedId}-${option.id}`;
           const titleId = `${optionId}-title`;
@@ -109,6 +132,49 @@ export function ShapeSelectionStep({
           );
         })}
       </div>
+
+      {pendingShape !== null ? (
+        <section
+          aria-labelledby={`${generatedId}-shape-change-heading`}
+          className="mt-component rounded-card border-2 border-accent-strong bg-surface-subtle p-control-x py-4"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              setPendingShape(null);
+            }
+          }}
+        >
+          <h3
+            id={`${generatedId}-shape-change-heading`}
+            className="text-body font-control text-text-primary"
+          >
+            Confirm equal dimensions
+          </h3>
+          <p className="mt-2 text-supporting text-text-muted">
+            {getCushionShapeDefinition(pendingShape).name} uses one face
+            measurement. Changing shape will make the stored height match your
+            current width ({state.width} {state.unit}). Your other measurements
+            and choices will be kept.
+          </p>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Button
+              ref={confirmButtonRef}
+              onClick={() => {
+                dispatch({ type: "setShape", shape: pendingShape });
+                setPendingShape(null);
+              }}
+            >
+              Use width for both dimensions
+            </Button>
+            <Button variant="secondary" onClick={() => setPendingShape(null)}>
+              Keep current shape
+            </Button>
+          </div>
+          <p className="mt-2 text-supporting text-text-muted">
+            Press Escape to keep the current shape.
+          </p>
+        </section>
+      ) : null}
     </fieldset>
   );
 }

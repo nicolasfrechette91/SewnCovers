@@ -46,7 +46,8 @@ FRONTEND_CATALOGUE = BACKEND_ROOT.parent / "frontend" / "data" / "patterns.ts"
 ALEMBIC_INI = BACKEND_ROOT / "alembic.ini"
 BASE_REVISION = "20260728_01"
 INDEX_REVISION = "20260728_02"
-REVISION = "20260729_01"
+SEED_REVISION = "20260729_01"
+REVISION = "20260812_01"
 INDEPENDENT_PATTERN = {
     "id": "independent-private-pattern",
     "name": "Independent private pattern",
@@ -190,19 +191,23 @@ def test_revisions_form_one_descriptive_linear_history_and_one_head() -> None:
     script = ScriptDirectory.from_config(alembic_config())
     revisions = list(script.walk_revisions())
 
-    assert len(revisions) == 3
+    assert len(revisions) == 4
     assert revisions[0].revision == REVISION
-    assert revisions[0].down_revision == INDEX_REVISION
+    assert revisions[0].down_revision == SEED_REVISION
     assert revisions[0].is_head
-    assert "canonical public pattern catalogue" in revisions[0].doc
-    assert revisions[1].revision == INDEX_REVISION
-    assert revisions[1].down_revision == BASE_REVISION
+    assert "richer specification choices" in revisions[0].doc
+    assert revisions[1].revision == SEED_REVISION
+    assert revisions[1].down_revision == INDEX_REVISION
     assert revisions[1].is_head is False
-    assert "pattern category and activity filter indexes" in revisions[1].doc
-    assert revisions[2].revision == BASE_REVISION
-    assert revisions[2].down_revision is None
+    assert "canonical public pattern catalogue" in revisions[1].doc
+    assert revisions[2].revision == INDEX_REVISION
+    assert revisions[2].down_revision == BASE_REVISION
     assert revisions[2].is_head is False
-    assert "patterns and immutable cover designs" in revisions[2].doc
+    assert "pattern category and activity filter indexes" in revisions[2].doc
+    assert revisions[3].revision == BASE_REVISION
+    assert revisions[3].down_revision is None
+    assert revisions[3].is_head is False
+    assert "patterns and immutable cover designs" in revisions[3].doc
     assert script.get_heads() == [REVISION]
 
 
@@ -279,7 +284,7 @@ def test_index_revision_has_exact_ordered_upgrade_and_downgrade_operations(
 
 
 def test_seed_revision_matches_task_4_5_catalogue_and_frontend_artwork() -> None:
-    revision = ScriptDirectory.from_config(alembic_config()).get_revision(REVISION)
+    revision = ScriptDirectory.from_config(alembic_config()).get_revision(SEED_REVISION)
     assert revision is not None
 
     seed_rows = revision.module.PATTERN_ROWS
@@ -368,18 +373,28 @@ def test_upgrade_from_empty_database_creates_exact_schema(
         "shape",
         "width",
         "height",
+        "back_width",
         "thickness",
         "unit",
         "pattern_id",
         "pattern_scale",
+        "material_id",
+        "fit_preference",
+        "closure_type",
+        "seam_style",
     }
-    assert all(column["nullable"] is False for column in design_columns.values())
+    assert design_columns["back_width"]["nullable"] is True
+    assert all(
+        column["nullable"] is False
+        for name, column in design_columns.items()
+        if name != "back_width"
+    )
     assert isinstance(design_columns["id"]["type"], Integer)
     assert isinstance(design_columns["public_id"]["type"], String)
     assert design_columns["public_id"]["type"].length == 22
     assert isinstance(design_columns["shape"]["type"], String)
     assert design_columns["shape"]["type"].length == 16
-    for dimension in ("width", "height", "thickness"):
+    for dimension in ("width", "height", "back_width", "thickness"):
         assert isinstance(design_columns[dimension]["type"], Numeric)
         assert design_columns[dimension]["type"].precision == 7
         assert design_columns[dimension]["type"].scale == 2
@@ -391,6 +406,10 @@ def test_upgrade_from_empty_database_creates_exact_schema(
     assert design_columns["pattern_scale"]["type"].precision == 2
     assert design_columns["pattern_scale"]["type"].scale == 1
     assert design_columns["pattern_scale"]["default"] == "1.0"
+    assert design_columns["material_id"]["default"] == "'cotton-canvas'"
+    assert design_columns["fit_preference"]["default"] == "'standard'"
+    assert design_columns["closure_type"]["default"] == "'zipper'"
+    assert design_columns["seam_style"]["default"] == "'plain'"
 
     assert inspector.get_pk_constraint("patterns") == {
         "constrained_columns": ["id"],
@@ -431,7 +450,12 @@ def test_upgrade_from_empty_database_creates_exact_schema(
         "ck_cover_designs_pattern_scale_range",
         "ck_cover_designs_public_id_format",
         "ck_cover_designs_shape_supported",
-        "ck_cover_designs_square_dimensions",
+        "ck_cover_designs_equal_face_dimensions",
+        "ck_cover_designs_back_width_shape",
+        "ck_cover_designs_material_supported",
+        "ck_cover_designs_fit_supported",
+        "ck_cover_designs_closure_supported",
+        "ck_cover_designs_seam_supported",
         "ck_cover_designs_thickness_range",
         "ck_cover_designs_unit_supported",
         "ck_cover_designs_width_range",
@@ -500,11 +524,65 @@ def test_incremental_upgrade_from_index_revision_seeds_without_replacing_other_r
         connection.execute(patterns_table.insert(), INDEPENDENT_PATTERN)
     engine.dispose()
 
-    command.upgrade(alembic_config(), REVISION)
+    command.upgrade(alembic_config(), SEED_REVISION)
     engine = create_engine(database_url)
     assert read_pattern_rows(engine) == (
         *expected_seed_rows(),
         INDEPENDENT_PATTERN,
+    )
+    engine.dispose()
+
+
+def test_configuration_upgrade_preserves_legacy_design_with_safe_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "legacy-design-to-expanded.sqlite3"
+    database_url = configure_test_database(monkeypatch, database_path)
+    command.upgrade(alembic_config(), SEED_REVISION)
+
+    engine = create_engine(database_url)
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            "INSERT INTO cover_designs "
+            "(public_id, shape, width, height, thickness, unit, "
+            "pattern_id, pattern_scale) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "L" * 22,
+                "box",
+                73.25,
+                49.75,
+                13.5,
+                "cm",
+                "terrace-wave",
+                1.6,
+            ),
+        )
+    engine.dispose()
+
+    command.upgrade(alembic_config(), REVISION)
+    engine = create_engine(database_url)
+    with engine.connect() as connection:
+        restored = connection.exec_driver_sql(
+            "SELECT shape, width, height, back_width, thickness, unit, "
+            "pattern_id, pattern_scale, material_id, fit_preference, "
+            "closure_type, seam_style FROM cover_designs WHERE public_id = ?",
+            ("L" * 22,),
+        ).one()
+    assert tuple(restored) == (
+        "box",
+        73.25,
+        49.75,
+        None,
+        13.5,
+        "cm",
+        "terrace-wave",
+        1.6,
+        "cotton-canvas",
+        "standard",
+        "zipper",
+        "plain",
     )
     engine.dispose()
 
@@ -527,7 +605,7 @@ def test_seed_upgrade_rejects_conflicting_records_without_partial_catalogue(
     engine.dispose()
 
     with pytest.raises(MigrationConfigurationError):
-        command.upgrade(alembic_config(), REVISION)
+        command.upgrade(alembic_config(), SEED_REVISION)
 
     engine = create_engine(database_url)
     assert read_pattern_rows(engine) == (conflict,)
@@ -588,7 +666,7 @@ def test_seed_downgrade_removes_only_owned_rows_and_reupgrade_is_repeatable(
 ) -> None:
     database_path = tmp_path / "seed-round-trip.sqlite3"
     database_url = configure_test_database(monkeypatch, database_path)
-    command.upgrade(alembic_config(), REVISION)
+    command.upgrade(alembic_config(), SEED_REVISION)
 
     engine = create_engine(database_url)
     with engine.begin() as connection:
@@ -620,7 +698,7 @@ def test_seed_downgrade_removes_only_owned_rows_and_reupgrade_is_repeatable(
     ) == {"uq_cover_designs_public_id"}
     engine.dispose()
 
-    command.upgrade(alembic_config(), REVISION)
+    command.upgrade(alembic_config(), SEED_REVISION)
     engine = create_engine(database_url)
     assert read_pattern_rows(engine) == (
         *expected_seed_rows(),
@@ -635,7 +713,7 @@ def test_seed_downgrade_is_blocked_when_a_design_references_a_seeded_pattern(
 ) -> None:
     database_path = tmp_path / "referenced-seed.sqlite3"
     database_url = configure_test_database(monkeypatch, database_path)
-    command.upgrade(alembic_config(), REVISION)
+    command.upgrade(alembic_config(), SEED_REVISION)
 
     engine = create_engine(database_url)
     with engine.begin() as connection:
@@ -675,7 +753,7 @@ def test_seed_downgrade_is_blocked_when_a_design_references_a_seeded_pattern(
             connection.exec_driver_sql(
                 "SELECT version_num FROM alembic_version"
             ).scalar_one()
-            == REVISION
+            == SEED_REVISION
         )
     engine.dispose()
 
@@ -794,7 +872,12 @@ def test_offline_postgresql_sql_has_schema_indexes_and_exact_seed_inserts() -> N
     assert "ck_cover_designs_width_range" in ddl
     assert "ck_cover_designs_height_range" in ddl
     assert "ck_cover_designs_thickness_range" in ddl
-    assert "ck_cover_designs_square_dimensions" in ddl
+    assert "ck_cover_designs_equal_face_dimensions" in ddl
+    assert "ck_cover_designs_back_width_shape" in ddl
+    assert "ck_cover_designs_material_supported" in ddl
+    assert "ck_cover_designs_fit_supported" in ddl
+    assert "ck_cover_designs_closure_supported" in ddl
+    assert "ck_cover_designs_seam_supported" in ddl
     assert "ck_cover_designs_pattern_scale_range" in ddl
     assert "fk_cover_designs_pattern_id_patterns" in ddl
     assert "ON DELETE RESTRICT ON UPDATE RESTRICT" in ddl
@@ -838,7 +921,7 @@ def test_offline_postgresql_seed_downgrade_deletes_only_owned_ids() -> None:
     output = StringIO()
     command.downgrade(
         alembic_config(output_buffer=output),
-        f"{REVISION}:{INDEX_REVISION}",
+        f"{SEED_REVISION}:{INDEX_REVISION}",
         sql=True,
     )
     ddl = output.getvalue()
@@ -903,5 +986,6 @@ def test_migration_imports_history_and_application_startup_do_not_connect(
 
     assert reloaded.migration_metadata is Base.metadata
     assert REVISION in history_output.getvalue()
+    assert SEED_REVISION in history_output.getvalue()
     assert INDEX_REVISION in history_output.getvalue()
     assert BASE_REVISION in history_output.getvalue()

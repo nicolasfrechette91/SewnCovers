@@ -75,10 +75,19 @@ class DesignService:
                             shape=request.shape,
                             width=Decimal(str(request.width)),
                             height=Decimal(str(request.height)),
+                            back_width=(
+                                None
+                                if request.back_width is None
+                                else Decimal(str(request.back_width))
+                            ),
                             thickness=Decimal(str(request.thickness)),
                             unit=request.unit,
                             pattern_id=request.pattern_id,
                             pattern_scale=Decimal(str(request.pattern_scale)),
+                            material_id=request.material_id,
+                            fit_preference=request.fit_preference,
+                            closure_type=request.closure_type,
+                            seam_style=request.seam_style,
                         )
                     )
             except (IntegrityError, PublicIdCollisionError):
@@ -130,12 +139,51 @@ class DesignService:
             for field, value, minimum, maximum in measurements
             if not minimum <= value <= maximum
         ]
-        if request.shape == "square" and request.width != request.height:
+        if request.shape in {"square", "round"} and request.width != request.height:
             errors.append(
                 DomainValidationIssue(
-                    code="square_dimensions_mismatch",
-                    message="Square width and height must be equal.",
+                    code="shape_measurements_mismatch",
+                    message=(
+                        f"{request.shape.capitalize()} face dimensions must be equal."
+                    ),
                     field="height",
+                )
+            )
+        if request.shape == "tapered":
+            if request.back_width is None:
+                errors.append(
+                    DomainValidationIssue(
+                        code="shape_measurements_mismatch",
+                        message="Tapered cushions require a back width.",
+                        field="backWidth",
+                    )
+                )
+            else:
+                back_width_cm = Decimal(str(request.back_width)) * factor
+                if not Decimal("10") <= back_width_cm <= Decimal("300"):
+                    errors.append(
+                        DomainValidationIssue(
+                            code="measurement_out_of_range",
+                            message="Back width must be between 10 and 300 cm.",
+                            field="backWidth",
+                        )
+                    )
+                if request.back_width >= request.width:
+                    errors.append(
+                        DomainValidationIssue(
+                            code="shape_measurements_mismatch",
+                            message=(
+                                "Tapered back width must be smaller than front width."
+                            ),
+                            field="backWidth",
+                        )
+                    )
+        elif request.back_width is not None:
+            errors.append(
+                DomainValidationIssue(
+                    code="shape_measurements_mismatch",
+                    message="Back width is supported only for tapered cushions.",
+                    field="backWidth",
                 )
             )
         if errors:
@@ -148,8 +196,13 @@ class DesignService:
             shape=saved.shape,
             width=float(saved.width),
             height=float(saved.height),
+            back_width=(None if saved.back_width is None else float(saved.back_width)),
             thickness=float(saved.thickness),
             unit=saved.unit,
             pattern_id=saved.pattern_id,
             pattern_scale=float(saved.pattern_scale),
+            material_id=saved.material_id,
+            fit_preference=saved.fit_preference,
+            closure_type=saved.closure_type,
+            seam_style=saved.seam_style,
         )

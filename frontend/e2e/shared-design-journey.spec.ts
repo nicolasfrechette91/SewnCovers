@@ -39,10 +39,15 @@ const savedDesign = Object.freeze({
   shape: "box",
   width: 72.25,
   height: 48.5,
+  backWidth: null,
   thickness: 12.75,
   unit: "cm",
   patternId: "fern-trail",
   patternScale: 1.3,
+  materialId: "linen-blend",
+  fitPreference: "relaxed",
+  closureType: "envelope",
+  seamStyle: "piped",
 });
 
 const corsHeaders = {
@@ -131,7 +136,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Choose your cushion's shape, measurements, and pattern.",
+        name: "Build your custom cover specification.",
       }),
     ).toBeVisible();
 
@@ -148,6 +153,10 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await expect(
       page.getByRole("radio", { name: "Centimetres (cm)" }),
     ).toBeChecked();
+    await page.getByRole("radio", { name: "Linen blend" }).check();
+    await page.getByRole("radio", { name: "More relaxed fit" }).check();
+    await page.getByRole("radio", { name: "Envelope opening" }).check();
+    await page.getByRole("radio", { name: "Piped edge" }).check();
     await expect(page.getByText("Showing all 12 patterns.")).toBeVisible();
   });
 
@@ -190,6 +199,10 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await expect(summary).toContainText("72.25 cm");
     await expect(summary).toContainText("48.5 cm");
     await expect(summary).toContainText("12.75 cm");
+    await expect(summary).toContainText("Linen blend");
+    await expect(summary).toContainText("More relaxed fit");
+    await expect(summary).toContainText("Envelope opening");
+    await expect(summary).toContainText("Piped edge");
     await expect(summary).toContainText("Fern trail");
     await expect(summary).toContainText("1.3×");
   });
@@ -256,6 +269,18 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     ).toBeChecked();
     await expect(
       restoredPage.getByRole("radio", { name: "Fern trail" }),
+    ).toBeChecked();
+    await expect(
+      restoredPage.getByRole("radio", { name: "Linen blend" }),
+    ).toBeChecked();
+    await expect(
+      restoredPage.getByRole("radio", { name: "More relaxed fit" }),
+    ).toBeChecked();
+    await expect(
+      restoredPage.getByRole("radio", { name: "Envelope opening" }),
+    ).toBeChecked();
+    await expect(
+      restoredPage.getByRole("radio", { name: "Piped edge" }),
     ).toBeChecked();
     await expect(
       restoredPage.getByRole("slider", { name: "Pattern size" }),

@@ -28,6 +28,7 @@ type ErrorCode = Literal[
     "pattern_unavailable",
     "public_id_unavailable",
     "resource_not_found",
+    "shape_measurements_mismatch",
     "square_dimensions_mismatch",
     "storage_unavailable",
     "unknown_field",
@@ -108,15 +109,28 @@ _FIELD_ORDER = {
     "shape": 0,
     "width": 1,
     "height": 2,
-    "thickness": 3,
-    "unit": 4,
-    "patternId": 5,
-    "patternScale": 6,
+    "backWidth": 3,
+    "thickness": 4,
+    "unit": 5,
+    "patternId": 6,
+    "patternScale": 7,
+    "materialId": 8,
+    "fitPreference": 9,
+    "closureType": 10,
+    "seamStyle": 11,
     "category": 0,
     "color": 1,
     "public_id": 0,
 }
-_ALIASES = {"pattern_id": "patternId", "pattern_scale": "patternScale"}
+_ALIASES = {
+    "back_width": "backWidth",
+    "closure_type": "closureType",
+    "fit_preference": "fitPreference",
+    "material_id": "materialId",
+    "pattern_id": "patternId",
+    "pattern_scale": "patternScale",
+    "seam_style": "seamStyle",
+}
 
 
 def _error_sort_key(error: APIErrorDetail) -> tuple[Any, ...]:
@@ -203,6 +217,7 @@ def _request_error(
     elif error_type == "value_error" and field in {
         "width",
         "height",
+        "backWidth",
         "thickness",
         "patternScale",
     }:

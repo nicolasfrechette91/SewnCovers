@@ -12,6 +12,7 @@ import { getCompleteCatalogueResult } from "@/services/pattern-catalogue";
 import { usePatternCatalogue } from "@/services/use-pattern-catalogue";
 
 import { MeasurementStep } from "./measurement-step";
+import { CoverDetailsStep } from "./cover-details-step";
 import { PatternStep } from "./pattern-step";
 import { PreviewStep } from "./preview-step";
 import {
@@ -33,6 +34,7 @@ import {
 const configuratorSteps = [
   { id: "shape", label: "Shape" },
   { id: "measurements", label: "Measurements" },
+  { id: "details", label: "Cover details" },
   { id: "pattern", label: "Pattern" },
   { id: "preview", label: "Preview" },
   { id: "review", label: "Review" },
@@ -40,6 +42,7 @@ const configuratorSteps = [
 
 const editTargetIds = {
   measurements: "configuration-measurements-edit-target",
+  coverDetails: "configuration-cover-details-edit-target",
   pattern: "configuration-pattern-edit-target",
   patternScale: "configuration-pattern-scale-edit-target",
   shape: "configuration-shape-edit-target",
@@ -74,6 +77,7 @@ export function Configurator() {
     state.height,
     state.thickness,
     state.unit,
+    state.backWidth,
   );
   const catalogueResult =
     getCompleteCatalogueResult(patternCatalogue);
@@ -178,6 +182,9 @@ export function Configurator() {
 
         <MeasurementStep
           focusTargetId={editTargetIds.measurements}
+        />
+        <CoverDetailsStep
+          focusTargetId={editTargetIds.coverDetails}
         />
         <PatternStep
           catalogue={patternCatalogue}

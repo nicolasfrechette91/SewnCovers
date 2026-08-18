@@ -6,7 +6,11 @@ import type {
 export const CENTIMETRES_PER_INCH = 2.54;
 export const MEASUREMENT_DECIMAL_PLACES = 2;
 
-export type MeasurementField = "height" | "thickness" | "width";
+export type MeasurementField =
+  | "backWidth"
+  | "height"
+  | "thickness"
+  | "width";
 
 export type MeasurementDraftIssue =
   | "aboveMaximum"
@@ -30,6 +34,7 @@ export interface MeasurementDraftResult {
 export const MEASUREMENT_RANGES_CM: Readonly<
   Record<MeasurementField, MeasurementRange>
 > = {
+  backWidth: { min: 10, max: 300 },
   height: { min: 10, max: 300 },
   thickness: { min: 1, max: 60 },
   width: { min: 10, max: 300 },
@@ -123,6 +128,7 @@ export function hasValidMeasurementsForShape(
   height: number | null,
   thickness: number | null,
   unit: MeasurementUnit,
+  backWidth: number | null = null,
 ): boolean {
   if (shape === null) {
     return false;
@@ -139,7 +145,15 @@ export function hasValidMeasurementsForShape(
     return false;
   }
 
-  return shape !== "square" || width === height;
+  if ((shape === "square" || shape === "round") && width !== height) {
+    return false;
+  }
+
+  return (
+    shape !== "tapered" ||
+    (isMeasurementWithinRange(backWidth, "backWidth", unit) &&
+      backWidth < width)
+  );
 }
 
 export function getMeasurementRange(

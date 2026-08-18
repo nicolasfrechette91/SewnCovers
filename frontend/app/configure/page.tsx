@@ -5,7 +5,7 @@ import { Configurator } from "@/components/configurator";
 export const metadata: Metadata = {
   title: "Configure a cushion | SewnCovers",
   description:
-    "Choose and measure a square, rectangle, or box / bench cushion, explore API-loaded patterns, and review, save, and share a prototype design with SewnCovers.",
+    "Choose a cushion shape, measurements, cover details, and pattern, then review, save, and share a prototype design with SewnCovers.",
 };
 
 export default function ConfigurePage() {
@@ -17,14 +17,14 @@ export default function ConfigurePage() {
             Cushion configurator
           </p>
           <h1 className="mt-2 font-display text-page-title font-heading tracking-heading text-text-primary">
-            Choose your cushion&apos;s shape, measurements, and pattern.
+            Build your custom cover specification.
           </h1>
           <p className="mt-component break-words text-body text-text-muted">
-            Select Square, Rectangle, or Box / bench, then record the
-            shape-specific measurements before filtering and choosing one
-            of the available pattern directions, explore the proportional
-            2D preview, then review, save, and share a printable or
-            downloadable prototype summary.
+            Choose from five cover shapes, follow the shape-specific
+            measurement guidance, and set material, fit, closure, seam,
+            pattern, and motif size. The proportional 2D preview and review
+            summary keep the complete prototype specification together
+            before you save or share it.
           </p>
         </header>
 

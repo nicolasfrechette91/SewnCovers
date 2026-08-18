@@ -12,8 +12,12 @@ from pydantic import (
     field_validator,
 )
 
-type CushionShape = Literal["box", "rectangle", "square"]
+type CushionShape = Literal["box", "rectangle", "round", "square", "tapered"]
 type MeasurementUnit = Literal["cm", "in"]
+type MaterialId = Literal["cotton-canvas", "linen-blend", "polyester-weave"]
+type FitPreference = Literal["close", "relaxed", "standard"]
+type ClosureType = Literal["envelope", "slip-on", "zipper"]
+type SeamStyle = Literal["piped", "plain"]
 
 CENTIMETRES_PER_INCH = Decimal("2.54")
 PUBLIC_ID_LENGTH = 22
@@ -81,6 +85,13 @@ class DesignConfiguration(BaseModel):
             "Face height or box depth in the selected unit, with at most two decimals."
         )
     )
+    back_width: Measurement | None = Field(
+        default=None,
+        alias="backWidth",
+        description=(
+            "Tapered cushion back width in the selected unit; null for other shapes."
+        ),
+    )
     thickness: Measurement = Field(
         description="Cushion thickness in the selected unit, with at most two decimals."
     )
@@ -95,6 +106,26 @@ class DesignConfiguration(BaseModel):
     pattern_scale: PatternScale = Field(
         alias="patternScale",
         description="Preview scale from 0.5 through 2.0 at one-decimal resolution.",
+    )
+    material_id: MaterialId = Field(
+        default="cotton-canvas",
+        alias="materialId",
+        description="Base material direction, separate from the visual pattern.",
+    )
+    fit_preference: FitPreference = Field(
+        default="standard",
+        alias="fitPreference",
+        description="Requested visual fit preference; measurements remain unchanged.",
+    )
+    closure_type: ClosureType = Field(
+        default="zipper",
+        alias="closureType",
+        description="Preferred cushion access or closure construction.",
+    )
+    seam_style: SeamStyle = Field(
+        default="plain",
+        alias="seamStyle",
+        description="Preferred visible edge finish.",
     )
 
     @field_validator("pattern_id")
@@ -111,6 +142,29 @@ class CreateDesignRequest(DesignConfiguration):
 
 class DesignResponse(DesignConfiguration):
     """Stable public representation of a saved immutable design."""
+
+    back_width: Measurement | None = Field(
+        alias="backWidth",
+        description=(
+            "Tapered cushion back width in the selected unit; null for other shapes."
+        ),
+    )
+    material_id: MaterialId = Field(
+        alias="materialId",
+        description="Base material direction, separate from the visual pattern.",
+    )
+    fit_preference: FitPreference = Field(
+        alias="fitPreference",
+        description="Requested visual fit preference; measurements remain unchanged.",
+    )
+    closure_type: ClosureType = Field(
+        alias="closureType",
+        description="Preferred cushion access or closure construction.",
+    )
+    seam_style: SeamStyle = Field(
+        alias="seamStyle",
+        description="Preferred visible edge finish.",
+    )
 
     public_id: PublicDesignId = Field(
         alias="publicId",

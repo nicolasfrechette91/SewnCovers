@@ -3,6 +3,7 @@ import {
 } from "../context/configuration/measurements";
 import { normalizePatternScale } from "../context/configuration/pattern-scale";
 import type { ConfigurationState } from "../context/configuration/types";
+import { hasSupportedCoverOptions } from "../data/cover-options";
 import type {
   ApiRequestStatus,
   CreateDesignRequest,
@@ -16,10 +17,15 @@ const RESPONSE_KEYS = [
   "shape",
   "width",
   "height",
+  "backWidth",
   "thickness",
   "unit",
   "patternId",
   "patternScale",
+  "materialId",
+  "fitPreference",
+  "closureType",
+  "seamStyle",
   "publicId",
 ] as const;
 
@@ -112,10 +118,15 @@ function responseMatchesRequest(
     value.shape === request.shape &&
     value.width === request.width &&
     value.height === request.height &&
+    value.backWidth === request.backWidth &&
     value.thickness === request.thickness &&
     value.unit === request.unit &&
     value.patternId === request.patternId &&
     value.patternScale === request.patternScale &&
+    value.materialId === request.materialId &&
+    value.fitPreference === request.fitPreference &&
+    value.closureType === request.closureType &&
+    value.seamStyle === request.seamStyle &&
     typeof value.publicId === "string" &&
     PUBLIC_DESIGN_ID_PATTERN.test(value.publicId)
   );
@@ -139,9 +150,14 @@ export function mapConfigurationToCreateDesign(
   configuration: ConfigurationState,
 ): CreateDesignRequest {
   const {
+    backWidth,
+    closureType,
+    fitPreference,
     height,
     patternId,
     patternScale,
+    materialId,
+    seamStyle,
     shape,
     thickness,
     unit,
@@ -162,9 +178,12 @@ export function mapConfigurationToCreateDesign(
       height,
       thickness,
       unit,
+      backWidth,
     ) ||
+    !hasSupportedCoverOptions(configuration) ||
     !hasAtMostDecimalPlaces(width, 2) ||
     !hasAtMostDecimalPlaces(height, 2) ||
+    (backWidth !== null && !hasAtMostDecimalPlaces(backWidth, 2)) ||
     !hasAtMostDecimalPlaces(thickness, 2) ||
     normalizedScale === null ||
     normalizedScale !== patternScale
@@ -180,6 +199,11 @@ export function mapConfigurationToCreateDesign(
     unit,
     patternId,
     patternScale: normalizedScale,
+    backWidth: shape === "tapered" ? backWidth : null,
+    materialId,
+    fitPreference,
+    closureType,
+    seamStyle,
   });
 }
 

@@ -88,6 +88,17 @@ The supported measurement contract is:
 | `rectangle` | `width`, `height`, `thickness` | Width and height describe the face. |
 | `box` | `width`, `height`, `thickness` | The UI labels stored `height` as depth. |
 
+### Local Task 10.1 expansion (not deployed)
+
+The current worktree adds Round and Tapered / trapezoid shapes, shape-aware
+measurement guidance, and separate material, fit, closure, seam, pattern, and
+pattern-scale choices. Every visible specification is included in preview and
+review where it can be represented honestly, then saved and restored through an
+additive API/database contract. Existing links remain readable through the
+documented Cotton canvas, Standard fit, Zipper access, Plain seam, and null back
+width defaults. These local changes are not yet available on the production URLs
+or applied to the production database.
+
 Width and height must be 10-300 cm equivalent, thickness must be 1-60 cm
 equivalent, measurements allow at most two decimal places, and pattern scale is
 0.5-2.0 at one-decimal resolution.
@@ -102,7 +113,7 @@ equivalent, measurements allow at most two decimal places, and pattern scale is
 | Persistence | SQLAlchemy 2.0.51, Psycopg 3.3.4, Alembic 1.18.5 | Lazy sessions, explicit transactions, PostgreSQL models, schema migrations, and the canonical seed. |
 | Database | Neon PostgreSQL | Separate development and production branches containing catalogue metadata and immutable designs. |
 | Hosting | GitHub Pages and Render Free | Static frontend delivery and the migration-gated FastAPI service. |
-| Verification | Node test runner, React Testing Library, jsdom, Playwright 1.62.1, pytest 9.1.1, Ruff 0.15.22 | 70 frontend tests, a four-test browser journey, and 222 backend tests plus lint, type, build, export, and dependency checks. |
+| Verification | Node test runner, React Testing Library, jsdom, Playwright 1.62.1, pytest 9.1.1, Ruff 0.15.22 | 76 frontend tests, a four-test browser journey, and 243 backend tests plus lint, type, build, export, and dependency checks. |
 
 The frontend has a committed npm lockfile. Backend direct dependencies are
 exact-pinned in `backend/pyproject.toml`; standard pip is used without a
@@ -252,7 +263,7 @@ developer-supplied variable. No browser bundle receives backend settings.
    python -m alembic upgrade head
    ```
 
-3. Confirm `python -m alembic current` reports `20260729_01 (head)`, then
+3. Confirm `python -m alembic current` reports `20260812_01 (head)`, then
    request `/health` and `/patterns`. A second upgrade must be a no-op.
 
 Online `current`, `upgrade`, and `downgrade` commands need
@@ -273,11 +284,14 @@ development/test recovery.
 | --- | --- |
 | `20260728_01` | Creates `patterns` and `cover_designs` with named constraints. |
 | `20260728_02` | Adds the non-redundant category and activity indexes. |
-| `20260729_01` **(head)** | Seeds the canonical 15 active pattern metadata rows. |
+| `20260729_01` | Seeds the canonical 15 active pattern metadata rows. |
+| `20260812_01` **(head)** | Adds richer shape dimensions and backward-compatible material, fit, closure, and seam fields. |
 
 Production startup additionally verifies this exact head, exactly the three
 tables `alembic_version`, `patterns`, and `cover_designs`, the reviewed
 constraint/index sets, and exactly 15 pattern rows before Uvicorn starts.
+This describes the local release candidate; production remains at its previously
+deployed revision until an explicitly authorized deployment applies it.
 
 ### Schema relationship and integrity
 
@@ -290,7 +304,7 @@ and ORM update/delete attempts are rejected.
 | Table | Important columns | Important constraints and indexes |
 | --- | --- | --- |
 | `patterns` | String primary-key ID, visible metadata, JSON color IDs, preview handle, activity, display order | Unique name and preview handle; normalized/length/nonblank/category/order checks; `ix_patterns_category_id` and `ix_patterns_is_active`. The primary key already indexes slug lookup. |
-| `cover_designs` | Internal integer primary key, unique 22-character public ID, shape, dimensions, unit, pattern ID, scale | Public-ID format, supported shape/unit, unit-aware ranges, square equality, and scale checks; restrictive pattern foreign key. The public-ID unique constraint already supports retrieval, so no redundant explicit design index exists. |
+| `cover_designs` | Internal integer primary key, unique 22-character public ID, shape-specific dimensions, unit, material, fit, closure, seam, pattern ID, scale | Public-ID format, supported options, unit-aware ranges, equal square/round faces, tapered back-width rules, and scale checks; restrictive pattern foreign key. The public-ID unique constraint already supports retrieval, so no redundant explicit design index exists. |
 
 Dimensions use `NUMERIC(7,2)`; pattern scale uses `NUMERIC(2,1)`. Pattern
 artwork, images, gradients, URLs, and filesystem paths are not stored in
@@ -322,14 +336,14 @@ order:
 | `frontend` | `npm run lint` | Run ESLint. |
 | `frontend` | `npm run typecheck` | Run strict TypeScript checking without emit. |
 | `frontend` | `npm run check:config` | Run focused build/environment tests. |
-| `frontend` | `npm test` | Run all 70 deterministic frontend tests. |
+| `frontend` | `npm test` | Run all 76 deterministic frontend tests. |
 | `frontend` | `npm run build` | Build the static export into ignored `frontend/out/`. |
 | `frontend` | `npm run verify:export` | Verify exported routes, links, assets, base path, and API embedding. |
 | `frontend` | `npm run test:e2e` | Build, serve, and run the four-test isolated Chromium journey. |
 | `backend` | `python -m uvicorn app.main:app --reload` | Start the local API without automatic migrations. |
 | `backend` | `python -m ruff format --check .` | Check Python formatting. |
 | `backend` | `python -m ruff check .` | Run Ruff lint. |
-| `backend` | `python -m pytest` | Run all 222 isolated backend tests. |
+| `backend` | `python -m pytest` | Run all 243 isolated backend tests. |
 | `backend` | `python -m pip check` | Check installed dependency consistency. |
 
 ### CI-equivalent frontend gate
@@ -383,7 +397,7 @@ available at `/docs`, `/redoc`, and `/openapi.json`.
 | `GET /` | `200 {"service":"SewnCovers API","status":"ready"}`; does not start database work. | Stable process verification only. |
 | `GET /health` | `200 {"process":"healthy","database":"healthy"}` after one `select(1)`. | `503` with database `unconfigured` or `unavailable`; it uses `HealthResponse`, not the general error envelope. |
 | `GET /patterns` | `200` bare array of active public pattern metadata, ordered by display order then ID. Optional `category` and `color` filters are normalized and combined with AND semantics; valid no-match filters return `[]`. | `422` invalid filter or unsupported query field, `503` storage unavailable, `500` unexpected failure. |
-| `POST /designs` | `201` exact saved-design response plus `Location: /designs/{publicId}`. Every request field is required and the selected pattern must be active. | `422` schema/business/pattern failure, `503` storage or ID generation unavailable, `500` unexpected failure. |
+| `POST /designs` | `201` exact saved-design response plus `Location: /designs/{publicId}`. Legacy core fields remain required; newer detail fields have documented defaults, and the selected pattern must be active. | `422` schema/business/pattern failure, `503` storage or ID generation unavailable, `500` unexpected failure. |
 | `GET /designs/{public_id}` | `200` exact immutable public design for a 22-character URL-safe ID. | `404` well-formed unknown ID, `422` malformed ID, `503` storage unavailable, `500` unexpected failure. |
 
 `GET /patterns` serializes `id`, `name`, `description`, `categoryId`,
@@ -395,10 +409,15 @@ not public. Design creation accepts:
   "shape": "rectangle",
   "width": 61.75,
   "height": 39.5,
+  "backWidth": null,
   "thickness": 14.25,
   "unit": "cm",
   "patternId": "arch-grid",
-  "patternScale": 1.4
+  "patternScale": 1.4,
+  "materialId": "linen-blend",
+  "fitPreference": "standard",
+  "closureType": "zipper",
+  "seamStyle": "piped"
 }
 ```
 
@@ -409,10 +428,15 @@ The response adds only `publicId` and returns the validated configuration:
   "shape": "rectangle",
   "width": 61.75,
   "height": 39.5,
+  "backWidth": null,
   "thickness": 14.25,
   "unit": "cm",
   "patternId": "arch-grid",
   "patternScale": 1.4,
+  "materialId": "linen-blend",
+  "fitPreference": "standard",
+  "closureType": "zipper",
+  "seamStyle": "piped",
   "publicId": "<22-character-public-id>"
 }
 ```
@@ -441,7 +465,9 @@ sequential attempts.
 Share links contain only `?design=<public_id>`. Restoration validates the ID
 locally, retrieves the exact public record, waits for its pattern to exist in
 the current API catalogue, and atomically restores `shape`, `width`,
-`height`, `thickness`, `unit`, `patternId`, and `patternScale`.
+`height`, `backWidth`, `thickness`, `unit`, material, fit, closure, seam,
+`patternId`, and `patternScale`. Legacy records without the newer fields restore
+with `backWidth: null`, Cotton canvas, Standard fit, Zipper access, and Plain seam.
 Malformed, unknown, unavailable-pattern, failed, stale, or superseded loads keep
 the visitor's current configuration. A share ID is opaque, but it is not an
 authentication or privacy boundary.
@@ -513,8 +539,8 @@ Sensible future production improvements—not implemented today—include:
   with an explicit migration and API-contract change.
 - Object storage, validation, processing, and moderation before accepting
   customer-uploaded artwork.
-- Richer shapes, construction/material/fit choices, pricing and quote/order
-  workflows, accessible advanced visualization, and production administration.
+- Pricing and quote/order workflows, accessible advanced visualization, and
+  production administration.
 
 See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the exact roadmap,
 current handoff, and historical engineering decisions.

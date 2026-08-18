@@ -14,6 +14,7 @@ import { SaveSharePanel } from "./save-share-panel";
 import { SummaryOutputActions } from "./summary-output-actions";
 
 const editActionLabels = {
+  coverDetails: "Edit cover details",
   measurements: "Edit measurements",
   pattern: "Edit pattern",
   patternScale: "Edit pattern scale",
@@ -23,6 +24,7 @@ const editActionLabels = {
 const editActionOrder: readonly ReviewSection[] = [
   "shape",
   "measurements",
+  "coverDetails",
   "pattern",
   "patternScale",
 ];
@@ -207,7 +209,7 @@ export function ReviewScreen({
         <h3 className="text-body font-control text-text-primary">
           Edit this configuration
         </h3>
-        <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {editActionOrder.map((section) => (
             <Button
               key={section}

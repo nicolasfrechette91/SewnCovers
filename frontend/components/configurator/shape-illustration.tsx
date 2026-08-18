@@ -74,6 +74,38 @@ export function ShapeIllustration({
           />
         </>
       ) : null}
+
+      {shape === "round" ? (
+        <>
+          <circle
+            className="shape-illustration-face"
+            cx="96"
+            cy="55"
+            r="40"
+          />
+          <path
+            className="shape-illustration-detail"
+            d="M60 64c20 12 52 12 72 0"
+            fill="none"
+          />
+        </>
+      ) : null}
+
+      {shape === "tapered" ? (
+        <>
+          <polygon
+            className="shape-illustration-face"
+            points="30,24 162,24 140,92 52,92"
+          />
+          <line
+            className="shape-illustration-detail"
+            x1="52"
+            y1="78"
+            x2="140"
+            y2="78"
+          />
+        </>
+      ) : null}
     </svg>
   );
 }

@@ -175,8 +175,13 @@ def test_model_columns_relationship_and_named_constraints_are_explicit() -> None
         "ck_cover_designs_width_range",
         "ck_cover_designs_height_range",
         "ck_cover_designs_thickness_range",
-        "ck_cover_designs_square_dimensions",
+        "ck_cover_designs_equal_face_dimensions",
         "ck_cover_designs_pattern_scale_range",
+        "ck_cover_designs_back_width_shape",
+        "ck_cover_designs_material_supported",
+        "ck_cover_designs_fit_supported",
+        "ck_cover_designs_closure_supported",
+        "ck_cover_designs_seam_supported",
     }
 
     relationship = inspect(CoverDesign).relationships["pattern"]
@@ -274,7 +279,7 @@ def test_valid_orm_insert_uses_defaults_and_typed_relationship(
 @pytest.mark.parametrize(
     ("overrides", "expected_constraint"),
     [
-        ({"shape": "round"}, "ck_cover_designs_shape_supported"),
+        ({"shape": "oval"}, "ck_cover_designs_shape_supported"),
         ({"unit": "mm"}, "ck_cover_designs_unit_supported"),
         ({"width": Decimal("9.99")}, "ck_cover_designs_width_range"),
         ({"height": Decimal("300.01")}, "ck_cover_designs_height_range"),
@@ -285,12 +290,25 @@ def test_valid_orm_insert_uses_defaults_and_typed_relationship(
                 "width": Decimal("45.00"),
                 "height": Decimal("45.01"),
             },
-            "ck_cover_designs_square_dimensions",
+            "ck_cover_designs_equal_face_dimensions",
         ),
         (
             {"pattern_scale": Decimal("2.1")},
             "ck_cover_designs_pattern_scale_range",
         ),
+        ({"shape": "tapered", "back_width": None}, "ck_cover_designs_back_width_shape"),
+        (
+            {"shape": "tapered", "back_width": Decimal("45.25")},
+            "ck_cover_designs_back_width_shape",
+        ),
+        (
+            {"shape": "rectangle", "back_width": Decimal("30.00")},
+            "ck_cover_designs_back_width_shape",
+        ),
+        ({"material_id": "silk"}, "ck_cover_designs_material_supported"),
+        ({"fit_preference": "tight"}, "ck_cover_designs_fit_supported"),
+        ({"closure_type": "buttons"}, "ck_cover_designs_closure_supported"),
+        ({"seam_style": "serged"}, "ck_cover_designs_seam_supported"),
         ({"public_id": "too-short"}, "ck_cover_designs_public_id_format"),
         (
             {"public_id": "!" + ("A" * 21)},
@@ -473,10 +491,15 @@ def test_public_openapi_and_routes_remain_model_field_free() -> None:
         "shape",
         "width",
         "height",
+        "backWidth",
         "thickness",
         "unit",
         "patternId",
         "patternScale",
+        "materialId",
+        "fitPreference",
+        "closureType",
+        "seamStyle",
         "publicId",
     }
     assert set(pattern_response) == {

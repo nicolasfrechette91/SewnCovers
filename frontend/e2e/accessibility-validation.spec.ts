@@ -148,6 +148,7 @@ test("keeps the complete configurator responsive with usable touch targets", asy
       const targetSizes = await page.evaluate(() => {
         const selectors = [
           ".shape-option-label",
+          ".cover-option-label",
           ".unit-selector-label",
           ".pattern-filter-label",
           ".pattern-card-label",
@@ -230,6 +231,24 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await page.keyboard.press("Tab");
   await page.keyboard.type("12.75");
   await page.keyboard.press("Tab");
+  await expect(page.getByText("More measuring tips")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("radio", { name: "Cotton canvas" })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("radio", { name: "Linen blend" })).toBeChecked();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("radio", { name: "Standard fit" })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("radio", { name: "More relaxed fit" })).toBeChecked();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("radio", { name: "Zipper access" })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("radio", { name: "Envelope opening" })).toBeChecked();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("radio", { name: "Plain seam" })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("radio", { name: "Piped edge" })).toBeChecked();
+  await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "All categories" })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "All colors" })).toBeFocused();
@@ -251,7 +270,7 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
       name: "SewnCovers configuration summary",
     }),
   ).toBeFocused();
-  for (let index = 0; index < 7; index += 1) {
+  for (let index = 0; index < 8; index += 1) {
     await page.keyboard.press("Tab");
   }
   await expect(

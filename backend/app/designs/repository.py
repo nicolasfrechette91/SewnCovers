@@ -25,6 +25,11 @@ class SavedDesign:
     unit: str
     pattern_id: str
     pattern_scale: Decimal
+    back_width: Decimal | None = None
+    material_id: str = "cotton-canvas"
+    fit_preference: str = "standard"
+    closure_type: str = "zipper"
+    seam_style: str = "plain"
 
 
 class DesignRepository:
@@ -39,10 +44,15 @@ class DesignRepository:
             cover_designs_table.c.shape,
             cover_designs_table.c.width,
             cover_designs_table.c.height,
+            cover_designs_table.c.back_width,
             cover_designs_table.c.thickness,
             cover_designs_table.c.unit,
             cover_designs_table.c.pattern_id,
             cover_designs_table.c.pattern_scale,
+            cover_designs_table.c.material_id,
+            cover_designs_table.c.fit_preference,
+            cover_designs_table.c.closure_type,
+            cover_designs_table.c.seam_style,
         ).where(cover_designs_table.c.public_id == public_id)
         row = self._session.execute(query).mappings().one_or_none()
         return None if row is None else self._from_row(row)
@@ -53,10 +63,15 @@ class DesignRepository:
             shape=design.shape,
             width=design.width,
             height=design.height,
+            back_width=design.back_width,
             thickness=design.thickness,
             unit=design.unit,
             pattern_id=design.pattern_id,
             pattern_scale=design.pattern_scale,
+            material_id=design.material_id,
+            fit_preference=design.fit_preference,
+            closure_type=design.closure_type,
+            seam_style=design.seam_style,
         )
         self._session.execute(statement)
         self._session.flush()
@@ -69,8 +84,13 @@ class DesignRepository:
             shape=row["shape"],
             width=row["width"],
             height=row["height"],
+            back_width=row["back_width"],
             thickness=row["thickness"],
             unit=row["unit"],
             pattern_id=row["pattern_id"],
             pattern_scale=row["pattern_scale"],
+            material_id=row["material_id"],
+            fit_preference=row["fit_preference"],
+            closure_type=row["closure_type"],
+            seam_style=row["seam_style"],
         )

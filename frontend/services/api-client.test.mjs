@@ -12,6 +12,10 @@ const clientSource = readFileSync(
   new URL("./api-client.ts", import.meta.url),
   "utf8",
 );
+const coverOptionsSource = readFileSync(
+  new URL("../data/cover-options.ts", import.meta.url),
+  "utf8",
+);
 const originalApiUrl = process.env.NEXT_PUBLIC_API_URL;
 const originalFetch = globalThis.fetch;
 const originalSetTimeout = globalThis.setTimeout;
@@ -47,10 +51,18 @@ async function loadClient(apiUrl) {
   const environmentUrl = `data:text/javascript;base64,${Buffer.from(
     transpile(environmentSource),
   ).toString("base64")}#environment-${moduleSequence}`;
-  const compiledClient = transpile(clientSource).replace(
-    '"../config/environment"',
-    JSON.stringify(environmentUrl),
-  );
+  const coverOptionsUrl = `data:text/javascript;base64,${Buffer.from(
+    transpile(coverOptionsSource),
+  ).toString("base64")}#cover-options-${moduleSequence}`;
+  const compiledClient = transpile(clientSource)
+    .replace(
+      '"../config/environment"',
+      JSON.stringify(environmentUrl),
+    )
+    .replace(
+      '"../data/cover-options"',
+      JSON.stringify(coverOptionsUrl),
+    );
   const clientUrl = `data:text/javascript;base64,${Buffer.from(
     compiledClient,
   ).toString("base64")}#client-${moduleSequence}`;
@@ -82,10 +94,15 @@ function design(overrides = {}) {
     shape: "rectangle",
     width: 45.25,
     height: 55.5,
+    backWidth: null,
     thickness: 8.75,
     unit: "cm",
     patternId: "fern-trail",
     patternScale: 1.2,
+    materialId: "cotton-canvas",
+    fitPreference: "standard",
+    closureType: "zipper",
+    seamStyle: "plain",
     publicId: "AbCdEfGhIjKlMnOpQrSt_1",
     ...overrides,
   };
@@ -301,10 +318,35 @@ test("returns exact typed health, pattern, create, and retrieval responses", asy
     shape: "rectangle",
     width: 45.25,
     height: 55.5,
+    backWidth: null,
     thickness: 8.75,
     unit: "cm",
     patternId: "fern-trail",
     patternScale: 1.2,
+    materialId: "cotton-canvas",
+    fitPreference: "standard",
+    closureType: "zipper",
+    seamStyle: "plain",
+  });
+});
+
+test("decodes legacy saved-design responses with backward-compatible defaults", async () => {
+  const { apiClient } = await loadClient();
+  const legacy = design();
+  delete legacy.backWidth;
+  delete legacy.materialId;
+  delete legacy.fitPreference;
+  delete legacy.closureType;
+  delete legacy.seamStyle;
+  globalThis.fetch = async () => jsonResponse(legacy);
+
+  assert.deepEqual(await apiClient.getDesign(legacy.publicId), {
+    ...legacy,
+    backWidth: null,
+    materialId: "cotton-canvas",
+    fitPreference: "standard",
+    closureType: "zipper",
+    seamStyle: "plain",
   });
 });
 

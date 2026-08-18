@@ -1,4 +1,10 @@
 import { publicEnvironment } from "../config/environment";
+import {
+  DEFAULT_CLOSURE_TYPE,
+  DEFAULT_FIT_PREFERENCE,
+  DEFAULT_MATERIAL_ID,
+  DEFAULT_SEAM_STYLE,
+} from "../data/cover-options";
 
 export const API_REQUEST_TIMEOUT_MS = 20_000;
 export const API_RETRY_LIMIT = 2;
@@ -23,6 +29,7 @@ const ERROR_CODES = new Set<ApiErrorCode>([
   "pattern_unavailable",
   "public_id_unavailable",
   "resource_not_found",
+  "shape_measurements_mismatch",
   "square_dimensions_mismatch",
   "storage_unavailable",
   "unknown_field",
@@ -53,6 +60,7 @@ export type ApiErrorCode =
   | "pattern_unavailable"
   | "public_id_unavailable"
   | "resource_not_found"
+  | "shape_measurements_mismatch"
   | "square_dimensions_mismatch"
   | "storage_unavailable"
   | "unknown_field"
@@ -83,13 +91,23 @@ export interface PatternResponse {
   readonly previewClassName: string;
 }
 
-export type CushionShape = "box" | "rectangle" | "square";
+export type CushionShape =
+  | "box"
+  | "rectangle"
+  | "round"
+  | "square"
+  | "tapered";
 export type MeasurementUnit = "cm" | "in";
 
 export interface CreateDesignRequest {
   readonly height: number;
+  readonly backWidth: number | null;
   readonly patternId: string;
   readonly patternScale: number;
+  readonly materialId: "cotton-canvas" | "linen-blend" | "polyester-weave";
+  readonly fitPreference: "close" | "relaxed" | "standard";
+  readonly closureType: "envelope" | "slip-on" | "zipper";
+  readonly seamStyle: "piped" | "plain";
   readonly shape: CushionShape;
   readonly thickness: number;
   readonly unit: MeasurementUnit;
@@ -267,19 +285,39 @@ function parsePatternList(
 }
 
 function parseDesignResponse(value: unknown): DesignResponse | undefined {
+  const legacyKeys = [
+    "shape",
+    "width",
+    "height",
+    "thickness",
+    "unit",
+    "patternId",
+    "patternScale",
+    "publicId",
+  ] as const;
+  const expandedKeys = [
+    "shape",
+    "width",
+    "height",
+    "backWidth",
+    "thickness",
+    "unit",
+    "patternId",
+    "patternScale",
+    "materialId",
+    "fitPreference",
+    "closureType",
+    "seamStyle",
+    "publicId",
+  ] as const;
+  const isLegacy = isRecord(value) && hasExactKeys(value, legacyKeys);
+
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, [
-      "shape",
-      "width",
-      "height",
-      "thickness",
-      "unit",
-      "patternId",
-      "patternScale",
-      "publicId",
-    ]) ||
-    !["box", "rectangle", "square"].includes(String(value.shape)) ||
+    (!isLegacy && !hasExactKeys(value, expandedKeys)) ||
+    !["box", "rectangle", "round", "square", "tapered"].includes(
+      String(value.shape),
+    ) ||
     !isFiniteNumber(value.width) ||
     value.width <= 0 ||
     !hasAtMostDecimalPlaces(value.width, 2) ||
@@ -298,6 +336,43 @@ function parseDesignResponse(value: unknown): DesignResponse | undefined {
     !hasAtMostDecimalPlaces(value.patternScale, 1) ||
     typeof value.publicId !== "string" ||
     !/^[A-Za-z0-9_-]{22}$/.test(value.publicId)
+  ) {
+    return undefined;
+  }
+
+  if (isLegacy) {
+    return {
+      ...(value as unknown as Omit<
+        DesignResponse,
+        | "backWidth"
+        | "closureType"
+        | "fitPreference"
+        | "materialId"
+        | "seamStyle"
+      >),
+      backWidth: null,
+      closureType: DEFAULT_CLOSURE_TYPE,
+      fitPreference: DEFAULT_FIT_PREFERENCE,
+      materialId: DEFAULT_MATERIAL_ID,
+      seamStyle: DEFAULT_SEAM_STYLE,
+    };
+  }
+
+  if (
+    (value.backWidth !== null &&
+      (!isFiniteNumber(value.backWidth) ||
+        value.backWidth <= 0 ||
+        !hasAtMostDecimalPlaces(value.backWidth, 2))) ||
+    !["cotton-canvas", "linen-blend", "polyester-weave"].includes(
+      String(value.materialId),
+    ) ||
+    !["close", "relaxed", "standard"].includes(
+      String(value.fitPreference),
+    ) ||
+    !["envelope", "slip-on", "zipper"].includes(
+      String(value.closureType),
+    ) ||
+    !["piped", "plain"].includes(String(value.seamStyle))
   ) {
     return undefined;
   }

@@ -65,6 +65,22 @@ test("validates shape-specific measurements, inclusive boundaries, and decimals"
     hasValidMeasurementsForShape("box", 180, 60, 12.5, "cm"),
     true,
   );
+  assert.equal(
+    hasValidMeasurementsForShape("round", 50, 50, 8, "cm"),
+    true,
+  );
+  assert.equal(
+    hasValidMeasurementsForShape("round", 50, 49, 8, "cm"),
+    false,
+  );
+  assert.equal(
+    hasValidMeasurementsForShape("tapered", 80, 55, 10, "cm", 65),
+    true,
+  );
+  assert.equal(
+    hasValidMeasurementsForShape("tapered", 80, 55, 10, "cm", 80),
+    false,
+  );
 });
 
 test("rejects required, incomplete, malformed, non-positive, and over-precision drafts", () => {
@@ -111,10 +127,15 @@ test("initializes, updates, resets, and preserves reducer invariants", () => {
     shape: null,
     width: null,
     height: null,
+    backWidth: null,
     thickness: null,
     unit: "cm",
     patternId: null,
     patternScale: 1,
+    materialId: "cotton-canvas",
+    fitPreference: "standard",
+    closureType: "zipper",
+    seamStyle: "plain",
   });
 
   const actions: readonly ConfigurationAction[] = [
@@ -134,10 +155,15 @@ test("initializes, updates, resets, and preserves reducer invariants", () => {
     shape: "square",
     width: 50,
     height: 50,
+    backWidth: null,
     thickness: 8,
     unit: "cm",
     patternId: "fern-trail",
     patternScale: 1.2,
+    materialId: "cotton-canvas",
+    fitPreference: "standard",
+    closureType: "zipper",
+    seamStyle: "plain",
   });
   assert.equal(
     configurationReducer(configured, {
@@ -185,10 +211,15 @@ test("accepts only complete invariant-preserving restored configurations", () =>
     shape: "box",
     width: 180.5,
     height: 60.25,
+    backWidth: null,
     thickness: 12.75,
     unit: "cm",
     patternId: "terrace-wave",
     patternScale: 1.4,
+    materialId: "linen-blend",
+    fitPreference: "close",
+    closureType: "envelope",
+    seamStyle: "piped",
   };
   assert.deepEqual(
     configurationReducer(initialConfigurationState, {
@@ -225,6 +256,7 @@ test("calculates bounded proportional preview geometry for every shape and unit"
     { shape: "square", width: 50, height: 50, thickness: 8 },
     { shape: "rectangle", width: 80, height: 40, thickness: 10 },
     { shape: "box", width: 180, height: 60, thickness: 12 },
+    { shape: "round", width: 50, height: 50, thickness: 8 },
   ];
 
   for (const input of cases) {
@@ -256,6 +288,18 @@ test("calculates bounded proportional preview geometry for every shape and unit"
     });
     assert.deepEqual(imperialGeometry, geometry);
   }
+
+  const tapered = calculatePreviewGeometry({
+    shape: "tapered",
+    width: 80,
+    backWidth: 65,
+    height: 55,
+    thickness: 10,
+    unit: "cm",
+  });
+  assert.ok(tapered);
+  assert.ok(tapered.backFaceWidth);
+  assert.ok(tapered.backFaceWidth < tapered.faceWidth);
 
   assert.equal(
     calculatePreviewGeometry({

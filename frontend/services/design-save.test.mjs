@@ -16,6 +16,10 @@ const designSaveSource = readFileSync(
   new URL("./design-save.ts", import.meta.url),
   "utf8",
 );
+const coverOptionsSource = readFileSync(
+  new URL("../data/cover-options.ts", import.meta.url),
+  "utf8",
+);
 const saveSharePanelSource = readFileSync(
   new URL(
     "../components/configurator/save-share-panel.tsx",
@@ -54,6 +58,10 @@ async function loadDesignSave() {
     transpile(patternScaleSource),
     "pattern-scale",
   );
+  const coverOptionsUrl = dataModule(
+    transpile(coverOptionsSource),
+    "cover-options",
+  );
   const compiled = transpile(designSaveSource)
     .replace(
       '"../context/configuration/measurements"',
@@ -62,6 +70,10 @@ async function loadDesignSave() {
     .replace(
       '"../context/configuration/pattern-scale"',
       JSON.stringify(patternScaleUrl),
+    )
+    .replace(
+      '"../data/cover-options"',
+      JSON.stringify(coverOptionsUrl),
     );
 
   return import(dataModule(compiled, "design-save"));
@@ -72,10 +84,15 @@ function configuration(overrides = {}) {
     shape: "rectangle",
     width: 45.25,
     height: 55.5,
+    backWidth: null,
     thickness: 8.75,
     unit: "cm",
     patternId: "fern-trail",
     patternScale: 1.2,
+    materialId: "cotton-canvas",
+    fitPreference: "standard",
+    closureType: "zipper",
+    seamStyle: "plain",
     ...overrides,
   };
 }
@@ -139,6 +156,11 @@ test("maps every reviewed cushion shape to only backend-owned public fields", as
       "unit",
       "patternId",
       "patternScale",
+      "backWidth",
+      "materialId",
+      "fitPreference",
+      "closureType",
+      "seamStyle",
     ]);
     assert.equal(Object.isFrozen(mapped), true);
   }

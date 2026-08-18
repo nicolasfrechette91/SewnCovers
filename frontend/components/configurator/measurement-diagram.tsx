@@ -187,16 +187,98 @@ function BoxDiagram() {
   );
 }
 
+function RoundDiagram() {
+  return (
+    <>
+      <circle
+        className="measurement-diagram-face"
+        cx="92"
+        cy="86"
+        r="58"
+      />
+      <DimensionLine
+        label="Diameter"
+        x1={34}
+        x2={150}
+        y1={86}
+        y2={86}
+        labelY={76}
+      />
+      <rect
+        className="measurement-diagram-face"
+        x="208"
+        y="66"
+        width="74"
+        height="42"
+        rx="21"
+      />
+      <DimensionLine
+        label="Thickness"
+        labelX={245}
+        labelY={54}
+        x1={294}
+        x2={294}
+        y1={66}
+        y2={108}
+      />
+    </>
+  );
+}
+
+function TaperedDiagram() {
+  return (
+    <>
+      <polygon
+        className="measurement-diagram-face"
+        points="40,42 202,42 174,138 68,138"
+      />
+      <DimensionLine label="Front width" x1={68} x2={174} y1={160} y2={160} />
+      <DimensionLine label="Back width" x1={40} x2={202} y1={24} y2={24} />
+      <DimensionLine
+        label="Depth"
+        labelX={34}
+        labelY={92}
+        x1={24}
+        x2={24}
+        y1={42}
+        y2={138}
+      />
+      <rect
+        className="measurement-diagram-face"
+        x="240"
+        y="70"
+        width="50"
+        height="36"
+        rx="7"
+      />
+      <DimensionLine
+        label="Thickness"
+        labelX={265}
+        labelY={56}
+        x1={302}
+        x2={302}
+        y1={70}
+        y2={106}
+      />
+    </>
+  );
+}
+
 export function MeasurementDiagram({
   shape,
 }: Readonly<{ shape: CushionShape }>) {
   const definition = getCushionShapeDefinition(shape);
-  const caption =
-    shape === "square"
-      ? "Measure Width across the square face and Thickness across the side profile. Height uses the same committed value as Width."
-      : shape === "rectangle"
-        ? "Measure Width and Height independently across the rectangular face, then measure Thickness across the side profile."
-        : "Measure Width from side to side and Depth from front to back across the top, then measure Thickness across the side profile.";
+  const captions: Readonly<Record<CushionShape, string>> = {
+    square:
+      "Measure Width across the square face and Thickness across the side profile. Height uses the same committed value as Width.",
+    rectangle:
+      "Measure Width and Height independently across the rectangular face, then measure Thickness across the side profile.",
+    box: "Measure Width from side to side and Depth from front to back across the top, then measure Thickness across the side profile.",
+    round:
+      "Measure Diameter through the centre at the widest point, then measure Thickness across the side profile.",
+    tapered:
+      "Measure the front and back edges separately, Depth through the centre, and Thickness across the side profile.",
+  };
 
   return (
     <figure className="min-w-0 rounded-card border border-border bg-surface-subtle px-control-x py-4 sm:p-card">
@@ -214,10 +296,12 @@ export function MeasurementDiagram({
           {shape === "square" ? <SquareDiagram /> : null}
           {shape === "rectangle" ? <RectangleDiagram /> : null}
           {shape === "box" ? <BoxDiagram /> : null}
+          {shape === "round" ? <RoundDiagram /> : null}
+          {shape === "tapered" ? <TaperedDiagram /> : null}
         </svg>
       </div>
       <figcaption className="mt-component text-supporting text-text-muted">
-        {caption}
+        {captions[shape]}
       </figcaption>
     </figure>
   );

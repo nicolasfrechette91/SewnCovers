@@ -33,7 +33,11 @@ export type {
   ConfigurationAction,
   ConfigurationState,
   CushionShape,
+  ClosureType,
+  FitPreference,
+  MaterialId,
   MeasurementUnit,
+  SeamStyle,
 } from "./types";
 export type {
   MeasurementDraftIssue,

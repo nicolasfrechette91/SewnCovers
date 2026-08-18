@@ -40,7 +40,7 @@ def test_missing_extra_and_invalid_body_fields_are_safe_and_deterministic(
 ) -> None:
     secret = f"{PRIVATE_DETAIL}?token=submitted-secret"
     payload: dict[str, Any] = {
-        "shape": "round",
+        "shape": "oval",
         "width": "45",
         "height": True,
         "unit": "mm",

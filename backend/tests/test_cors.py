@@ -39,10 +39,15 @@ class StubDesignService:
         shape="square",
         width=55.25,
         height=55.25,
+        back_width=None,
         thickness=12.5,
         unit="cm",
         pattern_id="fern-trail",
         pattern_scale=1.0,
+        material_id="cotton-canvas",
+        fit_preference="standard",
+        closure_type="zipper",
+        seam_style="plain",
     )
 
     def create(self, _request: CreateDesignRequest) -> DesignResponse:

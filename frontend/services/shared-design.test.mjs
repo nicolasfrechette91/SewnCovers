@@ -16,6 +16,10 @@ const sharedDesignSource = readFileSync(
   new URL("./shared-design.ts", import.meta.url),
   "utf8",
 );
+const coverOptionsSource = readFileSync(
+  new URL("../data/cover-options.ts", import.meta.url),
+  "utf8",
+);
 const sharedDesignLoaderSource = readFileSync(
   new URL(
     "../components/configurator/shared-design-loader.tsx",
@@ -59,6 +63,10 @@ async function loadSharedDesign() {
     transpile(patternScaleSource),
     "pattern-scale",
   );
+  const coverOptionsUrl = dataModule(
+    transpile(coverOptionsSource),
+    "cover-options",
+  );
   const compiled = transpile(sharedDesignSource)
     .replace(
       '"../context/configuration/measurements"',
@@ -67,6 +75,10 @@ async function loadSharedDesign() {
     .replace(
       '"../context/configuration/pattern-scale"',
       JSON.stringify(patternScaleUrl),
+    )
+    .replace(
+      '"../data/cover-options"',
+      JSON.stringify(coverOptionsUrl),
     );
 
   return import(dataModule(compiled, "shared-design"));
@@ -81,9 +93,17 @@ async function loadReducer() {
     transpile(patternScaleSource),
     "pattern-scale",
   );
+  const coverOptionsUrl = dataModule(
+    transpile(coverOptionsSource),
+    "cover-options",
+  );
   const compiled = transpile(reducerSource)
     .replace('"./measurements"', JSON.stringify(measurementUrl))
-    .replace('"./pattern-scale"', JSON.stringify(patternScaleUrl));
+    .replace('"./pattern-scale"', JSON.stringify(patternScaleUrl))
+    .replace(
+      '"../../data/cover-options"',
+      JSON.stringify(coverOptionsUrl),
+    );
 
   return import(dataModule(compiled, "reducer"));
 }
@@ -95,10 +115,15 @@ function design(overrides = {}) {
     shape: "rectangle",
     width: 45.25,
     height: 55.5,
+    backWidth: null,
     thickness: 8.75,
     unit: "cm",
     patternId: "fern-trail",
     patternScale: 1.2,
+    materialId: "cotton-canvas",
+    fitPreference: "standard",
+    closureType: "zipper",
+    seamStyle: "plain",
     publicId,
     ...overrides,
   };
@@ -252,6 +277,26 @@ test("exactly restores every shape and both units with decimal values", async ()
       unit: "in",
       patternScale: 0.5,
     }),
+    design({
+      shape: "round",
+      width: 50.25,
+      height: 50.25,
+      thickness: 8.5,
+      unit: "cm",
+      patternScale: 1.1,
+    }),
+    design({
+      shape: "tapered",
+      width: 31.5,
+      height: 21.65,
+      backWidth: 25.6,
+      thickness: 3.95,
+      unit: "in",
+      materialId: "linen-blend",
+      fitPreference: "relaxed",
+      closureType: "envelope",
+      seamStyle: "piped",
+    }),
   ];
 
   for (const response of cases) {
@@ -272,10 +317,15 @@ test("exactly restores every shape and both units with decimal values", async ()
       "shape",
       "width",
       "height",
+      "backWidth",
       "thickness",
       "unit",
       "patternId",
       "patternScale",
+      "materialId",
+      "fitPreference",
+      "closureType",
+      "seamStyle",
     ]);
     assert.equal(Object.isFrozen(harness.restored[0]), true);
     assert.equal(
@@ -283,6 +333,38 @@ test("exactly restores every shape and both units with decimal values", async ()
       "restored",
     );
   }
+});
+
+test("restores legacy responses with safe cover-detail defaults", async () => {
+  const { SharedDesignController } = await loadSharedDesign();
+  const legacy = design();
+  delete legacy.backWidth;
+  delete legacy.materialId;
+  delete legacy.fitPreference;
+  delete legacy.closureType;
+  delete legacy.seamStyle;
+  const harness = createHarness(
+    SharedDesignController,
+    async () => legacy,
+  );
+
+  harness.controller.start(`?design=${publicId}`, readyCatalogue());
+  await settle();
+
+  assert.deepEqual(harness.restored, [{
+    shape: legacy.shape,
+    width: legacy.width,
+    height: legacy.height,
+    backWidth: null,
+    thickness: legacy.thickness,
+    unit: legacy.unit,
+    patternId: legacy.patternId,
+    patternScale: legacy.patternScale,
+    materialId: "cotton-canvas",
+    fitPreference: "standard",
+    closureType: "zipper",
+    seamStyle: "plain",
+  }]);
 });
 
 test("waits for the API catalogue before restoring a valid pattern", async () => {
@@ -500,10 +582,15 @@ test("the atomic reducer restore does not convert units or partially accept inva
     shape: "rectangle",
     width: 23.75,
     height: 17.25,
+    backWidth: null,
     thickness: 3.5,
     unit: "in",
     patternId: "fern-trail",
     patternScale: 1.3,
+    materialId: "cotton-canvas",
+    fitPreference: "standard",
+    closureType: "zipper",
+    seamStyle: "plain",
   };
 
   assert.deepEqual(

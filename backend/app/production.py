@@ -12,7 +12,7 @@ from app.persistence.migrations import create_migration_engine
 from app.settings import Settings, get_settings
 
 ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[1] / "alembic.ini"
-EXPECTED_REVISION = "20260729_01"
+EXPECTED_REVISION = "20260812_01"
 EXPECTED_PATTERN_COUNT = 15
 EXPECTED_TABLES = {"alembic_version", "cover_designs", "patterns"}
 EXPECTED_CONSTRAINTS = {
@@ -35,10 +35,15 @@ EXPECTED_CONSTRAINTS = {
         "unique": {"uq_cover_designs_public_id"},
         "check": {
             "ck_cover_designs_height_range",
+            "ck_cover_designs_back_width_shape",
+            "ck_cover_designs_closure_supported",
+            "ck_cover_designs_equal_face_dimensions",
+            "ck_cover_designs_fit_supported",
+            "ck_cover_designs_material_supported",
             "ck_cover_designs_pattern_scale_range",
             "ck_cover_designs_public_id_format",
             "ck_cover_designs_shape_supported",
-            "ck_cover_designs_square_dimensions",
+            "ck_cover_designs_seam_supported",
             "ck_cover_designs_thickness_range",
             "ck_cover_designs_unit_supported",
             "ck_cover_designs_width_range",

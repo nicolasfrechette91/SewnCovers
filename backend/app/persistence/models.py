@@ -21,8 +21,12 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.orm import DeclarativeBase, Mapped, Mapper, mapped_column, relationship
 
 PATTERN_CATEGORIES = ("abstract", "botanical", "geometric", "striped", "woven")
-DESIGN_SHAPES = ("box", "rectangle", "square")
+DESIGN_SHAPES = ("box", "rectangle", "round", "square", "tapered")
 MEASUREMENT_UNITS = ("cm", "in")
+DESIGN_MATERIALS = ("cotton-canvas", "linen-blend", "polyester-weave")
+DESIGN_FITS = ("close", "relaxed", "standard")
+DESIGN_CLOSURES = ("envelope", "slip-on", "zipper")
+DESIGN_SEAMS = ("piped", "plain")
 
 
 def _sql_values(values: tuple[str, ...]) -> str:
@@ -146,12 +150,35 @@ class CoverDesign(Base):
             name="ck_cover_designs_thickness_range",
         ),
         CheckConstraint(
-            "shape <> 'square' OR width = height",
-            name="ck_cover_designs_square_dimensions",
+            "shape NOT IN ('square', 'round') OR width = height",
+            name="ck_cover_designs_equal_face_dimensions",
         ),
         CheckConstraint(
             "pattern_scale BETWEEN 0.5 AND 2.0",
             name="ck_cover_designs_pattern_scale_range",
+        ),
+        CheckConstraint(
+            "(shape = 'tapered' AND back_width IS NOT NULL AND back_width < width "
+            "AND ((unit = 'cm' AND back_width BETWEEN 10.00 AND 300.00) OR "
+            "(unit = 'in' AND back_width * 2.54 BETWEEN 10.00 AND 300.00))) "
+            "OR (shape <> 'tapered' AND back_width IS NULL)",
+            name="ck_cover_designs_back_width_shape",
+        ),
+        CheckConstraint(
+            f"material_id IN ({_sql_values(DESIGN_MATERIALS)})",
+            name="ck_cover_designs_material_supported",
+        ),
+        CheckConstraint(
+            f"fit_preference IN ({_sql_values(DESIGN_FITS)})",
+            name="ck_cover_designs_fit_supported",
+        ),
+        CheckConstraint(
+            f"closure_type IN ({_sql_values(DESIGN_CLOSURES)})",
+            name="ck_cover_designs_closure_supported",
+        ),
+        CheckConstraint(
+            f"seam_style IN ({_sql_values(DESIGN_SEAMS)})",
+            name="ck_cover_designs_seam_supported",
         ),
     )
 
@@ -160,6 +187,7 @@ class CoverDesign(Base):
     shape: Mapped[str] = mapped_column(String(16), nullable=False)
     width: Mapped[Decimal] = mapped_column(Numeric(7, 2), nullable=False)
     height: Mapped[Decimal] = mapped_column(Numeric(7, 2), nullable=False)
+    back_width: Mapped[Decimal | None] = mapped_column(Numeric(7, 2), nullable=True)
     thickness: Mapped[Decimal] = mapped_column(Numeric(7, 2), nullable=False)
     unit: Mapped[str] = mapped_column(String(2), nullable=False)
     pattern_id: Mapped[str] = mapped_column(
@@ -176,6 +204,18 @@ class CoverDesign(Base):
         Numeric(2, 1),
         nullable=False,
         server_default=text("1.0"),
+    )
+    material_id: Mapped[str] = mapped_column(
+        String(24), nullable=False, server_default=text("'cotton-canvas'")
+    )
+    fit_preference: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default=text("'standard'")
+    )
+    closure_type: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default=text("'zipper'")
+    )
+    seam_style: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default=text("'plain'")
     )
     pattern: Mapped[Pattern] = relationship(lazy="raise", viewonly=True)
 

@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, a linear Alembic history through the canonical pattern seed revision, and isolated Neon development/production environments. Both Neon databases are migrated and verified at `20260729_01`; Render alone owns the protected production connection.
+This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, and a linear Alembic history. The local Task 10.1 release candidate ends at `20260812_01`; it has not been applied to production. Render alone owns the protected production connection.
 
 ## Requirements
 
@@ -94,13 +94,13 @@ Repository and service responsibilities stay deliberately narrow:
 
 `Pattern` maps the stable string ID, visible name and description, category ID, JSON color-ID list, preview class, activity flag, and display order. The ID is the named primary key; visible names and preview handles have named uniqueness constraints. Portable named checks protect normalized ID and string lengths, nonblank visible text and preview handles, nonnegative display order, and the five supported catalogue categories. Activity defaults to true and display order defaults to zero at the server. Active-only selection and deterministic ascending `display_order`, then `id`, ordering remain repository behavior. Exact pattern-slug syntax and supported JSON color membership remain validated by the controlled catalogue/application boundary because PostgreSQL and SQLite do not share a safe equivalent regular-expression or JSON-array check. Category filters use the non-unique `ix_patterns_category_id` index, and the active-only predicate used by catalogue listing, pattern validation, and optional category filtering uses `ix_patterns_is_active`.
 
-`CoverDesign` maps an autoincrementing internal integer primary key, separate 22-character unique public ID, the seven existing configuration columns, and a view-only typed relationship to its referenced pattern. The named foreign key restricts referenced pattern updates/deletes. Numeric columns retain `NUMERIC(7, 2)` dimensions and `NUMERIC(2, 1)` scale; scale has a server default of 1.0. Named checks protect the public ID's exact URL-safe format, supported shape/unit values, exact unit-aware centimetre-equivalent dimension ranges, square width/height equality, and the 0.5-2.0 scale range. Request schemas and the design service continue to reject malformed IDs, excess decimal precision, invalid configurations, and inactive patterns before persistence; database constraints are the final integrity boundary for safely portable rules.
+`CoverDesign` maps an autoincrementing internal integer primary key, separate 22-character unique public ID, the expanded public configuration, and a view-only typed relationship to its referenced pattern. Numeric columns retain `NUMERIC(7, 2)` dimensions and `NUMERIC(2, 1)` scale. Named checks protect public-ID format; supported shape, unit, material, fit, closure, and seam values; unit-aware ranges; equal Square/Round faces; tapered back-width presence/range/order; and scale. New detail columns use server defaults so legacy rows remain valid without mutation.
 
 Saved designs are append-only. The repository exposes only insert and public-ID lookup, the API exposes only create and retrieve, and ORM update/delete flushes raise `ImmutableDesignError`. No mutable cascade or reverse design collection is mapped. Internal IDs, activity/order fields, constraint details, SQL, and database settings remain outside public response models and error payloads.
 
 Alembic 1.18.5 owns schema and controlled data transitions. Its initial revision creates `patterns` before `cover_designs` and drops them in reverse order. It reproduces the model types, precision, nullability, server defaults, named primary/unique/check/foreign-key constraints, restrictive foreign-key actions, and integrity structures. Revision `20260728_02` adds only `ix_patterns_category_id` and `ix_patterns_is_active`, matching the repository's single-column category and activity predicates. Pattern slug equality lookup remains covered by the existing `pk_patterns` primary-key index, and design retrieval remains covered by the existing unique index owned by `uq_cover_designs_public_id`; separate indexes with those same column orders are intentionally omitted as redundant. No composite, partial, expression, full-text, JSON/color, or ordering index is introduced.
 
-Revision `20260729_01` explicitly inserts the 15 active records established by `frontend/data/patterns.ts` and the Task 4.5 fixtures. Pattern IDs are the existing stable public slugs, and zero-based array position is the unique deterministic `display_order`. The migration stores only fields already supported by the model and `/patterns` API: ID, name, description, category, color IDs, frontend preview-class handle, activity, and display order. Pattern artwork, gradients, images, and other visual assets remain frontend-owned; the database receives no binary, URL, filesystem path, upload, or asset-table data.
+Revision `20260729_01` explicitly inserts the 15 active records established by `frontend/data/patterns.ts` and the Task 4.5 fixtures. Revision `20260812_01` additively introduces nullable `back_width` plus material, fit, closure, and seam columns with safe defaults, expands shape constraints, and preserves every existing row. Pattern artwork, gradients, images, and other visual assets remain frontend-owned; the database receives no binary, URL, filesystem path, upload, or asset-table data.
 
 ## Alembic migrations
 
@@ -125,7 +125,7 @@ python -m alembic upgrade head --sql
 python -m alembic downgrade head:base --sql
 ```
 
-The linear deterministic history is `20260728_01_create_patterns_and_cover_designs.py`, `20260728_02_add_pattern_filter_indexes.py`, then `20260729_01_seed_canonical_patterns.py`. The initial revision is an explicit schema snapshot rather than a call to runtime `create_all()`, the second revision changes only the two missing filter indexes, and the third performs an explicit reviewable data insert without startup or import hooks.
+The linear deterministic history ends with `20260812_01_expand_cover_configuration.py` after the initial schema, filter-index, and canonical-seed revisions. The new revision is an additive, explicit schema transition; its downgrade exists for isolated tests only and must not be run against shared databases.
 
 `python -m alembic upgrade head` applies the full schema and exact seed to an empty database or adds the seed after `20260728_02`. Existing conflicting IDs, names, or preview handles fail through the established constraints; the migration does not silently ignore drift. `python -m alembic downgrade 20260728_02` removes only the 15 seed-owned IDs in one statement while leaving tables, constraints, and Task 5.4 indexes intact. A restrictive foreign key blocks that downgrade if a saved design references any seeded pattern, without cascading or deleting the design. After references are handled deliberately, downgrade followed by `python -m alembic upgrade head` restores the identical catalogue. Automated tests cover fresh and incremental SQLite upgrades, exact frontend/fixture parity, migrated `/patterns` filtering, targeted downgrade/re-upgrade, conflict rejection, foreign-key-safe failure, schema parity, and PostgreSQL offline SQL. They require no internet, Neon, populated `.env`, or committed database file.
 
@@ -307,20 +307,25 @@ The endpoint uses the request session, concrete pattern repository, and pattern 
 
 | Field | Create request | Response | Validation |
 | --- | --- | --- | --- |
-| `shape` | Yes | Yes | Exactly `square`, `rectangle`, or `box`. |
+| `shape` | Yes | Yes | Exactly `square`, `rectangle`, `box`, `round`, or `tapered`. |
 | `width` | Yes | Yes | JSON number, positive, at most two decimals, and 10-300 cm equivalent. |
-| `height` | Yes | Yes | JSON number, positive, at most two decimals, and 10-300 cm equivalent; must equal width for `square`. |
+| `height` | Yes | Yes | JSON number, positive, at most two decimals, and 10-300 cm equivalent; must equal width for `square` and `round`. |
+| `backWidth` | No | Yes | Required, in range, and smaller than width for `tapered`; otherwise null. Defaults to null for legacy requests/rows. |
 | `thickness` | Yes | Yes | JSON number, positive, at most two decimals, and 1-60 cm equivalent. |
 | `unit` | Yes | Yes | Exactly `cm` or `in`; inch measurements are validated using exactly 2.54 cm per inch. |
 | `patternId` | Yes | Yes | Normalized lowercase slug identifying an active pattern at creation time. |
 | `patternScale` | Yes | Yes | JSON number from 0.5 through 2.0 at the frontend's one-decimal resolution. |
+| `materialId` | No | Yes | `cotton-canvas`, `linen-blend`, or `polyester-weave`; defaults to `cotton-canvas`. |
+| `fitPreference` | No | Yes | `close`, `standard`, or `relaxed`; defaults to `standard` and does not alter measurements. |
+| `closureType` | No | Yes | `zipper`, `envelope`, or `slip-on`; defaults to `zipper`. |
+| `seamStyle` | No | Yes | `plain` or `piped`; defaults to `plain`. |
 | `publicId` | No | Yes | Server-generated 22-character URL-safe opaque identifier. |
 
-Every request field is required. Strings are not coerced to numbers, unsupported values are rejected, and extra fields—including `id`, `publicId`, timestamps, activity flags, and other server-managed values—receive HTTP 422. Pattern validation happens in the service through the concrete active-pattern repository. Saved designs remain retrievable without rechecking current pattern activity so their stored configuration stays immutable.
+The original seven configuration fields remain required. New option fields use the documented defaults so legacy clients remain accepted; `backWidth` is conditionally required only for Tapered. Strings are not coerced to numbers, unsupported values are rejected, and extra fields—including `id`, `publicId`, timestamps, activity flags, and other server-managed values—receive HTTP 422. Saved designs remain retrievable without rechecking current pattern activity so their stored configuration stays immutable.
 
 Public IDs are independent of the internal integer database key. The service generates 128 random bits with the standard cryptographic token generator and exposes only the resulting 22-character URL-safe value. The minimum table contract also requires uniqueness. Creation checks for an existing ID, relies on database uniqueness for races, rolls back collisions, and retries up to five generated values. Exhaustion returns a generic HTTP 503 without SQL, constraint, internal-ID, host, credential, or exception detail.
 
-The design service owns unit-aware measurement bounds, square equality, active-pattern validation, public-ID generation, creation/retrieval coordination, commit, rollback, and collision retry. Request schemas own required fields, strict types, supported shape/unit values, slug shape, numeric positivity, and precision. The repository executes only public-ID queries and immutable inserts and may flush without committing. Routes contain no duplicated exception translation.
+The design service owns unit-aware measurement bounds, equal-face and tapered relationships, active-pattern validation, public-ID generation, creation/retrieval coordination, commit, rollback, and collision retry. Request schemas own required/defaulted fields, strict types, supported option values, slug shape, numeric positivity, and precision. The repository executes only public-ID queries and immutable inserts and may flush without committing. Routes contain no duplicated exception translation.
 
 These endpoints require a configured database upgraded to the compatible Alembic head and containing `patterns` and `cover_designs`. The initial migration supplies the empty schema only; it does not create a production schema, seed records, connect to Neon, or change endpoint behavior. Existing API tests create both contracts in isolated in-memory SQLite, seed only the pattern records needed by each test, and exercise all behavior without a database file, internet, or populated `.env`.
 
@@ -358,7 +363,7 @@ Additional string or integer segments can identify nested object fields or array
 Error codes follow these stable groups:
 
 - Request shape: `field_required`, `unknown_field`, `invalid_type`, `invalid_format`, `invalid_precision`, `invalid_value`, `unsupported_value`, `value_out_of_range`, `invalid_json`, and `invalid_public_id`.
-- Business rules: `measurement_out_of_range`, `square_dimensions_mismatch`, and `pattern_unavailable`.
+- Business rules: `measurement_out_of_range`, `shape_measurements_mismatch`, the retained legacy `square_dimensions_mismatch`, and `pattern_unavailable`.
 - Routing/resources: `design_not_found`, `resource_not_found`, and `method_not_allowed`.
 - Server/infrastructure: `public_id_unavailable`, `storage_unavailable`, and `internal_error`.
 
@@ -406,7 +411,7 @@ python -m app.production
 
 This entry point is migration-gated and reserved for Render. It loads settings,
 requires `ENVIRONMENT=production`, runs `alembic upgrade head`, verifies the
-exact `20260729_01` revision, expected tables and named primary/unique/check/
+exact `20260812_01` revision, expected tables and named primary/unique/check/
 foreign-key constraints, the two intentional pattern indexes, no extra explicit
 design index, and exactly 15 pattern rows, then starts the existing
 `app.main:app` application on `0.0.0.0` using the platform-provided `PORT` or

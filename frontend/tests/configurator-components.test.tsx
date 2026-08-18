@@ -16,8 +16,10 @@ import {
 import type { ConfigurationState } from "../context/configuration/types";
 import { ShapeSelectionStep } from "../components/configurator/shape-selection-step";
 import { MeasurementStep } from "../components/configurator/measurement-step";
+import { CoverDetailsStep } from "../components/configurator/cover-details-step";
 import { PatternStep } from "../components/configurator/pattern-step";
 import { PreviewStep } from "../components/configurator/preview-step";
+import { deriveReviewReadiness } from "../components/configurator/review-summary";
 import { SaveSharePanel } from "../components/configurator/save-share-panel";
 import type { PatternDefinition } from "../data/patterns";
 import {
@@ -57,10 +59,15 @@ const completeConfiguration: ConfigurationState = {
   shape: "rectangle",
   width: 80,
   height: 40,
+  backWidth: null,
   thickness: 10,
   unit: "cm",
   patternId: "fern-trail",
   patternScale: 1.2,
+  materialId: "cotton-canvas",
+  fitPreference: "standard",
+  closureType: "zipper",
+  seamStyle: "plain",
 };
 
 function SeedConfiguration({
@@ -84,6 +91,10 @@ function StateProbe() {
       <span data-testid="current-width">{state.width ?? "none"}</span>
       <span data-testid="current-height">{state.height ?? "none"}</span>
       <span data-testid="current-pattern">{state.patternId ?? "none"}</span>
+      <span data-testid="current-material">{state.materialId}</span>
+      <span data-testid="current-fit">{state.fitPreference}</span>
+      <span data-testid="current-closure">{state.closureType}</span>
+      <span data-testid="current-seam">{state.seamStyle}</span>
       <button
         type="button"
         onClick={() => dispatch({ type: "resetConfiguration" })}
@@ -160,6 +171,27 @@ test("selects accessible shape choices and resets context state", () => {
   assert.equal(screen.getByTestId("current-shape").textContent, "none");
 });
 
+test("warns before an equal-dimension shape replaces a meaningful height", () => {
+  renderWithConfiguration(<ShapeSelectionStep />, completeConfiguration);
+
+  fireEvent.click(screen.getByRole("radio", { name: "Round cushion" }));
+  assert.equal(screen.getByTestId("current-shape").textContent, "rectangle");
+  assert.ok(screen.getByRole("heading", { name: "Confirm equal dimensions" }));
+  assert.match(screen.getByText(/Changing shape will make/i).textContent ?? "", /80 cm/);
+
+  fireEvent.keyDown(screen.getByRole("heading", { name: "Confirm equal dimensions" }).parentElement!, {
+    key: "Escape",
+  });
+  assert.equal(screen.queryByRole("heading", { name: "Confirm equal dimensions" }), null);
+  assert.equal(screen.getByTestId("current-height").textContent, "40");
+
+  fireEvent.click(screen.getByRole("radio", { name: "Round cushion" }));
+  fireEvent.click(screen.getByRole("button", { name: "Use width for both dimensions" }));
+  assert.equal(screen.getByTestId("current-shape").textContent, "round");
+  assert.equal(screen.getByTestId("current-width").textContent, "80");
+  assert.equal(screen.getByTestId("current-height").textContent, "80");
+});
+
 test("shows shape-specific measurement fields and user-visible validation", () => {
   const squareConfiguration: ConfigurationState = {
     ...completeConfiguration,
@@ -191,6 +223,54 @@ test("shows shape-specific measurement fields and user-visible validation", () =
   assert.equal(screen.queryByRole("status"), null);
   assert.equal(screen.getByTestId("current-width").textContent, "45.25");
   assert.equal(screen.getByTestId("current-height").textContent, "45.25");
+});
+
+test("associates tapered guidance and relationship errors with each measurement", () => {
+  renderWithConfiguration(
+    <MeasurementStep />,
+    {
+      ...completeConfiguration,
+      shape: "tapered",
+      width: 80,
+      backWidth: 65,
+      height: 55,
+    },
+  );
+
+  const frontWidth = screen.getByRole("textbox", { name: "Front width (cm)" });
+  const backWidth = screen.getByRole("textbox", { name: "Back width (cm)" });
+  assert.ok(screen.getByRole("textbox", { name: "Depth (cm)" }));
+  const frontDescriptionId = frontWidth.getAttribute("aria-describedby");
+  assert.ok(frontDescriptionId);
+  assert.ok(document.getElementById(frontDescriptionId));
+  assert.match(screen.getByText(/Measure the wider front edge/i).textContent ?? "", /Example: 80 cm/);
+
+  const guidance = screen.getByText("More measuring tips");
+  assert.equal(guidance.closest("details")?.hasAttribute("open"), false);
+  fireEvent.click(guidance);
+  assert.equal(guidance.closest("details")?.hasAttribute("open"), true);
+
+  fireEvent.change(backWidth, { target: { value: "80" } });
+  const error = screen.getByRole("status");
+  assert.match(error.textContent ?? "", /smaller than front width/i);
+  assert.ok((backWidth.getAttribute("aria-describedby") ?? "").includes(error.id));
+});
+
+test("selects material, fit, closure, and seam independently", () => {
+  renderWithConfiguration(<CoverDetailsStep />, completeConfiguration);
+
+  assert.equal((screen.getByRole("radio", { name: "Cotton canvas" }) as HTMLInputElement).checked, true);
+  assert.equal((screen.getByRole("radio", { name: "Standard fit" }) as HTMLInputElement).checked, true);
+  fireEvent.click(screen.getByRole("radio", { name: "Linen blend" }));
+  fireEvent.click(screen.getByRole("radio", { name: "More relaxed fit" }));
+  fireEvent.click(screen.getByRole("radio", { name: "Envelope opening" }));
+  fireEvent.click(screen.getByRole("radio", { name: "Piped edge" }));
+
+  assert.equal(screen.getByTestId("current-material").textContent, "linen-blend");
+  assert.equal(screen.getByTestId("current-fit").textContent, "relaxed");
+  assert.equal(screen.getByTestId("current-closure").textContent, "envelope");
+  assert.equal(screen.getByTestId("current-seam").textContent, "piped");
+  assert.match(screen.getByText(/never rewrites your measurements/i).textContent ?? "", /never rewrites/i);
 });
 
 test("preserves a selected pattern when filters hide it and exposes recovery", () => {
@@ -365,6 +445,57 @@ test("renders the correct preview visual for square and box cushions", () => {
       ),
     );
     unmount();
+  }
+});
+
+test("renders tapered geometry, honest construction details, fit, and review output", () => {
+  const taperedConfiguration: ConfigurationState = {
+    ...completeConfiguration,
+    shape: "tapered",
+    width: 80,
+    backWidth: 65,
+    height: 55,
+    materialId: "linen-blend",
+    fitPreference: "relaxed",
+    closureType: "envelope",
+    seamStyle: "piped",
+  };
+  const { container } = renderWithConfiguration(
+    <PreviewStep selectedPattern={fernPattern} showScaleControls={false} />,
+    taperedConfiguration,
+  );
+
+  const preview = screen.getByRole("region", {
+    name: "Tapered / trapezoid cushion preview",
+  });
+  assert.match(preview.textContent ?? "", /Linen blend/);
+  assert.match(preview.textContent ?? "", /More relaxed fit/);
+  assert.match(preview.textContent ?? "", /Envelope opening/);
+  assert.match(preview.textContent ?? "", /Piped edge/);
+  assert.match(preview.textContent ?? "", /does not alter the entered measurements/i);
+  const svg = container.querySelector('svg[data-preview-shape="tapered"]');
+  assert.ok(svg);
+  assert.equal(svg.getAttribute("data-preview-fit"), "relaxed");
+  assert.ok(svg.querySelector(".cushion-preview-piping"));
+
+  const readiness = deriveReviewReadiness(taperedConfiguration, {
+    patterns: [fernPattern],
+    status: "ready",
+  });
+  assert.equal(readiness.status, "ready");
+  if (readiness.status === "ready") {
+    assert.deepEqual(
+      readiness.summary.fields
+        .filter(({ id }) => ["backWidth", "material", "fit-preference", "closure-type", "seam-style"].includes(id))
+        .map(({ label, value }) => [label, value]),
+      [
+        ["Back width", "65 cm"],
+        ["Material", "Linen blend"],
+        ["Fit preference", "More relaxed fit"],
+        ["Closure / access", "Envelope opening"],
+        ["Edge finish", "Piped edge"],
+      ],
+    );
   }
 });
 

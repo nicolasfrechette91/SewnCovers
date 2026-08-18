@@ -31,6 +31,10 @@ const sharedDesignSource = readFileSync(
   new URL("./shared-design.ts", import.meta.url),
   "utf8",
 );
+const coverOptionsSource = readFileSync(
+  new URL("../data/cover-options.ts", import.meta.url),
+  "utf8",
+);
 let moduleSequence = 0;
 
 function transpile(source) {
@@ -62,6 +66,10 @@ async function loadPhaseSixModules() {
     transpile(patternScaleSource),
     "pattern-scale",
   );
+  const coverOptionsUrl = dataModule(
+    transpile(coverOptionsSource),
+    "cover-options",
+  );
   const patternsUrl = dataModule(
     transpile(patternsSource),
     "patterns",
@@ -82,6 +90,10 @@ async function loadPhaseSixModules() {
       .replace(
         '"../context/configuration/pattern-scale"',
         JSON.stringify(patternScaleUrl),
+      )
+      .replace(
+        '"../data/cover-options"',
+        JSON.stringify(coverOptionsUrl),
       ),
     "design-save",
   );
@@ -94,6 +106,10 @@ async function loadPhaseSixModules() {
       .replace(
         '"../context/configuration/pattern-scale"',
         JSON.stringify(patternScaleUrl),
+      )
+      .replace(
+        '"../data/cover-options"',
+        JSON.stringify(coverOptionsUrl),
       ),
     "shared-design",
   );
@@ -183,10 +199,15 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
         shape: "square",
         width: 45.25,
         height: 45.25,
+        backWidth: null,
         thickness: 7.5,
         unit: "cm",
         patternId: "fern-trail",
         patternScale: 1.2,
+        materialId: "cotton-canvas",
+        fitPreference: "standard",
+        closureType: "zipper",
+        seamStyle: "plain",
       },
       expectedPath: "/configure/",
     },
@@ -196,10 +217,15 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
         shape: "rectangle",
         width: 23.75,
         height: 17.25,
+        backWidth: null,
         thickness: 3.5,
         unit: "in",
         patternId: "diamond-path",
         patternScale: 0.8,
+        materialId: "linen-blend",
+        fitPreference: "close",
+        closureType: "envelope",
+        seamStyle: "piped",
       },
       expectedPath: "/configure/",
     },
@@ -209,10 +235,15 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
         shape: "box",
         width: 180.5,
         height: 60.25,
+        backWidth: null,
         thickness: 12.75,
         unit: "cm",
         patternId: "terrace-wave",
         patternScale: 2,
+        materialId: "polyester-weave",
+        fitPreference: "relaxed",
+        closureType: "slip-on",
+        seamStyle: "plain",
       },
       expectedPath: "/sewncovers/configure/",
     },

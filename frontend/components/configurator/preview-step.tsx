@@ -17,11 +17,19 @@ import {
   PATTERN_SCALE_STEP,
   useConfiguration,
   type CushionShape,
+  type FitPreference,
+  type SeamStyle,
 } from "@/context/configuration";
+import {
+  closureOptions,
+  findCoverOption,
+  fitOptions,
+  materialOptions,
+  seamOptions,
+} from "@/data/cover-options";
 import type { PatternDefinition } from "@/data/patterns";
 import {
   getCushionShapeDefinition,
-  getMeasurementLabel,
 } from "@/data/shapes";
 
 import { CushionPreview } from "./cushion-preview";
@@ -49,16 +57,21 @@ function pointsToString(
 
 function PreviewVisual({
   geometry,
+  fitPreference,
   patternClassName,
   patternScale,
   shape,
+  seamStyle,
 }: Readonly<{
+  fitPreference: FitPreference;
   geometry: PreviewGeometry;
   patternClassName: string;
   patternScale: number;
   shape: CushionShape;
+  seamStyle: SeamStyle;
 }>) {
   const {
+    backFaceWidth,
     faceHeight,
     faceWidth,
     faceX,
@@ -83,6 +96,28 @@ function PreviewVisual({
   const patternStyle: PatternStyle = {
     "--pattern-scale": patternScale,
   };
+  const taperedInset =
+    backFaceWidth === null ? 0 : (faceWidth - backFaceWidth) / 2;
+  const faceClipPath =
+    shape === "round"
+      ? "circle(50%)"
+      : shape === "tapered"
+        ? `polygon(${taperedInset}px 0, ${faceWidth - taperedInset}px 0, 100% 100%, 0 100%)`
+        : undefined;
+  const cornerRadius =
+    shape === "box"
+      ? 4
+      : fitPreference === "close"
+        ? 6
+        : fitPreference === "relaxed"
+          ? 18
+          : 10;
+  const taperedPoints = pointsToString([
+    [faceX + taperedInset, faceY],
+    [faceRight - taperedInset, faceY],
+    [faceRight, faceBottom],
+    [faceX, faceBottom],
+  ]);
 
   return (
     <svg
@@ -91,9 +126,22 @@ function PreviewVisual({
       preserveAspectRatio="xMidYMid meet"
       focusable="false"
       data-preview-shape={shape}
+      data-preview-fit={fitPreference}
     >
-      <polygon className="cushion-preview-side" points={sidePoints} />
-      <polygon className="cushion-preview-bottom" points={bottomPoints} />
+      {shape === "round" ? (
+        <ellipse
+          className="cushion-preview-bottom"
+          cx={faceX + faceWidth / 2 + offsetX}
+          cy={faceY + faceHeight / 2 + offsetY}
+          rx={faceWidth / 2}
+          ry={faceHeight / 2}
+        />
+      ) : (
+        <>
+          <polygon className="cushion-preview-side" points={sidePoints} />
+          <polygon className="cushion-preview-bottom" points={bottomPoints} />
+        </>
+      )}
       <foreignObject
         x={faceX}
         y={faceY}
@@ -102,18 +150,44 @@ function PreviewVisual({
       >
         <div
           className={`prototype-pattern ${patternClassName} cushion-preview-face size-full`}
-          style={patternStyle}
+          style={{ ...patternStyle, clipPath: faceClipPath }}
         />
       </foreignObject>
-      <rect
-        className="cushion-preview-face-outline"
-        x={faceX}
-        y={faceY}
-        width={faceWidth}
-        height={faceHeight}
-        rx={shape === "box" ? 4 : 10}
-        vectorEffect="non-scaling-stroke"
-      />
+      {shape === "round" ? (
+        <ellipse
+          className="cushion-preview-face-outline"
+          cx={faceX + faceWidth / 2}
+          cy={faceY + faceHeight / 2}
+          rx={faceWidth / 2}
+          ry={faceHeight / 2}
+          vectorEffect="non-scaling-stroke"
+        />
+      ) : shape === "tapered" ? (
+        <polygon
+          className="cushion-preview-face-outline"
+          points={taperedPoints}
+          vectorEffect="non-scaling-stroke"
+        />
+      ) : (
+        <rect
+          className="cushion-preview-face-outline"
+          x={faceX}
+          y={faceY}
+          width={faceWidth}
+          height={faceHeight}
+          rx={cornerRadius}
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
+      {seamStyle === "piped" ? (
+        shape === "round" ? (
+          <ellipse className="cushion-preview-piping" cx={faceX + faceWidth / 2} cy={faceY + faceHeight / 2} rx={Math.max(0, faceWidth / 2 - 5)} ry={Math.max(0, faceHeight / 2 - 5)} />
+        ) : shape === "tapered" ? (
+          <polygon className="cushion-preview-piping" points={taperedPoints} />
+        ) : (
+          <rect className="cushion-preview-piping" x={faceX + 5} y={faceY + 5} width={Math.max(0, faceWidth - 10)} height={Math.max(0, faceHeight - 10)} rx={Math.max(0, cornerRadius - 2)} />
+        )
+      ) : null}
     </svg>
   );
 }
@@ -133,6 +207,10 @@ function getEmptyMessage(
     const requiredMeasurements =
       shape === "square"
         ? "width and thickness"
+        : shape === "round"
+          ? "diameter and thickness"
+          : shape === "tapered"
+            ? "front width, back width, depth, and thickness"
         : shape === "rectangle"
           ? "width, height, and thickness"
           : "width, depth, and thickness";
@@ -179,32 +257,19 @@ export function PreviewStep({
   const scaleControlId =
     focusTargetId ?? `${generatedId}-pattern-scale`;
   const scaleDescriptionId = `${scaleControlId}-description`;
-  const widthIsValid = isMeasurementWithinRange(
-    state.width,
-    "width",
-    state.unit,
-  );
-  const heightIsValid = isMeasurementWithinRange(
-    state.height,
-    "height",
-    state.unit,
-  );
-  const thicknessIsValid = isMeasurementWithinRange(
-    state.thickness,
-    "thickness",
-    state.unit,
-  );
   const measurementsAreValid = hasValidMeasurementsForShape(
     state.shape,
     state.width,
     state.height,
     state.thickness,
     state.unit,
+    state.backWidth,
   );
   const patternScaleIsValid = isPatternScaleWithinRange(
     state.patternScale,
   );
   const geometry = calculatePreviewGeometry({
+    backWidth: state.backWidth,
     width: state.width,
     height: state.height,
     shape: state.shape,
@@ -225,41 +290,25 @@ export function PreviewStep({
 
   const shape = state.shape;
   const definition = getCushionShapeDefinition(shape);
-  const width = formatValidMeasurement(
-    state.width,
-    widthIsValid,
-    state.unit,
-  );
-  const height = formatValidMeasurement(
-    state.height,
-    heightIsValid,
-    state.unit,
-  );
-  const thickness = formatValidMeasurement(
-    state.thickness,
-    thicknessIsValid,
-    state.unit,
-  );
+  const measurementValues = {
+    backWidth: state.backWidth,
+    height: state.height,
+    thickness: state.thickness,
+    width: state.width,
+  } as const;
   const dimensionDetails: readonly PreviewDetail[] =
-    shape === "square"
-      ? [
-          {
-            label: "Face dimensions",
-            value:
-              widthIsValid && heightIsValid
-                ? `${formatMeasurement(state.width)} × ${formatMeasurement(state.height)} ${state.unit}`
-                : "Invalid or incomplete",
-          },
-          { label: "Thickness", value: thickness },
-        ]
-      : [
-          { label: "Width", value: width },
-          {
-            label: getMeasurementLabel(shape, "height"),
-            value: height,
-          },
-          { label: "Thickness", value: thickness },
-        ];
+    definition.measurementFields.map(({ field, label }) => ({
+      label,
+      value: formatValidMeasurement(
+        measurementValues[field],
+        isMeasurementWithinRange(
+          measurementValues[field],
+          field,
+          state.unit,
+        ),
+        state.unit,
+      ),
+    }));
 
   const changePatternScale = (
     event: ChangeEvent<HTMLInputElement>,
@@ -296,10 +345,12 @@ export function PreviewStep({
         visual={
           previewIsComplete ? (
             <PreviewVisual
+              fitPreference={state.fitPreference}
               geometry={geometry}
               patternClassName={selectedPattern.previewClassName}
               patternScale={state.patternScale}
               shape={shape}
+              seamStyle={state.seamStyle}
             />
           ) : undefined
         }
@@ -314,6 +365,30 @@ export function PreviewStep({
               <div className="min-w-0">
                 <dt className="font-control text-text-primary">Shape</dt>
                 <dd className="break-words">{definition.name}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="font-control text-text-primary">Material</dt>
+                <dd className="break-words">
+                  {findCoverOption(materialOptions, state.materialId).name}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="font-control text-text-primary">Fit preference</dt>
+                <dd className="break-words">
+                  {findCoverOption(fitOptions, state.fitPreference).name}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="font-control text-text-primary">Closure / access</dt>
+                <dd className="break-words">
+                  {findCoverOption(closureOptions, state.closureType).name}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="font-control text-text-primary">Edge finish</dt>
+                <dd className="break-words">
+                  {findCoverOption(seamOptions, state.seamStyle).name}
+                </dd>
               </div>
               <div className="min-w-0">
                 <dt className="font-control text-text-primary">
@@ -341,6 +416,9 @@ export function PreviewStep({
                 <dd className="break-words">{formattedScale}</dd>
               </div>
             </dl>
+            <p className="mt-3 text-supporting text-text-muted">
+              Fit styling is indicative only and does not alter the entered measurements. Closure details are listed but not drawn because this view does not show the opening.
+            </p>
 
             {selectedPattern && showScaleControls ? (
               <div className="mt-component rounded-card border border-border bg-surface-subtle p-control-x py-4">

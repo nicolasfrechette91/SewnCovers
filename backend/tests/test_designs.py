@@ -118,10 +118,15 @@ def valid_payload(**overrides: Any) -> dict[str, Any]:
         "shape": "rectangle",
         "width": 45.25,
         "height": 55.5,
+        "backWidth": None,
         "thickness": 8.75,
         "unit": "cm",
         "patternId": ACTIVE_PATTERN_ID,
         "patternScale": 1.2,
+        "materialId": "cotton-canvas",
+        "fitPreference": "standard",
+        "closureType": "zipper",
+        "seamStyle": "plain",
     }
     payload.update(overrides)
     return payload
@@ -187,10 +192,15 @@ def test_create_returns_201_location_and_public_fields_then_retrieves(
         "shape",
         "width",
         "height",
+        "backWidth",
         "thickness",
         "unit",
         "patternId",
         "patternScale",
+        "materialId",
+        "fitPreference",
+        "closureType",
+        "seamStyle",
     }
     assert count_designs(design_database) == 1
 
@@ -201,14 +211,18 @@ def test_create_returns_201_location_and_public_fields_then_retrieves(
 
 
 @pytest.mark.parametrize(
-    ("shape", "unit", "width", "height", "thickness"),
+    ("shape", "unit", "width", "height", "back_width", "thickness"),
     [
-        ("square", "cm", 45.5, 45.5, 8.25),
-        ("rectangle", "cm", 45.5, 55.25, 8.25),
-        ("box", "cm", 70.0, 35.25, 12.5),
-        ("square", "in", 18.25, 18.25, 3.25),
-        ("rectangle", "in", 18.25, 22.5, 3.25),
-        ("box", "in", 27.5, 13.75, 4.75),
+        ("square", "cm", 45.5, 45.5, None, 8.25),
+        ("rectangle", "cm", 45.5, 55.25, None, 8.25),
+        ("box", "cm", 70.0, 35.25, None, 12.5),
+        ("round", "cm", 50.0, 50.0, None, 8.0),
+        ("tapered", "cm", 80.0, 55.0, 65.0, 10.0),
+        ("square", "in", 18.25, 18.25, None, 3.25),
+        ("rectangle", "in", 18.25, 22.5, None, 3.25),
+        ("box", "in", 27.5, 13.75, None, 4.75),
+        ("round", "in", 20.0, 20.0, None, 3.0),
+        ("tapered", "in", 31.5, 21.5, 25.5, 4.0),
     ],
 )
 def test_creation_and_retrieval_support_every_shape_and_unit_combination(
@@ -216,6 +230,7 @@ def test_creation_and_retrieval_support_every_shape_and_unit_combination(
     unit: str,
     width: float,
     height: float,
+    back_width: float | None,
     thickness: float,
     client: TestClient,
 ) -> None:
@@ -224,6 +239,7 @@ def test_creation_and_retrieval_support_every_shape_and_unit_combination(
         unit=unit,
         width=width,
         height=height,
+        backWidth=back_width,
         thickness=thickness,
     )
 
@@ -299,8 +315,12 @@ def test_malformed_public_id_is_rejected(public_id: str, client: TestClient) -> 
         valid_payload(width="45.25"),
         valid_payload(height=True),
         valid_payload(thickness=None),
-        valid_payload(shape="round"),
+        valid_payload(shape="oval"),
         valid_payload(unit="mm"),
+        valid_payload(materialId="silk"),
+        valid_payload(fitPreference="tight"),
+        valid_payload(closureType="buttons"),
+        valid_payload(seamStyle="serged"),
         valid_payload(patternId="Prototype-Botanical"),
         valid_payload(patternId="prototype_botanical"),
         valid_payload(width=45.251),
@@ -328,6 +348,10 @@ def test_invalid_extra_and_server_managed_request_fields_are_rejected(
         valid_payload(thickness=0.99),
         valid_payload(thickness=60.01),
         valid_payload(shape="square", width=45.0, height=45.01),
+        valid_payload(shape="round", width=45.0, height=45.01),
+        valid_payload(shape="tapered", backWidth=None),
+        valid_payload(shape="tapered", width=80.0, backWidth=80.0),
+        valid_payload(shape="rectangle", backWidth=40.0),
         valid_payload(patternScale=0.4),
         valid_payload(patternScale=2.1),
         valid_payload(
@@ -394,8 +418,8 @@ def test_cross_field_business_errors_are_field_aware_and_deterministic(
                 "location": ["body", "height"],
             },
             {
-                "code": "square_dimensions_mismatch",
-                "message": "Square width and height must be equal.",
+                "code": "shape_measurements_mismatch",
+                "message": "Square face dimensions must be equal.",
                 "location": ["body", "height"],
             },
             {
@@ -455,6 +479,31 @@ def test_supported_boundary_values_are_preserved(
     assert response.json() == {
         "publicId": response.json()["publicId"],
         **payload,
+    }
+
+
+def test_legacy_create_payload_receives_safe_defaults(client: TestClient) -> None:
+    payload = valid_payload()
+    for field in (
+        "backWidth",
+        "materialId",
+        "fitPreference",
+        "closureType",
+        "seamStyle",
+    ):
+        del payload[field]
+
+    response = client.post("/designs", json=payload)
+
+    assert response.status_code == 201
+    assert response.json() == {
+        "publicId": response.json()["publicId"],
+        **payload,
+        "backWidth": None,
+        "materialId": "cotton-canvas",
+        "fitPreference": "standard",
+        "closureType": "zipper",
+        "seamStyle": "plain",
     }
 
 
@@ -577,10 +626,15 @@ def test_openapi_documents_create_retrieve_schemas_and_statuses(
         "shape",
         "width",
         "height",
+        "backWidth",
         "thickness",
         "unit",
         "patternId",
         "patternScale",
+        "materialId",
+        "fitPreference",
+        "closureType",
+        "seamStyle",
         "publicId",
     ]
     assert "id" not in schemas["DesignResponse"]["properties"]

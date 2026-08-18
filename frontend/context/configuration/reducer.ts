@@ -9,15 +9,27 @@ import {
   normalizePatternScale,
   PATTERN_SCALE_DEFAULT,
 } from "./pattern-scale";
+import {
+  DEFAULT_CLOSURE_TYPE,
+  DEFAULT_FIT_PREFERENCE,
+  DEFAULT_MATERIAL_ID,
+  DEFAULT_SEAM_STYLE,
+  hasSupportedCoverOptions,
+} from "../../data/cover-options";
 
 export const initialConfigurationState: ConfigurationState = {
   shape: null,
   width: null,
   height: null,
+  backWidth: null,
   thickness: null,
   unit: "cm",
   patternId: null,
   patternScale: PATTERN_SCALE_DEFAULT,
+  materialId: DEFAULT_MATERIAL_ID,
+  fitPreference: DEFAULT_FIT_PREFERENCE,
+  closureType: DEFAULT_CLOSURE_TYPE,
+  seamStyle: DEFAULT_SEAM_STYLE,
 };
 
 export function configurationReducer(
@@ -33,7 +45,7 @@ export function configurationReducer(
 
       if (
         configuration.shape === null ||
-        !["box", "rectangle", "square"].includes(
+        !["box", "rectangle", "round", "square", "tapered"].includes(
           configuration.shape,
         ) ||
         !hasValidMeasurementsForShape(
@@ -42,6 +54,7 @@ export function configurationReducer(
           configuration.height,
           configuration.thickness,
           configuration.unit,
+          configuration.backWidth,
         ) ||
         configuration.width === null ||
         roundMeasurement(configuration.width) !==
@@ -56,7 +69,12 @@ export function configurationReducer(
         !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(
           configuration.patternId,
         ) ||
-        patternScale !== configuration.patternScale
+        patternScale !== configuration.patternScale ||
+        !isNullableCommittedMeasurement(configuration.backWidth) ||
+        (configuration.backWidth !== null &&
+          roundMeasurement(configuration.backWidth) !==
+            configuration.backWidth) ||
+        !hasSupportedCoverOptions(configuration)
       ) {
         return state;
       }
@@ -65,14 +83,19 @@ export function configurationReducer(
         shape: configuration.shape,
         width: configuration.width,
         height: configuration.height,
+        backWidth: configuration.backWidth,
         thickness: configuration.thickness,
         unit: configuration.unit,
         patternId: configuration.patternId,
         patternScale: configuration.patternScale,
+        materialId: configuration.materialId,
+        fitPreference: configuration.fitPreference,
+        closureType: configuration.closureType,
+        seamStyle: configuration.seamStyle,
       };
     }
     case "setShape":
-      return action.shape === "square"
+      return action.shape === "square" || action.shape === "round"
         ? { ...state, shape: action.shape, height: state.width }
         : { ...state, shape: action.shape };
     case "setWidth":
@@ -80,7 +103,7 @@ export function configurationReducer(
         return state;
       }
 
-      return state.shape === "square"
+      return state.shape === "square" || state.shape === "round"
         ? { ...state, width: action.width, height: action.width }
         : { ...state, width: action.width };
     case "setSquareWidth":
@@ -89,8 +112,13 @@ export function configurationReducer(
         : state;
     case "setHeight":
       return state.shape !== "square" &&
+        state.shape !== "round" &&
         isNullableCommittedMeasurement(action.height)
         ? { ...state, height: action.height }
+        : state;
+    case "setBackWidth":
+      return isNullableCommittedMeasurement(action.backWidth)
+        ? { ...state, backWidth: action.backWidth }
         : state;
     case "setThickness":
       return isNullableCommittedMeasurement(action.thickness)
@@ -101,7 +129,12 @@ export function configurationReducer(
         return state;
       }
 
-      const measurements = [state.width, state.height, state.thickness];
+      const measurements = [
+        state.width,
+        state.height,
+        state.backWidth,
+        state.thickness,
+      ];
 
       if (!measurements.every(isNullableCommittedMeasurement)) {
         return state;
@@ -111,6 +144,11 @@ export function configurationReducer(
         ...state,
         width: convertMeasurement(state.width, state.unit, action.unit),
         height: convertMeasurement(state.height, state.unit, action.unit),
+        backWidth: convertMeasurement(
+          state.backWidth,
+          state.unit,
+          action.unit,
+        ),
         thickness: convertMeasurement(
           state.thickness,
           state.unit,
@@ -128,6 +166,34 @@ export function configurationReducer(
         ? state
         : { ...state, patternScale };
     }
+    case "setMaterialId":
+      return hasSupportedCoverOptions({
+        ...state,
+        materialId: action.materialId,
+      })
+        ? { ...state, materialId: action.materialId }
+        : state;
+    case "setFitPreference":
+      return hasSupportedCoverOptions({
+        ...state,
+        fitPreference: action.fitPreference,
+      })
+        ? { ...state, fitPreference: action.fitPreference }
+        : state;
+    case "setClosureType":
+      return hasSupportedCoverOptions({
+        ...state,
+        closureType: action.closureType,
+      })
+        ? { ...state, closureType: action.closureType }
+        : state;
+    case "setSeamStyle":
+      return hasSupportedCoverOptions({
+        ...state,
+        seamStyle: action.seamStyle,
+      })
+        ? { ...state, seamStyle: action.seamStyle }
+        : state;
     case "resetConfiguration":
       return initialConfigurationState;
   }

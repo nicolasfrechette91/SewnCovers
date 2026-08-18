@@ -16,6 +16,7 @@ import {
 import {
   getCushionShapeDefinition,
   getMeasurementLabel,
+  getShapeMeasurementDefinition,
 } from "@/data/shapes";
 
 import { MeasurementDiagram } from "./measurement-diagram";
@@ -57,30 +58,16 @@ function getSupportingText(
   field: MeasurementField,
   unit: MeasurementUnit,
 ): string {
+  const measurement = getShapeMeasurementDefinition(shape, field);
   const range = getMeasurementRange(field, unit);
   const visibleRange = `${formatMeasurement(range.min)}–${formatMeasurement(range.max)} ${unit}`;
 
-  if (field === "thickness") {
-    return `Measure straight across the side profile. Enter ${visibleRange}.`;
-  }
-
-  if (field === "height") {
-    return shape === "box"
-      ? `Measure from front to back across the top. Enter ${visibleRange}.`
-      : `Measure from top to bottom across the face. Enter ${visibleRange}.`;
-  }
-
-  if (shape === "square") {
-    return `Measure straight across the face. Enter ${visibleRange}; height will match this value.`;
-  }
-
-  return shape === "box"
-    ? `Measure from side to side across the top. Enter ${visibleRange}.`
-    : `Measure from side to side across the face. Enter ${visibleRange}.`;
+  return `${measurement.tip} Enter ${visibleRange}. Example: ${measurement.example[unit]} ${unit}.`;
 }
 
 function ShapeMeasurementForm({
   focusTargetId,
+  backWidth,
   height,
   shape,
   thickness,
@@ -88,6 +75,7 @@ function ShapeMeasurementForm({
   width,
 }: Readonly<{
   focusTargetId?: string;
+  backWidth: number | null;
   height: number | null;
   shape: CushionShape;
   thickness: number | null;
@@ -99,11 +87,13 @@ function ShapeMeasurementForm({
   const generatedId = useId();
   const unitDescriptionId = `${generatedId}-unit-description`;
   const [drafts, setDrafts] = useState<MeasurementDrafts>({
+    backWidth: formatMeasurement(backWidth),
     height: formatMeasurement(height),
     thickness: formatMeasurement(thickness),
     width: formatMeasurement(width),
   });
   const [errors, setErrors] = useState<MeasurementErrors>({
+    backWidth: null,
     height: null,
     thickness: null,
     width: null,
@@ -115,7 +105,7 @@ function ShapeMeasurementForm({
   ) => {
     if (field === "width") {
       dispatch(
-        shape === "square"
+        shape === "square" || shape === "round"
           ? { type: "setSquareWidth", width: value }
           : { type: "setWidth", width: value },
       );
@@ -124,6 +114,11 @@ function ShapeMeasurementForm({
 
     if (field === "height") {
       dispatch({ type: "setHeight", height: value });
+      return;
+    }
+
+    if (field === "backWidth") {
+      dispatch({ type: "setBackWidth", backWidth: value });
       return;
     }
 
@@ -176,13 +171,28 @@ function ShapeMeasurementForm({
   };
 
   const changeUnit = (nextUnit: MeasurementUnit) => {
-    setErrors({ height: null, thickness: null, width: null });
+    setErrors({
+      backWidth: null,
+      height: null,
+      thickness: null,
+      width: null,
+    });
     dispatch({ type: "setMeasurementUnit", unit: nextUnit });
   };
 
   const renderMeasurementInput = (field: MeasurementField) => {
     const label = getMeasurementLabel(shape, field);
     const errorId = `${generatedId}-${field}-error`;
+    const parsedDraft = parseMeasurementDraft(drafts[field], field, unit);
+    const relationshipError =
+      shape === "tapered" &&
+      field === "backWidth" &&
+      parsedDraft.value !== null &&
+      width !== null &&
+      parsedDraft.value >= width
+        ? "Back width must be smaller than front width for this tapered shape."
+        : null;
+    const visibleError = errors[field] ?? relationshipError;
 
     return (
       <div className="min-w-0" key={field}>
@@ -197,21 +207,21 @@ function ShapeMeasurementForm({
           value={drafts[field]}
           label={`${label} (${unit})`}
           supportingText={getSupportingText(shape, field, unit)}
-          invalid={errors[field] !== null}
-          aria-describedby={errors[field] ? errorId : undefined}
+          invalid={visibleError !== null}
+          aria-describedby={visibleError ? errorId : undefined}
           onChange={(event) => updateDraft(field, event.currentTarget.value)}
           onBlur={(event) =>
             normalizeDraft(field, event.currentTarget.value)
           }
         />
-        {errors[field] ? (
+        {visibleError ? (
           <ErrorMessage
             id={errorId}
             className="mt-2"
             role="status"
             aria-live="polite"
           >
-            {errors[field]}
+            {visibleError}
           </ErrorMessage>
         ) : null}
       </div>
@@ -250,8 +260,24 @@ function ShapeMeasurementForm({
           </p>
 
           <div className="mt-component grid min-w-0 gap-component sm:grid-cols-2">
-            {definition.measurementFields.map(renderMeasurementInput)}
+            {definition.measurementFields.map(({ field }) =>
+              renderMeasurementInput(field),
+            )}
           </div>
+
+          <details className="mt-component rounded-card border border-border bg-surface-subtle p-control-x py-3">
+            <summary className="min-h-11 cursor-pointer py-2 text-button font-control text-brand">
+              More measuring tips
+            </summary>
+            <ul className="mt-2 list-disc space-y-2 pl-5 text-supporting text-text-muted">
+              <li>Use the same tape and unit for every dimension.</li>
+              <li>Measure the cushion itself, not the existing cover.</li>
+              <li>
+                Keep the tape straight and record the fullest point without
+                adding an allowance.
+              </li>
+            </ul>
+          </details>
         </div>
 
         <MeasurementDiagram shape={shape} />
@@ -280,6 +306,7 @@ export function MeasurementStep({
     >
       <ShapeMeasurementForm
         key={`${state.shape}-${state.unit}`}
+        backWidth={state.backWidth}
         focusTargetId={focusTargetId}
         height={state.height}
         shape={state.shape}

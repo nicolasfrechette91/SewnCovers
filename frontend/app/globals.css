@@ -634,6 +634,18 @@ body {
   stroke-width: 2;
 }
 
+.cushion-preview-piping {
+  fill: none;
+  stroke: var(--color-accent-strong);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.cover-option-label:has(.cover-option-input:checked) {
+  border-color: var(--color-brand);
+  background: var(--color-surface-subtle);
+}
+
 .configurator-edit-target:focus-visible {
   border-radius: var(--radius-control-small);
   box-shadow: var(--shadow-focus);
@@ -700,6 +712,11 @@ body {
     outline-offset: -2px;
   }
 
+  .cover-option-label:has(.cover-option-input:checked) {
+    outline: 2px solid CanvasText;
+    outline-offset: -2px;
+  }
+
   .shape-option-input:disabled + .shape-option-label {
     border-color: GrayText;
     color: GrayText;
@@ -737,6 +754,11 @@ body {
   .cushion-preview-side,
   .cushion-preview-bottom {
     fill: Canvas;
+    stroke: CanvasText;
+  }
+
+  .cushion-preview-piping {
+    fill: none;
     stroke: CanvasText;
   }
 

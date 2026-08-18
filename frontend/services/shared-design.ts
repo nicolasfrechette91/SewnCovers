@@ -4,6 +4,13 @@ import {
 import { normalizePatternScale } from "../context/configuration/pattern-scale";
 import type { ConfigurationState } from "../context/configuration/types";
 import type { PatternCatalogueResult } from "../data/patterns";
+import {
+  DEFAULT_CLOSURE_TYPE,
+  DEFAULT_FIT_PREFERENCE,
+  DEFAULT_MATERIAL_ID,
+  DEFAULT_SEAM_STYLE,
+  hasSupportedCoverOptions,
+} from "../data/cover-options";
 import type {
   ApiRequestStatus,
   DesignResponse,
@@ -12,7 +19,7 @@ import type {
 
 const PUBLIC_DESIGN_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 const PATTERN_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
-const DESIGN_RESPONSE_KEYS = [
+const LEGACY_DESIGN_RESPONSE_KEYS = [
   "shape",
   "width",
   "height",
@@ -20,6 +27,21 @@ const DESIGN_RESPONSE_KEYS = [
   "unit",
   "patternId",
   "patternScale",
+  "publicId",
+] as const;
+const EXPANDED_DESIGN_RESPONSE_KEYS = [
+  "shape",
+  "width",
+  "height",
+  "backWidth",
+  "thickness",
+  "unit",
+  "patternId",
+  "patternScale",
+  "materialId",
+  "fitPreference",
+  "closureType",
+  "seamStyle",
   "publicId",
 ] as const;
 
@@ -94,10 +116,25 @@ function configurationFromResponse(
   response: DesignResponse,
   requestedPublicId: string,
 ): Readonly<ConfigurationState> | null {
+  const legacyResponse = hasExactKeys(response, LEGACY_DESIGN_RESPONSE_KEYS);
+  const resolvedConfiguration = {
+    backWidth: legacyResponse ? null : response.backWidth,
+    closureType: legacyResponse
+      ? DEFAULT_CLOSURE_TYPE
+      : response.closureType,
+    fitPreference: legacyResponse
+      ? DEFAULT_FIT_PREFERENCE
+      : response.fitPreference,
+    materialId: legacyResponse ? DEFAULT_MATERIAL_ID : response.materialId,
+    seamStyle: legacyResponse ? DEFAULT_SEAM_STYLE : response.seamStyle,
+  };
   if (
-    !hasExactKeys(response, DESIGN_RESPONSE_KEYS) ||
+    (!legacyResponse &&
+      !hasExactKeys(response, EXPANDED_DESIGN_RESPONSE_KEYS)) ||
     response.publicId !== requestedPublicId ||
-    !["box", "rectangle", "square"].includes(response.shape) ||
+    !["box", "rectangle", "round", "square", "tapered"].includes(
+      response.shape,
+    ) ||
     !["cm", "in"].includes(response.unit) ||
     !hasAtMostDecimalPlaces(response.width, 2) ||
     !hasAtMostDecimalPlaces(response.height, 2) ||
@@ -108,11 +145,13 @@ function configurationFromResponse(
       response.height,
       response.thickness,
       response.unit,
+      resolvedConfiguration.backWidth,
     ) ||
     !PATTERN_ID_PATTERN.test(response.patternId) ||
     !hasAtMostDecimalPlaces(response.patternScale, 1) ||
     normalizePatternScale(response.patternScale) !==
-      response.patternScale
+      response.patternScale ||
+    !hasSupportedCoverOptions(resolvedConfiguration)
   ) {
     return null;
   }
@@ -121,10 +160,15 @@ function configurationFromResponse(
     shape: response.shape,
     width: response.width,
     height: response.height,
+    backWidth: resolvedConfiguration.backWidth,
     thickness: response.thickness,
     unit: response.unit,
     patternId: response.patternId,
     patternScale: response.patternScale,
+    materialId: resolvedConfiguration.materialId,
+    fitPreference: resolvedConfiguration.fitPreference,
+    closureType: resolvedConfiguration.closureType,
+    seamStyle: resolvedConfiguration.seamStyle,
   });
 }
 

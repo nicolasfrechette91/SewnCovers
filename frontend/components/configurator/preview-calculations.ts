@@ -19,6 +19,7 @@ const BOX_THICKNESS_VERTICAL_PROJECTION = 0.6;
 const GEOMETRY_DECIMAL_PLACES = 3;
 
 export interface PreviewGeometryInput {
+  readonly backWidth?: number | null;
   readonly height: number | null;
   readonly shape: CushionShape | null;
   readonly thickness: number | null;
@@ -27,6 +28,7 @@ export interface PreviewGeometryInput {
 }
 
 export interface PreviewGeometry {
+  readonly backFaceWidth: number | null;
   readonly faceHeight: number;
   readonly faceWidth: number;
   readonly faceX: number;
@@ -40,6 +42,7 @@ function roundGeometry(value: number): number {
 }
 
 export function calculatePreviewGeometry({
+  backWidth = null,
   height,
   shape,
   thickness,
@@ -51,7 +54,10 @@ export function calculatePreviewGeometry({
     !isMeasurementWithinRange(width, "width", unit) ||
     !isMeasurementWithinRange(height, "height", unit) ||
     !isMeasurementWithinRange(thickness, "thickness", unit) ||
-    (shape === "square" && width !== height)
+    ((shape === "square" || shape === "round") && width !== height) ||
+    (shape === "tapered" &&
+      (!isMeasurementWithinRange(backWidth, "backWidth", unit) ||
+        backWidth >= width))
   ) {
     return null;
   }
@@ -59,6 +65,10 @@ export function calculatePreviewGeometry({
   const widthInCentimetres = toCentimetres(width, unit);
   const heightInCentimetres = toCentimetres(height, unit);
   const thicknessInCentimetres = toCentimetres(thickness, unit);
+  const backWidthInCentimetres =
+    shape === "tapered" && backWidth !== null
+      ? toCentimetres(backWidth, unit)
+      : null;
   const horizontalProjection =
     shape === "box"
       ? BOX_THICKNESS_HORIZONTAL_PROJECTION
@@ -108,6 +118,10 @@ export function calculatePreviewGeometry({
   }
 
   return {
+    backFaceWidth:
+      backWidthInCentimetres === null
+        ? null
+        : roundGeometry(backWidthInCentimetres * scale),
     faceHeight: roundGeometry(faceHeight),
     faceWidth: roundGeometry(faceWidth),
     faceX: roundGeometry(faceX),
