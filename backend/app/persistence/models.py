@@ -1,11 +1,15 @@
 """Declarative database models and integrity constraints."""
 
+from __future__ import annotations
+
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     JSON,
     Boolean,
     CheckConstraint,
+    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -218,6 +222,204 @@ class CoverDesign(Base):
         String(16), nullable=False, server_default=text("'plain'")
     )
     pattern: Mapped[Pattern] = relationship(lazy="raise", viewonly=True)
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+class CustomerAccount(Base):
+    """Customer identity; private credentials never leave this table."""
+
+    __tablename__ = "customer_accounts"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_customer_accounts"),
+        UniqueConstraint("email", name="uq_customer_accounts_email"),
+        CheckConstraint(
+            "length(id) = 22",
+            name="ck_customer_accounts_id_length",
+        ),
+        CheckConstraint(
+            "length(email) BETWEEN 3 AND 254 AND email = lower(trim(email))",
+            name="ck_customer_accounts_email_normalized",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(22), nullable=False)
+    email: Mapped[str] = mapped_column(String(254), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(512), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now
+    )
+    sessions: Mapped[list[AuthenticatedSession]] = relationship(
+        back_populates="account", cascade="all, delete-orphan", passive_deletes=True
+    )
+    projects: Mapped[list[SavedProject]] = relationship(
+        back_populates="account", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class AuthenticatedSession(Base):
+    """Expiring, revocable bearer session containing only a token digest."""
+
+    __tablename__ = "authenticated_sessions"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_authenticated_sessions"),
+        UniqueConstraint("token_hash", name="uq_authenticated_sessions_token_hash"),
+        CheckConstraint(
+            "length(token_hash) = 64",
+            name="ck_authenticated_sessions_token_hash_length",
+        ),
+        Index("ix_authenticated_sessions_account_id", "account_id"),
+        Index("ix_authenticated_sessions_expires_at", "expires_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, autoincrement=True, nullable=False)
+    account_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey(
+            "customer_accounts.id",
+            name="fk_authenticated_sessions_account_id_customer_accounts",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    account: Mapped[CustomerAccount] = relationship(back_populates="sessions")
+
+
+class SavedProject(Base):
+    """Private named configuration workspace owned by exactly one account."""
+
+    __tablename__ = "saved_projects"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_saved_projects"),
+        CheckConstraint("length(id) = 22", name="ck_saved_projects_id_length"),
+        CheckConstraint(
+            "length(name) BETWEEN 1 AND 120 AND length(trim(name)) >= 1",
+            name="ck_saved_projects_name_length",
+        ),
+        CheckConstraint(
+            "next_version_number >= 2",
+            name="ck_saved_projects_next_version_number",
+        ),
+        Index("ix_saved_projects_account_id", "account_id"),
+        Index("ix_saved_projects_updated_at", "updated_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(22), nullable=False)
+    account_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey(
+            "customer_accounts.id",
+            name="fk_saved_projects_account_id_customer_accounts",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    next_version_number: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=2, server_default=text("2")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now
+    )
+    account: Mapped[CustomerAccount] = relationship(back_populates="projects")
+    versions: Mapped[list[ProjectVersion]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="ProjectVersion.version_number",
+    )
+
+
+class ProjectVersion(Base):
+    """Immutable validated configuration snapshot within a private project."""
+
+    __tablename__ = "project_versions"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_project_versions"),
+        UniqueConstraint(
+            "project_id",
+            "version_number",
+            name="uq_project_versions_project_number",
+        ),
+        CheckConstraint("length(id) = 22", name="ck_project_versions_id_length"),
+        CheckConstraint(
+            "version_number >= 1",
+            name="ck_project_versions_number_positive",
+        ),
+        Index("ix_project_versions_project_id", "project_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(22), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey(
+            "saved_projects.id",
+            name="fk_project_versions_project_id_saved_projects",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    configuration: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now
+    )
+    project: Mapped[SavedProject] = relationship(back_populates="versions")
+    share_grants: Mapped[list[ShareGrant]] = relationship(
+        back_populates="version",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class ShareGrant(Base):
+    """Revocable read-only bearer grant containing only a token digest."""
+
+    __tablename__ = "share_grants"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_share_grants"),
+        UniqueConstraint("token_hash", name="uq_share_grants_token_hash"),
+        CheckConstraint("length(id) = 22", name="ck_share_grants_id_length"),
+        CheckConstraint(
+            "length(token_hash) = 64",
+            name="ck_share_grants_token_hash_length",
+        ),
+        Index("ix_share_grants_version_id", "version_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(22), nullable=False)
+    version_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey(
+            "project_versions.id",
+            name="fk_share_grants_version_id_project_versions",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    version: Mapped[ProjectVersion] = relationship(back_populates="share_grants")
 
 
 class ImmutableDesignError(RuntimeError):

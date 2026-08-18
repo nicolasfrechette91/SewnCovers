@@ -13,6 +13,7 @@ for (const [name, value] of Object.entries({
   MouseEvent: dom.window.MouseEvent,
   getComputedStyle: dom.window.getComputedStyle.bind(dom.window),
   navigator: dom.window.navigator,
+  self: dom.window,
   window: dom.window,
 })) {
   Object.defineProperty(globalThis, name, {

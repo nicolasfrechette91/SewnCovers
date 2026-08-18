@@ -8,6 +8,24 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 
+from app.accounts.api import (
+    current_account,
+    delete_account,
+    export_account,
+    list_sessions,
+    login,
+    logout,
+    logout_all,
+    register,
+    revoke_session,
+)
+from app.accounts.schema import (
+    AccountDeletedResponse,
+    AccountExportResponse,
+    AccountResponse,
+    SessionCreatedResponse,
+    SessionResponse,
+)
 from app.designs.api import create_design, get_design
 from app.designs.schema import DesignResponse
 from app.errors import APIErrorResponse, register_error_handlers
@@ -15,6 +33,26 @@ from app.health import HealthResponse, read_health
 from app.patterns.api import list_patterns
 from app.patterns.schema import PatternResponse
 from app.persistence.database import dispose_application_database
+from app.projects.api import (
+    create_project,
+    create_share,
+    create_version,
+    delete_project,
+    get_project,
+    get_version,
+    list_projects,
+    list_versions,
+    rename_project,
+    restore_share,
+    revoke_share,
+)
+from app.projects.schema import (
+    CreatedShareResponse,
+    ProjectDetailResponse,
+    ProjectSummaryResponse,
+    SharedVersionResponse,
+    VersionResponse,
+)
 from app.settings import Settings, get_settings
 
 OPENAPI_TAGS = [
@@ -29,6 +67,20 @@ OPENAPI_TAGS = [
     {
         "name": "Designs",
         "description": "Create and retrieve immutable designs by opaque public ID.",
+    },
+    {
+        "name": "Accounts",
+        "description": "Register and manage expiring bearer sessions and account data.",
+    },
+    {
+        "name": "Projects",
+        "description": "Manage private owned projects and immutable version history.",
+    },
+    {
+        "name": "Project shares",
+        "description": (
+            "Create, revoke, and anonymously restore read-only bearer shares."
+        ),
     },
 ]
 
@@ -59,14 +111,15 @@ def create_application(settings: Settings | None = None) -> FastAPI:
     cors = (settings or get_settings()).cors
     application = FastAPI(
         title="SewnCovers API",
-        summary="Public API for the SewnCovers cushion-cover configurator.",
+        summary="Public and account-backed API for the SewnCovers configurator.",
         description=(
-            "Browse active patterns, save a validated immutable cushion-cover "
-            "configuration, and restore it with an opaque public ID. API failures "
+            "Browse active patterns, keep legacy anonymous immutable designs, and "
+            "manage private account-owned project versions. Authentication uses "
+            "expiring opaque bearer tokens. API failures "
             "use the documented field-aware `APIErrorResponse` contract; `/health` "
             "uses its dedicated health-state response."
         ),
-        version="0.1.0",
+        version="0.2.0",
         docs_url="/docs",
         openapi_url="/openapi.json",
         redoc_url="/redoc",
@@ -178,6 +231,240 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             422: {"description": "Malformed public ID", "model": APIErrorResponse},
             503: {"description": "Storage is unavailable", "model": APIErrorResponse},
             500: {"description": "Unexpected server error", "model": APIErrorResponse},
+        },
+    )
+    auth_errors = {
+        401: {
+            "description": "Authentication failed or is no longer valid",
+            "model": APIErrorResponse,
+        },
+        422: {"description": "Malformed or oversized input", "model": APIErrorResponse},
+        429: {
+            "description": "Credential attempts temporarily limited",
+            "model": APIErrorResponse,
+        },
+        503: {"description": "Storage is unavailable", "model": APIErrorResponse},
+    }
+    private_errors = {
+        401: {
+            "description": "Missing, invalid, expired, or revoked bearer session",
+            "model": APIErrorResponse,
+        },
+        404: {
+            "description": "Resource absent or not owned by the current account",
+            "model": APIErrorResponse,
+        },
+        422: {"description": "Invalid request", "model": APIErrorResponse},
+        503: {"description": "Storage is unavailable", "model": APIErrorResponse},
+    }
+    application.add_api_route(
+        "/auth/register",
+        register,
+        methods=["POST"],
+        response_model=SessionCreatedResponse,
+        status_code=201,
+        tags=["Accounts"],
+        summary="Register an account",
+        description=(
+            "Creates a case-normalized email account and one expiring bearer "
+            "session. The raw token is returned only in this response."
+        ),
+        responses=auth_errors,
+    )
+    application.add_api_route(
+        "/auth/login",
+        login,
+        methods=["POST"],
+        response_model=SessionCreatedResponse,
+        tags=["Accounts"],
+        summary="Sign in",
+        description=(
+            "Verifies an Argon2id password and creates one independently revocable "
+            "expiring bearer session. Failures do not disclose account existence."
+        ),
+        responses=auth_errors,
+    )
+    application.add_api_route(
+        "/account",
+        current_account,
+        methods=["GET"],
+        response_model=AccountResponse,
+        tags=["Accounts"],
+        summary="Read the current account",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/auth/logout",
+        logout,
+        methods=["POST"],
+        response_model=None,
+        status_code=204,
+        tags=["Accounts"],
+        summary="Revoke the current session",
+        responses={401: private_errors[401]},
+    )
+    application.add_api_route(
+        "/auth/logout-all",
+        logout_all,
+        methods=["POST"],
+        response_model=None,
+        status_code=204,
+        tags=["Accounts"],
+        summary="Revoke every account session",
+        responses={401: private_errors[401]},
+    )
+    application.add_api_route(
+        "/account/sessions",
+        list_sessions,
+        methods=["GET"],
+        response_model=list[SessionResponse],
+        tags=["Accounts"],
+        summary="List account sessions without bearer tokens",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/account/sessions/{session_id}",
+        revoke_session,
+        methods=["DELETE"],
+        response_model=None,
+        status_code=204,
+        tags=["Accounts"],
+        summary="Revoke one account session",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/account/export",
+        export_account,
+        methods=["GET"],
+        response_model=AccountExportResponse,
+        tags=["Accounts"],
+        summary="Export account-owned data",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/account/delete",
+        delete_account,
+        methods=["POST"],
+        response_model=AccountDeletedResponse,
+        tags=["Accounts"],
+        summary="Delete the account and all private data",
+        description=(
+            "Requires password re-entry and cascades through sessions, projects, "
+            "versions, and share grants without touching legacy anonymous designs."
+        ),
+        responses=auth_errors,
+    )
+    application.add_api_route(
+        "/projects",
+        list_projects,
+        methods=["GET"],
+        response_model=list[ProjectSummaryResponse],
+        tags=["Projects"],
+        summary="List the current account's projects",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/projects",
+        create_project,
+        methods=["POST"],
+        response_model=ProjectDetailResponse,
+        status_code=201,
+        tags=["Projects"],
+        summary="Create a private project with version 1",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/projects/{project_id}",
+        get_project,
+        methods=["GET"],
+        response_model=ProjectDetailResponse,
+        tags=["Projects"],
+        summary="Read an owned project",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/projects/{project_id}",
+        rename_project,
+        methods=["PATCH"],
+        response_model=ProjectDetailResponse,
+        tags=["Projects"],
+        summary="Rename an owned project",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/projects/{project_id}",
+        delete_project,
+        methods=["DELETE"],
+        response_model=None,
+        status_code=204,
+        tags=["Projects"],
+        summary="Delete an owned project and its private history",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/projects/{project_id}/versions",
+        list_versions,
+        methods=["GET"],
+        response_model=list[VersionResponse],
+        tags=["Projects"],
+        summary="List immutable project versions",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/projects/{project_id}/versions",
+        create_version,
+        methods=["POST"],
+        response_model=VersionResponse,
+        status_code=201,
+        tags=["Projects"],
+        summary="Append a complete immutable version",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/projects/{project_id}/versions/{version_id}",
+        get_version,
+        methods=["GET"],
+        response_model=VersionResponse,
+        tags=["Projects"],
+        summary="Read an owned historical version",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/projects/{project_id}/versions/{version_id}/shares",
+        create_share,
+        methods=["POST"],
+        response_model=CreatedShareResponse,
+        status_code=201,
+        tags=["Project shares"],
+        summary="Create a read-only bearer share",
+        description="Returns the raw high-entropy share token only in this response.",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/projects/{project_id}/shares/{grant_id}",
+        revoke_share,
+        methods=["DELETE"],
+        response_model=None,
+        status_code=204,
+        tags=["Project shares"],
+        summary="Revoke one read-only share",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/shares/{share_token}",
+        restore_share,
+        methods=["GET"],
+        response_model=SharedVersionResponse,
+        tags=["Project shares"],
+        summary="Restore a read-only shared configuration",
+        description=(
+            "Anonymous bearer-style access exposing only the complete configuration "
+            "snapshot."
+        ),
+        responses={
+            404: {"description": "Unknown or revoked share", "model": APIErrorResponse},
+            422: {"description": "Malformed share token", "model": APIErrorResponse},
+            503: private_errors[503],
         },
     )
     return application

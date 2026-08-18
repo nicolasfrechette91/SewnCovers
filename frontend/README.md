@@ -1,6 +1,6 @@
 # SewnCovers frontend
 
-This directory contains the Next.js 16.2.11, React, and TypeScript App Router frontend. It is configured for static export to GitHub Pages and uses the browser-side typed FastAPI client to load configurator pattern metadata, filters, and immutable shared designs.
+This directory contains the Next.js 16.2.11, React, and TypeScript App Router frontend. It is configured for static export to GitHub Pages and uses browser-side typed FastAPI clients for the guest configurator plus the local optional account/project workspace. The account functionality is not deployed.
 
 ## Requirements
 
@@ -61,9 +61,26 @@ npm run verify:export
 
 ## Typed API client
 
-`services/api-client.ts` is the single reusable browser client. It reads its base URL only from the statically inlined `NEXT_PUBLIC_API_URL`, preserves an optional base path, safely joins endpoint paths, encodes query/path values, and exposes typed methods only for the established roadmap endpoints: health, pattern listing, immutable design creation, and public-ID retrieval. Runtime validators require the exact public success fields and reject extra fields such as internal database metadata. Non-success responses preserve only a valid non-empty `{ errors: [...] }` contract.
+`services/api-client.ts` owns the established guest endpoints. `services/account-api.ts` adds exact runtime parsing for account, session, project, version, and revocable-share responses, attaches bearer authorization only to authenticated requests, and clears the tab session after an authenticated `401`. Both read only the statically inlined public API origin. Runtime validators reject malformed responses and never accept database or credential fields.
 
 Each attempt owns one `AbortController` and a 20-second timeout. Safe `GET` requests retry only timeout, network, HTTP 408/425/429/500/502/503/504, or documented backend failures with those transient statuses. The retry limit is two additional sequential attempts, delayed by 500 ms and 1 second; permanent 4xx validation/not-found responses and malformed success payloads do not retry. `POST /designs` never retries automatically because a lost response could follow a successful write. Every attempt clears its timer and aborts its controller after completion, and the single sequential loop prevents overlapping attempts.
+
+## Optional account workspace
+
+`AuthProvider` restores a bearer session from `sessionStorage`, verifies it
+against `/account` and `/account/sessions`, schedules local expiry cleanup, and
+clears state on logout, revocation, expiry, account deletion, or any
+authenticated `401`. It never uses `localStorage`, cookies, URL parameters, or
+persisted configuration state for the session token. Session storage avoids a
+cross-site-cookie dependency but remains readable after successful same-origin
+script injection; this is a portfolio architecture, not commercial-grade auth.
+
+`/projects/` uses a query parameter for runtime project IDs so one statically
+exported route supports listing and detail/refresh in root and Pages modes.
+Opening a private version places only opaque project/version identifiers in the
+configurator URL; the browser must still authenticate and the backend must still
+authorize both. A `?share=` URL instead carries an explicit read-only bearer
+grant. Anonymous `?design=` links remain public, immutable, and non-revocable.
 
 Callers may supply `onStatus` to receive `connecting`, `cold-start`, `retrying`, `success`, and `failure` states. After two seconds without completion, the message says the API *may* be waking and can take up to a minute; retry messages report the exact bounded retry count. A later response reports recovery, while final failures use fixed, actionable, secret-safe copy. Errors distinguish `configuration`, `timeout`, `network`, `http`, `backend-contract`, and `malformed-response`; caught exception details, response bodies, URLs, submitted designs, credentials, stack traces, and database fields are never logged or copied into client error messages.
 
@@ -226,7 +243,7 @@ npm test
 
 The existing Node runner remains responsible for environment, typed-client, catalogue, save/share, restoration, and Phase 6 integration tests. Exact-pinned `tsx`, `jsdom`, and React Testing Library development dependencies add client-component interaction coverage without changing the production dependency set. No coverage-report command is currently configured.
 
-The 76-test suite covers all five shapes, tapered and equal-face rules, associated guidance/errors, shape-change confirmation, cover-detail controls, preview and review output, legacy and expanded restoration, save payloads, decimal/unit behavior, catalogue states, retries, and immutable-save recovery. Component assertions prefer accessible names, roles, controls, and visible recovery text; mocked clients, controlled promises, mocked fetch, and deterministic timers keep all request and failure paths local and repeatable.
+The 82-test suite covers all five shapes, tapered and equal-face rules, associated guidance/errors, shape-change confirmation, cover-detail controls, preview and review output, legacy and expanded restoration, save payloads, decimal/unit behavior, catalogue states, retries, immutable-save recovery, session-only token storage, guest account states, private/share distinctions, and complete version summaries. Component assertions prefer accessible names, roles, controls, and visible recovery text; mocked clients, controlled promises, mocked fetch, and deterministic timers keep all request and failure paths local and repeatable.
 
 ## Playwright shared-design journey
 
@@ -246,7 +263,7 @@ npm run test:e2e
 
 On macOS or Linux, use `SEWNCOVERS_GITHUB_PAGES=true npm run test:e2e`. The runner builds the real static export with a local test-only Google Fonts response, serves `out/` from a single-process loopback server, and blocks every browser origin except that server and `api.sewncovers.test`. Playwright intercepts the reserved `.test` origin before DNS and fulfills patterns, design creation, and design retrieval entirely in memory, so the journey cannot contact Neon, Render, Google Fonts, or another external service.
 
-The Chromium journey uses accessible roles, names, status regions, visible values, and native controls to configure Box / bench measurements, all four cover-detail groups, pattern, and scale; it then verifies preview, review, exact expanded save payload, and restoration. Companion checks cover keyboard-only interaction, associated validation, clipboard, reduced motion, forced-colors emulation, and no-overflow/touch-target behavior at 320×568, 768×1024, and 1440×900. All four tests pass at `/configure/` and `/SewnCovers/configure/` while browser requests remain local or intercepted.
+The six-test Chromium journey uses accessible roles, names, status regions, visible values, and native controls. In addition to the guest save/restore and accessibility journeys, intercepted account coverage registers, restores and expires a session, lists/renames/deletes a project, opens history, appends a version, creates/restores/revokes a share, exports data, signs out/in, and deletes the account. It covers 320×568, 768×1024, and 1440×900 in both root and `/SewnCovers/` modes without production writes.
 
 ## Global layout components
 
@@ -257,7 +274,7 @@ Reusable server-compatible layout components live in `components/layout/` and ar
 - `SiteFooter` renders the documented SewnCovers portfolio-prototype identity and a build-time year. Optional typed footer navigation is omitted from the integrated frame until real destinations are defined.
 - Internal `next/link` destinations remain application-relative because Next.js applies the configured `/SewnCovers` base path automatically in GitHub Pages builds. Public image paths continue to use the existing build-time base-path strategy.
 
-Legal, contact, social, account, commerce, search, and additional product or configurator links remain deferred until their routes and content are defined.
+Legal, contact, social, commerce, search, and additional product links remain deferred. The local `/account/` and `/projects/` routes are static-export-compatible shells whose private data always comes from backend-authorized API calls; they are not available on the live site until a separately authorized deployment and migration.
 
 ## Landing page
 

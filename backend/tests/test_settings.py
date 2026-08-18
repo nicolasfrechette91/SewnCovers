@@ -56,8 +56,24 @@ def test_cors_configuration_is_explicit_typed_and_immutable() -> None:
     )
 
     assert settings.cors.allowed_origins == (PRODUCTION_FRONTEND_ORIGIN,)
-    assert settings.cors.allowed_methods == CORS_ALLOWED_METHODS == ("GET", "POST")
-    assert settings.cors.allowed_headers == CORS_ALLOWED_HEADERS == ("Content-Type",)
+    assert (
+        settings.cors.allowed_methods
+        == CORS_ALLOWED_METHODS
+        == (
+            "DELETE",
+            "GET",
+            "PATCH",
+            "POST",
+        )
+    )
+    assert (
+        settings.cors.allowed_headers
+        == CORS_ALLOWED_HEADERS
+        == (
+            "Authorization",
+            "Content-Type",
+        )
+    )
     assert settings.cors.exposed_headers == ()
     assert settings.cors.allow_credentials is False
     assert settings.cors.preflight_max_age_seconds == 600

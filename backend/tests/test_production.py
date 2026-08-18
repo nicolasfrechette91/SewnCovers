@@ -246,6 +246,7 @@ def test_python_and_runtime_dependencies_declare_the_production_baseline() -> No
     dependencies = set(project["dependencies"])
     assert "fastapi==0.139.2" in dependencies
     assert "uvicorn==0.51.0" in dependencies
+    assert "argon2-cffi==25.1.0" in dependencies
 
 
 def test_documentation_loads_without_database_configuration(
@@ -280,12 +281,34 @@ def test_openapi_is_public_complete_and_matches_runtime_contracts() -> None:
         "/patterns",
         "/designs",
         "/designs/{public_id}",
+        "/auth/register",
+        "/auth/login",
+        "/auth/logout",
+        "/auth/logout-all",
+        "/account",
+        "/account/sessions",
+        "/account/sessions/{session_id}",
+        "/account/export",
+        "/account/delete",
+        "/projects",
+        "/projects/{project_id}",
+        "/projects/{project_id}/versions",
+        "/projects/{project_id}/versions/{version_id}",
+        "/projects/{project_id}/versions/{version_id}/shares",
+        "/projects/{project_id}/shares/{grant_id}",
+        "/shares/{share_token}",
     }
     assert set(openapi["paths"]["/"]) == {"get"}
     assert set(openapi["paths"]["/health"]) == {"get"}
     assert set(openapi["paths"]["/patterns"]) == {"get"}
     assert set(openapi["paths"]["/designs"]) == {"post"}
     assert set(openapi["paths"]["/designs/{public_id}"]) == {"get"}
+    assert set(openapi["paths"]["/projects"]) == {"get", "post"}
+    assert set(openapi["paths"]["/projects/{project_id}"]) == {
+        "delete",
+        "get",
+        "patch",
+    }
 
     pattern_operation = openapi["paths"]["/patterns"]["get"]
     assert {parameter["name"] for parameter in pattern_operation["parameters"]} == {
@@ -364,7 +387,8 @@ def test_openapi_is_public_complete_and_matches_runtime_contracts() -> None:
         "internal_id",
         "is_active",
         "display_order",
-        "password",
+        "password_hash",
+        "token_hash",
         "postgresql",
         "sqlalchemy",
         "neon",

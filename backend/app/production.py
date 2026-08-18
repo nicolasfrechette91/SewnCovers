@@ -12,9 +12,18 @@ from app.persistence.migrations import create_migration_engine
 from app.settings import Settings, get_settings
 
 ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[1] / "alembic.ini"
-EXPECTED_REVISION = "20260812_01"
+EXPECTED_REVISION = "20260818_01"
 EXPECTED_PATTERN_COUNT = 15
-EXPECTED_TABLES = {"alembic_version", "cover_designs", "patterns"}
+EXPECTED_TABLES = {
+    "alembic_version",
+    "authenticated_sessions",
+    "cover_designs",
+    "customer_accounts",
+    "patterns",
+    "project_versions",
+    "saved_projects",
+    "share_grants",
+}
 EXPECTED_CONSTRAINTS = {
     "patterns": {
         "primary": {"pk_patterns"},
@@ -50,6 +59,60 @@ EXPECTED_CONSTRAINTS = {
         },
         "foreign_key": {"fk_cover_designs_pattern_id_patterns"},
         "index": set(),
+    },
+    "customer_accounts": {
+        "primary": {"pk_customer_accounts"},
+        "unique": {"uq_customer_accounts_email"},
+        "check": {
+            "ck_customer_accounts_email_normalized",
+            "ck_customer_accounts_id_length",
+        },
+        "foreign_key": set(),
+        "index": set(),
+    },
+    "authenticated_sessions": {
+        "primary": {"pk_authenticated_sessions"},
+        "unique": {"uq_authenticated_sessions_token_hash"},
+        "check": {"ck_authenticated_sessions_token_hash_length"},
+        "foreign_key": {"fk_authenticated_sessions_account_id_customer_accounts"},
+        "index": {
+            "ix_authenticated_sessions_account_id",
+            "ix_authenticated_sessions_expires_at",
+        },
+    },
+    "saved_projects": {
+        "primary": {"pk_saved_projects"},
+        "unique": set(),
+        "check": {
+            "ck_saved_projects_id_length",
+            "ck_saved_projects_name_length",
+            "ck_saved_projects_next_version_number",
+        },
+        "foreign_key": {"fk_saved_projects_account_id_customer_accounts"},
+        "index": {
+            "ix_saved_projects_account_id",
+            "ix_saved_projects_updated_at",
+        },
+    },
+    "project_versions": {
+        "primary": {"pk_project_versions"},
+        "unique": {"uq_project_versions_project_number"},
+        "check": {
+            "ck_project_versions_id_length",
+            "ck_project_versions_number_positive",
+        },
+        "foreign_key": {"fk_project_versions_project_id_saved_projects"},
+        "index": {"ix_project_versions_project_id"},
+    },
+    "share_grants": {
+        "primary": {"pk_share_grants"},
+        "unique": {"uq_share_grants_token_hash"},
+        "check": {
+            "ck_share_grants_id_length",
+            "ck_share_grants_token_hash_length",
+        },
+        "foreign_key": {"fk_share_grants_version_id_project_versions"},
+        "index": {"ix_share_grants_version_id"},
     },
 }
 

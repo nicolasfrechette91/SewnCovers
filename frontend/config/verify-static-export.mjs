@@ -30,7 +30,9 @@ const expectedFiles = [
   "404.html",
   "favicon.ico",
   "index.html",
+  path.join("account", "index.html"),
   path.join("configure", "index.html"),
+  path.join("projects", "index.html"),
 ];
 
 async function listFiles(directory) {
@@ -119,11 +121,21 @@ const configureHtml = await readFile(
   path.join(exportDirectory, "configure", "index.html"),
   "utf8",
 );
+const accountHtml = await readFile(
+  path.join(exportDirectory, "account", "index.html"),
+  "utf8",
+);
+const projectsHtml = await readFile(
+  path.join(exportDirectory, "projects", "index.html"),
+  "utf8",
+);
 assert.match(homeHtml, /<title>SewnCovers \| Plan a cushion-cover design<\/title>/);
 assert.match(
   configureHtml,
   /<title>Configure a cushion \| SewnCovers<\/title>/,
 );
+assert.match(accountHtml, /<title>Account \| SewnCovers<\/title>/);
+assert.match(projectsHtml, /<title>My projects \| SewnCovers<\/title>/);
 assert.match(homeHtml, new RegExp(`href="${basePath || ""}\\/"`));
 assert.match(configureHtml, new RegExp(`href="${basePath || ""}\\/"`));
 

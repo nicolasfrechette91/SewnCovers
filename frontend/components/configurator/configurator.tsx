@@ -26,6 +26,7 @@ import {
 } from "./review-summary";
 import { ShapeSelectionStep } from "./shape-selection-step";
 import { SharedDesignLoader } from "./shared-design-loader";
+import { WorkspaceConfigurationLoader } from "./workspace-configuration-loader";
 import {
   StepIndicator,
   type StepIndicatorStep,
@@ -146,6 +147,7 @@ export function Configurator() {
         catalogue={catalogueResult}
         onRetryPatterns={retryPatternCatalogue}
       />
+      <WorkspaceConfigurationLoader />
 
       <div
         className="configurator-editing print-hidden"

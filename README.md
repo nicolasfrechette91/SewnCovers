@@ -7,6 +7,12 @@ previews the result, reviews it, and saves an immutable configuration behind a
 shareable link. Saving never places an order, requests a quote, or starts a
 purchase.
 
+The current local worktree also adds an optional account-backed workspace with
+private named projects, immutable version history, revocable read-only shares,
+data export, and deletion controls. Phase 10.2 has not been deployed to the
+public URLs below; the live guest journey remains the previously deployed
+behavior.
+
 | Public resource | URL |
 | --- | --- |
 | Case study | [Problem, constraints, decisions, outcome, and lessons](docs/CASE_STUDY.md) |
@@ -103,17 +109,36 @@ Width and height must be 10-300 cm equivalent, thickness must be 1-60 cm
 equivalent, measurements allow at most two decimal places, and pattern scale is
 0.5-2.0 at one-decimal resolution.
 
+### Local Task 10.2 account workspace (not deployed)
+
+Accounts remain optional. Email identifiers are case-normalized, passwords use
+Argon2id, and sessions use independently revocable seven-day opaque bearer
+tokens. PostgreSQL stores only token hashes; the browser receives a raw token
+only when a session is created and keeps it only in `sessionStorage`. This
+avoids cross-site-cookie dependence but remains exposed to successful
+same-origin script injection and is not commercial-grade authentication. Email
+verification and password recovery are not implemented.
+
+An account owns private named projects. Each save appends a complete validated
+snapshot with an atomically allocated sequential version number; older versions
+never change. Explicit read-only project shares use separate high-entropy
+bearer tokens, store only token hashes, and can be revoked. The longstanding
+`?design=<public_id>` guest workflow stays public, immutable, account-free, and
+non-revocable. Account export returns versioned JSON. Confirmed account deletion
+removes only that account's sessions, projects, private versions, and share
+grants—not legacy anonymous designs.
+
 ## Technology and responsibilities
 
 | Area | Technology | Responsibility |
 | --- | --- | --- |
 | Web application | Next.js 16.2.11, React 19.2.4, TypeScript, Tailwind CSS 4 | App Router UI, typed configuration state, validation, static routes, 2D preview, and share-link experience. |
 | Browser integration | Typed `fetch` client | Validates public API responses, applies bounded retries only to safe reads, and reports cold-start states. |
-| API | Python 3.13, FastAPI 0.139.2, Pydantic Settings 2.13.1, Uvicorn 0.51.0 | Public HTTP contracts, CORS, business validation, error translation, and production process startup. |
+| API | Python 3.13, FastAPI 0.139.2, Pydantic Settings 2.13.1, Argon2-cffi 25.1.0, Uvicorn 0.51.0 | Public/private HTTP contracts, authentication, authorization, CORS, validation, and production process startup. |
 | Persistence | SQLAlchemy 2.0.51, Psycopg 3.3.4, Alembic 1.18.5 | Lazy sessions, explicit transactions, PostgreSQL models, schema migrations, and the canonical seed. |
-| Database | Neon PostgreSQL | Separate development and production branches containing catalogue metadata and immutable designs. |
+| Database | Neon PostgreSQL | Catalogue and anonymous designs plus local account, session, private-project, version, and hashed share-grant models. |
 | Hosting | GitHub Pages and Render Free | Static frontend delivery and the migration-gated FastAPI service. |
-| Verification | Node test runner, React Testing Library, jsdom, Playwright 1.62.1, pytest 9.1.1, Ruff 0.15.22 | 76 frontend tests, a four-test browser journey, and 243 backend tests plus lint, type, build, export, and dependency checks. |
+| Verification | Node test runner, React Testing Library, jsdom, Playwright 1.62.1, pytest 9.1.1, Ruff 0.15.22 | 82 frontend tests, a six-test browser journey, and 251 backend tests plus lint, type, build, export, and dependency checks. |
 
 The frontend has a committed npm lockfile. Backend direct dependencies are
 exact-pinned in `backend/pyproject.toml`; standard pip is used without a
@@ -263,7 +288,7 @@ developer-supplied variable. No browser bundle receives backend settings.
    python -m alembic upgrade head
    ```
 
-3. Confirm `python -m alembic current` reports `20260812_01 (head)`, then
+3. Confirm `python -m alembic current` reports `20260818_01 (head)`, then
    request `/health` and `/patterns`. A second upgrade must be a no-op.
 
 Online `current`, `upgrade`, and `downgrade` commands need
@@ -285,10 +310,11 @@ development/test recovery.
 | `20260728_01` | Creates `patterns` and `cover_designs` with named constraints. |
 | `20260728_02` | Adds the non-redundant category and activity indexes. |
 | `20260729_01` | Seeds the canonical 15 active pattern metadata rows. |
-| `20260812_01` **(head)** | Adds richer shape dimensions and backward-compatible material, fit, closure, and seam fields. |
+| `20260812_01` | Adds richer shape dimensions and backward-compatible material, fit, closure, and seam fields. |
+| `20260818_01` **(head)** | Adds accounts, hashed/expiring sessions, private projects, immutable versions, and hashed revocable share grants without changing anonymous designs. |
 
-Production startup additionally verifies this exact head, exactly the three
-tables `alembic_version`, `patterns`, and `cover_designs`, the reviewed
+Production startup additionally verifies this exact head and all eight expected
+migration, catalogue, anonymous-design, and private-workspace tables, the reviewed
 constraint/index sets, and exactly 15 pattern rows before Uvicorn starts.
 This describes the local release candidate; production remains at its previously
 deployed revision until an explicitly authorized deployment applies it.
@@ -305,6 +331,8 @@ and ORM update/delete attempts are rejected.
 | --- | --- | --- |
 | `patterns` | String primary-key ID, visible metadata, JSON color IDs, preview handle, activity, display order | Unique name and preview handle; normalized/length/nonblank/category/order checks; `ix_patterns_category_id` and `ix_patterns_is_active`. The primary key already indexes slug lookup. |
 | `cover_designs` | Internal integer primary key, unique 22-character public ID, shape-specific dimensions, unit, material, fit, closure, seam, pattern ID, scale | Public-ID format, supported options, unit-aware ranges, equal square/round faces, tapered back-width rules, and scale checks; restrictive pattern foreign key. The public-ID unique constraint already supports retrieval, so no redundant explicit design index exists. |
+| `customer_accounts`, `authenticated_sessions` | Normalized email, Argon2id password hash, session-token hash, creation/expiry/revocation times | Unique email and token hashes, bounded lengths, account ownership, cascade deletion, and focused indexes. Raw passwords and tokens are never response columns. |
+| `saved_projects`, `project_versions`, `share_grants` | Account-owned name and atomic next-version counter; immutable JSON snapshots; share-token hashes and revocation | Ownership/cascade foreign keys, unique per-project version number, positive sequence, private-by-default access, and hashed bearer grants. |
 
 Dimensions use `NUMERIC(7,2)`; pattern scale uses `NUMERIC(2,1)`. Pattern
 artwork, images, gradients, URLs, and filesystem paths are not stored in
@@ -336,14 +364,14 @@ order:
 | `frontend` | `npm run lint` | Run ESLint. |
 | `frontend` | `npm run typecheck` | Run strict TypeScript checking without emit. |
 | `frontend` | `npm run check:config` | Run focused build/environment tests. |
-| `frontend` | `npm test` | Run all 76 deterministic frontend tests. |
+| `frontend` | `npm test` | Run all 82 deterministic frontend tests. |
 | `frontend` | `npm run build` | Build the static export into ignored `frontend/out/`. |
 | `frontend` | `npm run verify:export` | Verify exported routes, links, assets, base path, and API embedding. |
-| `frontend` | `npm run test:e2e` | Build, serve, and run the four-test isolated Chromium journey. |
+| `frontend` | `npm run test:e2e` | Build, serve, and run the six-test isolated Chromium journey. |
 | `backend` | `python -m uvicorn app.main:app --reload` | Start the local API without automatic migrations. |
 | `backend` | `python -m ruff format --check .` | Check Python formatting. |
 | `backend` | `python -m ruff check .` | Run Ruff lint. |
-| `backend` | `python -m pytest` | Run all 243 isolated backend tests. |
+| `backend` | `python -m pytest` | Run all 251 isolated backend tests. |
 | `backend` | `python -m pip check` | Check installed dependency consistency. |
 
 ### CI-equivalent frontend gate
@@ -389,7 +417,8 @@ requires a populated environment file.
 
 ## Public API contract
 
-The API exposes five application paths. Swagger UI, ReDoc, and OpenAPI are also
+The local API exposes the established five public paths plus focused account,
+session, project, version, share, export, and deletion paths. Swagger UI, ReDoc, and OpenAPI are also
 available at `/docs`, `/redoc`, and `/openapi.json`.
 
 | Method and path | Successful behavior | Important failures |
@@ -399,6 +428,15 @@ available at `/docs`, `/redoc`, and `/openapi.json`.
 | `GET /patterns` | `200` bare array of active public pattern metadata, ordered by display order then ID. Optional `category` and `color` filters are normalized and combined with AND semantics; valid no-match filters return `[]`. | `422` invalid filter or unsupported query field, `503` storage unavailable, `500` unexpected failure. |
 | `POST /designs` | `201` exact saved-design response plus `Location: /designs/{publicId}`. Legacy core fields remain required; newer detail fields have documented defaults, and the selected pattern must be active. | `422` schema/business/pattern failure, `503` storage or ID generation unavailable, `500` unexpected failure. |
 | `GET /designs/{public_id}` | `200` exact immutable public design for a 22-character URL-safe ID. | `404` well-formed unknown ID, `422` malformed ID, `503` storage unavailable, `500` unexpected failure. |
+
+Account routes cover registration/login, current account, current/all-session
+logout, session listing/revocation, JSON export, and password-confirmed account
+deletion. Project routes cover owned list/create/detail/rename/delete, immutable
+version list/get/create, and owned share creation/revocation. `GET
+/shares/{share_token}` is the only anonymous private-project restoration path
+and returns only the complete configuration snapshot. Missing, malformed,
+expired, or revoked authentication returns `401`; absent and cross-account
+project/version/grant access uses the same non-disclosing `404` response.
 
 `GET /patterns` serializes `id`, `name`, `description`, `categoryId`,
 `colorIds`, and `previewClassName`; internal activity and display order are
@@ -479,7 +517,7 @@ authentication or privacy boundary.
 | Frontend | GitHub Pages serves `https://nicolasfrechette91.github.io/SewnCovers/` from `frontend/out`. `SEWNCOVERS_GITHUB_PAGES=true` selects `basePath="/SewnCovers"`; `assetPrefix` is intentionally unset. |
 | Frontend API configuration | The Pages workflow embeds exactly `NEXT_PUBLIC_API_URL=https://sewncovers-api.onrender.com` and rejects another value before building. |
 | API | Render Free builds from `backend` with `python -m pip install .` and starts with `python -m app.production` in Ohio. |
-| CORS | Production allows exactly `https://nicolasfrechette91.github.io`. The `/SewnCovers/` path is not part of an origin. Allowed methods are GET/POST, credentials are disabled, and CORS is not authentication. |
+| CORS | Production allows exactly `https://nicolasfrechette91.github.io`. The `/SewnCovers/` path is not part of an origin. Allowed methods are DELETE/GET/PATCH/POST and request headers are Authorization/Content-Type; credentialed cookies remain disabled, and CORS is not authentication. |
 | Database | FastAPI alone uses Render's protected production `DATABASE_URL` to reach the isolated Neon production branch. No credential is stored in this repository. |
 | Health | Render probes `/health`; HTTP 200 requires both the process and database query to be healthy. |
 
@@ -505,7 +543,7 @@ publishes only `frontend/out`. Render auto-deploys after checks pass.
 | Bounded retry for safe GETs | Improves recovery from cold starts and transient network/5xx failures. | A wake-up can still exceed the client timeout/retry window and cannot guarantee availability. |
 | Frontend-owned pattern artwork | Keeps binary/static assets on static hosting and PostgreSQL focused on queryable metadata. | Catalogue metadata and shipped visual handles must stay compatible across deployments. |
 | Synchronous SQLAlchemy sessions | Compact, explicit transaction ownership for this small request workload. | High-concurrency production growth could justify revisiting worker and async strategy. |
-| Public, account-free MVP | Reviewers can use the full journey without signup or personal data. | There is no authentication, authorization, ownership, private sharing, rate limiting, abuse control, or user-managed deletion. Opaque IDs and CORS do not supply those controls. |
+| Optional accounts without removing guests | Reviewers can use the configurator and anonymous immutable links without signup; signed-in customers can use server-authorized private projects locally. | The live deployment still lacks Task 10.2. Local auth has no email verification/recovery or distributed abuse protection, and bearer session/share tokens remain sensitive. Opaque IDs and CORS never supply authorization. |
 
 ## Troubleshooting
 

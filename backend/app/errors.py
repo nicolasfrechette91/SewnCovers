@@ -14,6 +14,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.persistence.database import DatabaseConfigurationError
 
 type ErrorCode = Literal[
+    "authentication_failed",
+    "authentication_required",
+    "credential_throttled",
     "design_not_found",
     "field_required",
     "internal_error",
@@ -27,6 +30,7 @@ type ErrorCode = Literal[
     "method_not_allowed",
     "pattern_unavailable",
     "public_id_unavailable",
+    "project_not_found",
     "resource_not_found",
     "shape_measurements_mismatch",
     "square_dimensions_mismatch",
@@ -104,6 +108,53 @@ class PublicIdGenerationError(RuntimeError):
     """Report exhausted opaque-ID collision attempts."""
 
 
+class APIProblem(Exception):
+    """Safe domain-to-HTTP failure for private workspace operations."""
+
+    def __init__(
+        self,
+        status_code: int,
+        code: ErrorCode,
+        message: str,
+        location: ErrorLocation,
+        headers: Mapping[str, str] | None = None,
+    ) -> None:
+        self.status_code = status_code
+        self.code = code
+        self.message = message
+        self.location = location
+        self.headers = headers
+        super().__init__(message)
+
+
+def authentication_required() -> APIProblem:
+    return APIProblem(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        code="authentication_required",
+        message="Authentication is required or the session is no longer valid.",
+        location=("header", "Authorization"),
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def authentication_failed() -> APIProblem:
+    return APIProblem(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        code="authentication_failed",
+        message="Email or password could not be accepted.",
+        location=("body", "credentials"),
+    )
+
+
+def project_not_found() -> APIProblem:
+    return APIProblem(
+        status_code=status.HTTP_404_NOT_FOUND,
+        code="project_not_found",
+        message="Project resource not found.",
+        location=("path", "project_id"),
+    )
+
+
 _SOURCE_ORDER = {"body": 0, "query": 1, "path": 2, "request": 3}
 _FIELD_ORDER = {
     "shape": 0,
@@ -121,6 +172,13 @@ _FIELD_ORDER = {
     "category": 0,
     "color": 1,
     "public_id": 0,
+    "project_id": 0,
+    "version_id": 1,
+    "grant_id": 2,
+    "email": 20,
+    "password": 21,
+    "credentials": 22,
+    "Authorization": 0,
 }
 _ALIASES = {
     "back_width": "backWidth",
@@ -308,6 +366,23 @@ async def _handle_storage_failure(
     )
 
 
+async def _handle_api_problem(
+    _request: Request,
+    exception: APIProblem,
+) -> JSONResponse:
+    return _response(
+        exception.status_code,
+        (
+            APIErrorDetail(
+                code=exception.code,
+                message=exception.message,
+                location=exception.location,
+            ),
+        ),
+        headers=exception.headers,
+    )
+
+
 async def _handle_http_exception(
     _request: Request,
     exception: StarletteHTTPException,
@@ -368,6 +443,7 @@ def register_error_handlers(application: FastAPI) -> None:
         PublicIdGenerationError,
         _handle_public_id_generation,
     )
+    application.add_exception_handler(APIProblem, _handle_api_problem)
     application.add_exception_handler(SQLAlchemyError, _handle_storage_failure)
     application.add_exception_handler(
         DatabaseConfigurationError,

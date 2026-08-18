@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the compact Python and FastAPI service for SewnCovers. It provides a root verification endpoint, typed health and active-pattern endpoints, immutable saved-design creation/retrieval, a consistent field-aware error contract, a typed environment-settings boundary, an explicit CORS policy, lazy SQLAlchemy 2 session infrastructure, declarative pattern and immutable design models, and a linear Alembic history. The local Task 10.1 release candidate ends at `20260812_01`; it has not been applied to production. Render alone owns the protected production connection.
+This directory contains the Python and FastAPI service for SewnCovers. It keeps the public catalogue and anonymous immutable-design API and adds a local optional account workspace with Argon2id credentials, expiring/revocable hashed bearer sessions, private owned projects, immutable versions, hashed revocable share grants, export, and deletion. The linear local head is `20260818_01`; Task 10.2 has not been applied to production. Render alone owns the protected production connection.
 
 ## Requirements
 
@@ -71,7 +71,7 @@ The example values are safe local placeholders. `DATABASE_URL` remains empty bec
 
 The public Pages URL includes `/SewnCovers/`, but that suffix is a path, not part of the origin. Origin matching is exact across scheme, hostname, and optional port. Configuration rejects credentials, non-root paths, queries, fragments, unsupported schemes, malformed URLs, and invalid ports. Browser requests from lookalike hosts, wrong schemes or ports, path-bearing or `null` origins, unconfigured origins, and the Render API's own address receive no allow-origin response. Surrounding whitespace, hostname case, and trailing root slashes are normalized only while loading configuration, without converting one origin into another.
 
-The allowed requested methods are `GET` and `POST`, covering the roadmap's read endpoints and JSON design creation. Preflight `OPTIONS` requests are handled by the middleware rather than exposed as an application method. The configured request-header allowlist contains only `Content-Type`, needed for future JSON posts; Starlette also reports the standard CORS-safelisted request headers (`Accept`, `Accept-Language`, and `Content-Language`) in preflight responses. Preflight results may be cached for 600 seconds and no response headers are exposed to scripts beyond the CORS defaults. Origins, methods, and headers never use `*`. Credentials are disabled because the MVP has no cookie, HTTP-auth, or other credential requirement.
+The allowed requested methods are `DELETE`, `GET`, `PATCH`, and `POST`. Preflight `OPTIONS` remains middleware-owned. The configured request-header allowlist contains `Authorization` and `Content-Type`; Starlette also reports standard CORS-safelisted headers. Preflight results may be cached for 600 seconds, no wildcard is used, and credentialed cookie access stays disabled because authentication is an explicit bearer header rather than a cross-site cookie. CORS is not authentication.
 
 CORS tells supporting browsers which cross-origin responses frontend scripts may read. It is not authentication or authorization, and non-browser clients can still call public endpoints.
 
@@ -102,6 +102,14 @@ Alembic 1.18.5 owns schema and controlled data transitions. Its initial revision
 
 Revision `20260729_01` explicitly inserts the 15 active records established by `frontend/data/patterns.ts` and the Task 4.5 fixtures. Revision `20260812_01` additively introduces nullable `back_width` plus material, fit, closure, and seam columns with safe defaults, expands shape constraints, and preserves every existing row. Pattern artwork, gradients, images, and other visual assets remain frontend-owned; the database receives no binary, URL, filesystem path, upload, or asset-table data.
 
+Revision `20260818_01` additively creates `customer_accounts`,
+`authenticated_sessions`, `saved_projects`, `project_versions`, and
+`share_grants`. Foreign keys cascade only within account-owned private data;
+the migration has no relationship to and never rewrites `cover_designs`.
+`saved_projects.next_version_number` is incremented with an atomic database
+`UPDATE ... RETURNING`, and `(project_id, version_number)` is unique, so two
+successful concurrent saves cannot receive the same sequence number.
+
 ## Alembic migrations
 
 Run Alembic from `backend`, where `alembic.ini` points to `migrations/`. The configuration file intentionally has no `sqlalchemy.url`. `migrations/env.py` discovers the exact `Base.metadata` object through the side-effect-free `app.persistence.migrations` boundary. Offline SQL selects the PostgreSQL dialect without loading settings; online commands obtain `DATABASE_URL` only through `get_settings()` and the existing database engine factory. Imports, FastAPI startup, history inspection, head inspection, and offline SQL generation neither create an engine nor open a connection.
@@ -125,7 +133,7 @@ python -m alembic upgrade head --sql
 python -m alembic downgrade head:base --sql
 ```
 
-The linear deterministic history ends with `20260812_01_expand_cover_configuration.py` after the initial schema, filter-index, and canonical-seed revisions. The new revision is an additive, explicit schema transition; its downgrade exists for isolated tests only and must not be run against shared databases.
+The linear deterministic history ends with `20260818_01_add_private_account_workspaces.py` after the configuration expansion. Both Phase 10 revisions are additive, explicit transitions; their downgrades exist for isolated tests only and must not be run against shared databases.
 
 `python -m alembic upgrade head` applies the full schema and exact seed to an empty database or adds the seed after `20260728_02`. Existing conflicting IDs, names, or preview handles fail through the established constraints; the migration does not silently ignore drift. `python -m alembic downgrade 20260728_02` removes only the 15 seed-owned IDs in one statement while leaving tables, constraints, and Task 5.4 indexes intact. A restrictive foreign key blocks that downgrade if a saved design references any seeded pattern, without cascading or deleting the design. After references are handled deliberately, downgrade followed by `python -m alembic upgrade head` restores the identical catalogue. Automated tests cover fresh and incremental SQLite upgrades, exact frontend/fixture parity, migrated `/patterns` filtering, targeted downgrade/re-upgrade, conflict rejection, foreign-key-safe failure, schema parity, and PostgreSQL offline SQL. They require no internet, Neon, populated `.env`, or committed database file.
 
@@ -325,6 +333,40 @@ The original seven configuration fields remain required. New option fields use t
 
 Public IDs are independent of the internal integer database key. The service generates 128 random bits with the standard cryptographic token generator and exposes only the resulting 22-character URL-safe value. The minimum table contract also requires uniqueness. Creation checks for an existing ID, relies on database uniqueness for races, rolls back collisions, and retries up to five generated values. Exhaustion returns a generic HTTP 503 without SQL, constraint, internal-ID, host, credential, or exception detail.
 
+## Accounts, sessions, projects, versions, and privacy
+
+`POST /auth/register` and `POST /auth/login` accept a normalized email and a
+12–128 character passphrase with no composition rule. Passwords use the pinned
+Argon2id implementation. Duplicate/unknown/wrong-password failures use the same
+generic authentication body. A process-local rolling five-attempt/five-minute
+credential throttle expires automatically and is deterministic under injected
+test clocks; it is a focused portfolio safeguard, not distributed abuse
+protection. Email verification and password recovery are unavailable.
+
+Successful registration/login returns a cryptographically random 32-byte
+URL-safe token only once. PostgreSQL stores only its SHA-256 digest, creation,
+seven-day expiry, and optional revocation. `Authorization: Bearer` is required
+for current-account, session, project, version, export, and deletion routes.
+Missing, malformed, unknown, expired, or revoked sessions return `401` with a
+generic response. Logout revokes the current session; logout-all revokes every
+account session; individual session metadata can be listed and revoked without
+ever returning bearer material.
+
+Projects belong to exactly one account and are private by default. Version 1 is
+created with the project, later saves atomically allocate a sequential number,
+and every row stores the complete existing `DesignConfiguration` snapshot.
+List/detail/rename/delete and version list/get/create queries always include the
+authenticated account boundary. Cross-account and unknown resources share one
+non-disclosing `404` response; IDs never authorize access.
+
+An explicit share action creates another 32-byte token, returns it once, and
+stores only its digest. `GET /shares/{share_token}` is anonymous read-only
+bearer access and returns only the validated configuration snapshot. Individual
+revocation makes later restoration fail. Account export is versioned JSON and
+excludes password/session/share secrets. Account deletion requires password
+re-entry and deletes only the account's sessions, projects, private versions,
+and grants. It does not touch legacy anonymous `cover_designs`.
+
 The design service owns unit-aware measurement bounds, equal-face and tapered relationships, active-pattern validation, public-ID generation, creation/retrieval coordination, commit, rollback, and collision retry. Request schemas own required/defaulted fields, strict types, supported option values, slug shape, numeric positivity, and precision. The repository executes only public-ID queries and immutable inserts and may flush without committing. Routes contain no duplicated exception translation.
 
 These endpoints require a configured database upgraded to the compatible Alembic head and containing `patterns` and `cover_designs`. The initial migration supplies the empty schema only; it does not create a production schema, seed records, connect to Neon, or change endpoint behavior. Existing API tests create both contracts in isolated in-memory SQLite, seed only the pattern records needed by each test, and exercise all behavior without a database file, internet, or populated `.env`.
@@ -411,7 +453,7 @@ python -m app.production
 
 This entry point is migration-gated and reserved for Render. It loads settings,
 requires `ENVIRONMENT=production`, runs `alembic upgrade head`, verifies the
-exact `20260812_01` revision, expected tables and named primary/unique/check/
+exact `20260818_01` revision, expected tables and named primary/unique/check/
 foreign-key constraints, the two intentional pattern indexes, no extra explicit
 design index, and exactly 15 pattern rows, then starts the existing
 `app.main:app` application on `0.0.0.0` using the platform-provided `PORT` or

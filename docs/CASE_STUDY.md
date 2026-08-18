@@ -21,6 +21,17 @@ price, accept an order, collect customer details, or represent a
 manufacturing-ready specification. The result is a deployed, reviewable design
 journey with its limitations documented instead of hidden.
 
+### Local Phase 10 follow-on
+
+The current worktree now extends that deployed case study with five shapes,
+construction choices, materials, fit preferences, and an optional account
+workspace. Task 10.2 adds Argon2id accounts, expiring/revocable hashed bearer
+sessions, private named projects, immutable full-snapshot versions, revocable
+hashed read-only share grants, export, and confirmed deletion. It preserves the
+deployed anonymous immutable-design contract. These additions are local only:
+they were not migrated or deployed to the live service and should not be read
+as a production availability or security claim.
+
 ## Problem
 
 Custom cover discussions combine several kinds of information that are easy to
@@ -74,7 +85,7 @@ it later. The implementation translated that journey into concrete criteria:
 | Static GitHub Pages hosting | The Next.js application must export HTML, CSS, and JavaScript. It cannot depend on runtime SSR, API routes, or Server Actions. |
 | Separate Render API and Neon PostgreSQL | The browser calls Render over HTTPS; only FastAPI receives `DATABASE_URL` and connects to Neon. |
 | Portfolio-scale free-tier infrastructure | Render can sleep after inactivity, so the first request may take long enough to require visible wake-up messaging and bounded recovery. |
-| No authentication or destructive design management | Share IDs are public opaque locators, not access control. There are no accounts, ownership rules, design updates, or deletion endpoints. |
+| Deployed release has no authentication or destructive design management | Its share IDs are public opaque locators, not access control. The newer local account/project lifecycle is separate and undeployed. |
 | Immutable shareable designs | Every successful creation inserts a new record whose public representation remains stable. Retention and storage growth are accepted MVP trade-offs. |
 | Exact deployment boundaries | Pages uses the case-sensitive `/SewnCovers` base path, the frontend embeds one exact production API URL, and CORS permits one exact path-free Pages origin. |
 | Responsive and keyboard-accessible interaction | Controls, status messages, focus movement, summaries, and the preview must remain useful without a pointer and without horizontal overflow on narrow screens. |
@@ -126,7 +137,7 @@ to `head`, verifies the expected revision, tables, constraints, indexes, and
 | API-backed catalogue with frontend-owned artwork | PostgreSQL remains the source of truth for active, ordered, filterable metadata, while static CSS visuals avoid storing or serving binary assets from the API. | Database metadata and shipped visual mappings must remain compatible. |
 | Immutable saved designs | Create/read semantics keep the API small and ensure an existing link continues to represent the stored configuration. | There is no edit, delete, retention, or user-ownership workflow. |
 | Random IDs and create-new-record semantics | Each creation receives a 128-bit, 22-character URL-safe opaque ID independent of the internal database key. Repeated identical saves are still separate successful creations. | There is no content deduplication or idempotency key; equivalent records can coexist. |
-| Explicit CORS allowlisting | The production browser boundary is exactly `https://nicolasfrechette91.github.io`, with only `GET` and `POST`, configured `Content-Type`, and no credentials. | Alternate origins, custom domains, and lookalikes require deliberate configuration changes. CORS remains browser policy, not authentication. |
+| Explicit CORS allowlisting | The deployed browser boundary is exactly `https://nicolasfrechette91.github.io`, with only `GET` and `POST`. The local account API expands methods to DELETE/GET/PATCH/POST and adds `Authorization`, still with credentials disabled. | Alternate origins, custom domains, and lookalikes require deliberate configuration changes. CORS remains browser policy, not authentication. |
 | Migration before server startup | A process should not serve against an unknown schema or incomplete catalogue. Startup fails closed if migration or verification fails. | Startup does more database work and wake-up latency includes the gate. |
 | Share URLs use `?design=<public_id>` | One static `/configure/` route can load a design without adding dynamic server-rendered routes or path-generation logic. | The ID is visible in browser history and must be treated as public. |
 | Deterministic restoration | The client validates the exact API response, waits for the selected API pattern, then applies one atomic reducer action. Request generations and state revisions prevent late responses from overwriting user edits. | Restoration logic must coordinate two asynchronous reads and expose explicit recovery states. |
@@ -277,8 +288,9 @@ user adoption, revenue, production traffic, or commercial-scale performance.
 The following are reasonable production directions, but none is implemented in
 the current project:
 
-- Add authentication, per-design authorization and privacy, ownership,
-  retention controls, and a deliberate deletion and audit policy.
+- Deploy and independently review the local authentication, project ownership,
+  privacy, version, export, and deletion work; add email verification/password
+  recovery, distributed abuse controls, retention, and audit policy.
 - Add idempotency keys or client operation IDs before supporting automatic
   create retries.
 - Introduce rate limiting, abuse monitoring, observability, backup and recovery

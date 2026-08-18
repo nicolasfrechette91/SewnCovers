@@ -121,7 +121,15 @@ def test_declarative_models_reuse_one_metadata_and_existing_table_contracts() ->
     assert design_metadata is Base.metadata
     assert patterns_table is Pattern.__table__
     assert cover_designs_table is CoverDesign.__table__
-    assert set(Base.metadata.tables) == {"patterns", "cover_designs"}
+    assert set(Base.metadata.tables) == {
+        "authenticated_sessions",
+        "cover_designs",
+        "customer_accounts",
+        "patterns",
+        "project_versions",
+        "saved_projects",
+        "share_grants",
+    }
 
 
 def test_model_columns_relationship_and_named_constraints_are_explicit() -> None:

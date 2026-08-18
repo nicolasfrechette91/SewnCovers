@@ -150,10 +150,11 @@ def test_valid_design_creation_preflight_returns_only_the_explicit_policy(
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == origin
-    assert response.headers["access-control-allow-methods"] == "GET, POST"
-    assert response.headers["access-control-allow-headers"] == (
-        "Accept, Accept-Language, Content-Language, Content-Type"
+    assert response.headers["access-control-allow-methods"] == (
+        "DELETE, GET, PATCH, POST"
     )
+    assert "Authorization" in response.headers["access-control-allow-headers"]
+    assert "Content-Type" in response.headers["access-control-allow-headers"]
     assert response.headers["access-control-max-age"] == "600"
     assert response.headers["vary"] == "Origin"
     assert "access-control-allow-credentials" not in response.headers
@@ -189,7 +190,9 @@ def test_production_preflight_allows_required_pattern_and_design_operations(
     assert response.headers["access-control-allow-origin"] == (
         PRODUCTION_FRONTEND_ORIGIN
     )
-    assert response.headers["access-control-allow-methods"] == "GET, POST"
+    assert response.headers["access-control-allow-methods"] == (
+        "DELETE, GET, PATCH, POST"
+    )
     assert "access-control-allow-credentials" not in response.headers
 
 
@@ -285,7 +288,7 @@ def test_unknown_origin_receives_no_permissive_cors_headers(
         {
             "Origin": LOCAL_FRONTEND_ORIGIN,
             "Access-Control-Request-Method": "POST",
-            "Access-Control-Request-Headers": "Authorization",
+            "Access-Control-Request-Headers": "X-Admin-Key",
         },
     ],
 )
@@ -297,8 +300,10 @@ def test_unconfigured_methods_and_headers_are_rejected(
 
     assert response.status_code == 400
     assert response.headers["access-control-allow-origin"] == LOCAL_FRONTEND_ORIGIN
-    assert response.headers["access-control-allow-methods"] == "GET, POST"
-    assert "Authorization" not in response.headers["access-control-allow-headers"]
+    assert response.headers["access-control-allow-methods"] == (
+        "DELETE, GET, PATCH, POST"
+    )
+    assert "X-Admin-Key" not in response.headers["access-control-allow-headers"]
     assert "access-control-allow-credentials" not in response.headers
     assert "*" not in " ".join(cors_headers(response.headers).values())
 

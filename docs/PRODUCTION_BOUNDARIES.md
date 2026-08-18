@@ -10,12 +10,18 @@ repository evidence, and read-only checks of the public deployment. No deployed
 commit is stated because this verification did not independently confirm one
 commit across Pages, Render, and the database.
 
+The repository's local Phase 10.1 and 10.2 work is newer than that deployment.
+In particular, accounts, private projects, versions, and revocable shares
+described below are implemented and locally verified but are not available on
+the live Pages/Render/Neon system. No production migration or account write was
+performed for Task 10.2.
+
 ## Boundary summary
 
 | Category | Current position | Evidence boundary |
 | --- | --- | --- |
 | Verified behavior | GitHub Pages serves a Next.js static export under `/SewnCovers/`; the browser calls a Render-hosted FastAPI service backed by Neon PostgreSQL. | Deployment configuration, generated-export checks, startup code, migrations, live HTTPS responses, and retrieval of an existing immutable design. |
-| Known limitation | Portfolio-scale hosting has variable first-request latency and no project availability or support SLA. The product has no accounts or complete design lifecycle. | Recorded smoke observations and the implemented API/UI surface only; no uptime, support, quota, or latency commitment is inferred. |
+| Known limitation | Portfolio-scale hosting has variable first-request latency and no availability or support SLA. The deployed product has no accounts; the local worktree has an intentionally limited account/project lifecycle. | Recorded smoke observations and the deployed versus local API/UI surfaces only; no uptime, support, quota, or latency commitment is inferred. |
 | Security boundary | Exact CORS, server-side secrets, validation, constraints, migrations, tests, and bundle scans reduce specific risks but do not provide identity, privacy, abuse prevention, or a security review. | Repository and deployed-response evidence only; no claim of hardening, compliance, penetration testing, or commercial readiness. |
 | Future direction | Hardening, account and design ownership, and commerce/operations are prioritized requirements. | Directional future work only, with no dates or delivery promise. |
 
@@ -67,9 +73,9 @@ price, or current Render or Neon policy.
 - This is a portfolio-scale deployment without an application availability or
   support SLA. Free-tier wake-up delays are possible, and first-request latency
   is variable.
-- The repository implements no application rate limiting, request quota,
-  per-client quota, or abuse-protection layer. CORS and input validation do not
-  fill those roles.
+- The deployed service implements no application rate limiting, request quota,
+  per-client quota, or abuse-protection layer. The local credential endpoints
+  have a process-local rolling throttle, not distributed abuse protection.
 - Render is configured to probe `/health`, but the repository contains no
   application monitoring system, structured alerting, error tracker, on-call
   process, or demonstrated incident-response workflow. A health endpoint is a
@@ -81,8 +87,10 @@ price, or current Render or Neon policy.
 
 ### Product and data lifecycle
 
-- There is no authentication, authorization, account, ownership, tenancy, or
-  administrative interface.
+- The deployed service has no authentication, authorization, account,
+  ownership, tenancy, or administrative interface. The local worktree adds
+  customer accounts and per-resource authorization, but no organization,
+  tenancy-administration, staff, or catalogue-administration interface.
 - Saved designs are immutable and retrievable by public ID. The application and
   OpenAPI expose creation and retrieval, but no update, archive, or deletion
   operation.
@@ -96,6 +104,11 @@ price, or current Render or Neon policy.
 - A share URL is effectively a bearer-style public link: anyone who obtains it
   can request the stored configuration. Opaque IDs and unlisted URLs are not
   privacy or access controls.
+- Locally, private projects are distinct from those legacy links. A project
+  share is also bearer-style, but is created explicitly, stores only a token
+  hash, is read-only, and can be revoked. A session token is stored only in the
+  tab's `sessionStorage`; this avoids cross-site-cookie dependence but remains
+  exposed to successful same-origin script injection.
 - The application is not intended to store personal, confidential, regulated,
   payment, order, or production information. The public pattern catalogue,
   OpenAPI schema, Swagger/ReDoc documentation, API root, and health endpoint
@@ -174,14 +187,17 @@ None is implemented, scheduled, priced, or promised.
 - Complete privacy, security, accessibility, and operational reviews, including
   manual assistive-technology coverage and threat modeling.
 
-### 2. Account and design lifecycle
+### 2. Deploying and strengthening the local account lifecycle
 
-- Add authentication, authorization, ownership, tenant isolation, and
-  server-enforced access checks.
-- Make designs private by default where appropriate and support revocable,
-  scoped sharing instead of permanent bearer-style public links.
-- Add deliberate update/version, archive, deletion, and audit workflows with a
-  compatible schema and migration strategy.
+- Review and deploy the local Argon2id authentication, expiring/revocable
+  sessions, server-enforced ownership, private projects, immutable versions,
+  revocable sharing, export, and deletion through a separately authorized
+  production migration and release.
+- Add email verification and password recovery plus distributed rate limiting,
+  abuse detection, stronger operational logging, and independent security
+  review before treating accounts as a production capability.
+- Add archive/retention and audit workflows if the product requires them; do
+  not rewrite immutable history.
 - Add idempotency keys or client operation IDs so a retried create can return a
   known outcome without silently inserting another record.
 - Add an authorized administrative interface for catalogue, pattern activity,

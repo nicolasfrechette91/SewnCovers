@@ -10,15 +10,15 @@ from pydantic.functional_validators import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 EnvironmentName = Literal["development", "test", "production"]
-CorsMethod = Literal["GET", "POST"]
-CorsHeader = Literal["Content-Type"]
+CorsMethod = Literal["DELETE", "GET", "PATCH", "POST"]
+CorsHeader = Literal["Authorization", "Content-Type"]
 
 _HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
 
 LOCAL_FRONTEND_ORIGIN = "http://localhost:3000"
 PRODUCTION_FRONTEND_ORIGIN = "https://nicolasfrechette91.github.io"
-CORS_ALLOWED_METHODS: tuple[CorsMethod, ...] = ("GET", "POST")
-CORS_ALLOWED_HEADERS: tuple[CorsHeader, ...] = ("Content-Type",)
+CORS_ALLOWED_METHODS: tuple[CorsMethod, ...] = ("DELETE", "GET", "PATCH", "POST")
+CORS_ALLOWED_HEADERS: tuple[CorsHeader, ...] = ("Authorization", "Content-Type")
 
 
 @dataclass(frozen=True, slots=True)

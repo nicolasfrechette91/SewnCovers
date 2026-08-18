@@ -6,6 +6,7 @@ import type { PatternDefinition } from "@/data/patterns";
 
 import { ConfigurationSummary } from "./configuration-summary";
 import { PreviewStep } from "./preview-step";
+import { PrivateProjectPanel } from "./private-project-panel";
 import {
   type ReviewReadiness,
   type ReviewSection,
@@ -231,6 +232,10 @@ export function ReviewScreen({
       </div>
 
       <SaveSharePanel
+        configuration={configuration}
+        onSavingChange={setSaveIsPending}
+      />
+      <PrivateProjectPanel
         configuration={configuration}
         onSavingChange={setSaveIsPending}
       />

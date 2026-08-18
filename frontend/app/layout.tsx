@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { SiteFooter, SiteHeader } from "@/components/layout";
+import { AuthProvider } from "@/context/auth";
 import { ConfigurationProvider } from "@/context/configuration";
 
 import "./globals.css";
@@ -39,13 +40,21 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <SiteHeader />
+        <SiteHeader
+          navigationItems={[
+            { href: "/configure/", label: "Configure" },
+            { href: "/projects/", label: "My projects" },
+            { href: "/account/", label: "Account" },
+          ]}
+        />
         <main
           id="main-content"
           tabIndex={-1}
           className="flex min-w-0 flex-1 flex-col"
         >
-          <ConfigurationProvider>{children}</ConfigurationProvider>
+          <AuthProvider>
+            <ConfigurationProvider>{children}</ConfigurationProvider>
+          </AuthProvider>
         </main>
         <SiteFooter />
       </body>
