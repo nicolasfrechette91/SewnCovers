@@ -285,19 +285,20 @@ user adoption, revenue, production traffic, or commercial-scale performance.
 
 ## Future improvements
 
-The following are reasonable production directions, but none is implemented in
-the current project:
+The following are reasonable production directions beyond the locally
+implemented, undeployed Phase 10 work:
 
 - Deploy and independently review the local authentication, project ownership,
-  privacy, version, export, and deletion work; add email verification/password
-  recovery, distributed abuse controls, retention, and audit policy.
+  privacy, version, custom-upload, export, and deletion work; provision private
+  storage and a worker, and add email verification/password recovery,
+  distributed abuse controls, retention, and audit policy.
 - Add idempotency keys or client operation IDs before supporting automatic
   create retries.
 - Introduce rate limiting, abuse monitoring, observability, backup and recovery
   exercises, and always-on or scaled infrastructure.
-- Move customer-uploaded artwork through object storage, validation,
-  processing, and moderation rather than accepting file data in the current
-  API.
+- Add operational review, monitoring, human escalation, and appeals around the
+  implemented fail-closed automated image-moderation boundary; automated
+  moderation does not guarantee safety.
 - Expand the domain to richer shapes, construction choices, materials, fit
   preferences, pricing, quotes, orders, fulfilment, and administration.
 - Complete platform-specific assistive-technology testing and continue testing

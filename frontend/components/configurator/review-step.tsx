@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui";
 import type { ConfigurationState } from "@/context/configuration";
-import type { PatternDefinition } from "@/data/patterns";
+import type { SelectedPatternPresentation } from "./preview-step";
 
 import { ConfigurationSummary } from "./configuration-summary";
 import { PreviewStep } from "./preview-step";
@@ -142,7 +142,7 @@ interface ReviewScreenProps {
   configuration: ConfigurationState;
   onEdit: (section: ReviewSection) => void;
   readiness: Extract<ReviewReadiness, { status: "ready" }>;
-  selectedPattern: PatternDefinition;
+  selectedPattern: SelectedPatternPresentation;
 }
 
 export function ReviewScreen({

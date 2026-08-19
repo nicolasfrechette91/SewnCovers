@@ -11,6 +11,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
@@ -31,6 +32,26 @@ DESIGN_MATERIALS = ("cotton-canvas", "linen-blend", "polyester-weave")
 DESIGN_FITS = ("close", "relaxed", "standard")
 DESIGN_CLOSURES = ("envelope", "slip-on", "zipper")
 DESIGN_SEAMS = ("piped", "plain")
+UPLOAD_STATES = (
+    "awaiting_upload",
+    "uploaded",
+    "processing",
+    "awaiting_moderation",
+    "approved",
+    "rejected",
+    "failed",
+    "deleted",
+    "expired",
+)
+UPLOAD_MODERATION_STATES = (
+    "not_started",
+    "pending",
+    "approved",
+    "rejected",
+    "unavailable",
+    "failed",
+)
+DERIVATIVE_KINDS = ("tile", "thumbnail")
 
 
 def _sql_values(values: tuple[str, ...]) -> str:
@@ -257,6 +278,9 @@ class CustomerAccount(Base):
     projects: Mapped[list[SavedProject]] = relationship(
         back_populates="account", cascade="all, delete-orphan", passive_deletes=True
     )
+    uploads: Mapped[list[CustomUpload]] = relationship(
+        back_populates="account", cascade="all, delete-orphan", passive_deletes=True
+    )
 
 
 class AuthenticatedSession(Base):
@@ -356,6 +380,7 @@ class ProjectVersion(Base):
             "version_number",
             name="uq_project_versions_project_number",
         ),
+        UniqueConstraint("id", "account_id", name="uq_project_versions_id_account_id"),
         CheckConstraint("length(id) = 22", name="ck_project_versions_id_length"),
         CheckConstraint(
             "version_number >= 1",
@@ -374,6 +399,15 @@ class ProjectVersion(Base):
         ),
         nullable=False,
     )
+    account_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey(
+            "customer_accounts.id",
+            name="fk_project_versions_account_id_customer_accounts",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     configuration: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -384,6 +418,14 @@ class ProjectVersion(Base):
         back_populates="version",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+    custom_pattern_reference: Mapped[ProjectCustomPatternReference | None] = (
+        relationship(
+            back_populates="version",
+            cascade="all, delete-orphan",
+            passive_deletes=True,
+            uselist=False,
+        )
     )
 
 
@@ -420,6 +462,235 @@ class ShareGrant(Base):
         DateTime(timezone=True), nullable=True
     )
     version: Mapped[ProjectVersion] = relationship(back_populates="share_grants")
+
+
+class CustomUpload(Base):
+    """Owned quarantine upload and its durable processing/moderation job state."""
+
+    __tablename__ = "custom_uploads"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_custom_uploads"),
+        UniqueConstraint("original_object_key", name="uq_custom_uploads_original_key"),
+        UniqueConstraint(
+            "upload_token_hash", name="uq_custom_uploads_upload_token_hash"
+        ),
+        UniqueConstraint(
+            "access_token_hash", name="uq_custom_uploads_access_token_hash"
+        ),
+        UniqueConstraint("id", "account_id", name="uq_custom_uploads_id_account_id"),
+        CheckConstraint("length(id) = 22", name="ck_custom_uploads_id_length"),
+        CheckConstraint(
+            "length(label) BETWEEN 1 AND 120 AND length(trim(label)) >= 1",
+            name="ck_custom_uploads_label_length",
+        ),
+        CheckConstraint(
+            f"state IN ({_sql_values(UPLOAD_STATES)})",
+            name="ck_custom_uploads_state_supported",
+        ),
+        CheckConstraint(
+            f"moderation_state IN ({_sql_values(UPLOAD_MODERATION_STATES)})",
+            name="ck_custom_uploads_moderation_state_supported",
+        ),
+        CheckConstraint(
+            "declared_size BETWEEN 1 AND 10485760",
+            name="ck_custom_uploads_declared_size_range",
+        ),
+        CheckConstraint(
+            "original_size IS NULL OR original_size BETWEEN 1 AND 10485760",
+            name="ck_custom_uploads_original_size_range",
+        ),
+        CheckConstraint(
+            "decoded_width IS NULL OR decoded_width BETWEEN 64 AND 4096",
+            name="ck_custom_uploads_width_range",
+        ),
+        CheckConstraint(
+            "decoded_height IS NULL OR decoded_height BETWEEN 64 AND 4096",
+            name="ck_custom_uploads_height_range",
+        ),
+        CheckConstraint(
+            "(crop_left IS NULL AND crop_top IS NULL AND crop_width IS NULL "
+            "AND crop_height IS NULL) OR "
+            "(crop_left >= 0 AND crop_top >= 0 AND crop_width BETWEEN 64 AND 4096 "
+            "AND crop_height BETWEEN 64 AND 4096)",
+            name="ck_custom_uploads_crop_complete",
+        ),
+        CheckConstraint(
+            "processing_attempts BETWEEN 0 AND 3 "
+            "AND moderation_attempts BETWEEN 0 AND 3",
+            name="ck_custom_uploads_attempt_ranges",
+        ),
+        CheckConstraint(
+            "(state = 'approved' AND moderation_state = 'approved') OR "
+            "(state = 'rejected' AND moderation_state = 'rejected') OR "
+            "state NOT IN ('approved', 'rejected')",
+            name="ck_custom_uploads_terminal_moderation_match",
+        ),
+        Index("ix_custom_uploads_account_id", "account_id"),
+        Index("ix_custom_uploads_state_next_attempt", "state", "next_attempt_at"),
+        Index("ix_custom_uploads_lease_expires_at", "lease_expires_at"),
+        Index("ix_custom_uploads_intent_expires_at", "intent_expires_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(22), nullable=False)
+    account_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey(
+            "customer_accounts.id",
+            name="fk_custom_uploads_account_id_customer_accounts",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    declared_content_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    declared_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    original_object_key: Mapped[str] = mapped_column(String(180), nullable=False)
+    upload_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    access_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    access_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    intent_expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    original_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    original_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    decoded_format: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    decoded_width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    decoded_height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    crop_left: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    crop_top: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    crop_width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    crop_height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    processing_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    processing_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    moderation_state: Mapped[str] = mapped_column(String(24), nullable=False)
+    moderation_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    moderation_provider: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    moderation_model: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    moderation_request_id_hash: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    last_error_code: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    lease_owner: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    next_attempt_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now
+    )
+    uploaded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    moderated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    account: Mapped[CustomerAccount] = relationship(back_populates="uploads")
+    derivatives: Mapped[list[CustomDerivative]] = relationship(
+        back_populates="upload", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class CustomDerivative(Base):
+    """A metadata-stripped private production derivative."""
+
+    __tablename__ = "custom_derivatives"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_custom_derivatives"),
+        UniqueConstraint("object_key", name="uq_custom_derivatives_object_key"),
+        UniqueConstraint("upload_id", "kind", name="uq_custom_derivatives_upload_kind"),
+        UniqueConstraint("id", "upload_id", name="uq_custom_derivatives_id_upload_id"),
+        CheckConstraint("length(id) = 22", name="ck_custom_derivatives_id_length"),
+        CheckConstraint(
+            f"kind IN ({_sql_values(DERIVATIVE_KINDS)})",
+            name="ck_custom_derivatives_kind_supported",
+        ),
+        CheckConstraint(
+            "width BETWEEN 1 AND 4096", name="ck_custom_derivatives_width_range"
+        ),
+        CheckConstraint(
+            "height BETWEEN 1 AND 4096", name="ck_custom_derivatives_height_range"
+        ),
+        CheckConstraint(
+            "byte_size BETWEEN 1 AND 10485760", name="ck_custom_derivatives_size_range"
+        ),
+        Index("ix_custom_derivatives_upload_id", "upload_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(22), nullable=False)
+    upload_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey(
+            "custom_uploads.id",
+            name="fk_custom_derivatives_upload_id_custom_uploads",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    object_key: Mapped[str] = mapped_column(String(180), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    image_format: Mapped[str] = mapped_column(String(16), nullable=False)
+    width: Mapped[int] = mapped_column(Integer, nullable=False)
+    height: Mapped[int] = mapped_column(Integer, nullable=False)
+    byte_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    processing_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now
+    )
+    upload: Mapped[CustomUpload] = relationship(back_populates="derivatives")
+
+
+class ProjectCustomPatternReference(Base):
+    """Relational authorization binding for a custom-pattern version snapshot."""
+
+    __tablename__ = "project_custom_pattern_references"
+    __table_args__ = (
+        PrimaryKeyConstraint("version_id", name="pk_project_custom_pattern_references"),
+        ForeignKeyConstraint(
+            ["version_id", "account_id"],
+            ["project_versions.id", "project_versions.account_id"],
+            name="fk_project_custom_reference_version_account",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["upload_id", "account_id"],
+            ["custom_uploads.id", "custom_uploads.account_id"],
+            name="fk_project_custom_reference_upload_account",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["derivative_id", "upload_id"],
+            ["custom_derivatives.id", "custom_derivatives.upload_id"],
+            name="fk_project_custom_reference_derivative_upload",
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "length(processing_version) BETWEEN 1 AND 32",
+            name="ck_project_custom_reference_processing_version",
+        ),
+        Index("ix_project_custom_references_upload_id", "upload_id"),
+    )
+
+    version_id: Mapped[str] = mapped_column(String(22), nullable=False)
+    account_id: Mapped[str] = mapped_column(String(22), nullable=False)
+    upload_id: Mapped[str] = mapped_column(String(22), nullable=False)
+    derivative_id: Mapped[str] = mapped_column(String(22), nullable=False)
+    processing_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    version: Mapped[ProjectVersion] = relationship(
+        back_populates="custom_pattern_reference"
+    )
 
 
 class ImmutableDesignError(RuntimeError):

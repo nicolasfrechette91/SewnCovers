@@ -9,9 +9,19 @@ from pydantic import (
     ConfigDict,
     Field,
     StringConstraints,
+    model_validator,
 )
 
-from app.designs.schema import DesignConfiguration
+from app.designs.schema import (
+    ClosureType,
+    CushionShape,
+    FitPreference,
+    MaterialId,
+    Measurement,
+    MeasurementUnit,
+    PatternScale,
+    SeamStyle,
+)
 
 
 def _strip_name(value: str) -> str:
@@ -36,11 +46,72 @@ ShareToken = Annotated[
 ]
 
 
+class BuiltInPatternChoice(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+
+    kind: Literal["built-in"]
+    pattern_id: str = Field(
+        alias="patternId",
+        min_length=1,
+        max_length=64,
+        pattern=r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+    )
+
+
+class CustomPatternChoice(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+
+    kind: Literal["custom"]
+    asset_id: ResourceId = Field(alias="assetId")
+    derivative_id: ResourceId = Field(alias="derivativeId")
+    processing_version: str = Field(
+        alias="processingVersion", min_length=1, max_length=32
+    )
+
+
+PatternChoice = Annotated[
+    BuiltInPatternChoice | CustomPatternChoice, Field(discriminator="kind")
+]
+
+
+class ProjectConfiguration(BaseModel):
+    """Complete private snapshot with an explicit built-in/custom pattern choice."""
+
+    model_config = ConfigDict(
+        extra="forbid", frozen=True, populate_by_name=True, strict=True
+    )
+
+    shape: CushionShape
+    width: Measurement
+    height: Measurement
+    back_width: Measurement | None = Field(default=None, alias="backWidth")
+    thickness: Measurement
+    unit: MeasurementUnit
+    pattern: PatternChoice
+    pattern_scale: PatternScale = Field(alias="patternScale")
+    material_id: MaterialId = Field(default="cotton-canvas", alias="materialId")
+    fit_preference: FitPreference = Field(default="standard", alias="fitPreference")
+    closure_type: ClosureType = Field(default="zipper", alias="closureType")
+    seam_style: SeamStyle = Field(default="plain", alias="seamStyle")
+
+    @model_validator(mode="before")
+    @classmethod
+    def accept_legacy_built_in_snapshot(cls, value: object) -> object:
+        if isinstance(value, dict) and "pattern" not in value and "patternId" in value:
+            migrated = dict(value)
+            migrated["pattern"] = {
+                "kind": "built-in",
+                "patternId": migrated.pop("patternId"),
+            }
+            return migrated
+        return value
+
+
 class CreateProjectRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
     name: ProjectName
-    configuration: DesignConfiguration
+    configuration: ProjectConfiguration
 
 
 class RenameProjectRequest(BaseModel):
@@ -52,7 +123,7 @@ class RenameProjectRequest(BaseModel):
 class CreateVersionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
-    configuration: DesignConfiguration
+    configuration: ProjectConfiguration
 
 
 class VersionResponse(BaseModel):
@@ -60,7 +131,7 @@ class VersionResponse(BaseModel):
 
     id: str
     version_number: int = Field(alias="versionNumber", ge=1)
-    configuration: DesignConfiguration
+    configuration: ProjectConfiguration
     created_at: datetime = Field(alias="createdAt")
     is_current: bool = Field(alias="isCurrent")
 
@@ -102,4 +173,4 @@ class SharedVersionResponse(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    configuration: DesignConfiguration
+    configuration: ProjectConfiguration

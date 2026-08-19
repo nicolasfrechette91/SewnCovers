@@ -37,12 +37,16 @@ from app.accounts.throttle import (
 from app.errors import APIProblem, authentication_failed, authentication_required
 from app.persistence.models import (
     AuthenticatedSession,
+    CustomDerivative,
     CustomerAccount,
+    CustomUpload,
+    ProjectCustomPatternReference,
     ProjectVersion,
     SavedProject,
     ShareGrant,
 )
 from app.persistence.transactions import service_transaction
+from app.uploads.storage import ObjectStorageError, get_object_storage
 
 SESSION_LIFETIME = timedelta(days=7)
 TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_-]{43}$")
@@ -247,10 +251,29 @@ class AccountService:
                 }
             )
         return AccountExportResponse(
-            format_version=1,
+            format_version=2,
             exported_at=self._clock(),
             account=self._account_response(authenticated.account),
             projects=exported_projects,
+            custom_patterns=[
+                {
+                    "id": upload.id,
+                    "label": upload.label,
+                    "state": upload.state,
+                    "createdAt": upload.created_at.isoformat(),
+                    "deletedAt": (
+                        upload.deleted_at.isoformat() if upload.deleted_at else None
+                    ),
+                    "width": upload.decoded_width,
+                    "height": upload.decoded_height,
+                    "processingVersion": upload.processing_version,
+                }
+                for upload in self._session.scalars(
+                    select(CustomUpload)
+                    .where(CustomUpload.account_id == authenticated.account.id)
+                    .order_by(CustomUpload.created_at, CustomUpload.id)
+                ).all()
+            ],
         )
 
     def delete_account(
@@ -258,6 +281,24 @@ class AccountService:
     ) -> AccountDeletedResponse:
         if not verify_password(authenticated.account.password_hash, password):
             raise authentication_failed()
+        uploads = self._session.scalars(
+            select(CustomUpload).where(
+                CustomUpload.account_id == authenticated.account.id
+            )
+        ).all()
+        try:
+            storage = get_object_storage()
+            for upload in uploads:
+                storage.delete(upload.original_object_key)
+                for derivative in upload.derivatives:
+                    storage.delete(derivative.object_key)
+        except ObjectStorageError:
+            raise APIProblem(
+                503,
+                "storage_unavailable",
+                "Private asset cleanup is temporarily unavailable.",
+                ("service", "storage"),
+            ) from None
         project_ids = select(SavedProject.id).where(
             SavedProject.account_id == authenticated.account.id
         )
@@ -265,6 +306,11 @@ class AccountService:
             ProjectVersion.project_id.in_(project_ids)
         )
         with service_transaction(self._session):
+            self._session.execute(
+                delete(ProjectCustomPatternReference).where(
+                    ProjectCustomPatternReference.account_id == authenticated.account.id
+                )
+            )
             self._session.execute(
                 delete(ShareGrant).where(ShareGrant.version_id.in_(version_ids))
             )
@@ -274,6 +320,19 @@ class AccountService:
             self._session.execute(
                 delete(SavedProject).where(
                     SavedProject.account_id == authenticated.account.id
+                )
+            )
+            upload_ids = select(CustomUpload.id).where(
+                CustomUpload.account_id == authenticated.account.id
+            )
+            self._session.execute(
+                delete(CustomDerivative).where(
+                    CustomDerivative.upload_id.in_(upload_ids)
+                )
+            )
+            self._session.execute(
+                delete(CustomUpload).where(
+                    CustomUpload.account_id == authenticated.account.id
                 )
             )
             self._session.execute(

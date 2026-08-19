@@ -10,6 +10,7 @@ import type {
   DesignResponse,
   SewnCoversApiClient,
 } from "./api-client";
+import type { ProjectConfigurationRequest } from "./account-api";
 
 const PATTERN_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const PUBLIC_DESIGN_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
@@ -154,7 +155,7 @@ export function mapConfigurationToCreateDesign(
     closureType,
     fitPreference,
     height,
-    patternId,
+    pattern,
     patternScale,
     materialId,
     seamStyle,
@@ -164,6 +165,13 @@ export function mapConfigurationToCreateDesign(
     width,
   } = configuration;
   const normalizedScale = normalizePatternScale(patternScale);
+  const legacyPatternId = isRecord(configuration) &&
+    typeof configuration.patternId === "string"
+    ? configuration.patternId
+    : null;
+  const patternId = pattern?.kind === "built-in"
+    ? pattern.patternId
+    : legacyPatternId;
 
   if (
     shape === null ||
@@ -205,6 +213,42 @@ export function mapConfigurationToCreateDesign(
     closureType,
     seamStyle,
   });
+}
+
+export function mapConfigurationToProjectConfiguration(
+  configuration: ConfigurationState,
+): ProjectConfigurationRequest {
+  const validationState: ConfigurationState =
+    configuration.pattern?.kind === "custom"
+      ? {
+          ...configuration,
+          pattern: { kind: "built-in", patternId: "terrace-wave" },
+        }
+      : configuration;
+  const validated = mapConfigurationToCreateDesign(validationState);
+  if (configuration.pattern === null) {
+    throw new InvalidReviewedConfigurationError();
+  }
+  const { patternId, ...common } = validated;
+  if (
+    configuration.pattern.kind === "built-in" &&
+    patternId !== configuration.pattern.patternId
+  ) {
+    throw new InvalidReviewedConfigurationError();
+  }
+  const pattern =
+    configuration.pattern.kind === "built-in"
+      ? {
+          kind: "built-in" as const,
+          patternId: configuration.pattern.patternId,
+        }
+      : {
+          kind: "custom" as const,
+          assetId: configuration.pattern.assetId,
+          derivativeId: configuration.pattern.derivativeId,
+          processingVersion: configuration.pattern.processingVersion,
+        };
+  return Object.freeze({ ...common, pattern });
 }
 
 export function buildDesignShareUrl(

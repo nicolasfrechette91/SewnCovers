@@ -15,7 +15,8 @@ const expiresAt = "2026-08-25T12:00:00Z";
 
 const configuration = {
   shape: "box", width: 73.25, height: 49.75, backWidth: null,
-  thickness: 13.5, unit: "cm", patternId: "terrace-wave",
+  thickness: 13.5, unit: "cm",
+  pattern: { kind: "built-in", patternId: "terrace-wave" },
   patternScale: 1.6, materialId: "linen-blend", fitPreference: "relaxed",
   closureType: "envelope", seamStyle: "piped",
 } as const;
@@ -35,7 +36,7 @@ const patterns = patternIds.map((id, index) => ({
 const corsHeaders = {
   "access-control-allow-origin": appOrigin,
   "access-control-allow-headers": "authorization, content-type",
-  "access-control-allow-methods": "DELETE, GET, PATCH, POST, OPTIONS",
+  "access-control-allow-methods": "DELETE, GET, PATCH, POST, PUT, OPTIONS",
   "content-type": "application/json",
 };
 

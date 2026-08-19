@@ -163,7 +163,10 @@ function configurationFromResponse(
     backWidth: resolvedConfiguration.backWidth,
     thickness: response.thickness,
     unit: response.unit,
-    patternId: response.patternId,
+    pattern: {
+      kind: "built-in" as const,
+      patternId: response.patternId,
+    },
     patternScale: response.patternScale,
     materialId: resolvedConfiguration.materialId,
     fitPreference: resolvedConfiguration.fitPreference,
@@ -470,7 +473,9 @@ export class SharedDesignController {
     if (
       this.#catalogue.status === "empty" ||
       !this.#catalogue.patterns.some(
-        ({ id }) => id === this.#pendingConfiguration?.patternId,
+        ({ id }) =>
+          this.#pendingConfiguration?.pattern?.kind === "built-in" &&
+          id === this.#pendingConfiguration.pattern.patternId,
       )
     ) {
       this.#publish({

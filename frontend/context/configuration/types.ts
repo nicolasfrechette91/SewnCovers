@@ -15,6 +15,21 @@ export type FitPreference = "close" | "relaxed" | "standard";
 export type ClosureType = "envelope" | "slip-on" | "zipper";
 export type SeamStyle = "piped" | "plain";
 
+export type PatternChoice =
+  | {
+      readonly kind: "built-in";
+      readonly patternId: string;
+    }
+  | {
+      readonly kind: "custom";
+      readonly assetId: string;
+      readonly derivativeId: string;
+      readonly processingVersion: string;
+      readonly label: string;
+      readonly previewUrl: string | null;
+      readonly unavailableReason?: "deleted" | "unavailable";
+    };
+
 export interface ConfigurationState {
   readonly shape: CushionShape | null;
   readonly width: number | null;
@@ -22,7 +37,7 @@ export interface ConfigurationState {
   readonly backWidth: number | null;
   readonly thickness: number | null;
   readonly unit: MeasurementUnit;
-  readonly patternId: string | null;
+  readonly pattern: PatternChoice | null;
   readonly patternScale: number;
   readonly materialId: MaterialId;
   readonly fitPreference: FitPreference;
@@ -55,8 +70,12 @@ export type ConfigurationAction =
       readonly unit: MeasurementUnit;
     }
   | {
-      readonly type: "setPatternId";
+      readonly type: "setBuiltInPattern";
       readonly patternId: string | null;
+    }
+  | {
+      readonly type: "setCustomPattern";
+      readonly pattern: Extract<PatternChoice, { readonly kind: "custom" }>;
     }
   | { readonly type: "setPatternScale"; readonly patternScale: number }
   | { readonly type: "setMaterialId"; readonly materialId: MaterialId }
@@ -70,3 +89,9 @@ export type ConfigurationAction =
     }
   | { readonly type: "setSeamStyle"; readonly seamStyle: SeamStyle }
   | { readonly type: "resetConfiguration" };
+
+export function getBuiltInPatternId(
+  pattern: PatternChoice | null,
+): string | null {
+  return pattern?.kind === "built-in" ? pattern.patternId : null;
+}

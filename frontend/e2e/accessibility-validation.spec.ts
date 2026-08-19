@@ -249,6 +249,8 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("radio", { name: "Piped edge" })).toBeChecked();
   await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Sign in or register" })).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "All categories" })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "All colors" })).toBeFocused();

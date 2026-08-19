@@ -56,6 +56,7 @@ export function SaveSharePanel({
   const shareUrlInput = useRef<HTMLInputElement>(null);
   const copyPending = useRef(false);
   const [copyState, setCopyState] = useState<CopyState>("idle");
+  const customPatternSelected = configuration.pattern?.kind === "custom";
 
   useEffect(() => {
     if (saveState.phase !== "success") {
@@ -118,7 +119,15 @@ export function SaveSharePanel({
         configuration.
       </p>
 
-      {saveState.phase === "idle" ? (
+      {customPatternSelected ? (
+        <p className="mt-component rounded-card border border-border-strong bg-surface-subtle p-control-x py-4 text-supporting text-text-muted">
+          Anonymous permanent design links support built-in patterns only. Save
+          this configuration to a private project, then create a revocable
+          project share so asset access follows the share grant.
+        </p>
+      ) : null}
+
+      {saveState.phase === "idle" && !customPatternSelected ? (
         <Button className="mt-component" onClick={saveDesign}>
           Save and create share link
         </Button>

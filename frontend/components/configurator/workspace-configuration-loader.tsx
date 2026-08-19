@@ -5,8 +5,14 @@ import Link from "next/link";
 
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import { useAuth } from "@/context/auth";
-import { useConfiguration } from "@/context/configuration";
-import { accountApi, AccountApiError } from "@/services/account-api";
+import { useConfiguration, type ConfigurationState } from "@/context/configuration";
+import {
+  accountApi,
+  AccountApiError,
+  buildSharedAssetUrl,
+  resolveAssetUrl,
+  type ProjectConfigurationRequest,
+} from "@/services/account-api";
 
 type LoaderState =
   | { status: "idle" }
@@ -21,6 +27,44 @@ function removeWorkspaceParameters(): void {
   url.searchParams.delete("project");
   url.searchParams.delete("version");
   window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+async function restoreState(
+  configuration: ProjectConfigurationRequest,
+  token: string | null,
+  share: string | null,
+): Promise<ConfigurationState> {
+  let pattern: ConfigurationState["pattern"];
+  if (configuration.pattern.kind === "built-in") {
+    pattern = configuration.pattern;
+  } else {
+    let previewUrl: string | null = null;
+    let unavailableReason: "deleted" | "unavailable" | undefined;
+    let label = "Shared custom pattern";
+    try {
+      if (share) {
+        previewUrl = buildSharedAssetUrl(share);
+      } else if (token) {
+        const upload = await accountApi.getUpload(token, configuration.pattern.assetId);
+        label = upload.label;
+        if (upload.state === "deleted") unavailableReason = "deleted";
+        else if (upload.state !== "approved") unavailableReason = "unavailable";
+        else {
+          const access = await accountApi.assetAccess(token, upload.id, "tile");
+          previewUrl = resolveAssetUrl(access.url);
+        }
+      }
+    } catch {
+      unavailableReason = "unavailable";
+    }
+    pattern = {
+      ...configuration.pattern,
+      label,
+      previewUrl,
+      unavailableReason,
+    };
+  }
+  return { ...configuration, pattern };
 }
 
 export function WorkspaceConfigurationLoader() {
@@ -46,12 +90,17 @@ export function WorkspaceConfigurationLoader() {
     const revision = getRevision();
     setState({ status: "loading", label: share ? "Loading the read-only shared configuration…" : "Loading the private project version…" });
     try {
-      const configuration = share
+      const snapshot = share
         ? (await accountApi.restoreShare(share)).configuration
         : auth.status === "authenticated"
           ? (await accountApi.getVersion(auth.token, project!, version!)).configuration
           : null;
-      if (active !== generation.current || configuration === null) return;
+      if (active !== generation.current || snapshot === null) return;
+      const configuration = await restoreState(
+        snapshot,
+        auth.status === "authenticated" ? auth.token : null,
+        share,
+      );
       if (getRevision() !== revision) {
         setState({ status: "error", label: "Your configuration changed while the saved version was loading, so it was not overwritten." });
         return;

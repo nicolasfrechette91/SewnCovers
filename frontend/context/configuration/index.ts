@@ -6,6 +6,7 @@ export {
   configurationReducer,
   initialConfigurationState,
 } from "./reducer";
+export { getBuiltInPatternId } from "./types";
 export {
   CENTIMETRES_PER_INCH,
   convertMeasurement,
@@ -37,6 +38,7 @@ export type {
   FitPreference,
   MaterialId,
   MeasurementUnit,
+  PatternChoice,
   SeamStyle,
 } from "./types";
 export type {

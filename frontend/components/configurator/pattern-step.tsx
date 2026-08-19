@@ -9,6 +9,7 @@ import {
 } from "@/components/configurator/pattern-filter";
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import {
+  getBuiltInPatternId,
   hasValidMeasurementsForShape,
   useConfiguration,
 } from "@/context/configuration";
@@ -25,6 +26,7 @@ import {
   type PatternFilters,
 } from "@/data/patterns";
 import type { PatternCatalogueState } from "@/services/pattern-catalogue";
+import { YourPatterns } from "./your-patterns";
 
 const categoryFilterOptions: readonly PatternFilterOption<PatternCategoryFilter>[] =
   [
@@ -73,9 +75,10 @@ export function PatternStep({
     categoryId !== ALL_PATTERN_CATEGORIES ||
     colorId !== ALL_PATTERN_COLORS;
   const hasCompleteCatalogue = catalogue.allPatterns.length > 0;
+  const builtInPatternId = getBuiltInPatternId(state.pattern);
   const selectedPattern = getPatternById(
     catalogue.allPatterns,
-    state.patternId,
+    builtInPatternId,
   );
   const selectedPatternIsHidden =
     selectedPattern !== null &&
@@ -85,7 +88,7 @@ export function PatternStep({
     );
   const selectedPatternIsUnavailable =
     hasCompleteCatalogue &&
-    state.patternId !== null &&
+    builtInPatternId !== null &&
     selectedPattern === null;
 
   if (
@@ -157,6 +160,12 @@ export function PatternStep({
           SewnCovers. Choose one pattern for this configuration, then adjust
           its scale in the preview.
         </p>
+
+        <YourPatterns />
+
+        <h3 className="mt-layout font-display text-section-title font-heading">
+          Built-in patterns
+        </h3>
 
         {!hasCompleteCatalogue ? (
           catalogue.phase === "loading" ? (
@@ -337,7 +346,7 @@ export function PatternStep({
                       name="cushion-pattern"
                       value={pattern.id}
                       required
-                      checked={state.patternId === pattern.id}
+                      checked={builtInPatternId === pattern.id}
                       patternName={pattern.name}
                       patternCategory={getPatternCategoryLabel(
                         pattern.categoryId,
@@ -351,7 +360,7 @@ export function PatternStep({
                       }
                       onChange={() =>
                         dispatch({
-                          type: "setPatternId",
+                          type: "setBuiltInPattern",
                           patternId: pattern.id,
                         })
                       }

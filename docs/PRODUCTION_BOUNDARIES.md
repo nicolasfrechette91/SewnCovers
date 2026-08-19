@@ -10,11 +10,12 @@ repository evidence, and read-only checks of the public deployment. No deployed
 commit is stated because this verification did not independently confirm one
 commit across Pages, Render, and the database.
 
-The repository's local Phase 10.1 and 10.2 work is newer than that deployment.
-In particular, accounts, private projects, versions, and revocable shares
-described below are implemented and locally verified but are not available on
-the live Pages/Render/Neon system. No production migration or account write was
-performed for Task 10.2.
+The repository's local Phase 10.1-10.3 work is newer than that deployment.
+Accounts, private projects, versions, revocable shares, and private custom
+uploads described below are implemented and locally verified but are not
+available on the live Pages/Render/Neon system. No production migration,
+bucket, credential, upload, moderation call, account write, or worker change
+was performed for Task 10.3.
 
 ## Boundary summary
 
@@ -109,6 +110,12 @@ price, or current Render or Neon policy.
   hash, is read-only, and can be revoked. A session token is stored only in the
   tab's `sessionStorage`; this avoids cross-site-cookie dependence but remains
   exposed to successful same-origin script injection.
+- Locally, an authenticated account can upload JPEG, PNG, or WebP to private
+  quarantine storage, then select only a server-validated, processed, approved
+  derivative. Pending, rejected, failed, expired, deleted, cross-account, and
+  revoked-share access fails closed. The deterministic filesystem/provider
+  checks and mocked S3/OpenAI contracts are integration evidence, not live
+  provider verification. See [custom uploads](CUSTOM_UPLOADS.md).
 - The application is not intended to store personal, confidential, regulated,
   payment, order, or production information. The public pattern catalogue,
   OpenAPI schema, Swagger/ReDoc documentation, API root, and health endpoint
@@ -154,10 +161,11 @@ price, or current Render or Neon policy.
 - CORS is a browser-enforced cross-origin response policy. It is not
   authentication, authorization, API access control, privacy, or protection
   against non-browser clients.
-- A reporting-only refresh of the committed npm dependency graph returned six
-  high-severity vulnerabilities in the full audit and four high-severity
-  vulnerabilities when development dependencies were omitted. No critical,
-  moderate, or low findings were reported in either view. These unresolved
+- A reporting-only refresh of the committed npm dependency graph returned nine
+  high-severity and two moderate findings in the full audit, and four
+  high-severity plus two moderate findings when development dependencies were
+  omitted. No critical, low, or informational findings were reported in either
+  view. These unresolved
   findings are a production-readiness concern; no dependency or lockfile was
   changed. The existing Python environment passed `pip check`, which verifies
   installed-package consistency but is not a vulnerability audit.
@@ -187,17 +195,20 @@ None is implemented, scheduled, priced, or promised.
 - Complete privacy, security, accessibility, and operational reviews, including
   manual assistive-technology coverage and threat modeling.
 
-### 2. Deploying and strengthening the local account lifecycle
+### 2. Deploying and strengthening the local Phase 10 lifecycle
 
 - Review and deploy the local Argon2id authentication, expiring/revocable
   sessions, server-enforced ownership, private projects, immutable versions,
-  revocable sharing, export, and deletion through a separately authorized
-  production migration and release.
+  revocable sharing, custom uploads, export, and deletion through a separately
+  authorized production migration and release. Provision private object
+  storage, protected credentials, lifecycle rules, and a durable worker first.
 - Add email verification and password recovery plus distributed rate limiting,
   abuse detection, stronger operational logging, and independent security
   review before treating accounts as a production capability.
 - Add archive/retention and audit workflows if the product requires them; do
   not rewrite immutable history.
+- Establish moderation-provider privacy review, metrics, alerts, abuse handling,
+  human escalation, and appeals. Automated moderation cannot guarantee safety.
 - Add idempotency keys or client operation IDs so a retried create can return a
   known outcome without silently inserting another record.
 - Add an authorized administrative interface for catalogue, pattern activity,

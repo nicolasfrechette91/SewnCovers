@@ -27,7 +27,6 @@ import {
   materialOptions,
   seamOptions,
 } from "@/data/cover-options";
-import type { PatternDefinition } from "@/data/patterns";
 import {
   getCushionShapeDefinition,
 } from "@/data/shapes";
@@ -44,6 +43,12 @@ type PatternStyle = CSSProperties & {
   "--pattern-scale": number;
 };
 
+export interface SelectedPatternPresentation {
+  readonly name: string;
+  readonly previewClassName: string;
+  readonly previewUrl?: string;
+}
+
 interface PreviewDetail {
   readonly label: string;
   readonly value: string;
@@ -59,6 +64,7 @@ function PreviewVisual({
   geometry,
   fitPreference,
   patternClassName,
+  patternUrl,
   patternScale,
   shape,
   seamStyle,
@@ -66,6 +72,7 @@ function PreviewVisual({
   fitPreference: FitPreference;
   geometry: PreviewGeometry;
   patternClassName: string;
+  patternUrl?: string;
   patternScale: number;
   shape: CushionShape;
   seamStyle: SeamStyle;
@@ -95,6 +102,10 @@ function PreviewVisual({
   ]);
   const patternStyle: PatternStyle = {
     "--pattern-scale": patternScale,
+    backgroundImage: patternUrl ? `url("${patternUrl}")` : undefined,
+    backgroundSize: patternUrl
+      ? `${Math.round(160 * patternScale)}px auto`
+      : undefined,
   };
   const taperedInset =
     backFaceWidth === null ? 0 : (faceWidth - backFaceWidth) / 2;
@@ -243,7 +254,7 @@ function formatValidMeasurement(
 
 export interface PreviewStepProps {
   focusTargetId?: string;
-  selectedPattern: PatternDefinition | null;
+  selectedPattern: SelectedPatternPresentation | null;
   showScaleControls?: boolean;
 }
 
@@ -339,7 +350,7 @@ export function PreviewStep({
           shape,
           measurementsAreValid,
           selectedPattern !== null,
-          state.patternId !== null,
+          state.pattern !== null,
           patternScaleIsValid,
         )}
         visual={
@@ -348,6 +359,7 @@ export function PreviewStep({
               fitPreference={state.fitPreference}
               geometry={geometry}
               patternClassName={selectedPattern.previewClassName}
+              patternUrl={selectedPattern.previewUrl}
               patternScale={state.patternScale}
               shape={shape}
               seamStyle={state.seamStyle}
@@ -396,7 +408,7 @@ export function PreviewStep({
                 </dt>
                 <dd className="break-words">
                   {selectedPattern?.name ??
-                    (state.patternId === null
+                    (state.pattern === null
                       ? "Not selected"
                       : "Selected pattern unavailable")}
                 </dd>

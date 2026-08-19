@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 10 - Future commercial expansion
-- Current task: 10.2 - Deferred - customer accounts, saved projects, design versions, and privacy controls
+- Current task: 10.3 - Deferred - custom uploads using object storage, processing, moderation, and production assets
 - Status: Completed
-- Overall progress: 55 / 58 tasks completed
-- Up next: 10.3 - Deferred - custom uploads using object storage, processing, moderation, and production assets
+- Overall progress: 56 / 58 tasks completed
+- Up next: 10.4 - Deferred - pricing, quotes, cart, payments, orders, manufacturing, fulfilment, and administration
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -119,7 +119,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | --- | --- | --- |
 | 10.1 | Deferred - richer shapes, construction choices, materials, fit preferences, and measurement guidance | Completed |
 | 10.2 | Deferred - customer accounts, saved projects, design versions, and privacy controls | Completed |
-| 10.3 | Deferred - custom uploads using object storage, processing, moderation, and production assets | Not started |
+| 10.3 | Deferred - custom uploads using object storage, processing, moderation, and production assets | Completed |
 | 10.4 | Deferred - pricing, quotes, cart, payments, orders, manufacturing, fulfilment, and administration | Not started |
 | 10.5 | Deferred - advanced visualization, production platform, analytics, legal, and trust capabilities | Not started |
 
@@ -702,3 +702,71 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 - Final frontend verification passed 13 configuration checks, ESLint, strict TypeScript, all 82 unit/component/service tests, deterministic ordinary and `/SewnCovers/` seven-HTML static builds and scans, and all six Playwright scenarios in both base-path modes. Browser requests that create, rename, version, share, revoke, export, or delete were intercepted locally; no production write was sent. The backend passed Ruff format/lint, `pip check`, all 251 tests, clean-database creation, upgrade from `20260812_01`, schema parity, OpenAPI response/status checks, two-account isolation, concurrent numbering, token/hash/session behavior, export/cascade deletion, and the single `20260818_01` head.
 - A direct ordinary build without the deterministic local Google Fonts fixture remains unavailable in this restricted environment because the sandbox cannot fetch the font stylesheet; both equivalent fixture-backed build modes passed. Manual screen-reader, native forced-colors, zoom, browser/OS-dialog, broader assistive-technology, penetration, and production-load testing remain outstanding, and this portfolio implementation is not described as commercially hardened. Reporting-only npm audits still show the accepted six high-severity findings overall and four with development dependencies omitted; unrelated remediation was not attempted.
 - Task 10.2 is `Completed`, progress is 55 / 58, all 58 roadmap tasks and exact deliverable wording remain present, and the exact following roadmap task is 10.3 - Deferred - custom uploads using object storage, processing, moderation, and production assets. The account schema and UI are local and undeployed; no production migration, account, private project, request mutation, workflow, or remote action occurred. All changes remain local, unstaged, and uncommitted, and Task 10.3 was not started.
+
+### 2026-08-18 - Private custom-pattern upload pipeline
+
+- Authenticated upload intents use opaque server-generated IDs, keys, and
+  hashed ten-minute local grants or S3-compatible presigned POSTs constrained
+  to the exact private quarantine key, MIME, and length. PostgreSQL stores no
+  image bytes, base64, filename, credential, signed URL, or complete provider
+  response. The private filesystem adapter supports deterministic local/tests;
+  the private S3 adapter and five-minute signed downloads have mocked contract
+  coverage. No production bucket, credential, object, or request was created.
+- The durable state machine covers awaiting upload, uploaded, processing,
+  awaiting moderation, approved, rejected, failed, deleted, and expired with
+  guarded transitions, three-attempt bounds, transactional worker claims,
+  leases/recovery, idempotent derivative replacement, abandoned-intent cleanup,
+  and a documented `python -m app.uploads.worker` command. Server processing
+  accepts only still JPEG/PNG/WebP within 10 MiB, 64-4096 px per side, and 16
+  million pixels; validates signatures/container endings, decode format/MIME,
+  dimensions, animation, crop bounds, malformed/truncated data, checksums, and
+  decompression-bomb warnings; applies EXIF orientation; strips metadata; and
+  emits deterministic metadata-free PNG tile/thumbnail derivatives under
+  `tile-v1`. Originals are never served and no arbitrary URL is fetched.
+- Moderation is fail-closed. Missing configuration and provider failure cannot
+  approve; deterministic approval/rejection exists only for explicit local/test
+  settings and production startup rejects those providers. The real server-only
+  OpenAI image adapter follows the official Moderations API, sends only the
+  normalized image, stores limited outcome/audit metadata with a hashed request
+  ID, and is fully mocked in tests. No live moderation call was made. Automated
+  moderation is not represented as a safety guarantee and production still
+  requires operational/provider review, monitoring, abuse handling, and human
+  escalation.
+- Migration `20260818_02` adds owned uploads, derivative metadata, durable job
+  fields, and composite account/version/upload/derivative constraints after
+  `20260818_01`. Private snapshots now discriminate built-in and custom pattern
+  choices and preserve the exact approved owned asset, derivative, processing
+  version, scale, and complete configuration. Anonymous designs remain
+  built-in-only and backward compatible. Active project-share grants authorize
+  only the referenced derivative; revocation, rejection, pending state,
+  deletion, expiry, and cross-account guesses deny access without disclosure.
+  Deletion immediately tombstones authorization and removes objects while an
+  immutable referencing version shows the deleted custom-asset state; account
+  deletion removes only its owner's upload data and assets.
+- The authenticated **Your patterns** experience provides a native file input
+  plus drag/drop, documented format/size/dimension limits, external-processing
+  consent, local full-image repeating preview without silent crop or seamless
+  claim, upload/queue/moderation status, approved-only selection, retry, rename,
+  referenced-version deletion confirmation, focus recovery, and status
+  announcements. Guests retain all 15 built-ins and receive a sign-in path.
+  Custom textures render in live preview, review, project history/editing, and
+  authorized share restoration; deleted assets are not silently substituted.
+- Final verification passes 13 configuration checks, ESLint, strict TypeScript,
+  all 84 frontend tests, ordinary and `/SewnCovers/` static builds/exports, and
+  all seven Playwright scenarios in both base-path modes, including genuine
+  keyboard upload/select/delete behavior and the required viewports. Backend
+  verification passes Ruff format/lint, `pip check`, all 264 tests, clean schema
+  creation and upgrade from `20260818_01`, schema parity, OpenAPI contracts,
+  strict fixture/metadata checks, S3 presigning, moderation outcomes/retries,
+  concurrent worker claims, two-account isolation, share revocation, deletion,
+  account cleanup, and legacy anonymous compatibility. Reporting-only
+  dependency audits report nine high and two moderate findings overall, and
+  four high plus two moderate findings with development dependencies omitted;
+  no unrelated upgrade was performed.
+- Task 10.3 is `Completed`, progress is 56 / 58, all 58 roadmap deliverables
+  retain their exact wording, and the exact following roadmap task is 10.4 -
+  Deferred - pricing, quotes, cart, payments, orders, manufacturing, fulfilment,
+  and administration. The integration is local and undeployed; live S3 and
+  moderation protocols were not exercised. No production mutation, deployment,
+  workflow, or remote Git action occurred. All changes remain local, unstaged,
+  and uncommitted, and Task 10.4 was not started.

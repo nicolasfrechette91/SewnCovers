@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the Python and FastAPI service for SewnCovers. It keeps the public catalogue and anonymous immutable-design API and adds a local optional account workspace with Argon2id credentials, expiring/revocable hashed bearer sessions, private owned projects, immutable versions, hashed revocable share grants, export, and deletion. The linear local head is `20260818_01`; Task 10.2 has not been applied to production. Render alone owns the protected production connection.
+This directory contains the Python and FastAPI service for SewnCovers. It keeps the public catalogue and anonymous immutable-design API and adds a local optional account workspace plus private custom-pattern upload processing. The linear local head is `20260818_02`; Phase 10 has not been applied to production. Render alone owns the protected production connection.
 
 ## Requirements
 
@@ -59,6 +59,12 @@ The immutable settings boundary in `app/settings.py` reads backend process varia
 | `FRONTEND_ORIGIN` | Optional in `development`/`test`; required in `production` | One absolute HTTP(S) origin without credentials, path, query, or fragment | Missing local/test configuration uses `http://localhost:3000`. A production process accepts only the Pages origin `https://nicolasfrechette91.github.io`. Whitespace and trailing root slashes are removed at process runtime. |
 | `PORT` | Optional; hosting platforms normally provide it | Integer from 1 through 65535; defaults to `8000` | Read once at process startup and used by the production Uvicorn entry point. |
 | `DATABASE_URL` | Required by the migration-gated production command; locally required only when database functionality is requested | Private SSL-enabled SQLAlchemy connection URL | Kept server-only in a secret type and excluded from settings representations and serialization. Local development reads only the development-branch value from ignored `.env`; Render reads only the production-branch value from its protected secret. Missing or invalid configuration produces a value-free error naming only the variable. |
+| `CUSTOM_UPLOADS_ENABLED` | Optional; defaults to `false` | `true` or `false` | Enables authenticated custom-upload routes. The deployed service remains disabled. |
+| `OBJECT_STORAGE_BACKEND` / `OBJECT_STORAGE_ROOT` | Required for enabled local uploads | `filesystem` and an ignored private directory | Deterministic local storage outside the frontend/public tree. |
+| `OBJECT_STORAGE_ENDPOINT`, `OBJECT_STORAGE_REGION`, `OBJECT_STORAGE_BUCKET` | Required for enabled production uploads | Private S3-compatible configuration | Server-only; the browser never chooses a bucket or object key. |
+| `OBJECT_STORAGE_ACCESS_KEY`, `OBJECT_STORAGE_SECRET_KEY` | Required for enabled production uploads | Protected credentials | Secret settings excluded from representations and serialization. |
+| `MODERATION_PROVIDER` | Optional; defaults to `none` | `none`, `development-approve`, `development-reject`, or `openai` | Missing/provider failure is fail-closed. Development results are forbidden in production. |
+| `OPENAI_API_KEY`, `OPENAI_MODERATION_MODEL` | Required only for enabled production moderation | Protected key and `omni-moderation-2024-09-26` by default | Server-only; setup and tests perform no live call. |
 
 The example values are safe local placeholders. `DATABASE_URL` remains empty because imports, ordinary local FastAPI startup, the root endpoint, and the automated suite do not need a live database; a developer must supply the development value privately before requesting `/health` or `/patterns` against that branch. Render's production command requires its separately protected value before it can migrate or start. Validation errors hide input values, and configuration import does not initialize a Neon or database client. Never commit `.env`, a Neon connection string, passwords, tokens, or credentials.
 
@@ -71,7 +77,7 @@ The example values are safe local placeholders. `DATABASE_URL` remains empty bec
 
 The public Pages URL includes `/SewnCovers/`, but that suffix is a path, not part of the origin. Origin matching is exact across scheme, hostname, and optional port. Configuration rejects credentials, non-root paths, queries, fragments, unsupported schemes, malformed URLs, and invalid ports. Browser requests from lookalike hosts, wrong schemes or ports, path-bearing or `null` origins, unconfigured origins, and the Render API's own address receive no allow-origin response. Surrounding whitespace, hostname case, and trailing root slashes are normalized only while loading configuration, without converting one origin into another.
 
-The allowed requested methods are `DELETE`, `GET`, `PATCH`, and `POST`. Preflight `OPTIONS` remains middleware-owned. The configured request-header allowlist contains `Authorization` and `Content-Type`; Starlette also reports standard CORS-safelisted headers. Preflight results may be cached for 600 seconds, no wildcard is used, and credentialed cookie access stays disabled because authentication is an explicit bearer header rather than a cross-site cookie. CORS is not authentication.
+The allowed requested methods are `DELETE`, `GET`, `PATCH`, `POST`, and `PUT`. Preflight `OPTIONS` remains middleware-owned. The configured request-header allowlist contains `Authorization` and `Content-Type`; Starlette also reports standard CORS-safelisted headers. Preflight results may be cached for 600 seconds, no wildcard is used, and credentialed cookie access stays disabled because authentication is an explicit bearer header rather than a cross-site cookie. CORS is not authentication.
 
 CORS tells supporting browsers which cross-origin responses frontend scripts may read. It is not authentication or authorization, and non-browser clients can still call public endpoints.
 
@@ -100,7 +106,7 @@ Saved designs are append-only. The repository exposes only insert and public-ID 
 
 Alembic 1.18.5 owns schema and controlled data transitions. Its initial revision creates `patterns` before `cover_designs` and drops them in reverse order. It reproduces the model types, precision, nullability, server defaults, named primary/unique/check/foreign-key constraints, restrictive foreign-key actions, and integrity structures. Revision `20260728_02` adds only `ix_patterns_category_id` and `ix_patterns_is_active`, matching the repository's single-column category and activity predicates. Pattern slug equality lookup remains covered by the existing `pk_patterns` primary-key index, and design retrieval remains covered by the existing unique index owned by `uq_cover_designs_public_id`; separate indexes with those same column orders are intentionally omitted as redundant. No composite, partial, expression, full-text, JSON/color, or ordering index is introduced.
 
-Revision `20260729_01` explicitly inserts the 15 active records established by `frontend/data/patterns.ts` and the Task 4.5 fixtures. Revision `20260812_01` additively introduces nullable `back_width` plus material, fit, closure, and seam columns with safe defaults, expands shape constraints, and preserves every existing row. Pattern artwork, gradients, images, and other visual assets remain frontend-owned; the database receives no binary, URL, filesystem path, upload, or asset-table data.
+Revision `20260729_01` explicitly inserts the 15 active records established by `frontend/data/patterns.ts` and the Task 4.5 fixtures. Revision `20260812_01` additively introduces nullable `back_width` plus material, fit, closure, and seam columns with safe defaults, expands shape constraints, and preserves every existing row. Built-in pattern artwork remains frontend-owned. Task 10.3 customer image bytes remain in private object storage; the database stores only opaque object metadata and references, never binary, base64, or signed URLs.
 
 Revision `20260818_01` additively creates `customer_accounts`,
 `authenticated_sessions`, `saved_projects`, `project_versions`, and
@@ -133,7 +139,14 @@ python -m alembic upgrade head --sql
 python -m alembic downgrade head:base --sql
 ```
 
-The linear deterministic history ends with `20260818_01_add_private_account_workspaces.py` after the configuration expansion. Both Phase 10 revisions are additive, explicit transitions; their downgrades exist for isolated tests only and must not be run against shared databases.
+The linear deterministic history ends with `20260818_02_add_custom_upload_assets.py`. All Phase 10 revisions are additive, explicit transitions; their downgrades exist for isolated tests only and must not be run against shared databases.
+
+Task 10.3 stores no image bytes in PostgreSQL. It adds private quarantine and
+processed-object metadata, the durable processing/moderation state and lease,
+and exact account/version/derivative references. Run the local worker with
+`python -m app.uploads.worker` (or `--once` for one deterministic claim). See
+[the custom-upload guide](../docs/CUSTOM_UPLOADS.md) for formats, limits,
+filesystem/S3 adapters, moderation, deletion, and undeployed requirements.
 
 `python -m alembic upgrade head` applies the full schema and exact seed to an empty database or adds the seed after `20260728_02`. Existing conflicting IDs, names, or preview handles fail through the established constraints; the migration does not silently ignore drift. `python -m alembic downgrade 20260728_02` removes only the 15 seed-owned IDs in one statement while leaving tables, constraints, and Task 5.4 indexes intact. A restrictive foreign key blocks that downgrade if a saved design references any seeded pattern, without cascading or deleting the design. After references are handled deliberately, downgrade followed by `python -m alembic upgrade head` restores the identical catalogue. Automated tests cover fresh and incremental SQLite upgrades, exact frontend/fixture parity, migrated `/patterns` filtering, targeted downgrade/re-upgrade, conflict rejection, foreign-key-safe failure, schema parity, and PostgreSQL offline SQL. They require no internet, Neon, populated `.env`, or committed database file.
 
@@ -453,7 +466,7 @@ python -m app.production
 
 This entry point is migration-gated and reserved for Render. It loads settings,
 requires `ENVIRONMENT=production`, runs `alembic upgrade head`, verifies the
-exact `20260818_01` revision, expected tables and named primary/unique/check/
+exact `20260818_02` revision, expected tables and named primary/unique/check/
 foreign-key constraints, the two intentional pattern indexes, no extra explicit
 design index, and exactly 15 pattern rows, then starts the existing
 `app.main:app` application on `0.0.0.0` using the platform-provided `PORT` or
@@ -566,4 +579,4 @@ python -m ruff format .
 
 `pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. FastAPI's existing Starlette middleware supplies CORS, so Task 4.3 adds no dependency. Tasks 4.4-4.8 reuse FastAPI, Uvicorn, Pydantic, SQLAlchemy, and Python's standard library and add no dependency. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
 
-Task 5.3 adds pinned Alembic 1.18.5 as the minimum migration runtime dependency for the Python 3.13 and SQLAlchemy 2.0.51 baseline. Task 5.4 reuses it for two portable pattern filter indexes without adding a dependency. The backend connects to a configured database only when `/health`, `/patterns`, `/designs`, or an online Alembic command requests it. Import, startup, the root endpoint, and the offline tests do not connect to Neon. Design editing/deletion, authentication, upload, and commercial endpoints remain unimplemented. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) for the staged implementation roadmap.
+Task 5.3 adds pinned Alembic 1.18.5 as the minimum migration runtime dependency for the Python 3.13 and SQLAlchemy 2.0.51 baseline. Task 5.4 reuses it for two portable pattern filter indexes without adding a dependency. Task 10.3 adds only pinned Boto3 and Pillow for private S3-compatible operations and strict raster processing. Imports, startup, the root endpoint, and offline tests do not connect to Neon, object storage, or a moderation provider. Accounts and uploads are local and undeployed; commercial endpoints remain unimplemented. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) and [`../docs/CUSTOM_UPLOADS.md`](../docs/CUSTOM_UPLOADS.md).

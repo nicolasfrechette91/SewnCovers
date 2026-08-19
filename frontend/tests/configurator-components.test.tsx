@@ -13,6 +13,7 @@ import {
   ConfigurationProvider,
   useConfiguration,
 } from "../context/configuration/configuration-context";
+import { AuthProvider } from "../context/auth";
 import type { ConfigurationState } from "../context/configuration/types";
 import { ShapeSelectionStep } from "../components/configurator/shape-selection-step";
 import { MeasurementStep } from "../components/configurator/measurement-step";
@@ -26,7 +27,10 @@ import {
   ALL_PATTERN_CATEGORIES,
   ALL_PATTERN_COLORS,
 } from "../data/patterns";
-import { DesignSaveController } from "../services/design-save";
+import {
+  DesignSaveController,
+  mapConfigurationToCreateDesign,
+} from "../services/design-save";
 import type {
   ApiRequestOptions,
   CreateDesignRequest,
@@ -62,7 +66,7 @@ const completeConfiguration: ConfigurationState = {
   backWidth: null,
   thickness: 10,
   unit: "cm",
-  patternId: "fern-trail",
+  pattern: { kind: "built-in", patternId: "fern-trail" },
   patternScale: 1.2,
   materialId: "cotton-canvas",
   fitPreference: "standard",
@@ -90,7 +94,7 @@ function StateProbe() {
       <span data-testid="current-shape">{state.shape ?? "none"}</span>
       <span data-testid="current-width">{state.width ?? "none"}</span>
       <span data-testid="current-height">{state.height ?? "none"}</span>
-      <span data-testid="current-pattern">{state.patternId ?? "none"}</span>
+      <span data-testid="current-pattern">{state.pattern?.kind === "built-in" ? state.pattern.patternId : state.pattern?.label ?? "none"}</span>
       <span data-testid="current-material">{state.materialId}</span>
       <span data-testid="current-fit">{state.fitPreference}</span>
       <span data-testid="current-closure">{state.closureType}</span>
@@ -110,13 +114,15 @@ function renderWithConfiguration(
   configuration?: ConfigurationState,
 ) {
   return render(
-    <ConfigurationProvider>
-      {configuration ? (
-        <SeedConfiguration configuration={configuration} />
-      ) : null}
-      {children}
-      <StateProbe />
-    </ConfigurationProvider>,
+    <AuthProvider>
+      <ConfigurationProvider>
+        {configuration ? (
+          <SeedConfiguration configuration={configuration} />
+        ) : null}
+        {children}
+        <StateProbe />
+      </ConfigurationProvider>
+    </AuthProvider>,
   );
 }
 
@@ -320,18 +326,18 @@ test("preserves a selected pattern when filters hide it and exposes recovery", (
 test("announces unavailable selections and filtered empty results without losing state", () => {
   const unavailableConfiguration = {
     ...completeConfiguration,
-    patternId: "removed-pattern",
+    pattern: { kind: "built-in" as const, patternId: "removed-pattern" },
   };
   const { rerender } = render(
-    <ConfigurationProvider>
-      <SeedConfiguration configuration={unavailableConfiguration} />
-      <PatternStep
-        catalogue={catalogueState()}
-        onFiltersChange={() => undefined}
-        onRetry={() => undefined}
-      />
-      <StateProbe />
-    </ConfigurationProvider>,
+    <AuthProvider><ConfigurationProvider>
+        <SeedConfiguration configuration={unavailableConfiguration} />
+        <PatternStep
+          catalogue={catalogueState()}
+          onFiltersChange={() => undefined}
+          onRetry={() => undefined}
+        />
+        <StateProbe />
+      </ConfigurationProvider></AuthProvider>,
   );
 
   assert.ok(
@@ -346,7 +352,7 @@ test("announces unavailable selections and filtered empty results without losing
   );
 
   rerender(
-    <ConfigurationProvider>
+    <AuthProvider><ConfigurationProvider>
       <SeedConfiguration configuration={unavailableConfiguration} />
       <PatternStep
         catalogue={catalogueState({
@@ -361,7 +367,7 @@ test("announces unavailable selections and filtered empty results without losing
         onRetry={() => undefined}
       />
       <StateProbe />
-    </ConfigurationProvider>,
+    </ConfigurationProvider></AuthProvider>,
   );
   assert.ok(
     screen.getByRole("heading", {
@@ -559,8 +565,8 @@ test("prevents duplicate saves, preserves input, and recovers after API rejectio
   assert.ok(await screen.findByText(/Design saved/i));
   assert.equal(calls, 2);
   assert.deepEqual(submitted, [
-    completeConfiguration,
-    completeConfiguration,
+    mapConfigurationToCreateDesign(completeConfiguration),
+    mapConfigurationToCreateDesign(completeConfiguration),
   ]);
   assert.deepEqual(savingChanges, [true, false, true, false]);
 });

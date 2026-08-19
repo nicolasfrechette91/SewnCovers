@@ -64,6 +64,7 @@ def test_cors_configuration_is_explicit_typed_and_immutable() -> None:
             "GET",
             "PATCH",
             "POST",
+            "PUT",
         )
     )
     assert (

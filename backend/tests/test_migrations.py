@@ -49,14 +49,18 @@ BASE_REVISION = "20260728_01"
 INDEX_REVISION = "20260728_02"
 SEED_REVISION = "20260729_01"
 CONFIG_REVISION = "20260812_01"
-REVISION = "20260818_01"
+PRIVATE_REVISION = "20260818_01"
+REVISION = "20260818_02"
 HEAD_TABLES = {
     "alembic_version",
     "authenticated_sessions",
     "cover_designs",
+    "custom_derivatives",
+    "custom_uploads",
     "customer_accounts",
     "patterns",
     "project_versions",
+    "project_custom_pattern_references",
     "saved_projects",
     "share_grants",
 }
@@ -203,27 +207,31 @@ def test_revisions_form_one_descriptive_linear_history_and_one_head() -> None:
     script = ScriptDirectory.from_config(alembic_config())
     revisions = list(script.walk_revisions())
 
-    assert len(revisions) == 5
+    assert len(revisions) == 6
     assert revisions[0].revision == REVISION
-    assert revisions[0].down_revision == CONFIG_REVISION
+    assert revisions[0].down_revision == PRIVATE_REVISION
     assert revisions[0].is_head
-    assert "private account workspaces" in revisions[0].doc
-    assert revisions[1].revision == CONFIG_REVISION
-    assert revisions[1].down_revision == SEED_REVISION
+    assert "private custom-upload processing" in revisions[0].doc
+    assert revisions[1].revision == PRIVATE_REVISION
+    assert revisions[1].down_revision == CONFIG_REVISION
     assert revisions[1].is_head is False
-    assert "richer specification choices" in revisions[1].doc
-    assert revisions[2].revision == SEED_REVISION
-    assert revisions[2].down_revision == INDEX_REVISION
+    assert "private account workspaces" in revisions[1].doc
+    assert revisions[2].revision == CONFIG_REVISION
+    assert revisions[2].down_revision == SEED_REVISION
     assert revisions[2].is_head is False
-    assert "canonical public pattern catalogue" in revisions[2].doc
-    assert revisions[3].revision == INDEX_REVISION
-    assert revisions[3].down_revision == BASE_REVISION
+    assert "richer specification choices" in revisions[2].doc
+    assert revisions[3].revision == SEED_REVISION
+    assert revisions[3].down_revision == INDEX_REVISION
     assert revisions[3].is_head is False
-    assert "pattern category and activity filter indexes" in revisions[3].doc
-    assert revisions[4].revision == BASE_REVISION
-    assert revisions[4].down_revision is None
+    assert "canonical public pattern catalogue" in revisions[3].doc
+    assert revisions[4].revision == INDEX_REVISION
+    assert revisions[4].down_revision == BASE_REVISION
     assert revisions[4].is_head is False
-    assert "patterns and immutable cover designs" in revisions[4].doc
+    assert "pattern category and activity filter indexes" in revisions[4].doc
+    assert revisions[5].revision == BASE_REVISION
+    assert revisions[5].down_revision is None
+    assert revisions[5].is_head is False
+    assert "patterns and immutable cover designs" in revisions[5].doc
     assert script.get_heads() == [REVISION]
 
 
@@ -647,6 +655,34 @@ def test_private_workspace_upgrade_from_previous_head_preserves_anonymous_rows(
     engine.dispose()
 
 
+def test_custom_upload_upgrade_from_20260818_01_adds_owned_asset_schema(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "private-workspace-to-custom-uploads.sqlite3"
+    database_url = configure_test_database(monkeypatch, database_path)
+    command.upgrade(alembic_config(), PRIVATE_REVISION)
+    engine = create_engine(database_url)
+    inspector = inspect(engine)
+    assert "custom_uploads" not in inspector.get_table_names()
+    assert "account_id" not in {
+        column["name"] for column in inspector.get_columns("project_versions")
+    }
+    engine.dispose()
+
+    command.upgrade(alembic_config(), REVISION)
+    engine = create_engine(database_url)
+    inspector = inspect(engine)
+    assert {
+        "custom_uploads",
+        "custom_derivatives",
+        "project_custom_pattern_references",
+    } <= set(inspector.get_table_names())
+    assert inspector.get_columns("project_versions")[-1]["name"] == "account_id"
+    assert inspector.get_columns("project_versions")[-1]["nullable"] is False
+    engine.dispose()
+
+
 def test_seed_upgrade_rejects_conflicting_records_without_partial_catalogue(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -942,7 +978,7 @@ def test_offline_postgresql_sql_has_schema_indexes_and_exact_seed_inserts() -> N
     assert category_ddl in ddl
     assert activity_ddl in ddl
     assert ddl.index(category_ddl) < ddl.index(activity_ddl)
-    assert ddl.count("CREATE INDEX") == 8
+    assert ddl.count("CREATE INDEX") == 14
     assert "CREATE INDEX ix_patterns_id" not in ddl
     assert "CREATE INDEX ix_cover_designs_public_id" not in ddl
     assert ddl.count("INSERT INTO patterns") == 15
@@ -950,7 +986,6 @@ def test_offline_postgresql_sql_has_schema_indexes_and_exact_seed_inserts() -> N
     assert "'confetti-grid'" in ddl
     assert '\'["ivory","green","gold","rose"]\'' in ddl
     assert "ON CONFLICT" not in ddl
-    assert "image" not in ddl.lower()
     assert "http://" not in ddl
     assert "https://" not in ddl
     assert "postgresql://" not in ddl

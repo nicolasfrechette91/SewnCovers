@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal, Self
 from urllib.parse import urlsplit
 
@@ -10,14 +11,18 @@ from pydantic.functional_validators import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 EnvironmentName = Literal["development", "test", "production"]
-CorsMethod = Literal["DELETE", "GET", "PATCH", "POST"]
+StorageBackend = Literal["filesystem", "s3"]
+ModerationProviderName = Literal[
+    "none", "development-approve", "development-reject", "openai"
+]
+CorsMethod = Literal["DELETE", "GET", "PATCH", "POST", "PUT"]
 CorsHeader = Literal["Authorization", "Content-Type"]
 
 _HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
 
 LOCAL_FRONTEND_ORIGIN = "http://localhost:3000"
 PRODUCTION_FRONTEND_ORIGIN = "https://nicolasfrechette91.github.io"
-CORS_ALLOWED_METHODS: tuple[CorsMethod, ...] = ("DELETE", "GET", "PATCH", "POST")
+CORS_ALLOWED_METHODS: tuple[CorsMethod, ...] = ("DELETE", "GET", "PATCH", "POST", "PUT")
 CORS_ALLOWED_HEADERS: tuple[CorsHeader, ...] = ("Authorization", "Content-Type")
 
 
@@ -106,6 +111,58 @@ class Settings(BaseSettings):
         repr=False,
         validation_alias="DATABASE_URL",
     )
+    custom_uploads_enabled: bool = Field(
+        default=False,
+        validation_alias="CUSTOM_UPLOADS_ENABLED",
+    )
+    object_storage_backend: StorageBackend = Field(
+        default="filesystem",
+        validation_alias="OBJECT_STORAGE_BACKEND",
+    )
+    object_storage_root: Path = Field(
+        default=Path(".local/custom-assets"),
+        validation_alias="OBJECT_STORAGE_ROOT",
+    )
+    object_storage_endpoint: str | None = Field(
+        default=None,
+        validation_alias="OBJECT_STORAGE_ENDPOINT",
+    )
+    object_storage_region: str = Field(
+        default="us-east-1",
+        validation_alias="OBJECT_STORAGE_REGION",
+    )
+    object_storage_bucket: str | None = Field(
+        default=None,
+        validation_alias="OBJECT_STORAGE_BUCKET",
+    )
+    object_storage_access_key: SecretStr | None = Field(
+        default=None,
+        exclude=True,
+        repr=False,
+        validation_alias="OBJECT_STORAGE_ACCESS_KEY",
+    )
+    object_storage_secret_key: SecretStr | None = Field(
+        default=None,
+        exclude=True,
+        repr=False,
+        validation_alias="OBJECT_STORAGE_SECRET_KEY",
+    )
+    moderation_provider: ModerationProviderName = Field(
+        default="none",
+        validation_alias="MODERATION_PROVIDER",
+    )
+    openai_api_key: SecretStr | None = Field(
+        default=None,
+        exclude=True,
+        repr=False,
+        validation_alias="OPENAI_API_KEY",
+    )
+    openai_moderation_model: str = Field(
+        default="omni-moderation-2024-09-26",
+        min_length=1,
+        max_length=80,
+        validation_alias="OPENAI_MODERATION_MODEL",
+    )
 
     @field_validator("environment", mode="before")
     @classmethod
@@ -135,6 +192,34 @@ class Settings(BaseSettings):
             raise ValueError(
                 "FRONTEND_ORIGIN must be the configured GitHub Pages origin when "
                 "ENVIRONMENT is production"
+            )
+        if self.environment == "production" and self.custom_uploads_enabled:
+            if self.object_storage_backend != "s3":
+                raise ValueError(
+                    "Production custom uploads require private S3-compatible storage"
+                )
+            if not all(
+                (
+                    self.object_storage_endpoint,
+                    self.object_storage_bucket,
+                    self.object_storage_access_key,
+                    self.object_storage_secret_key,
+                )
+            ):
+                raise ValueError(
+                    "Production custom uploads require complete server-side "
+                    "storage configuration"
+                )
+            if self.moderation_provider != "openai" or self.openai_api_key is None:
+                raise ValueError(
+                    "Production custom uploads require a configured fail-closed "
+                    "moderation provider"
+                )
+        if self.environment == "production" and self.moderation_provider.startswith(
+            "development-"
+        ):
+            raise ValueError(
+                "Development moderation providers are forbidden in production"
             )
         return self
 

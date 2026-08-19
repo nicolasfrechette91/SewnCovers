@@ -296,7 +296,13 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
     await settle();
 
     assert.equal(restoreController.getSnapshot().phase, "restored");
-    assert.deepEqual(restored, [journey.configuration]);
+    const expectedRestored = { ...journey.configuration };
+    delete expectedRestored.patternId;
+    expectedRestored.pattern = {
+      kind: "built-in",
+      patternId: journey.configuration.patternId,
+    };
+    assert.deepEqual(restored, [expectedRestored]);
   }
 
   assert.deepEqual(calls, {

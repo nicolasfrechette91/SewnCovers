@@ -1,5 +1,7 @@
 import { JSDOM } from "jsdom";
 
+process.env.NEXT_PUBLIC_API_URL ??= "https://api.example.test";
+
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   url: "https://example.test/configure/",
 });

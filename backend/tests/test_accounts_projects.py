@@ -32,7 +32,7 @@ CONFIGURATION = {
     "backWidth": 61.5,
     "thickness": 13.5,
     "unit": "cm",
-    "patternId": "terrace-wave",
+    "pattern": {"kind": "built-in", "patternId": "terrace-wave"},
     "patternScale": 1.6,
     "materialId": "linen-blend",
     "fitPreference": "relaxed",
@@ -249,7 +249,8 @@ def test_logout_expiry_logout_all_export_and_account_deletion_are_isolated(
     assert created.status_code == 201
     exported = client.get("/account/export", headers=auth(first_token))
     assert exported.status_code == 200
-    assert exported.json()["formatVersion"] == 1
+    assert exported.json()["formatVersion"] == 2
+    assert exported.json()["customPatterns"] == []
     assert exported.json()["projects"][0]["versions"][0]["configuration"] == (
         CONFIGURATION
     )

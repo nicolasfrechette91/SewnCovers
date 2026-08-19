@@ -24,7 +24,7 @@ export const initialConfigurationState: ConfigurationState = {
   backWidth: null,
   thickness: null,
   unit: "cm",
-  patternId: null,
+  pattern: null,
   patternScale: PATTERN_SCALE_DEFAULT,
   materialId: DEFAULT_MATERIAL_ID,
   fitPreference: DEFAULT_FIT_PREFERENCE,
@@ -39,6 +39,14 @@ export function configurationReducer(
   switch (action.type) {
     case "restoreConfiguration": {
       const configuration = action.configuration;
+      const legacyPatternId = (
+        configuration as unknown as Record<string, unknown>
+      ).patternId;
+      const restoredPattern = configuration.pattern ?? (
+        typeof legacyPatternId === "string"
+          ? { kind: "built-in" as const, patternId: legacyPatternId }
+          : null
+      );
       const patternScale = normalizePatternScale(
         configuration.patternScale,
       );
@@ -65,10 +73,17 @@ export function configurationReducer(
         configuration.thickness === null ||
         roundMeasurement(configuration.thickness) !==
           configuration.thickness ||
-        configuration.patternId === null ||
-        !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(
-          configuration.patternId,
-        ) ||
+        restoredPattern === null ||
+        (restoredPattern.kind === "built-in" &&
+          !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(
+            restoredPattern.patternId,
+          )) ||
+        (restoredPattern.kind === "custom" &&
+          (!/^[A-Za-z0-9_-]{22}$/.test(restoredPattern.assetId) ||
+            !/^[A-Za-z0-9_-]{22}$/.test(
+              restoredPattern.derivativeId,
+            ) ||
+            restoredPattern.processingVersion.length === 0)) ||
         patternScale !== configuration.patternScale ||
         !isNullableCommittedMeasurement(configuration.backWidth) ||
         (configuration.backWidth !== null &&
@@ -86,7 +101,7 @@ export function configurationReducer(
         backWidth: configuration.backWidth,
         thickness: configuration.thickness,
         unit: configuration.unit,
-        patternId: configuration.patternId,
+        pattern: restoredPattern,
         patternScale: configuration.patternScale,
         materialId: configuration.materialId,
         fitPreference: configuration.fitPreference,
@@ -157,8 +172,16 @@ export function configurationReducer(
         unit: action.unit,
       };
     }
-    case "setPatternId":
-      return { ...state, patternId: action.patternId };
+    case "setBuiltInPattern":
+      return {
+        ...state,
+        pattern:
+          action.patternId === null
+            ? null
+            : { kind: "built-in", patternId: action.patternId },
+      };
+    case "setCustomPattern":
+      return { ...state, pattern: action.pattern };
     case "setPatternScale": {
       const patternScale = normalizePatternScale(action.patternScale);
 

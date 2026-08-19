@@ -20,7 +20,6 @@ import {
   getPatternCategoryLabel,
   getPatternColorLabels,
   type PatternCatalogueResult,
-  type PatternDefinition,
 } from "@/data/patterns";
 import {
   getCushionShapeDefinition,
@@ -138,9 +137,15 @@ interface ReviewSummaryInput {
   readonly width: number;
 }
 
+interface ReviewPatternSummary {
+  readonly name: string;
+  readonly category: string;
+  readonly colors: string;
+}
+
 function buildSummary(
   configuration: ReviewSummaryInput,
-  pattern: PatternDefinition,
+  pattern: ReviewPatternSummary,
 ): ReviewSummary {
   const {
     backWidth,
@@ -220,12 +225,12 @@ function buildSummary(
     {
       id: "pattern-category",
       label: "Pattern category",
-      value: getPatternCategoryLabel(pattern.categoryId),
+      value: pattern.category,
     },
     {
       id: "pattern-colors",
       label: "Pattern colors",
-      value: getPatternColorLabels(pattern.colorIds).join(", "),
+      value: pattern.colors,
     },
     {
       id: "pattern-scale",
@@ -277,9 +282,26 @@ export function deriveReviewReadiness(
     });
   }
 
-  let selectedPattern: PatternDefinition | null = null;
+  let selectedPattern: ReviewPatternSummary | null = null;
 
-  if (catalogueResult.status === "loading") {
+  if (state.pattern?.kind === "custom") {
+    if (state.pattern.unavailableReason || !state.pattern.previewUrl) {
+      issues.push({
+        id: "custom-pattern-unavailable",
+        message:
+          state.pattern.unavailableReason === "deleted"
+            ? "This saved custom pattern was deleted by its owner. Choose another pattern."
+            : "The custom pattern image is unavailable. Try restoring it again or choose another pattern.",
+        section: "pattern",
+      });
+    } else {
+      selectedPattern = {
+        name: state.pattern.label,
+        category: "Your uploaded pattern",
+        colors: "Original uploaded colors",
+      };
+    }
+  } else if (catalogueResult.status === "loading") {
     issues.push({
       id: "catalogue-loading",
       message:
@@ -300,25 +322,32 @@ export function deriveReviewReadiness(
         "The pattern catalogue is empty, so no pattern can be selected.",
       section: "pattern",
     });
-  } else if (state.patternId === null) {
+  } else if (state.pattern === null) {
     issues.push({
       id: "pattern-required",
       message: "Choose a pattern.",
       section: "pattern",
     });
   } else {
-    selectedPattern =
-      catalogueResult.patterns.find(
-        (pattern) => pattern.id === state.patternId,
-      ) ?? null;
+    const builtInPattern = catalogueResult.patterns.find(
+      (pattern) =>
+        state.pattern?.kind === "built-in" &&
+        pattern.id === state.pattern.patternId,
+    );
 
-    if (selectedPattern === null) {
+    if (!builtInPattern) {
       issues.push({
         id: "pattern-unresolved",
         message:
           "The selected pattern is unavailable. Choose another pattern.",
         section: "pattern",
       });
+    } else {
+      selectedPattern = {
+        name: builtInPattern.name,
+        category: getPatternCategoryLabel(builtInPattern.categoryId),
+        colors: getPatternColorLabels(builtInPattern.colorIds).join(", "),
+      };
     }
   }
 

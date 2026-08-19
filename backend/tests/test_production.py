@@ -297,6 +297,14 @@ def test_openapi_is_public_complete_and_matches_runtime_contracts() -> None:
         "/projects/{project_id}/versions/{version_id}/shares",
         "/projects/{project_id}/shares/{grant_id}",
         "/shares/{share_token}",
+        "/shares/{share_token}/assets/{kind}",
+        "/uploads",
+        "/uploads/{upload_id}",
+        "/uploads/{upload_id}/complete",
+        "/uploads/{upload_id}/retry",
+        "/uploads/{upload_id}/assets/{kind}/access",
+        "/uploads/direct/{token}",
+        "/assets/direct/{token}/{kind}",
     }
     assert set(openapi["paths"]["/"]) == {"get"}
     assert set(openapi["paths"]["/health"]) == {"get"}
@@ -309,6 +317,14 @@ def test_openapi_is_public_complete_and_matches_runtime_contracts() -> None:
         "get",
         "patch",
     }
+    assert set(openapi["paths"]["/uploads"]) == {"get", "post"}
+    assert set(openapi["paths"]["/uploads/{upload_id}"]) == {
+        "delete",
+        "get",
+        "patch",
+    }
+    assert set(openapi["paths"]["/uploads/{upload_id}/complete"]) == {"post"}
+    assert set(openapi["paths"]["/uploads/{upload_id}/retry"]) == {"post"}
 
     pattern_operation = openapi["paths"]["/patterns"]["get"]
     assert {parameter["name"] for parameter in pattern_operation["parameters"]} == {

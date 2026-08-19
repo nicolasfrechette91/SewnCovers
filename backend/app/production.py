@@ -12,15 +12,18 @@ from app.persistence.migrations import create_migration_engine
 from app.settings import Settings, get_settings
 
 ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[1] / "alembic.ini"
-EXPECTED_REVISION = "20260818_01"
+EXPECTED_REVISION = "20260818_02"
 EXPECTED_PATTERN_COUNT = 15
 EXPECTED_TABLES = {
     "alembic_version",
     "authenticated_sessions",
     "cover_designs",
     "customer_accounts",
+    "custom_derivatives",
+    "custom_uploads",
     "patterns",
     "project_versions",
+    "project_custom_pattern_references",
     "saved_projects",
     "share_grants",
 }
@@ -96,12 +99,18 @@ EXPECTED_CONSTRAINTS = {
     },
     "project_versions": {
         "primary": {"pk_project_versions"},
-        "unique": {"uq_project_versions_project_number"},
+        "unique": {
+            "uq_project_versions_project_number",
+            "uq_project_versions_id_account_id",
+        },
         "check": {
             "ck_project_versions_id_length",
             "ck_project_versions_number_positive",
         },
-        "foreign_key": {"fk_project_versions_project_id_saved_projects"},
+        "foreign_key": {
+            "fk_project_versions_project_id_saved_projects",
+            "fk_project_versions_account_id_customer_accounts",
+        },
         "index": {"ix_project_versions_project_id"},
     },
     "share_grants": {
@@ -113,6 +122,63 @@ EXPECTED_CONSTRAINTS = {
         },
         "foreign_key": {"fk_share_grants_version_id_project_versions"},
         "index": {"ix_share_grants_version_id"},
+    },
+    "custom_uploads": {
+        "primary": {"pk_custom_uploads"},
+        "unique": {
+            "uq_custom_uploads_original_key",
+            "uq_custom_uploads_upload_token_hash",
+            "uq_custom_uploads_access_token_hash",
+            "uq_custom_uploads_id_account_id",
+        },
+        "check": {
+            "ck_custom_uploads_id_length",
+            "ck_custom_uploads_label_length",
+            "ck_custom_uploads_state_supported",
+            "ck_custom_uploads_moderation_state_supported",
+            "ck_custom_uploads_declared_size_range",
+            "ck_custom_uploads_original_size_range",
+            "ck_custom_uploads_width_range",
+            "ck_custom_uploads_height_range",
+            "ck_custom_uploads_crop_complete",
+            "ck_custom_uploads_attempt_ranges",
+            "ck_custom_uploads_terminal_moderation_match",
+        },
+        "foreign_key": {"fk_custom_uploads_account_id_customer_accounts"},
+        "index": {
+            "ix_custom_uploads_account_id",
+            "ix_custom_uploads_state_next_attempt",
+            "ix_custom_uploads_lease_expires_at",
+            "ix_custom_uploads_intent_expires_at",
+        },
+    },
+    "custom_derivatives": {
+        "primary": {"pk_custom_derivatives"},
+        "unique": {
+            "uq_custom_derivatives_object_key",
+            "uq_custom_derivatives_upload_kind",
+            "uq_custom_derivatives_id_upload_id",
+        },
+        "check": {
+            "ck_custom_derivatives_id_length",
+            "ck_custom_derivatives_kind_supported",
+            "ck_custom_derivatives_width_range",
+            "ck_custom_derivatives_height_range",
+            "ck_custom_derivatives_size_range",
+        },
+        "foreign_key": {"fk_custom_derivatives_upload_id_custom_uploads"},
+        "index": {"ix_custom_derivatives_upload_id"},
+    },
+    "project_custom_pattern_references": {
+        "primary": {"pk_project_custom_pattern_references"},
+        "unique": set(),
+        "check": {"ck_project_custom_reference_processing_version"},
+        "foreign_key": {
+            "fk_project_custom_reference_version_account",
+            "fk_project_custom_reference_upload_account",
+            "fk_project_custom_reference_derivative_upload",
+        },
+        "index": {"ix_project_custom_references_upload_id"},
     },
 }
 

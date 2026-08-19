@@ -124,9 +124,12 @@ def test_declarative_models_reuse_one_metadata_and_existing_table_contracts() ->
     assert set(Base.metadata.tables) == {
         "authenticated_sessions",
         "cover_designs",
+        "custom_derivatives",
+        "custom_uploads",
         "customer_accounts",
         "patterns",
         "project_versions",
+        "project_custom_pattern_references",
         "saved_projects",
         "share_grants",
     }

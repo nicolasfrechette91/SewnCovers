@@ -9,7 +9,7 @@ purchase.
 
 The current local worktree also adds an optional account-backed workspace with
 private named projects, immutable version history, revocable read-only shares,
-data export, and deletion controls. Phase 10.2 has not been deployed to the
+and private processed custom patterns. Phase 10 has not been deployed to the
 public URLs below; the live guest journey remains the previously deployed
 behavior.
 
@@ -128,6 +128,18 @@ non-revocable. Account export returns versioned JSON. Confirmed account deletion
 removes only that account's sessions, projects, private versions, and share
 grants—not legacy anonymous designs.
 
+### Local Task 10.3 private custom patterns (not deployed)
+
+Signed-in customers can upload a still JPEG, PNG, or WebP to private quarantine
+storage, preview its full-image repeat, and select it only after server-side
+validation, deterministic derivative processing, and fail-closed moderation.
+Private snapshots preserve the exact owned approved derivative and processing
+version. Deletion revokes access immediately while immutable history shows a
+deleted-asset state. The provider-neutral filesystem/S3 architecture, durable
+worker, limits, privacy boundary, and local setup are documented in
+[Private custom-pattern uploads](docs/CUSTOM_UPLOADS.md). No production bucket,
+credential, upload, worker, moderation call, or migration was created.
+
 ## Technology and responsibilities
 
 | Area | Technology | Responsibility |
@@ -138,7 +150,7 @@ grants—not legacy anonymous designs.
 | Persistence | SQLAlchemy 2.0.51, Psycopg 3.3.4, Alembic 1.18.5 | Lazy sessions, explicit transactions, PostgreSQL models, schema migrations, and the canonical seed. |
 | Database | Neon PostgreSQL | Catalogue and anonymous designs plus local account, session, private-project, version, and hashed share-grant models. |
 | Hosting | GitHub Pages and Render Free | Static frontend delivery and the migration-gated FastAPI service. |
-| Verification | Node test runner, React Testing Library, jsdom, Playwright 1.62.1, pytest 9.1.1, Ruff 0.15.22 | 82 frontend tests, a six-test browser journey, and 251 backend tests plus lint, type, build, export, and dependency checks. |
+| Verification | Node test runner, React Testing Library, jsdom, Playwright 1.62.1, pytest 9.1.1, Ruff 0.15.22 | 84 frontend tests, a seven-test browser journey in both base-path modes, and 264 backend tests plus lint, type, build, export, and dependency checks. |
 
 The frontend has a committed npm lockfile. Backend direct dependencies are
 exact-pinned in `backend/pyproject.toml`; standard pip is used without a
@@ -288,7 +300,7 @@ developer-supplied variable. No browser bundle receives backend settings.
    python -m alembic upgrade head
    ```
 
-3. Confirm `python -m alembic current` reports `20260818_01 (head)`, then
+3. Confirm `python -m alembic current` reports `20260818_02 (head)`, then
    request `/health` and `/patterns`. A second upgrade must be a no-op.
 
 Online `current`, `upgrade`, and `downgrade` commands need
@@ -311,9 +323,10 @@ development/test recovery.
 | `20260728_02` | Adds the non-redundant category and activity indexes. |
 | `20260729_01` | Seeds the canonical 15 active pattern metadata rows. |
 | `20260812_01` | Adds richer shape dimensions and backward-compatible material, fit, closure, and seam fields. |
-| `20260818_01` **(head)** | Adds accounts, hashed/expiring sessions, private projects, immutable versions, and hashed revocable share grants without changing anonymous designs. |
+| `20260818_01` | Adds accounts, hashed/expiring sessions, private projects, immutable versions, and hashed revocable share grants without changing anonymous designs. |
+| `20260818_02` **(head)** | Adds owned private custom uploads, derivative metadata, durable processing/moderation state, and exact project-version asset references. |
 
-Production startup additionally verifies this exact head and all eight expected
+Production startup additionally verifies this exact head and all eleven expected
 migration, catalogue, anonymous-design, and private-workspace tables, the reviewed
 constraint/index sets, and exactly 15 pattern rows before Uvicorn starts.
 This describes the local release candidate; production remains at its previously
@@ -364,14 +377,14 @@ order:
 | `frontend` | `npm run lint` | Run ESLint. |
 | `frontend` | `npm run typecheck` | Run strict TypeScript checking without emit. |
 | `frontend` | `npm run check:config` | Run focused build/environment tests. |
-| `frontend` | `npm test` | Run all 82 deterministic frontend tests. |
+| `frontend` | `npm test` | Run all 84 deterministic frontend tests. |
 | `frontend` | `npm run build` | Build the static export into ignored `frontend/out/`. |
 | `frontend` | `npm run verify:export` | Verify exported routes, links, assets, base path, and API embedding. |
-| `frontend` | `npm run test:e2e` | Build, serve, and run the six-test isolated Chromium journey. |
+| `frontend` | `npm run test:e2e` | Build, serve, and run the seven-test isolated Chromium journey. |
 | `backend` | `python -m uvicorn app.main:app --reload` | Start the local API without automatic migrations. |
 | `backend` | `python -m ruff format --check .` | Check Python formatting. |
 | `backend` | `python -m ruff check .` | Run Ruff lint. |
-| `backend` | `python -m pytest` | Run all 251 isolated backend tests. |
+| `backend` | `python -m pytest` | Run all 264 isolated backend tests. |
 | `backend` | `python -m pip check` | Check installed dependency consistency. |
 
 ### CI-equivalent frontend gate
@@ -556,27 +569,28 @@ publishes only `frontend/out`. Render auto-deploys after checks pass.
 | Pages route, CSS, script, favicon, or refresh returns 404 | Build with `SEWNCOVERS_GITHUB_PAGES=true`, preserve uppercase `/SewnCovers`, use Next.js-aware links, and run `npm run verify:export`. Ordinary local exports intentionally use the domain root. |
 | First production request is slow or times out | Render Free may be waking. Wait and retry safe reads. The UI reports possible wake-up after two seconds and retries transient GETs within its bounded policy. Do not automatically replay a design POST; inspect the original outcome or use the explicit save retry knowing it may create another record. |
 | Static build tries to fetch fonts | Set `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` to the absolute `frontend/e2e/font-responses.cjs` path, matching CI. |
+| Local custom upload remains queued | Confirm Task 10.3 variables are enabled and run `python -m app.uploads.worker` from `backend`. See [private custom uploads](docs/CUSTOM_UPLOADS.md). |
 
 ## Current boundaries and future production work
 
-This remains a portfolio MVP, not a commerce or manufacturing system. It has no
-accounts, authentication, authorization, private projects, uploads, pricing,
-quotes, cart, payments, orders, inventory, fulfilment, administration,
-analytics, moderation, legal/trust workflow, or complex/photorealistic cushion
-modeling. It stores public configuration data only; it should not be used for
-personal, confidential, payment, or production-order information. Provider
-free-tier limits and cold starts remain part of the demo's availability model.
+This remains a portfolio MVP, not a commerce or manufacturing system. The local
+worktree implements optional accounts, private projects, and private custom
+uploads with processing/moderation boundaries; none of Phase 10 is deployed.
+The live service has no account or upload capability. Neither environment has
+pricing, quotes, cart, payments, orders, inventory, fulfilment, staff
+administration, analytics, or a complete legal/trust workflow. Do not use it
+for confidential, regulated, payment, or production-order information.
 
 Sensible future production improvements—not implemented today—include:
 
-- Authentication, per-design authorization/privacy, retention controls, and a
-  deliberate deletion/audit policy.
+- Separately review and deploy the local Phase 10 schema, private storage,
+  worker, moderation provider, retention controls, and abuse operations.
 - Rate limiting, abuse monitoring, observability, backups/recovery exercises,
   and always-on or scaled infrastructure.
 - Idempotency keys or client operation IDs if create retries must become safe,
   with an explicit migration and API-contract change.
-- Object storage, validation, processing, and moderation before accepting
-  customer-uploaded artwork.
+- Human escalation, appeals, provider review, and monitoring around automated
+  upload moderation, which cannot guarantee safety.
 - Pricing and quote/order workflows, accessible advanced visualization, and
   production administration.
 

@@ -7,7 +7,7 @@ import { Button, ErrorMessage } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import type { ConfigurationState } from "@/context/configuration";
 import { accountApi, AccountApiError } from "@/services/account-api";
-import { mapConfigurationToCreateDesign } from "@/services/design-save";
+import { mapConfigurationToProjectConfiguration } from "@/services/design-save";
 
 export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<{ configuration: ConfigurationState; onSavingChange: (saving: boolean) => void }>) {
   const { state: auth } = useAuth();
@@ -30,7 +30,7 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
     if (auth.status !== "authenticated") return;
     setPending(true); onSavingChange(true); setError(null); setSuccess(null);
     try {
-      const snapshot = mapConfigurationToCreateDesign(configuration);
+      const snapshot = mapConfigurationToProjectConfiguration(configuration);
       if (projectId) {
         const version = await accountApi.createVersion(auth.token, projectId, snapshot);
         setSuccess({ projectId, message: `Version ${version.versionNumber} saved without changing earlier history.` });

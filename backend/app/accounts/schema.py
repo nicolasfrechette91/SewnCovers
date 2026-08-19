@@ -95,3 +95,4 @@ class AccountExportResponse(BaseModel):
     exported_at: datetime = Field(alias="exportedAt")
     account: AccountResponse
     projects: list[dict[str, object]]
+    custom_patterns: list[dict[str, object]] = Field(alias="customPatterns")

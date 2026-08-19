@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 
@@ -54,6 +54,25 @@ from app.projects.schema import (
     VersionResponse,
 )
 from app.settings import Settings, get_settings
+from app.uploads.api import (
+    confirm_upload,
+    create_asset_access,
+    create_upload_intent,
+    delete_upload,
+    direct_upload,
+    get_upload,
+    list_uploads,
+    read_direct_asset,
+    read_shared_asset,
+    rename_upload,
+    retry_upload,
+)
+from app.uploads.schema import (
+    AssetAccessResponse,
+    DeletedUploadResponse,
+    UploadIntentResponse,
+    UploadStatusResponse,
+)
 
 OPENAPI_TAGS = [
     {
@@ -81,6 +100,10 @@ OPENAPI_TAGS = [
         "description": (
             "Create, revoke, and anonymously restore read-only bearer shares."
         ),
+    },
+    {
+        "name": "Custom uploads",
+        "description": "Upload, process, moderate, and access private pattern assets.",
     },
 ]
 
@@ -466,6 +489,123 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             422: {"description": "Malformed share token", "model": APIErrorResponse},
             503: private_errors[503],
         },
+    )
+    upload_errors = {
+        **private_errors,
+        409: {
+            "description": "Invalid upload lifecycle transition",
+            "model": APIErrorResponse,
+        },
+    }
+    application.add_api_route(
+        "/uploads",
+        create_upload_intent,
+        methods=["POST"],
+        response_model=UploadIntentResponse,
+        status_code=201,
+        tags=["Custom uploads"],
+        summary="Create a private upload intent",
+        description=(
+            "Returns one scoped ten-minute upload operation for a server-generated "
+            "quarantine object key."
+        ),
+        responses=upload_errors,
+    )
+    application.add_api_route(
+        "/uploads/direct/{token}",
+        direct_upload,
+        methods=["PUT"],
+        response_model=None,
+        status_code=204,
+        tags=["Custom uploads"],
+        summary="Use a local private upload operation",
+        include_in_schema=True,
+        responses={
+            404: private_errors[404],
+            422: private_errors[422],
+            503: private_errors[503],
+        },
+    )
+    application.add_api_route(
+        "/uploads/{upload_id}/complete",
+        confirm_upload,
+        methods=["POST"],
+        response_model=UploadStatusResponse,
+        tags=["Custom uploads"],
+        summary="Confirm and server-verify a quarantine upload",
+        responses=upload_errors,
+    )
+    application.add_api_route(
+        "/uploads",
+        list_uploads,
+        methods=["GET"],
+        response_model=list[UploadStatusResponse],
+        tags=["Custom uploads"],
+        summary="List the current account's custom patterns",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/uploads/{upload_id}",
+        get_upload,
+        methods=["GET"],
+        response_model=UploadStatusResponse,
+        tags=["Custom uploads"],
+        summary="Read owned upload status",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/uploads/{upload_id}",
+        rename_upload,
+        methods=["PATCH"],
+        response_model=UploadStatusResponse,
+        tags=["Custom uploads"],
+        summary="Rename an owned custom pattern",
+        responses=upload_errors,
+    )
+    application.add_api_route(
+        "/uploads/{upload_id}/retry",
+        retry_upload,
+        methods=["POST"],
+        response_model=UploadStatusResponse,
+        tags=["Custom uploads"],
+        summary="Retry an eligible failed upload",
+        responses=upload_errors,
+    )
+    application.add_api_route(
+        "/uploads/{upload_id}",
+        delete_upload,
+        methods=["DELETE"],
+        response_model=DeletedUploadResponse,
+        tags=["Custom uploads"],
+        summary="Tombstone an owned upload and remove its objects",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/uploads/{upload_id}/assets/{kind}/access",
+        create_asset_access,
+        methods=["POST"],
+        response_model=AssetAccessResponse,
+        tags=["Custom uploads"],
+        summary="Create short-lived approved derivative access",
+        responses=private_errors,
+    )
+    application.add_api_route(
+        "/assets/direct/{token}/{kind}",
+        read_direct_asset,
+        methods=["GET"],
+        response_class=Response,
+        tags=["Custom uploads"],
+        summary="Read a private derivative through a short-lived grant",
+        responses={404: private_errors[404], 422: private_errors[422]},
+    )
+    application.add_api_route(
+        "/shares/{share_token}/assets/{kind}",
+        read_shared_asset,
+        methods=["GET"],
+        response_class=Response,
+        tags=["Project shares"],
+        summary="Read a shared approved derivative through an active share grant",
+        responses={404: private_errors[404], 422: private_errors[422]},
     )
     return application
 

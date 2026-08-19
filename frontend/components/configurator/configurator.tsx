@@ -4,10 +4,12 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui";
 import {
+  getBuiltInPatternId,
   hasValidMeasurementsForShape,
   useConfiguration,
 } from "@/context/configuration";
 import { getPatternById } from "@/data/patterns";
+import type { SelectedPatternPresentation } from "./preview-step";
 import { getCompleteCatalogueResult } from "@/services/pattern-catalogue";
 import { usePatternCatalogue } from "@/services/use-pattern-catalogue";
 
@@ -82,10 +84,20 @@ export function Configurator() {
   );
   const catalogueResult =
     getCompleteCatalogueResult(patternCatalogue);
-  const selectedPattern = getPatternById(
+  const selectedBuiltInPattern = getPatternById(
     patternCatalogue.allPatterns,
-    state.patternId,
+    getBuiltInPatternId(state.pattern),
   );
+  const selectedPattern: SelectedPatternPresentation | null =
+    state.pattern?.kind === "custom"
+      ? state.pattern.previewUrl && !state.pattern.unavailableReason
+        ? {
+            name: state.pattern.label,
+            previewClassName: "",
+            previewUrl: state.pattern.previewUrl,
+          }
+        : null
+      : selectedBuiltInPattern;
   const reviewReadiness = deriveReviewReadiness(
     state,
     catalogueResult,

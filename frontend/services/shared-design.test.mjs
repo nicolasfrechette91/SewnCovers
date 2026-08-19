@@ -312,6 +312,8 @@ test("exactly restores every shape and both units with decimal values", async ()
 
     const expected = { ...response };
     delete expected.publicId;
+    delete expected.patternId;
+    expected.pattern = { kind: "built-in", patternId: response.patternId };
     assert.deepEqual(harness.restored, [expected]);
     assert.deepEqual(Object.keys(harness.restored[0]), [
       "shape",
@@ -320,7 +322,7 @@ test("exactly restores every shape and both units with decimal values", async ()
       "backWidth",
       "thickness",
       "unit",
-      "patternId",
+      "pattern",
       "patternScale",
       "materialId",
       "fitPreference",
@@ -358,7 +360,7 @@ test("restores legacy responses with safe cover-detail defaults", async () => {
     backWidth: null,
     thickness: legacy.thickness,
     unit: legacy.unit,
-    patternId: legacy.patternId,
+    pattern: { kind: "built-in", patternId: legacy.patternId },
     patternScale: legacy.patternScale,
     materialId: "cotton-canvas",
     fitPreference: "standard",
@@ -592,13 +594,16 @@ test("the atomic reducer restore does not convert units or partially accept inva
     closureType: "zipper",
     seamStyle: "plain",
   };
+  const restoredExact = { ...exact };
+  delete restoredExact.patternId;
+  restoredExact.pattern = { kind: "built-in", patternId: exact.patternId };
 
   assert.deepEqual(
     configurationReducer(initialConfigurationState, {
       configuration: exact,
       type: "restoreConfiguration",
     }),
-    exact,
+    restoredExact,
   );
   assert.equal(
     configurationReducer(exact, {

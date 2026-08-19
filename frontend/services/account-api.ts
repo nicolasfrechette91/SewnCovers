@@ -1,6 +1,20 @@
 import { publicEnvironment } from "../config/environment";
 import type { CreateDesignRequest } from "./api-client";
 
+export type ProjectPatternChoice =
+  | { readonly kind: "built-in"; readonly patternId: string }
+  | {
+      readonly kind: "custom";
+      readonly assetId: string;
+      readonly derivativeId: string;
+      readonly processingVersion: string;
+    };
+
+export type ProjectConfigurationRequest = Omit<
+  CreateDesignRequest,
+  "patternId"
+> & { readonly pattern: ProjectPatternChoice };
+
 const TOKEN_KEY = "sewncovers.session-token";
 export const AUTH_CHANGED_EVENT = "sewncovers:auth-changed";
 
@@ -26,7 +40,7 @@ export interface SessionMetadata {
 export interface ProjectVersion {
   readonly id: string;
   readonly versionNumber: number;
-  readonly configuration: CreateDesignRequest;
+  readonly configuration: ProjectConfigurationRequest;
   readonly createdAt: string;
   readonly isCurrent: boolean;
 }
@@ -56,6 +70,62 @@ export interface ProjectDetail extends ProjectSummary {
   readonly activeShares: readonly ShareGrant[];
 }
 
+export type UploadState =
+  | "awaiting_upload"
+  | "uploaded"
+  | "processing"
+  | "awaiting_moderation"
+  | "approved"
+  | "rejected"
+  | "failed"
+  | "deleted"
+  | "expired";
+
+export interface CustomUpload {
+  readonly id: string;
+  readonly label: string;
+  readonly state: UploadState;
+  readonly moderationState:
+    | "not_started"
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "unavailable"
+    | "failed";
+  readonly contentType: string;
+  readonly byteSize: number;
+  readonly width: number | null;
+  readonly height: number | null;
+  readonly processingVersion: string;
+  readonly tileDerivativeId: string | null;
+  readonly thumbnailDerivativeId: string | null;
+  readonly processingAttempts: number;
+  readonly moderationAttempts: number;
+  readonly retryEligible: boolean;
+  readonly referencedByVersions: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly deletedAt: string | null;
+}
+
+export interface UploadOperation {
+  readonly method: "POST" | "PUT";
+  readonly url: string;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly fields: Readonly<Record<string, string>>;
+  readonly expiresAt: string;
+}
+
+export interface UploadIntent extends CustomUpload {
+  readonly upload: UploadOperation;
+}
+
+export interface AssetAccess {
+  readonly url: string;
+  readonly expiresAt: string;
+  readonly contentType: "image/png";
+}
+
 export class AccountApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -72,11 +142,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isConfiguration(value: unknown): value is CreateDesignRequest {
+function isPatternChoice(value: unknown): value is ProjectPatternChoice {
+  if (!isRecord(value) || typeof value.kind !== "string") return false;
+  if (value.kind === "built-in") {
+    return (
+      Object.keys(value).length === 2 &&
+      typeof value.patternId === "string"
+    );
+  }
+  return (
+    value.kind === "custom" &&
+    Object.keys(value).length === 4 &&
+    typeof value.assetId === "string" &&
+    typeof value.derivativeId === "string" &&
+    typeof value.processingVersion === "string"
+  );
+}
+
+function isConfiguration(value: unknown): value is ProjectConfigurationRequest {
   if (!isRecord(value)) return false;
   const keys = [
     "shape", "width", "height", "backWidth", "thickness", "unit",
-    "patternId", "patternScale", "materialId", "fitPreference",
+    "pattern", "patternScale", "materialId", "fitPreference",
     "closureType", "seamStyle",
   ];
   return (
@@ -88,7 +175,7 @@ function isConfiguration(value: unknown): value is CreateDesignRequest {
     (value.backWidth === null || typeof value.backWidth === "number") &&
     typeof value.thickness === "number" &&
     ["cm", "in"].includes(String(value.unit)) &&
-    typeof value.patternId === "string" &&
+    isPatternChoice(value.pattern) &&
     typeof value.patternScale === "number" &&
     ["cotton-canvas", "linen-blend", "polyester-weave"].includes(String(value.materialId)) &&
     ["close", "relaxed", "standard"].includes(String(value.fitPreference)) &&
@@ -145,6 +232,43 @@ function isProjectDetail(value: unknown): value is ProjectDetail {
     isVersion(record.currentVersion) &&
     Array.isArray(record.activeShares) &&
     record.activeShares.every(isShare);
+}
+
+function isCustomUpload(value: unknown): value is CustomUpload {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.label === "string" &&
+    ["awaiting_upload", "uploaded", "processing", "awaiting_moderation", "approved", "rejected", "failed", "deleted", "expired"].includes(String(value.state)) &&
+    ["not_started", "pending", "approved", "rejected", "unavailable", "failed"].includes(String(value.moderationState)) &&
+    typeof value.contentType === "string" &&
+    typeof value.byteSize === "number" &&
+    (value.width === null || typeof value.width === "number") &&
+    (value.height === null || typeof value.height === "number") &&
+    typeof value.processingVersion === "string" &&
+    (value.tileDerivativeId === null || typeof value.tileDerivativeId === "string") &&
+    (value.thumbnailDerivativeId === null || typeof value.thumbnailDerivativeId === "string") &&
+    typeof value.processingAttempts === "number" &&
+    typeof value.moderationAttempts === "number" &&
+    typeof value.retryEligible === "boolean" &&
+    typeof value.referencedByVersions === "number" &&
+    typeof value.createdAt === "string" &&
+    typeof value.updatedAt === "string" &&
+    (value.deletedAt === null || typeof value.deletedAt === "string")
+  );
+}
+
+function isUploadOperation(value: unknown): value is UploadOperation {
+  return (
+    isRecord(value) &&
+    ["POST", "PUT"].includes(String(value.method)) &&
+    typeof value.url === "string" &&
+    isRecord(value.headers) &&
+    Object.values(value.headers).every((item) => typeof item === "string") &&
+    isRecord(value.fields) &&
+    Object.values(value.fields).every((item) => typeof item === "string") &&
+    typeof value.expiresAt === "string"
+  );
 }
 
 type Parser<T> = (value: unknown) => value is T;
@@ -259,6 +383,16 @@ const isProjectList: Parser<readonly ProjectSummary[]> = (value): value is reado
   Array.isArray(value) && value.every(isProjectSummary);
 const isVersionList: Parser<readonly ProjectVersion[]> = (value): value is readonly ProjectVersion[] =>
   Array.isArray(value) && value.every(isVersion);
+const isUploadList: Parser<readonly CustomUpload[]> = (value): value is readonly CustomUpload[] =>
+  Array.isArray(value) && value.every(isCustomUpload);
+const isUpload: Parser<CustomUpload> = isCustomUpload;
+const isUploadIntent: Parser<UploadIntent> = (value): value is UploadIntent =>
+  isCustomUpload(value) && isRecord(value) && isUploadOperation(value.upload);
+const isAssetAccess: Parser<AssetAccess> = (value): value is AssetAccess =>
+  isRecord(value) &&
+  typeof value.url === "string" &&
+  typeof value.expiresAt === "string" &&
+  value.contentType === "image/png";
 
 export const accountApi = {
   register(email: string, password: string) {
@@ -291,7 +425,7 @@ export const accountApi = {
   listProjects(token: string) {
     return request("/projects", { token, parser: isProjectList });
   },
-  createProject(token: string, name: string, configuration: CreateDesignRequest) {
+  createProject(token: string, name: string, configuration: ProjectConfigurationRequest) {
     return request("/projects", { method: "POST", token, body: { name, configuration }, parser: isProjectDetail });
   },
   getProject(token: string, projectId: string) {
@@ -309,7 +443,7 @@ export const accountApi = {
   getVersion(token: string, projectId: string, versionId: string) {
     return request(`/projects/${encodeURIComponent(projectId)}/versions/${encodeURIComponent(versionId)}`, { token, parser: isVersion });
   },
-  createVersion(token: string, projectId: string, configuration: CreateDesignRequest) {
+  createVersion(token: string, projectId: string, configuration: ProjectConfigurationRequest) {
     return request(`/projects/${encodeURIComponent(projectId)}/versions`, { method: "POST", token, body: { configuration }, parser: isVersion });
   },
   createShare(token: string, projectId: string, versionId: string) {
@@ -321,11 +455,88 @@ export const accountApi = {
     return request<void>(`/projects/${encodeURIComponent(projectId)}/shares/${encodeURIComponent(grantId)}`, { method: "DELETE", token, empty: true });
   },
   restoreShare(shareToken: string) {
-    const parser: Parser<{ readonly configuration: CreateDesignRequest }> = (value): value is { readonly configuration: CreateDesignRequest } =>
+    const parser: Parser<{ readonly configuration: ProjectConfigurationRequest }> = (value): value is { readonly configuration: ProjectConfigurationRequest } =>
       isRecord(value) && Object.keys(value).length === 1 && isConfiguration(value.configuration);
     return request(`/shares/${encodeURIComponent(shareToken)}`, { parser });
   },
+  listUploads(token: string) {
+    return request("/uploads", { token, parser: isUploadList });
+  },
+  createUploadIntent(token: string, label: string, file: File) {
+    return request("/uploads", {
+      method: "POST",
+      token,
+      body: {
+        label,
+        contentType: file.type,
+        byteSize: file.size,
+        crop: null,
+      },
+      parser: isUploadIntent,
+    });
+  },
+  getUpload(token: string, uploadId: string) {
+    return request(`/uploads/${encodeURIComponent(uploadId)}`, { token, parser: isUpload });
+  },
+  confirmUpload(token: string, uploadId: string, checksum: string) {
+    return request(`/uploads/${encodeURIComponent(uploadId)}/complete`, {
+      method: "POST", token, body: { checksum }, parser: isUpload,
+    });
+  },
+  renameUpload(token: string, uploadId: string, label: string) {
+    return request(`/uploads/${encodeURIComponent(uploadId)}`, {
+      method: "PATCH", token, body: { label }, parser: isUpload,
+    });
+  },
+  retryUpload(token: string, uploadId: string) {
+    return request(`/uploads/${encodeURIComponent(uploadId)}/retry`, {
+      method: "POST", token, parser: isUpload,
+    });
+  },
+  deleteUpload(token: string, uploadId: string) {
+    const parser: Parser<{ readonly id: string; readonly state: "deleted"; readonly referencedByVersions: number }> =
+      (value): value is { readonly id: string; readonly state: "deleted"; readonly referencedByVersions: number } =>
+        isRecord(value) && typeof value.id === "string" && value.state === "deleted" && typeof value.referencedByVersions === "number";
+    return request(`/uploads/${encodeURIComponent(uploadId)}`, { method: "DELETE", token, parser });
+  },
+  assetAccess(token: string, uploadId: string, kind: "thumbnail" | "tile") {
+    return request(`/uploads/${encodeURIComponent(uploadId)}/assets/${kind}/access`, {
+      method: "POST", token, parser: isAssetAccess,
+    });
+  },
 };
+
+export async function sha256File(file: File): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export async function performUpload(operation: UploadOperation, file: File): Promise<void> {
+  const target = operation.url.startsWith("/")
+    ? `${publicEnvironment.apiUrl}${operation.url}`
+    : operation.url;
+  let body: BodyInit = file;
+  if (operation.method === "POST") {
+    const form = new FormData();
+    Object.entries(operation.fields).forEach(([key, value]) => form.append(key, value));
+    form.append("file", file);
+    body = form;
+  }
+  const response = await fetch(target, {
+    method: operation.method,
+    headers: operation.method === "PUT" ? operation.headers : undefined,
+    body,
+  });
+  if (!response.ok) throw new AccountApiError("The private upload could not be transferred.", response.status);
+}
+
+export function resolveAssetUrl(url: string): string {
+  return url.startsWith("/") ? `${publicEnvironment.apiUrl}${url}` : url;
+}
+
+export function buildSharedAssetUrl(shareToken: string): string {
+  return `${publicEnvironment.apiUrl}/shares/${encodeURIComponent(shareToken)}/assets/tile`;
+}
 
 export function withBasePath(path: string): string {
   const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");

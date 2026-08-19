@@ -130,7 +130,7 @@ test("initializes, updates, resets, and preserves reducer invariants", () => {
     backWidth: null,
     thickness: null,
     unit: "cm",
-    patternId: null,
+    pattern: null,
     patternScale: 1,
     materialId: "cotton-canvas",
     fitPreference: "standard",
@@ -143,7 +143,7 @@ test("initializes, updates, resets, and preserves reducer invariants", () => {
     { type: "setSquareWidth", width: 50 },
     { type: "setHeight", height: 40 },
     { type: "setThickness", thickness: 8 },
-    { type: "setPatternId", patternId: "fern-trail" },
+    { type: "setBuiltInPattern", patternId: "fern-trail" },
     { type: "setPatternScale", patternScale: 1.2 },
   ];
   const configured = actions.reduce(
@@ -158,7 +158,7 @@ test("initializes, updates, resets, and preserves reducer invariants", () => {
     backWidth: null,
     thickness: 8,
     unit: "cm",
-    patternId: "fern-trail",
+    pattern: { kind: "built-in", patternId: "fern-trail" },
     patternScale: 1.2,
     materialId: "cotton-canvas",
     fitPreference: "standard",
@@ -214,7 +214,7 @@ test("accepts only complete invariant-preserving restored configurations", () =>
     backWidth: null,
     thickness: 12.75,
     unit: "cm",
-    patternId: "terrace-wave",
+    pattern: { kind: "built-in", patternId: "terrace-wave" },
     patternScale: 1.4,
     materialId: "linen-blend",
     fitPreference: "close",
@@ -230,7 +230,7 @@ test("accepts only complete invariant-preserving restored configurations", () =>
   );
 
   const invalidStates: readonly ConfigurationState[] = [
-    { ...restored, patternId: "Terrace Wave" },
+    { ...restored, pattern: { kind: "built-in", patternId: "Terrace Wave" } },
     { ...restored, width: 180.555 },
     { ...restored, patternScale: 1.45 },
     { ...restored, shape: "square", width: 50, height: 49 },
