@@ -4,15 +4,15 @@ This file is the persistent implementation checklist derived from `SewnCover_Pro
 
 ## Status rules
 
-Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A task is `Completed` only after its relevant checks pass. Phase 10 is intentionally deferred and must not be implemented without an explicit request.
+Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A task is `Completed` only after its relevant checks pass. Phase 10's preserved `Deferred` wording required explicit authorization; all five Phase 10 tasks have now received that authorization and passed their relevant checks.
 
 ## Current handoff
 
 - Current phase: Phase 10 - Future commercial expansion
-- Current task: 10.4 - Deferred - pricing, quotes, cart, payments, orders, manufacturing, fulfilment, and administration
+- Current task: 10.5 - Deferred - advanced visualization, production platform, analytics, legal, and trust capabilities
 - Status: Completed
-- Overall progress: 57 / 58 tasks completed
-- Up next: 10.5 - Deferred - advanced visualization, production platform, analytics, legal, and trust capabilities
+- Overall progress: 58 / 58 tasks completed
+- Up next: Roadmap complete - no later task is defined or authorized
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -121,7 +121,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 10.2 | Deferred - customer accounts, saved projects, design versions, and privacy controls | Completed |
 | 10.3 | Deferred - custom uploads using object storage, processing, moderation, and production assets | Completed |
 | 10.4 | Deferred - pricing, quotes, cart, payments, orders, manufacturing, fulfilment, and administration | Completed |
-| 10.5 | Deferred - advanced visualization, production platform, analytics, legal, and trust capabilities | Not started |
+| 10.5 | Deferred - advanced visualization, production platform, analytics, legal, and trust capabilities | Completed |
 
 ## Decision log
 
@@ -828,3 +828,71 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
   undeployed. No live payment, tax, refund, shipment, provider customer, webhook,
   production migration, remote action, or Git mutation occurred. All changes
   remain local, unstaged, and uncommitted, and Task 10.5 was not started.
+
+### 2026-08-29 - Advanced visualization, assurance, and production operations
+
+- The existing complete SVG remains authoritative while Square, Rectangle, and
+  Box / bench gain a request-loaded isolated WebGL approximation. Versioned
+  `approximate-cover-v1` rules keep original values separate from normalized
+  display geometry and represent only supported material, pattern/scale, fit,
+  closure/access, edge, orientation, and view distinctions. Pointer, touch,
+  keyboard rotation/zoom, presets, reset, motion disable, reduced-motion,
+  expanded-control focus recovery, textual equivalence, WebGL failure, and
+  authorization-expiry fallback are explicit. Private derivatives use
+  short-lived authorized `no-store` fetches and temporary object URLs; renderer,
+  texture, buffer, listener, frame, and object-URL resources are disposed.
+- Migration `20260829_01`, linearly after `20260828_01`, adds immutable seeded
+  legal versions, caller-scoped acknowledgements, append-only consent decisions,
+  strict optional analytics events, and paid-line production work with
+  checklist, issue, history, and packet metadata. Verified payment derives work
+  transactionally and idempotently from frozen order lines. Direct unpaid
+  creation is rejected, duplicate order/line rows are constrained, and a
+  database-atomic revision claim was exercised by two concurrent sessions: one
+  update succeeded and the stale competitor received HTTP 409. Structured
+  prerequisites/reasons, quality control, order-state synchronization, retained
+  history, and deterministic checksum-validated safe packets preserve the
+  demonstrated integrity and deletion boundaries without adding factory scope.
+- Optional product analytics are independent of account, upload, moderation,
+  and checkout terms. They remain off before affirmative version-1 consent and
+  after rejection/withdrawal; GPC forces collection off. A rotating guest
+  pseudonym or server-derived account subject feeds only allowlisted, bounded,
+  rate-limited, timestamp-checked, deduplicated scalar events. Administrator
+  UTC aggregates display freshness, consent scope, fictional-data limitations,
+  and a configurable minimum threshold of three; raw-event access is not
+  exposed to customers and no third-party adapter or request exists.
+- Seven semantic, printable, directly navigable demonstration legal documents
+  and scoped account/upload/sandbox-checkout acknowledgements make version and
+  professional-review status explicit. Public Trust content distinguishes
+  local implementation, deterministic/mock evidence, configured-only providers,
+  omissions, and review requirements. FastAPI supplies security/referrer/
+  permissions/framing and private no-store headers; Pages' exported meta CSP is
+  accurately documented as a partial document policy. Placeholder
+  `security.txt`, typed environment examples, public/admin readiness summaries,
+  and `python -m app.assurance.cli readiness` disclose no secret values and make
+  no provider request or mutation.
+- Final verification passes 13 frontend configuration checks, ESLint, strict
+  TypeScript, all 93 frontend tests, ordinary and `/SewnCovers/` builds, both
+  144-file/16-HTML export scans, and all ten Playwright scenarios in both modes.
+  Browser coverage includes `320×568`, `768×1024`, and `1440×900`, genuine
+  keyboard workflows, WebGL-supported and forced-unavailable paths, consent,
+  legal/trust, production/checklist/issue/QC/packet, suppressed analytics,
+  readiness, reduced motion, forced colors, and overflow. Backend verification
+  passes Ruff format/lint, `pip check`, all 274 tests, the single
+  `20260829_01` head/history, clean and previous-head migration paths,
+  constraints/schema parity, OpenAPI, CLI/redaction, two-account/admin
+  authorization, consent/event/aggregate, export/deletion, concurrent revision,
+  packet, header, and existing regression coverage.
+- Reporting-only npm audits remain exactly six high and zero moderate findings
+  overall and four high and zero moderate findings with development dependencies
+  omitted. No dependency or lockfile changed and no finding is described as
+  remediated. Static artifact/source-map, secret/credential/token/PII/payment/
+  ciphertext/private-asset/signed-URL, logging, local-path, generated-file,
+  stale-reference, local-link, scope, roadmap, and whitespace scans pass.
+- Task 10.5 is `Completed`, progress is 58 / 58, all 58 roadmap deliverables
+  retain their exact wording, and the roadmap is complete with no Task 10.6.
+  Manual screen-reader, native forced-colors/zoom/print, touch hardware,
+  multi-browser/GPU/load, legal, privacy, security, manufacturing, retention,
+  incident, monitoring, and live-provider review remain accepted explicit
+  limitations—not certifications or readiness claims. No live provider request,
+  production migration/write, deployment, remote action, or Git mutation
+  occurred. All changes remain local, unstaged, and uncommitted.

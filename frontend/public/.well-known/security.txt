@@ -1,0 +1,5 @@
+# SewnCovers is an undeployed portfolio demonstration.
+# This address is intentionally non-routable and must be replaced before production.
+Contact: mailto:security-contact@example.invalid
+Expires: 2027-08-29T00:00:00Z
+Preferred-Languages: en

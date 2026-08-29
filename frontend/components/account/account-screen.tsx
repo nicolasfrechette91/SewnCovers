@@ -30,10 +30,17 @@ function AuthForm({ mode }: Readonly<{ mode: "login" | "register" }>) {
     setPending(true);
     setError(null);
     try {
-      await (isRegister ? register : login)(
-        String(data.get("email")),
-        String(data.get("password")),
-      );
+      const email = String(data.get("email"));
+      const password = String(data.get("password"));
+      if (isRegister) {
+        await register(
+          email,
+          password,
+          Boolean(data.get("acceptedTerms")),
+        );
+      } else {
+        await login(email, password);
+      }
     } catch (caught) {
       setError(message(caught));
       requestAnimationFrame(() => emailRef.current?.focus());
@@ -56,6 +63,21 @@ function AuthForm({ mode }: Readonly<{ mode: "login" | "register" }>) {
       <input ref={emailRef} id={`${mode}-email`} name="email" type="email" autoComplete="email" required maxLength={254} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-control-x" />
       <label className="mt-4 block text-label font-control text-text-primary" htmlFor={`${mode}-password`}>Passphrase</label>
       <input id={`${mode}-password`} name="password" type="password" autoComplete={isRegister ? "new-password" : "current-password"} required minLength={12} maxLength={128} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-control-x" />
+      {isRegister ? (
+        <label className="mt-4 flex items-start gap-2 text-supporting">
+          <input
+            className="mt-1 size-5 shrink-0"
+            type="checkbox"
+            name="acceptedTerms"
+            required
+          />
+          <span>
+            I acknowledge account terms version 1 and understand this is a
+            portfolio demonstration without commercial availability. Optional
+            analytics consent remains separate.
+          </span>
+        </label>
+      ) : null}
       {error ? <ErrorMessage className="mt-3">{error}</ErrorMessage> : null}
       <Button className="mt-4" type="submit" isLoading={pending} loadingLabel={isRegister ? "Creating account…" : "Signing in…"}>
         {isRegister ? "Create account" : "Sign in"}

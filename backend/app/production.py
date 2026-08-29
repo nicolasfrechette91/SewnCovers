@@ -12,17 +12,21 @@ from app.persistence.migrations import create_migration_engine
 from app.settings import Settings, get_settings
 
 ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[1] / "alembic.ini"
-EXPECTED_REVISION = "20260828_01"
+EXPECTED_REVISION = "20260829_01"
 EXPECTED_PATTERN_COUNT = 15
 EXPECTED_TABLES = {
     "alembic_version",
     "authenticated_sessions",
+    "analytics_consent_decisions",
+    "analytics_events",
     "audit_events",
     "cart_lines",
     "commerce_quotes",
     "cover_designs",
     "customer_accounts",
     "customer_orders",
+    "legal_acknowledgements",
+    "legal_documents",
     "custom_derivatives",
     "custom_uploads",
     "patterns",
@@ -32,6 +36,11 @@ EXPECTED_TABLES = {
     "payment_events",
     "price_books",
     "production_asset_reservations",
+    "production_checklist_results",
+    "production_history",
+    "production_issues",
+    "production_packets",
+    "production_work",
     "project_versions",
     "project_custom_pattern_references",
     "saved_projects",

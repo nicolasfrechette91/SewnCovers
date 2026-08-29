@@ -18,6 +18,7 @@ import {
   removeSessionToken,
   storeSessionToken,
 } from "@/services/account-api";
+import { assuranceApi } from "@/services/assurance-api";
 
 export type AuthState =
   | { readonly status: "initializing" }
@@ -27,7 +28,11 @@ export type AuthState =
 interface AuthContextValue {
   readonly state: AuthState;
   readonly login: (email: string, password: string) => Promise<void>;
-  readonly register: (email: string, password: string) => Promise<void>;
+  readonly register: (
+    email: string,
+    password: string,
+    acceptedTerms: boolean,
+  ) => Promise<void>;
   readonly logout: () => Promise<void>;
   readonly logoutAll: () => Promise<void>;
   readonly clear: () => void;
@@ -87,8 +92,23 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, [state]);
 
   const startSession = useCallback(
-    async (mode: "login" | "register", email: string, password: string) => {
+    async (
+      mode: "login" | "register",
+      email: string,
+      password: string,
+      acceptedTerms = false,
+    ) => {
+      if (mode === "register" && !acceptedTerms) {
+        throw new Error("Account terms version 1 must be acknowledged.");
+      }
       const response = await accountApi[mode](email, password);
+      if (mode === "register") {
+        await assuranceApi.acknowledge(
+          response.token,
+          "terms",
+          "account_terms",
+        );
+      }
       storeSessionToken(response.token);
       setState({ status: "authenticated", account: response.account, token: response.token, expiresAt: response.expiresAt });
     },
@@ -123,7 +143,8 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const value = useMemo<AuthContextValue>(() => ({
     state,
     login: (email, password) => startSession("login", email, password),
-    register: (email, password) => startSession("register", email, password),
+    register: (email, password, acceptedTerms) =>
+      startSession("register", email, password, acceptedTerms),
     logout,
     logoutAll,
     clear,

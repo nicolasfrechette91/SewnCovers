@@ -263,6 +263,7 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Review configuration" })).toBeFocused();
   await page.keyboard.press("Enter");
 
@@ -272,7 +273,7 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
       name: "SewnCovers configuration summary",
     }),
   ).toBeFocused();
-  for (let index = 0; index < 8; index += 1) {
+  for (let index = 0; index < 9; index += 1) {
     await page.keyboard.press("Tab");
   }
   await expect(
@@ -332,7 +333,11 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
     headingSkips: [],
     mainCount: 1,
     missingReferences: [],
-    navigationLabels: ["Primary navigation", "Configuration progress"],
+    navigationLabels: [
+      "Primary navigation",
+      "Configuration progress",
+      "Footer navigation",
+    ],
   });
 
   const tokens = await page.evaluate(() => {

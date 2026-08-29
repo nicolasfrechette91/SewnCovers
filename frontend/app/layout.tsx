@@ -2,10 +2,15 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { SiteFooter, SiteHeader } from "@/components/layout";
+import { ConsentPreferences } from "@/components/assurance";
 import { AuthProvider } from "@/context/auth";
 import { ConfigurationProvider } from "@/context/configuration";
 
 import "./globals.css";
+
+const publicApiOrigin = new URL(
+  process.env.NEXT_PUBLIC_API_URL as string,
+).origin;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +38,13 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <meta
+          httpEquiv="Content-Security-Policy"
+          content={`default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' ${publicApiOrigin}; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`}
+        />
+        <meta name="referrer" content="no-referrer" />
+      </head>
       <body className="min-h-full flex flex-col">
         <a
           href="#main-content"
@@ -49,6 +61,8 @@ export default function RootLayout({
             { href: "/orders/", label: "Orders" },
             { href: "/admin/", label: "Admin" },
             { href: "/account/", label: "Account" },
+            { href: "/legal/", label: "Legal" },
+            { href: "/trust/", label: "Trust" },
           ]}
         />
         <main
@@ -58,9 +72,16 @@ export default function RootLayout({
         >
           <AuthProvider>
             <ConfigurationProvider>{children}</ConfigurationProvider>
+            <ConsentPreferences />
           </AuthProvider>
         </main>
-        <SiteFooter />
+        <SiteFooter
+          navigationItems={[
+            { href: "/legal/", label: "Legal and privacy" },
+            { href: "/trust/", label: "Trust" },
+            { href: "/.well-known/security.txt", label: "security.txt" },
+          ]}
+        />
       </body>
     </html>
   );

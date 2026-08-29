@@ -10,12 +10,12 @@ repository evidence, and read-only checks of the public deployment. No deployed
 commit is stated because this verification did not independently confirm one
 commit across Pages, Render, and the database.
 
-The repository's local Phase 10.1-10.4 work is newer than that deployment.
+The repository's local Phase 10.1-10.5 work is newer than that deployment.
 Accounts, private projects, versions, revocable shares, and private custom
 uploads described below are implemented and locally verified but are not
 available on the live Pages/Render/Neon system. No production migration,
 bucket, credential, upload, moderation call, account write, or worker change
-was performed for Tasks 10.3 or 10.4. Local commerce uses only deterministic
+was performed for Tasks 10.3, 10.4, or 10.5. Local commerce uses only deterministic
 fictional provider data; no live payment or tax API was called.
 
 ## Boundary summary
@@ -25,7 +25,7 @@ fictional provider data; no live payment or tax API was called.
 | Verified behavior | GitHub Pages serves a Next.js static export under `/SewnCovers/`; the browser calls a Render-hosted FastAPI service backed by Neon PostgreSQL. | Deployment configuration, generated-export checks, startup code, migrations, live HTTPS responses, and retrieval of an existing immutable design. |
 | Known limitation | Portfolio-scale hosting has variable first-request latency and no availability or support SLA. The deployed product has no accounts; the local worktree has an intentionally limited account/project lifecycle. | Recorded smoke observations and the deployed versus local API/UI surfaces only; no uptime, support, quota, or latency commitment is inferred. |
 | Security boundary | Exact CORS, server-side secrets, validation, constraints, migrations, tests, and bundle scans reduce specific risks but do not provide identity, privacy, abuse prevention, or a security review. | Repository and deployed-response evidence only; no claim of hardening, compliance, penetration testing, or commercial readiness. |
-| Local future work | Accounts, uploads, and demonstration commerce/operations exist only in the local worktree. | No date, deployment, provider readiness, or commercial availability is promised. |
+| Local future work | Accounts, uploads, demonstration commerce/production, approximate visualization, consent-gated analytics, legal, and trust/readiness exist only in the local worktree. | No date, deployment, provider readiness, legal approval, or commercial availability is promised. |
 
 ## Verified deployed behavior
 
@@ -164,11 +164,10 @@ price, or current Render or Neon policy.
 - CORS is a browser-enforced cross-origin response policy. It is not
   authentication, authorization, API access control, privacy, or protection
   against non-browser clients.
-- A reporting-only refresh of the committed npm dependency graph returned nine
-  high-severity and two moderate findings in the full audit, and four
-  high-severity plus two moderate findings when development dependencies were
-  omitted. No critical, low, or informational findings were reported in either
-  view. These unresolved
+- A reporting-only refresh of the committed npm dependency graph on 2026-08-29
+  returned six high-severity and zero moderate findings in the full audit, and
+  four high-severity and zero moderate findings when development dependencies
+  were omitted. These unresolved
   findings are a production-readiness concern; no dependency or lockfile was
   changed. The existing Python environment passed `pip check`, which verifies
   installed-package consistency but is not a vulnerability audit.
@@ -190,6 +189,19 @@ administrator promotion, and append-only audit history. Every related screen
 is labelled as a demonstration. No provider credential/object, payment,
 refund, tax calculation, shipment, production action, production migration, or
 deployment was created or invoked. See [demonstration commerce](COMMERCE.md).
+
+### Local Task 10.5 assurance and production operations (not deployed)
+
+The local worktree adds an explicitly approximate, on-demand WebGL preview with
+a complete SVG fallback; verified-paid-line production work, checklists,
+structured issues, quality control, history, and safe deterministic packets;
+independently consented strict first-party analytics; immutable legal versions
+and scoped acknowledgements; a public Trust area; security/cache headers; and
+secret-free read-only readiness checks. These controls have deterministic local
+or mocked evidence only. They are not live-verified factory or analytics
+integrations, legal approval, security certification, accessibility conformance,
+or deployment approval. See [advanced visualization, assurance, and production
+operations](ASSURANCE_AND_OPERATIONS.md).
 
 ## Commercial direction - future production work only
 

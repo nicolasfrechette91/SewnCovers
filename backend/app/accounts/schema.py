@@ -98,3 +98,7 @@ class AccountExportResponse(BaseModel):
     projects: list[dict[str, object]]
     custom_patterns: list[dict[str, object]] = Field(alias="customPatterns")
     orders: list[dict[str, object]]
+    legal_acknowledgements: list[dict[str, object]] = Field(
+        alias="legalAcknowledgements"
+    )
+    analytics_consent: list[dict[str, object]] = Field(alias="analyticsConsent")

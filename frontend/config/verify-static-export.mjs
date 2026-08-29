@@ -37,6 +37,9 @@ const expectedFiles = [
   path.join("cart", "index.html"),
   path.join("orders", "index.html"),
   path.join("admin", "index.html"),
+  path.join("legal", "index.html"),
+  path.join("trust", "index.html"),
+  path.join(".well-known", "security.txt"),
   path.join("checkout", "sandbox", "index.html"),
   path.join("checkout", "return", "index.html"),
   path.join("checkout", "cancel", "index.html"),
@@ -139,6 +142,8 @@ const projectsHtml = await readFile(
 const commerceHtml = await readFile(path.join(exportDirectory, "commerce", "index.html"), "utf8");
 const ordersHtml = await readFile(path.join(exportDirectory, "orders", "index.html"), "utf8");
 const adminHtml = await readFile(path.join(exportDirectory, "admin", "index.html"), "utf8");
+const legalHtml = await readFile(path.join(exportDirectory, "legal", "index.html"), "utf8");
+const trustHtml = await readFile(path.join(exportDirectory, "trust", "index.html"), "utf8");
 assert.match(homeHtml, /<title>SewnCovers \| Plan a cushion-cover design<\/title>/);
 assert.match(
   configureHtml,
@@ -149,6 +154,8 @@ assert.match(projectsHtml, /<title>My projects \| SewnCovers<\/title>/);
 assert.match(commerceHtml, /<title>Demonstration pricing and quotes \| SewnCovers<\/title>/);
 assert.match(ordersHtml, /<title>Demonstration orders \| SewnCovers<\/title>/);
 assert.match(adminHtml, /<title>Demonstration administration \| SewnCovers<\/title>/);
+assert.match(legalHtml, /<title>Legal and consent information \| SewnCovers<\/title>/);
+assert.match(trustHtml, /<title>Trust and implementation boundaries \| SewnCovers<\/title>/);
 assert.match(homeHtml, new RegExp(`href="${basePath || ""}\\/"`));
 assert.match(configureHtml, new RegExp(`href="${basePath || ""}\\/"`));
 

@@ -32,6 +32,7 @@ import {
 } from "@/data/shapes";
 
 import { CushionPreview } from "./cushion-preview";
+import { AdvancedPreviewLoader } from "./advanced-preview-loader";
 import {
   calculatePreviewGeometry,
   PREVIEW_VIEWBOX_HEIGHT,
@@ -502,6 +503,15 @@ export function PreviewStep({
           </div>
         }
       />
+      {previewIsComplete &&
+      selectedPattern !== null &&
+      ["square", "rectangle", "box"].includes(shape) ? (
+        <AdvancedPreviewLoader
+          configuration={state}
+          patternName={selectedPattern.name}
+          textureUrl={selectedPattern.previewUrl}
+        />
+      ) : null}
     </section>
   );
 }

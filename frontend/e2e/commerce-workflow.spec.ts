@@ -38,6 +38,7 @@ test("sandbox quote-to-delivery workflow stays authoritative and role protected"
     if (method === "OPTIONS") return route.fulfill({ headers: corsHeaders, status: 204 });
     if (path === "/account") return json(route, { email: isAdmin ? "operations@example.invalid" : "customer@example.invalid", createdAt: "2026-08-28T00:00:00Z", role: isAdmin ? "administrator" : "customer" });
     if (path === "/account/sessions") return json(route, [{ id: 1, createdAt: "2026-08-28T00:00:00Z", expiresAt: expiry, revokedAt: null, current: true }]);
+    if (path === "/account/acknowledgements" && method === "POST") return json(route, { id: 1, documentType: "commerce", documentVersion: 1, purpose: "sandbox_checkout", acknowledgedAt: "2026-08-28T12:00:01Z" }, 201);
     if (path === "/projects" && method === "GET") return json(route, [{ id: projectId, name: "Fictional patio sample", versionCount: 1, updatedAt: "2026-08-28T12:00:00Z", privacy: "private" }]);
     if (path === `/projects/${projectId}`) return json(route, { id: projectId, name: "Fictional patio sample", versionCount: 1, updatedAt: "2026-08-28T12:00:00Z", privacy: "private", createdAt: "2026-08-28T12:00:00Z", currentVersion: { id: versionId, versionNumber: 1, configuration, createdAt: "2026-08-28T12:00:00Z", isCurrent: true }, activeShares: [] });
     if (path === "/commerce/pricing/preview") return json(route, pricing);
@@ -78,6 +79,7 @@ test("sandbox quote-to-delivery workflow stays authoritative and role protected"
   await page.getByRole("button", { name: "Continue to hosted sandbox checkout" }).press("Enter");
   await expect(page.getByRole("heading", { name: "SC-DEMO-ORDER0001" })).toBeVisible();
   await expect(page.getByText(/no card fields/i)).toBeVisible();
+  await page.getByRole("checkbox", { name: /commerce notice version 1/i }).check();
   await page.getByRole("button", { name: "Submit fictional successful payment" }).press("Enter");
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.getByText(/only a verified payment event/i)).toBeVisible();

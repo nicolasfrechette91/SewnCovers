@@ -734,6 +734,49 @@ ORDER_STATES = (
     "manual_review_required",
 )
 RESERVATION_STATES = ("reserved", "promoted", "released")
+LEGAL_DOCUMENT_TYPES = (
+    "accessibility",
+    "commerce",
+    "privacy",
+    "security",
+    "terms",
+    "tracking",
+    "uploads",
+)
+ACKNOWLEDGEMENT_PURPOSES = ("account_terms", "sandbox_checkout", "upload_rights")
+CONSENT_PURPOSES = ("optional_product_analytics",)
+CONSENT_STATUSES = ("accepted", "rejected", "withdrawn", "gpc_restricted")
+ANALYTICS_EVENT_TYPES = (
+    "checkout_started",
+    "configurator_stage_completed",
+    "configurator_stage_viewed",
+    "order_stage_changed",
+    "pattern_category_selected",
+    "payment_completed_sandbox",
+    "project_saved",
+    "quote_created",
+    "visualization_failed",
+    "visualization_fallback",
+)
+PRODUCTION_WORK_STATES = (
+    "review",
+    "approved",
+    "in_production",
+    "quality_check",
+    "ready_for_fulfilment",
+    "on_hold",
+    "cancelled",
+)
+QUALITY_STATES = ("not_checked", "passed", "failed")
+CHECKLIST_STATES = ("pending", "complete", "failed")
+ISSUE_STATES = ("open", "resolved")
+ISSUE_CODES = (
+    "asset_mismatch",
+    "configuration_question",
+    "manual_review",
+    "quality_failure",
+    "specification_question",
+)
 
 
 class PriceBook(Base):
@@ -1107,8 +1150,330 @@ class AuditEvent(Base):
     )
 
 
+class LegalDocument(Base):
+    """Immutable, versioned demonstration legal-information document."""
+
+    __tablename__ = "legal_documents"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_legal_documents"),
+        UniqueConstraint("document_type", "version", name="uq_legal_document_version"),
+        CheckConstraint(
+            f"document_type IN ({_sql_values(LEGAL_DOCUMENT_TYPES)})",
+            name="ck_legal_documents_type_supported",
+        ),
+        CheckConstraint("version >= 1", name="ck_legal_documents_version_positive"),
+        CheckConstraint(
+            "length(title) BETWEEN 1 AND 160", name="ck_legal_documents_title_length"
+        ),
+        CheckConstraint(
+            "length(body) BETWEEN 1 AND 12000", name="ck_legal_documents_body_length"
+        ),
+        Index("ix_legal_documents_current", "document_type", "version"),
+    )
+
+    id: Mapped[str] = mapped_column(String(22), nullable=False)
+    document_type: Mapped[str] = mapped_column(String(24), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    body: Mapped[str] = mapped_column(String(12000), nullable=False)
+    effective_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    review_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utc_now
+    )
+
+
+class LegalAcknowledgement(Base):
+    """Minimal account-owned reference to an immutable legal version."""
+
+    __tablename__ = "legal_acknowledgements"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_legal_acknowledgements"),
+        UniqueConstraint(
+            "account_id", "document_id", "purpose", name="uq_legal_acknowledgement"
+        ),
+        CheckConstraint(
+            f"purpose IN ({_sql_values(ACKNOWLEDGEMENT_PURPOSES)})",
+            name="ck_legal_acknowledgements_purpose_supported",
+        ),
+        Index("ix_legal_acknowledgements_account", "account_id", "acknowledged_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, autoincrement=True, nullable=False)
+    account_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey("customer_accounts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    document_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey("legal_documents.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    purpose: Mapped[str] = mapped_column(String(32), nullable=False)
+    acknowledged_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utc_now
+    )
+
+
+class AnalyticsConsentDecision(Base):
+    """Append-only versioned optional-analytics decision."""
+
+    __tablename__ = "analytics_consent_decisions"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_analytics_consent_decisions"),
+        CheckConstraint(
+            f"purpose IN ({_sql_values(CONSENT_PURPOSES)})",
+            name="ck_analytics_consent_purpose_supported",
+        ),
+        CheckConstraint(
+            f"status IN ({_sql_values(CONSENT_STATUSES)})",
+            name="ck_analytics_consent_status_supported",
+        ),
+        CheckConstraint(
+            "document_version >= 1", name="ck_analytics_consent_version_positive"
+        ),
+        CheckConstraint(
+            "(account_id IS NOT NULL AND guest_id_hash IS NULL) OR "
+            "(account_id IS NULL AND length(guest_id_hash) = 64)",
+            name="ck_analytics_consent_subject",
+        ),
+        Index("ix_analytics_consent_account", "account_id", "decided_at"),
+        Index("ix_analytics_consent_guest", "guest_id_hash", "decided_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, autoincrement=True, nullable=False)
+    account_id: Mapped[str | None] = mapped_column(
+        String(22), ForeignKey("customer_accounts.id", ondelete="CASCADE")
+    )
+    guest_id_hash: Mapped[str | None] = mapped_column(String(64))
+    purpose: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    document_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    privacy_signal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utc_now
+    )
+
+
+class AnalyticsEvent(Base):
+    """Allowlisted, bounded optional product event without arbitrary JSON."""
+
+    __tablename__ = "analytics_events"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_analytics_events"),
+        UniqueConstraint(
+            "subject_key", "client_event_id", name="uq_analytics_event_retry"
+        ),
+        CheckConstraint(
+            f"event_type IN ({_sql_values(ANALYTICS_EVENT_TYPES)})",
+            name="ck_analytics_events_type_supported",
+        ),
+        CheckConstraint(
+            "length(subject_key) = 64", name="ck_analytics_events_subject_hash"
+        ),
+        CheckConstraint(
+            "length(client_event_id) BETWEEN 8 AND 64",
+            name="ck_analytics_events_client_id",
+        ),
+        Index("ix_analytics_events_received", "received_at", "event_type"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, autoincrement=True, nullable=False)
+    account_id: Mapped[str | None] = mapped_column(
+        String(22), ForeignKey("customer_accounts.id", ondelete="SET NULL")
+    )
+    subject_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    client_event_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(48), nullable=False)
+    dimension: Mapped[str | None] = mapped_column(String(40))
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utc_now
+    )
+
+
+class ProductionWork(Base):
+    """Conflict-safe production work derived from one immutable paid-order line."""
+
+    __tablename__ = "production_work"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_production_work"),
+        UniqueConstraint(
+            "order_id", "line_index", name="uq_production_work_order_line"
+        ),
+        CheckConstraint(
+            f"state IN ({_sql_values(PRODUCTION_WORK_STATES)})",
+            name="ck_production_work_state_supported",
+        ),
+        CheckConstraint(
+            f"quality_state IN ({_sql_values(QUALITY_STATES)})",
+            name="ck_production_work_quality_supported",
+        ),
+        CheckConstraint("revision >= 1", name="ck_production_work_revision_positive"),
+        Index("ix_production_work_queue", "state", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(22), nullable=False)
+    order_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey("customer_orders.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    line_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    configuration_identity: Mapped[str] = mapped_column(String(64), nullable=False)
+    specification_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    specification: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    asset_checksum: Mapped[str | None] = mapped_column(String(64))
+    asset_processing_version: Mapped[str | None] = mapped_column(String(32))
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    quality_state: Mapped[str] = mapped_column(String(24), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    claimed_by: Mapped[str | None] = mapped_column(
+        String(22), ForeignKey("customer_accounts.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utc_now
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utc_now
+    )
+
+
+class ProductionChecklistResult(Base):
+    __tablename__ = "production_checklist_results"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_production_checklist_results"),
+        UniqueConstraint("work_id", "item_key", name="uq_production_checklist_item"),
+        CheckConstraint(
+            f"status IN ({_sql_values(CHECKLIST_STATES)})",
+            name="ck_production_checklist_status_supported",
+        ),
+        CheckConstraint(
+            "item_key IN ('configuration','asset','materials','construction','final')",
+            name="ck_production_checklist_item_supported",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, autoincrement=True, nullable=False)
+    work_id: Mapped[str] = mapped_column(
+        String(22), ForeignKey("production_work.id", ondelete="CASCADE"), nullable=False
+    )
+    item_key: Mapped[str] = mapped_column(String(24), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    actor_account_id: Mapped[str | None] = mapped_column(
+        String(22), ForeignKey("customer_accounts.id", ondelete="SET NULL")
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ProductionIssue(Base):
+    __tablename__ = "production_issues"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_production_issues"),
+        CheckConstraint(
+            f"code IN ({_sql_values(ISSUE_CODES)})",
+            name="ck_production_issues_code_supported",
+        ),
+        CheckConstraint(
+            f"state IN ({_sql_values(ISSUE_STATES)})",
+            name="ck_production_issues_state_supported",
+        ),
+        CheckConstraint(
+            "length(reason) BETWEEN 3 AND 500",
+            name="ck_production_issues_reason_length",
+        ),
+        Index("ix_production_issues_work", "work_id", "state"),
+    )
+
+    id: Mapped[str] = mapped_column(String(22), nullable=False)
+    work_id: Mapped[str] = mapped_column(
+        String(22), ForeignKey("production_work.id", ondelete="CASCADE"), nullable=False
+    )
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason: Mapped[str] = mapped_column(String(500), nullable=False)
+    state: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_by: Mapped[str | None] = mapped_column(
+        String(22), ForeignKey("customer_accounts.id", ondelete="SET NULL")
+    )
+    resolved_by: Mapped[str | None] = mapped_column(
+        String(22), ForeignKey("customer_accounts.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utc_now
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ProductionHistory(Base):
+    __tablename__ = "production_history"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_production_history"),
+        Index("ix_production_history_work", "work_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, autoincrement=True, nullable=False)
+    work_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey("production_work.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    actor_account_id: Mapped[str | None] = mapped_column(
+        String(22), ForeignKey("customer_accounts.id", ondelete="SET NULL")
+    )
+    action: Mapped[str] = mapped_column(String(48), nullable=False)
+    from_state: Mapped[str | None] = mapped_column(String(32))
+    to_state: Mapped[str | None] = mapped_column(String(32))
+    reason_code: Mapped[str | None] = mapped_column(String(32))
+    reason: Mapped[str | None] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utc_now
+    )
+
+
+class ProductionPacket(Base):
+    __tablename__ = "production_packets"
+    __table_args__ = (
+        PrimaryKeyConstraint("id", name="pk_production_packets"),
+        UniqueConstraint(
+            "work_id", "input_checksum", name="uq_production_packet_input"
+        ),
+        CheckConstraint(
+            "length(checksum) = 64 AND length(input_checksum) = 64",
+            name="ck_production_packet_checksums",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(22), nullable=False)
+    work_id: Mapped[str] = mapped_column(
+        String(22),
+        ForeignKey("production_work.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    generator_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    input_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utc_now
+    )
+
+
 class ImmutableCommerceSnapshotError(RuntimeError):
     """Reject mutation of published pricing and frozen quote/order snapshots."""
+
+
+@event.listens_for(LegalDocument, "before_update")
+@event.listens_for(LegalDocument, "before_delete")
+def _reject_legal_document_mutation(
+    _mapper: Mapper[LegalDocument], _connection: Connection, _target: LegalDocument
+) -> None:
+    raise ImmutableCommerceSnapshotError(
+        "Legal document versions are immutable; create a new version instead"
+    )
 
 
 @event.listens_for(PriceBook, "before_update")

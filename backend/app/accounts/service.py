@@ -37,6 +37,7 @@ from app.accounts.throttle import (
 from app.commerce.encryption import ShippingCipher, ShippingEncryptionError
 from app.errors import APIProblem, authentication_failed, authentication_required
 from app.persistence.models import (
+    AnalyticsConsentDecision,
     AuthenticatedSession,
     CartLine,
     CommerceQuote,
@@ -44,6 +45,8 @@ from app.persistence.models import (
     CustomerAccount,
     CustomerOrder,
     CustomUpload,
+    LegalAcknowledgement,
+    LegalDocument,
     OrderHistory,
     PaymentAttempt,
     PaymentEvent,
@@ -327,6 +330,39 @@ class AccountService:
                 ).all()
             ],
             orders=orders,
+            legal_acknowledgements=[
+                {
+                    "documentType": document.document_type,
+                    "documentVersion": document.version,
+                    "purpose": acknowledgement.purpose,
+                    "acknowledgedAt": acknowledgement.acknowledged_at.isoformat(),
+                }
+                for acknowledgement, document in self._session.execute(
+                    select(LegalAcknowledgement, LegalDocument)
+                    .join(
+                        LegalDocument,
+                        LegalDocument.id == LegalAcknowledgement.document_id,
+                    )
+                    .where(LegalAcknowledgement.account_id == authenticated.account.id)
+                    .order_by(LegalAcknowledgement.acknowledged_at)
+                ).all()
+            ],
+            analytics_consent=[
+                {
+                    "purpose": decision.purpose,
+                    "status": decision.status,
+                    "documentVersion": decision.document_version,
+                    "privacySignal": decision.privacy_signal,
+                    "decidedAt": decision.decided_at.isoformat(),
+                }
+                for decision in self._session.scalars(
+                    select(AnalyticsConsentDecision)
+                    .where(
+                        AnalyticsConsentDecision.account_id == authenticated.account.id
+                    )
+                    .order_by(AnalyticsConsentDecision.decided_at)
+                ).all()
+            ],
         )
 
     def delete_account(

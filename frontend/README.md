@@ -185,7 +185,15 @@ Pattern size uses a labeled native range input plus visible Smaller and Larger n
 
 The preview shell is a semantic figure. Its caption includes Shape, Material, Fit preference, Closure / access, Edge finish, Pattern, every shape-specific dimension, Thickness, and Pattern scale, so the decorative SVG and gradient are hidden from assistive technology without losing information. Before completion, the figure stays visible with an honest shape-specific message and `Invalid or incomplete` or `Not selected` values; it never invents measurements or silently chooses a pattern. Forced-colors CSS replaces decorative geometry with system-color outlines and surfaces. The control transitions retain reduced-motion suppression.
 
-Photorealistic or interactive 3D rendering, manufacturing output, pricing, cart, and checkout remain deferred.
+Task 10.5 adds an optional isolated WebGL renderer for Square, Rectangle, and
+Box / bench. It is loaded only on request, keeps entered values separate from
+normalized display geometry, supports pointer/touch/keyboard views and zoom,
+and labels versioned `approximate-cover-v1` output as non-manufacturing. The
+complete SVG remains the fallback for WebGL absence/failure, reduced-capability
+selection, and expired or unauthorized private textures. Private derivatives
+use short-lived authorization, `no-store` fetches, temporary object URLs, and
+explicit GPU/object-URL cleanup; originals and expiring URLs never enter saved
+snapshots. Photorealism and manufacturing output remain unimplemented.
 
 ## Configuration review and summary output
 
@@ -243,7 +251,19 @@ npm test
 
 The existing Node runner remains responsible for environment, typed-client, catalogue, save/share, restoration, and Phase 6 integration tests. Exact-pinned `tsx`, `jsdom`, and React Testing Library development dependencies add client-component interaction coverage without changing the production dependency set. No coverage-report command is currently configured.
 
-The 89-test suite covers all five shapes, tapered and equal-face rules, associated guidance/errors, shape-change confirmation, cover-detail controls, preview and review output, legacy and expanded restoration, save payloads, decimal/unit behavior, catalogue states, retries, immutable-save recovery, session-only token storage, guest account states, private/share distinctions, complete version summaries, the custom-upload lifecycle, server-owned cart changes, role denial/allowance, production specifications, financial summaries, and tracking-link allowlisting. Component assertions prefer accessible names, roles, controls, and visible recovery text; mocked clients, controlled promises, mocked fetch, and deterministic timers keep all request and failure paths local and repeatable.
+The 93-test suite covers all five shapes, tapered and equal-face rules,
+associated guidance/errors, shape-change confirmation, cover-detail controls,
+preview and review output, legacy and expanded restoration, save payloads,
+decimal/unit behavior, catalogue states, retries, immutable-save recovery,
+session-only token storage, guest account states, private/share distinctions,
+complete version summaries, the custom-upload lifecycle, server-owned cart
+changes, role denial/allowance, production specifications, financial summaries,
+tracking-link allowlisting, all three advanced-preview shapes,
+WebGL/private-texture fallbacks, Global Privacy Control, and
+legal/trust/authorization surfaces. Component assertions prefer accessible
+names, roles, controls, and visible recovery text; mocked clients, controlled
+promises, mocked fetch, and deterministic timers keep all request and failure
+paths local and repeatable.
 
 ## Playwright shared-design journey
 
@@ -263,7 +283,22 @@ npm run test:e2e
 
 On macOS or Linux, use `SEWNCOVERS_GITHUB_PAGES=true npm run test:e2e`. The runner builds the real static export with a local test-only Google Fonts response, serves `out/` from a single-process loopback server, and blocks every browser origin except that server and `api.sewncovers.test`. Playwright intercepts the reserved `.test` origin before DNS and fulfills patterns, design creation, and design retrieval entirely in memory, so the journey cannot contact Neon, Render, Google Fonts, or another external service.
 
-The eight-scenario Chromium journey uses accessible roles, names, status regions, visible values, and native controls. In addition to the guest save/restore and accessibility journeys, intercepted account coverage registers, restores and expires a session, lists/renames/deletes a project, opens history, appends a version, creates/restores/revokes a share, exports data, signs out/in, and deletes the account. Custom-upload coverage transfers a generated local PNG, observes fail-closed/pending, failed, rejected, and approved states, selects the approved texture with the keyboard, checks the repeat preview and mobile overflow, and confirms referenced-asset deletion. Commerce coverage uses keyboard activation from server estimate through quote, cart, hosted fictional checkout, authoritative return status, customer-role admin denial, and administrator production review. It covers 320×568, 768×1024, and 1440×900 in both root and `/SewnCovers/` modes without production writes.
+The ten-scenario Chromium journey uses accessible roles, names, status regions,
+visible values, and native controls. In addition to the guest save/restore and
+accessibility journeys, intercepted account coverage registers, restores and
+expires a session, lists/renames/deletes a project, opens history, appends a
+version, creates/restores/revokes a share, exports data, signs out/in, and
+deletes the account. Custom-upload coverage transfers a generated local PNG,
+observes fail-closed/pending, failed, rejected, and approved states, selects the
+approved texture with the keyboard, checks the repeat preview and mobile
+overflow, and confirms referenced-asset deletion. Commerce coverage uses
+keyboard activation from server estimate through quote, cart, hosted fictional
+checkout, authoritative return status, customer-role admin denial, and
+administrator production review. Task 10.5 coverage exercises WebGL-supported
+and forced-unavailable fallbacks, consent, legal/trust, production checklist,
+issue/QC/packet, suppressed analytics, and readiness. It covers `320×568`,
+`768×1024`, and `1440×900` in both root and `/SewnCovers/` modes without
+production writes.
 
 ## Global layout components
 
@@ -274,7 +309,14 @@ Reusable server-compatible layout components live in `components/layout/` and ar
 - `SiteFooter` renders the documented SewnCovers portfolio-prototype identity and a build-time year. Optional typed footer navigation is omitted from the integrated frame until real destinations are defined.
 - Internal `next/link` destinations remain application-relative because Next.js applies the configured `/SewnCovers` base path automatically in GitHub Pages builds. Public image paths continue to use the existing build-time base-path strategy.
 
-Legal, contact, social, search, and additional product links remain deferred. The local `/account/`, `/projects/`, `/commerce/`, `/cart/`, `/orders/`, `/admin/`, and checkout routes are static-export-compatible shells whose private and commercial data always comes from backend-authorized API calls; they are not available on the live site until a separately authorized deployment and migration.
+Versioned demonstration legal information, Trust, and placeholder `security.txt`
+are directly navigable under root and `/SewnCovers/`; qualified legal,
+operational, accessibility, and security review remain outstanding. The local
+`/account/`, `/projects/`, `/commerce/`, `/cart/`, `/orders/`, `/admin/`, legal,
+trust, and checkout routes are static-export-compatible shells whose private
+and commercial data always comes from backend-authorized API calls; they are not
+available on the live site until a separately authorized deployment and
+migration.
 
 ## Landing page
 

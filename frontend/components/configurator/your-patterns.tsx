@@ -22,6 +22,7 @@ import {
   sha256File,
   type CustomUpload,
 } from "@/services/account-api";
+import { assuranceApi } from "@/services/assurance-api";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -74,6 +75,7 @@ export function YourPatterns() {
   const [phase, setPhase] = useState<"idle" | "loading" | "uploading">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rightsAcknowledged, setRightsAcknowledged] = useState(false);
 
   const load = useCallback(async () => {
     if (auth.status !== "authenticated") return;
@@ -125,8 +127,17 @@ export function YourPatterns() {
 
   const upload = async () => {
     if (auth.status !== "authenticated" || !file || !label.trim()) return;
+    if (!rightsAcknowledged) {
+      setError("Acknowledge upload notice version 1 before uploading.");
+      return;
+    }
     setPhase("uploading"); setError(null); setMessage("Creating a private upload operation…");
     try {
+      await assuranceApi.acknowledge(
+        auth.token,
+        "uploads",
+        "upload_rights",
+      );
       const intent = await accountApi.createUploadIntent(auth.token, label.trim(), file);
       setMessage("Uploading directly to private quarantine storage…");
       await performUpload(intent.upload, file);
@@ -134,6 +145,7 @@ export function YourPatterns() {
       const confirmed = await accountApi.confirmUpload(auth.token, intent.id, await sha256File(file));
       setUploads((items) => [confirmed, ...items.filter((item) => item.id !== confirmed.id)]);
       setFile(null); setLocalPreview(null); setDimensions(null); setLabel("");
+      setRightsAcknowledged(false);
       setMessage("Upload queued. Processing and moderation continue in the durable worker.");
       requestAnimationFrame(() => statusRef.current?.focus());
       void poll(intent.id);
@@ -198,6 +210,23 @@ export function YourPatterns() {
       {auth.status === "initializing" ? <LoadingState className="mt-3" label="Waking your private pattern workspace…" /> : null}
       {auth.status === "authenticated" ? <>
         <p className="mt-3 text-supporting text-text-muted">JPEG, PNG, or WebP; 1 byte–10 MB; 64–4096 px per side; one still frame; at most 16 million pixels. Originals stay private and are never served. An external moderation provider may process the normalized image when configured.</p>
+        <label className="mt-3 flex items-start gap-2 text-supporting">
+          <input
+            className="mt-1 size-5 shrink-0"
+            type="checkbox"
+            checked={rightsAcknowledged}
+            onChange={(event) =>
+              setRightsAcknowledged(event.currentTarget.checked)
+            }
+          />
+          <span>
+            I acknowledge upload notice version 1: I have permission to use
+            this image; configured external moderation may process it;
+            automated approval does not guarantee safety, legality, or
+            ownership; deletion stops project rendering while a protected
+            paid-order copy may be retained.
+          </span>
+        </label>
         <div className="mt-4 rounded-card border border-dashed border-border-strong bg-surface p-control-x py-4" onDragOver={(event) => event.preventDefault()} onDrop={(event: DragEvent<HTMLDivElement>) => { event.preventDefault(); void chooseFile(event.dataTransfer.files[0] ?? null); }}>
           <label htmlFor={`${id}-file`} className="block font-control">Choose a pattern image</label>
           <input ref={fileInput} id={`${id}-file`} type="file" accept="image/jpeg,image/png,image/webp" className="mt-2 block w-full max-w-full" onChange={(event: ChangeEvent<HTMLInputElement>) => void chooseFile(event.target.files?.[0] ?? null)} />

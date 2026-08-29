@@ -51,10 +51,13 @@ SEED_REVISION = "20260729_01"
 CONFIG_REVISION = "20260812_01"
 PRIVATE_REVISION = "20260818_01"
 UPLOAD_REVISION = "20260818_02"
-REVISION = "20260828_01"
+COMMERCE_REVISION = "20260828_01"
+REVISION = "20260829_01"
 HEAD_TABLES = {
     "alembic_version",
     "authenticated_sessions",
+    "analytics_consent_decisions",
+    "analytics_events",
     "audit_events",
     "cart_lines",
     "commerce_quotes",
@@ -63,6 +66,8 @@ HEAD_TABLES = {
     "custom_uploads",
     "customer_accounts",
     "customer_orders",
+    "legal_acknowledgements",
+    "legal_documents",
     "order_history",
     "order_production_assets",
     "patterns",
@@ -70,6 +75,11 @@ HEAD_TABLES = {
     "payment_events",
     "price_books",
     "production_asset_reservations",
+    "production_checklist_results",
+    "production_history",
+    "production_issues",
+    "production_packets",
+    "production_work",
     "project_versions",
     "project_custom_pattern_references",
     "saved_projects",
@@ -220,35 +230,39 @@ def test_revisions_form_one_descriptive_linear_history_and_one_head() -> None:
     script = ScriptDirectory.from_config(alembic_config())
     revisions = list(script.walk_revisions())
 
-    assert len(revisions) == 7
+    assert len(revisions) == 8
     assert revisions[0].revision == REVISION
-    assert revisions[0].down_revision == UPLOAD_REVISION
+    assert revisions[0].down_revision == COMMERCE_REVISION
     assert revisions[0].is_head
-    assert "demonstration commerce" in revisions[0].doc
-    assert revisions[1].revision == UPLOAD_REVISION
-    assert revisions[1].down_revision == PRIVATE_REVISION
+    assert "Task 10.5 operations" in revisions[0].doc
+    assert revisions[1].revision == COMMERCE_REVISION
+    assert revisions[1].down_revision == UPLOAD_REVISION
     assert revisions[1].is_head is False
-    assert "private custom-upload processing" in revisions[1].doc
-    assert revisions[2].revision == PRIVATE_REVISION
-    assert revisions[2].down_revision == CONFIG_REVISION
+    assert "demonstration commerce" in revisions[1].doc
+    assert revisions[2].revision == UPLOAD_REVISION
+    assert revisions[2].down_revision == PRIVATE_REVISION
     assert revisions[2].is_head is False
-    assert "private account workspaces" in revisions[2].doc
-    assert revisions[3].revision == CONFIG_REVISION
-    assert revisions[3].down_revision == SEED_REVISION
+    assert "private custom-upload processing" in revisions[2].doc
+    assert revisions[3].revision == PRIVATE_REVISION
+    assert revisions[3].down_revision == CONFIG_REVISION
     assert revisions[3].is_head is False
-    assert "richer specification choices" in revisions[3].doc
-    assert revisions[4].revision == SEED_REVISION
-    assert revisions[4].down_revision == INDEX_REVISION
+    assert "private account workspaces" in revisions[3].doc
+    assert revisions[4].revision == CONFIG_REVISION
+    assert revisions[4].down_revision == SEED_REVISION
     assert revisions[4].is_head is False
-    assert "canonical public pattern catalogue" in revisions[4].doc
-    assert revisions[5].revision == INDEX_REVISION
-    assert revisions[5].down_revision == BASE_REVISION
+    assert "richer specification choices" in revisions[4].doc
+    assert revisions[5].revision == SEED_REVISION
+    assert revisions[5].down_revision == INDEX_REVISION
     assert revisions[5].is_head is False
-    assert "pattern category and activity filter indexes" in revisions[5].doc
-    assert revisions[6].revision == BASE_REVISION
-    assert revisions[6].down_revision is None
+    assert "canonical public pattern catalogue" in revisions[5].doc
+    assert revisions[6].revision == INDEX_REVISION
+    assert revisions[6].down_revision == BASE_REVISION
     assert revisions[6].is_head is False
-    assert "patterns and immutable cover designs" in revisions[6].doc
+    assert "pattern category and activity filter indexes" in revisions[6].doc
+    assert revisions[7].revision == BASE_REVISION
+    assert revisions[7].down_revision is None
+    assert revisions[7].is_head is False
+    assert "patterns and immutable cover designs" in revisions[7].doc
     assert script.get_heads() == [REVISION]
 
 
@@ -995,7 +1009,7 @@ def test_offline_postgresql_sql_has_schema_indexes_and_exact_seed_inserts() -> N
     assert category_ddl in ddl
     assert activity_ddl in ddl
     assert ddl.index(category_ddl) < ddl.index(activity_ddl)
-    assert ddl.count("CREATE INDEX") == 25
+    assert ddl.count("CREATE INDEX") == 33
     assert "CREATE INDEX ix_patterns_id" not in ddl
     assert "CREATE INDEX ix_cover_designs_public_id" not in ddl
     assert ddl.count("INSERT INTO patterns") == 15

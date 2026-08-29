@@ -21,6 +21,7 @@ from app.accounts.security import (
     token_hash_matches,
 )
 from app.accounts.service import AuthenticatedAccount, utc_now
+from app.assurance.service import create_paid_order_work
 from app.commerce.encryption import ShippingCipher, ShippingEncryptionError
 from app.commerce.providers import (
     CheckoutPayload,
@@ -699,6 +700,8 @@ class CommerceService:
                 attempt.status = "paid"
                 attempt.provider_payment_id = event.payment_id
                 self._session.add_all(promoted)
+                self._session.flush()
+                create_paid_order_work(self._session, order, self._clock())
                 for reservation in self._reservations(attempt.id):
                     self._session.delete(reservation)
                 cart = self._session.get(ShoppingCart, attempt.cart_id)

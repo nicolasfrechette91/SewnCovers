@@ -57,6 +57,7 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
     if (request.method() === "OPTIONS") return route.fulfill({ headers, status: 204 });
     if (path === "/account") return json(route, { email: "pattern@example.com", createdAt: "2026-08-18T09:00:00Z", role: "customer" });
     if (path === "/account/sessions") return json(route, [{ id: 1, createdAt: "2026-08-18T09:00:00Z", expiresAt, revokedAt: null, current: true }]);
+    if (path === "/account/acknowledgements" && request.method() === "POST") return json(route, { id: 1, documentType: "uploads", documentVersion: 1, purpose: "upload_rights", acknowledgedAt: "2026-08-18T12:00:01Z" }, 201);
     if (path === "/patterns") return json(route, []);
     if (path === "/uploads" && request.method() === "GET") {
       const lifecycle = [
@@ -95,6 +96,7 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   });
   await input.setInputFiles({ name: "garden.png", mimeType: "image/png", buffer: Buffer.from(dataUrl.split(",")[1], "base64") });
   await expect(page.getByLabel("Repeating preview of the selected local image")).toBeVisible();
+  await page.getByRole("checkbox", { name: /upload notice version 1/i }).check();
   await page.getByRole("button", { name: "Upload for review" }).press("Enter");
   await expect(page.getByText("My garden repeat")).toBeVisible();
   await expect(page.getByText(/moderation unavailable; approval is fail-closed/)).toBeVisible();

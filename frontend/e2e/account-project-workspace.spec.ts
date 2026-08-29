@@ -74,6 +74,7 @@ test("account workspace preserves immutable history and revocable sharing", asyn
     const method = request.method();
     if (method === "OPTIONS") return route.fulfill({ headers: corsHeaders, status: 204 });
     if (method === "POST" && path === "/auth/register") return json(route, { account: { email: "person@example.com", createdAt: "2026-08-18T09:00:00Z", role: "customer" }, token: sessionToken, expiresAt }, 201);
+    if (method === "POST" && path === "/account/acknowledgements") return json(route, { id: 1, documentType: "terms", documentVersion: 1, purpose: "account_terms", acknowledgedAt: "2026-08-18T09:00:01Z" }, 201);
     if (method === "POST" && path === "/auth/login") return json(route, { account: { email: "person@example.com", createdAt: "2026-08-18T09:00:00Z", role: "customer" }, token: sessionToken, expiresAt });
     if (method === "POST" && ["/auth/logout", "/auth/logout-all"].includes(path)) return route.fulfill({ headers: corsHeaders, status: 204 });
     if (method === "GET" && path === "/account") return json(route, { email: "person@example.com", createdAt: "2026-08-18T09:00:00Z", role: "customer" });
@@ -100,6 +101,7 @@ test("account workspace preserves immutable history and revocable sharing", asyn
   await page.goto(accountPath);
   await page.locator("#register-email").fill("person@example.com");
   await page.locator("#register-password").fill("correct horse battery staple");
+  await page.getByRole("checkbox", { name: /account terms version 1/i }).check();
   await page.locator("#register-password").press("Enter");
   await expect(page.getByRole("heading", { name: "person@example.com" })).toBeVisible();
   expect(await page.evaluate(() => localStorage.length)).toBe(0);

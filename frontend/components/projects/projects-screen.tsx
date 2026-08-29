@@ -82,6 +82,14 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
     const timer = globalThis.setTimeout(() => void load(), 0);
     return () => globalThis.clearTimeout(timer);
   }, [projectId, token]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!shareUrl || state.status !== "ready") return;
+    const timer = globalThis.setTimeout(() => {
+      shareRef.current?.focus();
+      shareRef.current?.select();
+    }, 0);
+    return () => globalThis.clearTimeout(timer);
+  }, [shareUrl, state.status]);
   if (state.status === "loading") return <LoadingState label="Loading project and version history…" />;
   if (state.status === "error") return <div><ErrorMessage>{state.message}</ErrorMessage><Button className="mt-3" variant="secondary" onClick={() => void load()}>Retry project</Button></div>;
   const { detail, versions } = state.value;
@@ -98,7 +106,6 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
       setShareUrl(buildProjectShareUrl(created.shareToken));
       setActionStatus(`Read-only share created for version ${version.versionNumber}.`);
       await load();
-      requestAnimationFrame(() => { shareRef.current?.focus(); shareRef.current?.select(); });
     } catch (error) { setActionError(errorMessage(error)); }
   };
   const removeProject = async () => {

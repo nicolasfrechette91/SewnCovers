@@ -25,10 +25,12 @@ journey with its limitations documented instead of hidden.
 
 The current worktree now extends that deployed case study with five shapes,
 construction choices, materials, fit preferences, and an optional account
-workspace. Task 10.2 adds Argon2id accounts, expiring/revocable hashed bearer
+workspace. Later Phase 10 work adds Argon2id accounts, expiring/revocable hashed bearer
 sessions, private named projects, immutable full-snapshot versions, revocable
-hashed read-only share grants, export, and confirmed deletion. It preserves the
-deployed anonymous immutable-design contract. These additions are local only:
+hashed read-only share grants, private moderated uploads, fictional commerce,
+approximate on-demand WebGL, durable production work, consent-gated first-party
+analytics, immutable legal versions, and evidence-bounded trust/readiness. It
+preserves the deployed anonymous immutable-design contract. These additions are local only:
 they were not migrated or deployed to the live service and should not be read
 as a production availability or security claim.
 
@@ -299,10 +301,12 @@ implemented, undeployed Phase 10 work:
 - Add operational review, monitoring, human escalation, and appeals around the
   implemented fail-closed automated image-moderation boundary; automated
   moderation does not guarantee safety.
-- Expand the domain to richer shapes, construction choices, materials, fit
-  preferences, pricing, quotes, orders, fulfilment, and administration.
-- Complete platform-specific assistive-technology testing and continue testing
-  advanced visualization without weakening the textual specification.
+- Independently validate manufacturing rules, production operations, consent
+  and retention operations, legal content, security assumptions, and readiness
+  configuration before considering deployment.
+- Complete platform-specific assistive-technology, touch-device, browser/GPU,
+  native forced-colors, zoom, and print testing without weakening the textual
+  specification or complete 2D fallback.
 
 ## Links
 

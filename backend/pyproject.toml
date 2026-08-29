@@ -40,6 +40,9 @@ line-length = 88
 [tool.ruff.lint]
 select = ["B", "E", "F", "I", "UP"]
 
+[tool.ruff.lint.per-file-ignores]
+"migrations/versions/*.py" = ["E501"]
+
 [tool.ruff.format]
 quote-style = "double"
 

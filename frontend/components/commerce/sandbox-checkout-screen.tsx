@@ -4,8 +4,16 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { Button, LoadingState } from "@/components/ui";
-import { AccountApiError, withBasePath } from "@/services/account-api";
-import { commerceApi, type SandboxCheckout } from "@/services/commerce-api";
+import {
+  AccountApiError,
+  readSessionToken,
+  withBasePath,
+} from "@/services/account-api";
+import { assuranceApi } from "@/services/assurance-api";
+import {
+  commerceApi,
+  type SandboxCheckout,
+} from "@/services/commerce-api";
 
 import { CommerceError, DemoBanner } from "./demo-banner";
 
@@ -25,27 +33,173 @@ export function SandboxCheckoutScreen() {
   const orderId = params.get("order");
   const [checkout, setCheckout] = useState<SandboxCheckout | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<"success" | "failure" | "cancel" | null>(null);
+  const [busy, setBusy] =
+    useState<"success" | "failure" | "cancel" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [termsAcknowledged, setTermsAcknowledged] = useState(false);
+
   useEffect(() => {
     const timer = globalThis.setTimeout(async () => {
-      if (!sessionId) { setError("The fictional checkout session is missing."); setLoading(false); return; }
-      try { setCheckout(await commerceApi.sandboxCheckout(sessionId)); }
-      catch (caught) { setError(caught instanceof AccountApiError ? caught.message : "The fictional checkout could not be loaded."); }
-      finally { setLoading(false); }
+      if (!sessionId) {
+        setError("The fictional checkout session is missing.");
+        setLoading(false);
+        return;
+      }
+      try {
+        setCheckout(await commerceApi.sandboxCheckout(sessionId));
+      } catch (caught) {
+        setError(
+          caught instanceof AccountApiError
+            ? caught.message
+            : "The fictional checkout could not be loaded.",
+        );
+      } finally {
+        setLoading(false);
+      }
     }, 0);
     return () => globalThis.clearTimeout(timer);
   }, [sessionId]);
-  if (loading) return <LoadingState label="Opening fictional hosted checkout…" />;
-  const finish = async (outcome: "success" | "failure" | "cancel") => {
-    if (!sessionId || !orderId) { setError("The fictional checkout mapping is incomplete."); return; }
-    setBusy(outcome); setError(null);
+
+  if (loading) {
+    return <LoadingState label="Opening fictional hosted checkout…" />;
+  }
+
+  const finish = async (
+    outcome: "success" | "failure" | "cancel",
+  ) => {
+    if (!sessionId || !orderId) {
+      setError("The fictional checkout mapping is incomplete.");
+      return;
+    }
+    if (outcome === "success" && !termsAcknowledged) {
+      setError(
+        "Acknowledge demonstration commerce notice version 1 before continuing.",
+      );
+      return;
+    }
+    setBusy(outcome);
+    setError(null);
     try {
-      await commerceApi.completeSandbox(sessionId, FICTIONAL_SHIPPING, outcome);
-      const target = outcome === "success" ? "/checkout/return/" : "/checkout/cancel/";
-      window.location.assign(`${withBasePath(target)}?order=${encodeURIComponent(orderId)}`);
-    } catch (caught) { setError(caught instanceof AccountApiError ? caught.message : "The fictional payment event failed."); setBusy(null); }
+      const token = readSessionToken();
+      if (outcome === "success" && token) {
+        await assuranceApi.acknowledge(
+          token,
+          "commerce",
+          "sandbox_checkout",
+        );
+      }
+      await commerceApi.completeSandbox(
+        sessionId,
+        FICTIONAL_SHIPPING,
+        outcome,
+      );
+      const target =
+        outcome === "success"
+          ? "/checkout/return/"
+          : "/checkout/cancel/";
+      window.location.assign(
+        withBasePath(target) +
+          "?order=" +
+          encodeURIComponent(orderId),
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof AccountApiError
+          ? caught.message
+          : "The fictional payment event failed.",
+      );
+      setBusy(null);
+    }
   };
-  return <div className="space-y-component"><DemoBanner />{error ? <CommerceError message={error} /> : null}{checkout ? <section className="rounded-panel border-2 border-brand bg-surface p-card shadow-raised"><p className="text-label font-control uppercase text-accent-strong">Fictional hosted checkout</p><h2 className="mt-2 font-display text-page-title font-heading">{checkout.orderReference}</h2><p className="mt-2 text-section-title font-heading">${(checkout.amountMinor / 100).toFixed(2)} CAD estimated subtotal</p><p className="mt-2 text-text-muted">This sandbox has no card fields and cannot charge anyone. It adds deterministic fictional shipping and tax before submitting a signed server-side payment event.</p>
-      <form className="mt-component" onSubmit={(event: FormEvent) => { event.preventDefault(); void finish("success"); }}><fieldset className="grid gap-3 rounded-card bg-surface-subtle p-4 sm:grid-cols-2"><legend className="px-2 font-control">Fixed fictional shipping fixture</legend>{Object.entries(FICTIONAL_SHIPPING).map(([key, value]) => <label key={key} className="grid gap-1 text-label font-control">{key.replace(/([A-Z])/g, " $1")}<input readOnly value={value} className="min-h-11 rounded-control border border-border-strong bg-surface px-3 text-body" /></label>)}</fieldset><div className="mt-4 flex flex-wrap gap-3"><Button type="submit" isLoading={busy === "success"}>Submit fictional successful payment</Button><Button variant="secondary" disabled={busy !== null} onClick={() => void finish("failure")}>Simulate failure</Button><Button variant="secondary" disabled={busy !== null} onClick={() => void finish("cancel")}>Cancel checkout</Button></div></form></section> : null}</div>;
+
+  return (
+    <div className="space-y-component">
+      <DemoBanner />
+      {error ? <CommerceError message={error} /> : null}
+      {checkout ? (
+        <section className="rounded-panel border-2 border-brand bg-surface p-card shadow-raised">
+          <p className="text-label font-control uppercase text-accent-strong">
+            Fictional hosted checkout
+          </p>
+          <h2 className="mt-2 font-display text-page-title font-heading">
+            {checkout.orderReference}
+          </h2>
+          <p className="mt-2 text-section-title font-heading">
+            {"$"}{(checkout.amountMinor / 100).toFixed(2)} CAD estimated
+            subtotal
+          </p>
+          <p className="mt-2 text-text-muted">
+            This sandbox has no card fields and cannot charge anyone. It adds
+            deterministic fictional shipping and tax before submitting a
+            signed server-side payment event.
+          </p>
+          <form
+            className="mt-component"
+            onSubmit={(event: FormEvent) => {
+              event.preventDefault();
+              void finish("success");
+            }}
+          >
+            <fieldset className="grid gap-3 rounded-card bg-surface-subtle p-4 sm:grid-cols-2">
+              <legend className="px-2 font-control">
+                Fixed fictional shipping fixture
+              </legend>
+              {Object.entries(FICTIONAL_SHIPPING).map(([key, value]) => (
+                <label
+                  key={key}
+                  className="grid gap-1 text-label font-control"
+                >
+                  {key.replace(/([A-Z])/g, " $1")}
+                  <input
+                    readOnly
+                    value={value}
+                    className="min-h-11 rounded-control border border-border-strong bg-surface px-3 text-body"
+                  />
+                </label>
+              ))}
+            </fieldset>
+            <label className="mt-4 flex items-start gap-2 text-supporting">
+              <input
+                className="mt-1 size-5 shrink-0"
+                type="checkbox"
+                checked={termsAcknowledged}
+                onChange={(event) =>
+                  setTermsAcknowledged(event.currentTarget.checked)
+                }
+              />
+              <span>
+                I acknowledge demonstration commerce notice version 1:
+                pricing, tax, shipping, payment, refund, production, and
+                fulfilment are fictional sandbox behavior with no charge,
+                manufacturing, delivery, or commercial-availability promise.
+              </span>
+            </label>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button
+                type="submit"
+                disabled={!termsAcknowledged}
+                isLoading={busy === "success"}
+              >
+                Submit fictional successful payment
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={busy !== null}
+                onClick={() => void finish("failure")}
+              >
+                Simulate failure
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={busy !== null}
+                onClick={() => void finish("cancel")}
+              >
+                Cancel checkout
+              </Button>
+            </div>
+          </form>
+        </section>
+      ) : null}
+    </div>
+  );
 }

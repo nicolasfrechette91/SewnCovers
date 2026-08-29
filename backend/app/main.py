@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 
@@ -26,6 +26,7 @@ from app.accounts.schema import (
     SessionCreatedResponse,
     SessionResponse,
 )
+from app.assurance.routes import register_assurance_routes
 from app.commerce.routes import register_commerce_routes
 from app.designs.api import create_design, get_design
 from app.designs.schema import DesignResponse
@@ -128,6 +129,30 @@ OPENAPI_TAGS = [
             "audit controls."
         ),
     },
+    {
+        "name": "Legal and consent",
+        "description": (
+            "Versioned review-required information and account acknowledgements."
+        ),
+    },
+    {
+        "name": "Analytics",
+        "description": (
+            "Consent-gated first-party product events and suppressed aggregates."
+        ),
+    },
+    {
+        "name": "Production operations",
+        "description": (
+            "Paid-order-derived work, checklist, issues, quality control, and packets."
+        ),
+    },
+    {
+        "name": "Trust",
+        "description": (
+            "Evidence-bounded public metadata and read-only readiness checks."
+        ),
+    },
 ]
 
 
@@ -165,7 +190,7 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             "use the documented field-aware `APIErrorResponse` contract; `/health` "
             "uses its dedicated health-state response."
         ),
-        version="0.3.0",
+        version="0.4.0",
         docs_url="/docs",
         openapi_url="/openapi.json",
         redoc_url="/redoc",
@@ -182,6 +207,31 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         expose_headers=cors.exposed_headers,
         max_age=cors.preflight_max_age_seconds,
     )
+
+    @application.middleware("http")
+    async def security_response_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+        )
+        response.headers["X-Frame-Options"] = "DENY"
+        if request.url.path not in {"/docs", "/redoc", "/openapi.json"}:
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'none'; frame-ancestors 'none'"
+            )
+        if (
+            request.headers.get("authorization")
+            or request.url.path.startswith(
+                ("/account", "/admin", "/assets", "/production-assets")
+            )
+            or request.url.path in {"/health", "/readiness"}
+        ):
+            response.headers["Cache-Control"] = "private, no-store, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+        return response
+
     application.add_api_route(
         "/",
         read_root,
@@ -631,6 +681,7 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         responses={404: private_errors[404], 422: private_errors[422]},
     )
     register_commerce_routes(application)
+    register_assurance_routes(application)
     return application
 
 
