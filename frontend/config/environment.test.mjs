@@ -20,6 +20,7 @@ assert.deepEqual(transpiled.diagnostics, []);
 
 const {
   createPublicEnvironment,
+  parsePublicApiOrigin,
   parsePublicApiUrl,
   PublicEnvironmentError,
 } = await import(
@@ -44,6 +45,10 @@ test("accepts absolute HTTP and HTTPS API URLs", () => {
     parsePublicApiUrl("https://api.example.com/v1"),
     "https://api.example.com/v1",
   );
+  assert.equal(
+    parsePublicApiOrigin("https://api.example.com/v1"),
+    "https://api.example.com",
+  );
 });
 
 test("trims whitespace and removes trailing slashes", () => {
@@ -56,6 +61,8 @@ test("trims whitespace and removes trailing slashes", () => {
 test("represents an absent optional API URL explicitly", () => {
   assert.equal(parsePublicApiUrl(undefined), undefined);
   assert.equal(parsePublicApiUrl("   "), undefined);
+  assert.equal(parsePublicApiOrigin(undefined), undefined);
+  assert.equal(parsePublicApiOrigin("   "), undefined);
 });
 
 test("rejects malformed URLs and unsupported schemes", () => {
@@ -69,6 +76,14 @@ test("rejects malformed URLs and unsupported schemes", () => {
   assert.throws(
     () => parsePublicApiUrl("ftp://api.example.com"),
     /NEXT_PUBLIC_API_URL/,
+  );
+  assert.throws(
+    () => parsePublicApiOrigin("not a URL"),
+    (error) =>
+      error instanceof PublicEnvironmentError &&
+      error.category === "configuration" &&
+      error.code !== "ERR_INVALID_URL" &&
+      /NEXT_PUBLIC_API_URL/.test(error.message),
   );
 });
 

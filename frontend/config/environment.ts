@@ -53,6 +53,14 @@ export function parsePublicApiUrl(
   return `${parsed.origin}${normalizedPath}`;
 }
 
+export function parsePublicApiOrigin(
+  value: string | undefined,
+): string | undefined {
+  const apiUrl = parsePublicApiUrl(value);
+
+  return apiUrl === undefined ? undefined : new URL(apiUrl).origin;
+}
+
 export function createPublicEnvironment(
   apiUrlValue: string | undefined,
 ): PublicEnvironment {

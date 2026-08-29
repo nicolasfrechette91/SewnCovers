@@ -3,14 +3,16 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { SiteFooter, SiteHeader } from "@/components/layout";
 import { ConsentPreferences } from "@/components/assurance";
+import { parsePublicApiOrigin } from "@/config/environment";
 import { AuthProvider } from "@/context/auth";
 import { ConfigurationProvider } from "@/context/configuration";
 
 import "./globals.css";
 
-const publicApiOrigin = new URL(
-  process.env.NEXT_PUBLIC_API_URL as string,
-).origin;
+const publicApiOrigin = parsePublicApiOrigin(
+  process.env.NEXT_PUBLIC_API_URL,
+);
+const publicApiConnectSource = publicApiOrigin ? ` ${publicApiOrigin}` : "";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,7 +43,7 @@ export default function RootLayout({
       <head>
         <meta
           httpEquiv="Content-Security-Policy"
-          content={`default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' ${publicApiOrigin}; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`}
+          content={`default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'${publicApiConnectSource}; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`}
         />
         <meta name="referrer" content="no-referrer" />
       </head>
