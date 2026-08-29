@@ -9,10 +9,10 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 ## Current handoff
 
 - Current phase: Phase 10 - Future commercial expansion
-- Current task: 10.3 - Deferred - custom uploads using object storage, processing, moderation, and production assets
+- Current task: 10.4 - Deferred - pricing, quotes, cart, payments, orders, manufacturing, fulfilment, and administration
 - Status: Completed
-- Overall progress: 56 / 58 tasks completed
-- Up next: 10.4 - Deferred - pricing, quotes, cart, payments, orders, manufacturing, fulfilment, and administration
+- Overall progress: 57 / 58 tasks completed
+- Up next: 10.5 - Deferred - advanced visualization, production platform, analytics, legal, and trust capabilities
 - Blockers: None
 
 ## Phase 1: Project foundation
@@ -120,7 +120,7 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
 | 10.1 | Deferred - richer shapes, construction choices, materials, fit preferences, and measurement guidance | Completed |
 | 10.2 | Deferred - customer accounts, saved projects, design versions, and privacy controls | Completed |
 | 10.3 | Deferred - custom uploads using object storage, processing, moderation, and production assets | Completed |
-| 10.4 | Deferred - pricing, quotes, cart, payments, orders, manufacturing, fulfilment, and administration | Not started |
+| 10.4 | Deferred - pricing, quotes, cart, payments, orders, manufacturing, fulfilment, and administration | Completed |
 | 10.5 | Deferred - advanced visualization, production platform, analytics, legal, and trust capabilities | Not started |
 
 ## Decision log
@@ -770,3 +770,61 @@ Allowed statuses are `Not started`, `In progress`, `Completed`, and `Blocked`. A
   moderation protocols were not exercised. No production mutation, deployment,
   workflow, or remote Git action occurred. All changes remain local, unstaged,
   and uncommitted, and Task 10.4 was not started.
+
+### 2026-08-28 - Demonstration commerce and operations
+
+- Migration `20260828_01`, after `20260818_02`, adds customer/admin roles,
+  immutable published price books and quotes, one account cart, frozen orders,
+  payment attempts/events, exact custom-asset reservations and order-owned
+  copies, shipments, append-only order history, and administrative audit events.
+  The seeded demonstration price model is server-owned, CAD-only, versioned,
+  Decimal-based, rounded half-up to integer minor units, and covers the existing
+  shape measurements plus material, fit, closure/access, edge finish, pattern,
+  and quantity inputs. Quotes default to seven days, remain readable after
+  expiry, and identify tax and shipping as checkout-time amounts.
+- Authenticated checkout revalidates ownership, configuration, quote, cart,
+  currency, price-book snapshot, and custom derivative before transactionally
+  freezing a pending order and idempotent provider attempt. The deterministic
+  sandbox uses only fictional hosted-checkout data. The configured-only Stripe
+  Checkout adapter creates a provider-hosted page, never handles card fields,
+  and cannot start in production without the complete webhook, encryption,
+  currency, tax, shipping, origin, provider, and administrator configuration.
+  Redirects remain informational; only a raw-body signature-verified, mapped,
+  amount/currency-checked, uniquely persisted webhook can change payment state.
+- Customer order history and detail show authoritative financial,
+  manufacturing, fulfilment, and allowlisted shipment state. The explicit state
+  graph rejects skips and reversals. The role-protected administrator area can
+  draft/publish price books, review immutable production specifications, issue
+  structured manual-review decisions, advance valid manufacturing states,
+  record allowlisted carrier references, request confirmed full sandbox refunds,
+  inspect short-lived production-asset access, and read audit history. Existing
+  accounts can be promoted only through the explicit local CLI; registration and
+  browser requests cannot choose roles.
+- Shipping details are minimized and AES-256-GCM encrypted with a random nonce,
+  versioned key identifier, and order-bound associated data. General APIs,
+  public shares, logs, exports, and browser bundles do not expose ciphertext,
+  credentials, addresses, payment payloads, or administrative secrets. Pending
+  checkout reservations are released on failure/expiry; verified payment copies
+  the exact checksum-pinned private derivative into an order namespace and only
+  short-lived authorized access is available. Active fulfilment blocks account
+  deletion; terminal orders detach the account and remove personal shipping
+  data while retaining non-personal integrity snapshots. These are documented
+  portfolio limitations, not legal retention or compliance claims.
+- Final local verification passes frontend configuration checks, ESLint, strict
+  TypeScript, all 89 frontend tests, ordinary and `/SewnCovers/` static builds
+  and 126-file/14-route export scans, plus all eight Playwright scenarios in
+  both base-path modes with keyboard operation and 320, 768, and 1440 px
+  viewports. Backend verification passes Ruff format/lint, `pip check`, all 270
+  tests, clean creation and upgrade from `20260818_02`, schema parity, OpenAPI,
+  pricing/rounding, authorization, CLI, webhook replay/order/mismatch, refund,
+  encryption, deletion, and production-asset pinning checks. Reporting-only npm
+  audits currently report six high findings overall and four high findings with
+  development dependencies omitted; no moderate findings or unrelated upgrade
+  were reported in this run.
+- Task 10.4 is `Completed`, progress is 57 / 58, all 58 roadmap deliverables
+  retain their exact wording, and the exact following roadmap task is 10.5 -
+  Deferred - advanced visualization, production platform, analytics, legal, and
+  trust capabilities. All commerce is local, unmistakably demonstrational, and
+  undeployed. No live payment, tax, refund, shipment, provider customer, webhook,
+  production migration, remote action, or Git mutation occurred. All changes
+  remain local, unstaged, and uncommitted, and Task 10.5 was not started.

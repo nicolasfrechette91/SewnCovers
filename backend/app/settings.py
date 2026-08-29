@@ -1,5 +1,6 @@
 """Typed, side-effect-free environment settings for the FastAPI application."""
 
+import base64
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -15,6 +16,7 @@ StorageBackend = Literal["filesystem", "s3"]
 ModerationProviderName = Literal[
     "none", "development-approve", "development-reject", "openai"
 ]
+CommerceMode = Literal["sandbox", "production"]
 CorsMethod = Literal["DELETE", "GET", "PATCH", "POST", "PUT"]
 CorsHeader = Literal["Authorization", "Content-Type"]
 
@@ -163,6 +165,55 @@ class Settings(BaseSettings):
         max_length=80,
         validation_alias="OPENAI_MODERATION_MODEL",
     )
+    commerce_enabled: bool = Field(default=False, validation_alias="COMMERCE_ENABLED")
+    commerce_mode: CommerceMode = Field(
+        default="sandbox", validation_alias="COMMERCE_MODE"
+    )
+    commerce_currency: str = Field(
+        default="CAD",
+        min_length=3,
+        max_length=3,
+        validation_alias="COMMERCE_CURRENCY",
+    )
+    quote_valid_days: int = Field(
+        default=7, ge=1, le=30, validation_alias="QUOTE_VALID_DAYS"
+    )
+    checkout_return_url: str | None = Field(
+        default=None, validation_alias="COMMERCE_CHECKOUT_RETURN_URL"
+    )
+    stripe_secret_key: SecretStr | None = Field(
+        default=None, exclude=True, repr=False, validation_alias="STRIPE_SECRET_KEY"
+    )
+    stripe_webhook_secret: SecretStr | None = Field(
+        default=None,
+        exclude=True,
+        repr=False,
+        validation_alias="STRIPE_WEBHOOK_SECRET",
+    )
+    shipping_encryption_key: SecretStr | None = Field(
+        default=None,
+        exclude=True,
+        repr=False,
+        validation_alias="SHIPPING_ENCRYPTION_KEY",
+    )
+    shipping_encryption_key_id: str = Field(
+        default="sandbox-v1",
+        min_length=1,
+        max_length=32,
+        validation_alias="SHIPPING_ENCRYPTION_KEY_ID",
+    )
+    commerce_tax_behavior: Literal["provider"] = Field(
+        default="provider", validation_alias="COMMERCE_TAX_BEHAVIOR"
+    )
+    commerce_shipping_countries: str = Field(
+        default="CA",
+        min_length=2,
+        max_length=80,
+        validation_alias="COMMERCE_SHIPPING_COUNTRIES",
+    )
+    commerce_admin_contact: str | None = Field(
+        default=None, max_length=254, validation_alias="COMMERCE_ADMIN_CONTACT"
+    )
 
     @field_validator("environment", mode="before")
     @classmethod
@@ -221,7 +272,98 @@ class Settings(BaseSettings):
             raise ValueError(
                 "Development moderation providers are forbidden in production"
             )
+        if self.commerce_mode == "production" and self.environment != "production":
+            raise ValueError("COMMERCE_MODE=production requires ENVIRONMENT=production")
+        if self.environment == "production" and self.commerce_enabled:
+            required = (
+                self.checkout_return_url,
+                self.stripe_secret_key,
+                self.stripe_webhook_secret,
+                self.shipping_encryption_key,
+                self.shipping_encryption_key_id,
+                self.commerce_currency,
+                self.commerce_tax_behavior,
+                self.commerce_shipping_countries,
+                self.commerce_admin_contact,
+            )
+            if self.commerce_mode != "production" or not all(required):
+                raise ValueError(
+                    "Production commerce requires complete provider, webhook, "
+                    "encryption, currency, tax, shipping, and administrative "
+                    "configuration"
+                )
+            try:
+                key = base64.b64decode(
+                    self.shipping_encryption_key.get_secret_value(), validate=True
+                )
+            except (ValueError, TypeError):
+                key = b""
+            if len(key) != 32:
+                raise ValueError(
+                    "SHIPPING_ENCRYPTION_KEY must be base64-encoded 32-byte key"
+                )
+            return_url = urlsplit(self.checkout_return_url or "")
+            frontend = urlsplit(self.frontend_origin or "")
+            if (return_url.scheme, return_url.netloc) != (
+                frontend.scheme,
+                frontend.netloc,
+            ):
+                raise ValueError(
+                    "COMMERCE_CHECKOUT_RETURN_URL must use the configured "
+                    "frontend origin"
+                )
         return self
+
+    @field_validator("commerce_currency", mode="before")
+    @classmethod
+    def normalize_commerce_currency(cls, value: object) -> object:
+        if isinstance(value, str):
+            normalized = value.strip().upper()
+            if normalized != "CAD":
+                raise ValueError("Only the configured CAD currency is supported")
+            return normalized
+        return value
+
+    @field_validator("checkout_return_url", mode="before")
+    @classmethod
+    def normalize_checkout_return_url(cls, value: object) -> object:
+        if isinstance(value, str):
+            candidate = value.strip()
+            if not candidate:
+                return None
+            try:
+                parsed = _HTTP_URL_ADAPTER.validate_python(candidate)
+            except ValidationError:
+                raise ValueError(
+                    "COMMERCE_CHECKOUT_RETURN_URL must be an absolute HTTP(S) URL"
+                ) from None
+            split = urlsplit(str(parsed))
+            if (
+                split.username is not None
+                or split.password is not None
+                or split.query
+                or split.fragment
+                or not split.path.rstrip("/").endswith("/checkout/return")
+            ):
+                raise ValueError(
+                    "COMMERCE_CHECKOUT_RETURN_URL must be an absolute checkout "
+                    "return path without credentials, query, or fragment"
+                )
+            return str(parsed).rstrip("/")
+        return value
+
+    @property
+    def shipping_country_codes(self) -> tuple[str, ...]:
+        values = tuple(
+            item.strip().upper()
+            for item in self.commerce_shipping_countries.split(",")
+            if item.strip()
+        )
+        if not values or any(len(item) != 2 or not item.isalpha() for item in values):
+            raise ValueError(
+                "COMMERCE_SHIPPING_COUNTRIES must contain ISO alpha-2 codes"
+            )
+        return values
 
     @field_validator("database_url", mode="before")
     @classmethod

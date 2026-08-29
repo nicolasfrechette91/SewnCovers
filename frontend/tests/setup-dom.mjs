@@ -12,6 +12,7 @@ for (const [name, value] of Object.entries({
   HTMLInputElement: dom.window.HTMLInputElement,
   Node: dom.window.Node,
   Event: dom.window.Event,
+  FormData: dom.window.FormData,
   MouseEvent: dom.window.MouseEvent,
   getComputedStyle: dom.window.getComputedStyle.bind(dom.window),
   navigator: dom.window.navigator,

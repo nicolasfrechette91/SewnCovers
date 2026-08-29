@@ -26,6 +26,7 @@ from app.accounts.schema import (
     SessionCreatedResponse,
     SessionResponse,
 )
+from app.commerce.routes import register_commerce_routes
 from app.designs.api import create_design, get_design
 from app.designs.schema import DesignResponse
 from app.errors import APIErrorResponse, register_error_handlers
@@ -105,6 +106,28 @@ OPENAPI_TAGS = [
         "name": "Custom uploads",
         "description": "Upload, process, moderate, and access private pattern assets.",
     },
+    {
+        "name": "Commerce",
+        "description": (
+            "Server-priced CAD demonstration quotes, cart, checkout, and "
+            "customer orders."
+        ),
+    },
+    {
+        "name": "Payment webhooks",
+        "description": "Raw-body verified, idempotent payment-provider events.",
+    },
+    {
+        "name": "Sandbox checkout",
+        "description": "Unmistakably fictional local hosted-checkout simulation.",
+    },
+    {
+        "name": "Administration",
+        "description": (
+            "Role-protected pricing, manufacturing, fulfilment, refunds, and "
+            "audit controls."
+        ),
+    },
 ]
 
 
@@ -142,7 +165,7 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             "use the documented field-aware `APIErrorResponse` contract; `/health` "
             "uses its dedicated health-state response."
         ),
-        version="0.2.0",
+        version="0.3.0",
         docs_url="/docs",
         openapi_url="/openapi.json",
         redoc_url="/redoc",
@@ -607,6 +630,7 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         summary="Read a shared approved derivative through an active share grant",
         responses={404: private_errors[404], 422: private_errors[422]},
     )
+    register_commerce_routes(application)
     return application
 
 

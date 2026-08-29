@@ -140,6 +140,18 @@ worker, limits, privacy boundary, and local setup are documented in
 [Private custom-pattern uploads](docs/CUSTOM_UPLOADS.md). No production bucket,
 credential, upload, worker, moderation call, or migration was created.
 
+### Local Task 10.4 demonstration commerce (not deployed)
+
+The local API now owns one-currency CAD pricing, immutable published price
+books and quotes, a private cart, pending-order checkout, signed/idempotent
+payment events, encrypted fictional shipping details, production-asset copies,
+manufacturing/fulfilment states, full sandbox refunds, CLI-assigned
+administrators, and audit history. The static frontend supplies customer and
+administrator workflows under both root and `/SewnCovers/` base paths. Every
+commerce surface is labelled as a sandbox demonstration; no live provider,
+charge, refund, tax, shipment, order, or migration was created. See
+[demonstration commerce](docs/COMMERCE.md).
+
 ## Technology and responsibilities
 
 | Area | Technology | Responsibility |
@@ -150,7 +162,7 @@ credential, upload, worker, moderation call, or migration was created.
 | Persistence | SQLAlchemy 2.0.51, Psycopg 3.3.4, Alembic 1.18.5 | Lazy sessions, explicit transactions, PostgreSQL models, schema migrations, and the canonical seed. |
 | Database | Neon PostgreSQL | Catalogue and anonymous designs plus local account, session, private-project, version, and hashed share-grant models. |
 | Hosting | GitHub Pages and Render Free | Static frontend delivery and the migration-gated FastAPI service. |
-| Verification | Node test runner, React Testing Library, jsdom, Playwright 1.62.1, pytest 9.1.1, Ruff 0.15.22 | 84 frontend tests, a seven-test browser journey in both base-path modes, and 264 backend tests plus lint, type, build, export, and dependency checks. |
+| Verification | Node test runner, React Testing Library, jsdom, Playwright 1.62.1, pytest 9.1.1, Ruff 0.15.22 | 89 frontend tests, eight browser scenarios in both base-path modes, and 270 backend tests plus lint, type, build, export, and dependency checks. |
 
 The frontend has a committed npm lockfile. Backend direct dependencies are
 exact-pinned in `backend/pyproject.toml`; standard pip is used without a
@@ -300,7 +312,7 @@ developer-supplied variable. No browser bundle receives backend settings.
    python -m alembic upgrade head
    ```
 
-3. Confirm `python -m alembic current` reports `20260818_02 (head)`, then
+3. Confirm `python -m alembic current` reports `20260828_01 (head)`, then
    request `/health` and `/patterns`. A second upgrade must be a no-op.
 
 Online `current`, `upgrade`, and `downgrade` commands need
@@ -324,10 +336,11 @@ development/test recovery.
 | `20260729_01` | Seeds the canonical 15 active pattern metadata rows. |
 | `20260812_01` | Adds richer shape dimensions and backward-compatible material, fit, closure, and seam fields. |
 | `20260818_01` | Adds accounts, hashed/expiring sessions, private projects, immutable versions, and hashed revocable share grants without changing anonymous designs. |
-| `20260818_02` **(head)** | Adds owned private custom uploads, derivative metadata, durable processing/moderation state, and exact project-version asset references. |
+| `20260818_02` | Adds owned private custom uploads, derivative metadata, durable processing/moderation state, and exact project-version asset references. |
+| `20260828_01` **(head)** | Adds server-owned demonstration price books, quotes, cart, payment events, immutable orders, protected production assets, fulfilment, and audit history. |
 
-Production startup additionally verifies this exact head and all eleven expected
-migration, catalogue, anonymous-design, and private-workspace tables, the reviewed
+Production startup additionally verifies this exact head and every expected
+migration, catalogue, anonymous-design, private-workspace, upload, and commerce table, the reviewed
 constraint/index sets, and exactly 15 pattern rows before Uvicorn starts.
 This describes the local release candidate; production remains at its previously
 deployed revision until an explicitly authorized deployment applies it.
@@ -377,14 +390,14 @@ order:
 | `frontend` | `npm run lint` | Run ESLint. |
 | `frontend` | `npm run typecheck` | Run strict TypeScript checking without emit. |
 | `frontend` | `npm run check:config` | Run focused build/environment tests. |
-| `frontend` | `npm test` | Run all 84 deterministic frontend tests. |
+| `frontend` | `npm test` | Run all 89 deterministic frontend tests. |
 | `frontend` | `npm run build` | Build the static export into ignored `frontend/out/`. |
 | `frontend` | `npm run verify:export` | Verify exported routes, links, assets, base path, and API embedding. |
-| `frontend` | `npm run test:e2e` | Build, serve, and run the seven-test isolated Chromium journey. |
+| `frontend` | `npm run test:e2e` | Build, serve, and run the eight-scenario isolated Chromium journey. |
 | `backend` | `python -m uvicorn app.main:app --reload` | Start the local API without automatic migrations. |
 | `backend` | `python -m ruff format --check .` | Check Python formatting. |
 | `backend` | `python -m ruff check .` | Run Ruff lint. |
-| `backend` | `python -m pytest` | Run all 264 isolated backend tests. |
+| `backend` | `python -m pytest` | Run all 270 isolated backend tests. |
 | `backend` | `python -m pip check` | Check installed dependency consistency. |
 
 ### CI-equivalent frontend gate
@@ -573,13 +586,14 @@ publishes only `frontend/out`. Render auto-deploys after checks pass.
 
 ## Current boundaries and future production work
 
-This remains a portfolio MVP, not a commerce or manufacturing system. The local
-worktree implements optional accounts, private projects, and private custom
-uploads with processing/moderation boundaries; none of Phase 10 is deployed.
-The live service has no account or upload capability. Neither environment has
-pricing, quotes, cart, payments, orders, inventory, fulfilment, staff
-administration, analytics, or a complete legal/trust workflow. Do not use it
-for confidential, regulated, payment, or production-order information.
+This remains a portfolio MVP, not a commercially available commerce or
+manufacturing system. The local worktree implements optional accounts, private
+projects, custom uploads, and a fully fictional Task 10.4 commerce/operations
+sandbox; none of Phase 10 is deployed. The live service has no account, upload,
+pricing, quote, cart, payment, order, fulfilment, refund, or administration
+capability. Local sandbox data must remain fictional. Neither environment has
+inventory, production scheduling, analytics, or a complete legal/trust
+workflow. See [demonstration commerce](docs/COMMERCE.md).
 
 Sensible future production improvements—not implemented today—include:
 

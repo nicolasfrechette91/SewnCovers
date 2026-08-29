@@ -6,6 +6,7 @@ import hashlib
 import io
 from collections.abc import Iterator
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from alembic import command
@@ -19,7 +20,12 @@ import app.persistence.database as database_module
 import app.persistence.migrations as migrations_module
 from app.main import create_application
 from app.persistence.database import get_session
-from app.persistence.models import CustomDerivative, CustomUpload
+from app.persistence.models import (
+    CustomDerivative,
+    CustomUpload,
+    OrderProductionAsset,
+    ProductionAssetReservation,
+)
 from app.settings import Settings, reset_settings_cache
 from app.uploads.moderation import (
     DeterministicModerationProvider,
@@ -73,6 +79,8 @@ def upload_workspace(
     monkeypatch.setenv("OBJECT_STORAGE_BACKEND", "filesystem")
     monkeypatch.setenv("OBJECT_STORAGE_ROOT", str(storage_root))
     monkeypatch.setenv("MODERATION_PROVIDER", "development-approve")
+    monkeypatch.setenv("COMMERCE_ENABLED", "true")
+    monkeypatch.setenv("COMMERCE_MODE", "sandbox")
     reset_settings_cache()
     migrations_module.get_settings.cache_clear()
     database_module.dispose_application_database()
@@ -87,6 +95,8 @@ def upload_workspace(
             custom_uploads_enabled=True,
             object_storage_root=storage_root,
             moderation_provider="development-approve",
+            commerce_enabled=True,
+            commerce_mode="sandbox",
         )
     )
 
@@ -238,6 +248,106 @@ def test_upload_to_approved_custom_project_share_delete_round_trip(
     assert project.status_code == 201, project.text
     version = project.json()["currentVersion"]
     assert version["configuration"] == custom_configuration
+    quote = client.post(
+        "/commerce/quotes",
+        headers=auth(owner),
+        json={"projectVersionId": version["id"], "quantity": 1},
+    )
+    assert quote.status_code == 201, quote.text
+    assert (
+        client.post(
+            "/commerce/cart/lines",
+            headers=auth(owner),
+            json={"quoteId": quote.json()["id"]},
+        ).status_code
+        == 200
+    )
+    checkout = client.post(
+        "/commerce/checkout",
+        headers=auth(owner),
+        json={"idempotencyKey": "custom_asset_reservation_0001"},
+    )
+    assert checkout.status_code == 201, checkout.text
+    assert (
+        client.delete(f"/uploads/{upload_id}", headers=auth(owner)).status_code == 409
+    )
+    session_id = parse_qs(urlsplit(checkout.json()["checkoutUrl"]).query)["session"][0]
+    failed = client.post(
+        f"/commerce/sandbox/checkouts/{session_id}/complete",
+        json={
+            "outcome": "failure",
+            "shipping": {
+                "name": "Avery Example",
+                "line1": "100 Demonstration Way",
+                "line2": None,
+                "city": "Ottawa",
+                "region": "ON",
+                "postalCode": "K1A 0B1",
+                "country": "CA",
+            },
+        },
+    )
+    assert failed.json()["outcome"] == "failed"
+    assert client.get("/commerce/cart", headers=auth(owner)).status_code == 200
+    replacement = client.post(
+        "/commerce/quotes",
+        headers=auth(owner),
+        json={"projectVersionId": version["id"], "quantity": 1},
+    ).json()
+    assert (
+        client.post(
+            "/commerce/cart/lines",
+            headers=auth(owner),
+            json={"quoteId": replacement["id"]},
+        ).status_code
+        == 200
+    )
+    paid_checkout = client.post(
+        "/commerce/checkout",
+        headers=auth(owner),
+        json={"idempotencyKey": "custom_asset_paid_copy_000001"},
+    ).json()
+    paid_session = parse_qs(urlsplit(paid_checkout["checkoutUrl"]).query)["session"][0]
+    with factory() as reservation_session:
+        reservations = reservation_session.scalars(
+            select(ProductionAssetReservation).where(
+                ProductionAssetReservation.status == "reserved"
+            )
+        ).all()
+        assert reservations
+        for reservation in reservations:
+            derivative = reservation_session.get(
+                CustomDerivative, reservation.derivative_id
+            )
+            assert derivative is not None
+            assert derivative.checksum == reservation.checksum
+            assert hashlib.sha256(storage.read(derivative.object_key)).hexdigest() == (
+                reservation.checksum
+            )
+    paid = client.post(
+        f"/commerce/sandbox/checkouts/{paid_session}/complete",
+        json={
+            "outcome": "success",
+            "shipping": {
+                "name": "Avery Example",
+                "line1": "100 Demonstration Way",
+                "line2": None,
+                "city": "Ottawa",
+                "region": "ON",
+                "postalCode": "K1A 0B1",
+                "country": "CA",
+            },
+        },
+    )
+    assert paid.json()["outcome"] == "paid"
+    with factory() as session:
+        production_asset = session.scalar(select(OrderProductionAsset))
+        assert production_asset is not None
+        assert (
+            production_asset.checksum
+            == hashlib.sha256(storage.read(production_asset.object_key)).hexdigest()
+        )
+        protected_object_key = production_asset.object_key
     share = client.post(
         f"/projects/{project.json()['id']}/versions/{version['id']}/shares",
         headers=auth(owner),
@@ -261,6 +371,7 @@ def test_upload_to_approved_custom_project_share_delete_round_trip(
     assert client.get(access.json()["url"]).status_code == 404
     assert client.get(f"/shares/{share['shareToken']}").status_code == 200
     assert client.get(f"/shares/{share['shareToken']}/assets/tile").status_code == 404
+    assert storage.stat(protected_object_key).byte_size > 0
     restored = client.get(
         f"/projects/{project.json()['id']}/versions/{version['id']}",
         headers=auth(owner),

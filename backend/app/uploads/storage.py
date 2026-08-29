@@ -11,7 +11,9 @@ from typing import BinaryIO
 from app.settings import Settings, get_settings
 
 OBJECT_KEY_PATTERN = re.compile(
-    r"^(?:quarantine|processed)/[a-f0-9]{32}/[a-f0-9]{32}(?:-[a-z]+)?\.bin$"
+    r"^(?:(?:quarantine|processed)/[a-f0-9]{32}/"
+    r"[a-f0-9]{32}(?:-[a-z]+)?|orders/[A-Za-z0-9_-]{22}/"
+    r"[0-9]+-[a-f0-9]{16})\.bin$"
 )
 
 

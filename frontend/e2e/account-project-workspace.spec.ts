@@ -11,7 +11,7 @@ const projectId = "P".repeat(22);
 const versionOneId = "V".repeat(22);
 const versionTwoId = "W".repeat(22);
 const grantId = "G".repeat(22);
-const expiresAt = "2026-08-25T12:00:00Z";
+const expiresAt = new Date(Date.now() + 3_600_000).toISOString();
 
 const configuration = {
   shape: "box", width: 73.25, height: 49.75, backWidth: null,
@@ -73,10 +73,10 @@ test("account workspace preserves immutable history and revocable sharing", asyn
     const path = new URL(request.url()).pathname;
     const method = request.method();
     if (method === "OPTIONS") return route.fulfill({ headers: corsHeaders, status: 204 });
-    if (method === "POST" && path === "/auth/register") return json(route, { account: { email: "person@example.com", createdAt: "2026-08-18T09:00:00Z" }, token: sessionToken, expiresAt }, 201);
-    if (method === "POST" && path === "/auth/login") return json(route, { account: { email: "person@example.com", createdAt: "2026-08-18T09:00:00Z" }, token: sessionToken, expiresAt });
+    if (method === "POST" && path === "/auth/register") return json(route, { account: { email: "person@example.com", createdAt: "2026-08-18T09:00:00Z", role: "customer" }, token: sessionToken, expiresAt }, 201);
+    if (method === "POST" && path === "/auth/login") return json(route, { account: { email: "person@example.com", createdAt: "2026-08-18T09:00:00Z", role: "customer" }, token: sessionToken, expiresAt });
     if (method === "POST" && ["/auth/logout", "/auth/logout-all"].includes(path)) return route.fulfill({ headers: corsHeaders, status: 204 });
-    if (method === "GET" && path === "/account") return json(route, { email: "person@example.com", createdAt: "2026-08-18T09:00:00Z" });
+    if (method === "GET" && path === "/account") return json(route, { email: "person@example.com", createdAt: "2026-08-18T09:00:00Z", role: "customer" });
     if (method === "GET" && path === "/account/sessions") return json(route, [{ id: 1, createdAt: "2026-08-18T09:00:00Z", expiresAt, revokedAt: null, current: true }]);
     if (method === "GET" && path === "/account/export") return json(route, { formatVersion: 1, account: { email: "person@example.com" }, projects: [] });
     if (method === "POST" && path === "/account/delete") return json(route, { deleted: true });

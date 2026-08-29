@@ -23,6 +23,7 @@ from app.errors import APIProblem
 from app.persistence.models import (
     CustomDerivative,
     CustomUpload,
+    ProductionAssetReservation,
     ProjectCustomPatternReference,
     ProjectVersion,
     ShareGrant,
@@ -297,6 +298,26 @@ class UploadService:
         upload = self._owned(authenticated, upload_id)
         if upload.state in {"deleted", "expired"}:
             raise _not_found()
+        reserved = self._session.scalar(
+            select(ProductionAssetReservation.id)
+            .join(
+                CustomDerivative,
+                CustomDerivative.id == ProductionAssetReservation.derivative_id,
+            )
+            .where(
+                CustomDerivative.upload_id == upload.id,
+                ProductionAssetReservation.status == "reserved",
+            )
+            .limit(1)
+        )
+        if reserved is not None:
+            raise APIProblem(
+                409,
+                "invalid_value",
+                "Custom pattern deletion is deferred while an active checkout "
+                "reserves its production asset.",
+                ("path", "upload_id"),
+            )
         reference_count = self._reference_count(upload.id)
         derivative_keys = [item.object_key for item in upload.derivatives]
         with service_transaction(self._session):

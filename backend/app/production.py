@@ -12,20 +12,32 @@ from app.persistence.migrations import create_migration_engine
 from app.settings import Settings, get_settings
 
 ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[1] / "alembic.ini"
-EXPECTED_REVISION = "20260818_02"
+EXPECTED_REVISION = "20260828_01"
 EXPECTED_PATTERN_COUNT = 15
 EXPECTED_TABLES = {
     "alembic_version",
     "authenticated_sessions",
+    "audit_events",
+    "cart_lines",
+    "commerce_quotes",
     "cover_designs",
     "customer_accounts",
+    "customer_orders",
     "custom_derivatives",
     "custom_uploads",
     "patterns",
+    "order_history",
+    "order_production_assets",
+    "payment_attempts",
+    "payment_events",
+    "price_books",
+    "production_asset_reservations",
     "project_versions",
     "project_custom_pattern_references",
     "saved_projects",
     "share_grants",
+    "shipments",
+    "shopping_carts",
 }
 EXPECTED_CONSTRAINTS = {
     "patterns": {
@@ -69,6 +81,7 @@ EXPECTED_CONSTRAINTS = {
         "check": {
             "ck_customer_accounts_email_normalized",
             "ck_customer_accounts_id_length",
+            "ck_customer_accounts_role_supported",
         },
         "foreign_key": set(),
         "index": set(),

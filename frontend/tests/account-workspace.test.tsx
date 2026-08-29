@@ -156,9 +156,9 @@ test("shows every custom upload lifecycle state and selects only approved assets
   const states = ["awaiting_upload", "uploaded", "processing", "awaiting_moderation", "approved", "rejected", "failed", "deleted", "expired"].map(uploadState);
   globalThis.fetch = async (input, init) => {
     const url = String(input); const method = init?.method ?? "GET"; requests.push(`${method} ${url}`);
-    if (url.endsWith("/auth/login")) return json({ account: { email: "patterns@example.com", createdAt: "2026-08-18T00:00:00Z" }, token: "S".repeat(43), expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
+    if (url.endsWith("/auth/login")) return json({ account: { email: "patterns@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" }, token: "S".repeat(43), expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
     if (url.endsWith("/account/sessions")) return json([{ id: 1, createdAt: "2026-08-18T00:00:00Z", expiresAt: "2099-08-18T00:00:00Z", revokedAt: null, current: true }]);
-    if (url.endsWith("/account")) return json({ email: "patterns@example.com", createdAt: "2026-08-18T00:00:00Z" });
+    if (url.endsWith("/account")) return json({ email: "patterns@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" });
     if (url.endsWith("/uploads") && method === "GET") return json(states);
     if (/\/uploads\/[A-Za-z0-9_-]{22}$/.test(url) && method === "GET") return json(states[5]);
     if (url.includes("/assets/tile/access")) return json({ url: "/assets/direct/" + "Z".repeat(43) + "/tile", expiresAt: "2099-08-18T00:00:00Z", contentType: "image/png" });
@@ -203,8 +203,8 @@ test("validates the accessible file control and shows a local repeat preview", a
   Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: () => undefined });
   globalThis.fetch = async (input) => {
     const url = String(input);
-    if (url.endsWith("/auth/login")) return json({ account: { email: "preview@example.com", createdAt: "2026-08-18T00:00:00Z" }, token: "Q".repeat(43), expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
-    if (url.endsWith("/account")) return json({ email: "preview@example.com", createdAt: "2026-08-18T00:00:00Z" });
+    if (url.endsWith("/auth/login")) return json({ account: { email: "preview@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" }, token: "Q".repeat(43), expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
+    if (url.endsWith("/account")) return json({ email: "preview@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" });
     if (url.endsWith("/account/sessions")) return json([]);
     if (url.endsWith("/uploads")) return json([]);
     throw new Error(`Unexpected request GET ${url}`);

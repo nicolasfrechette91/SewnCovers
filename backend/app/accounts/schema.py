@@ -1,7 +1,7 @@
 """Public account and session contracts."""
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import (
     AfterValidator,
@@ -55,6 +55,7 @@ class AccountResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
 
     email: str
+    role: Literal["customer", "administrator"]
     created_at: datetime = Field(alias="createdAt")
 
 
@@ -96,3 +97,4 @@ class AccountExportResponse(BaseModel):
     account: AccountResponse
     projects: list[dict[str, object]]
     custom_patterns: list[dict[str, object]] = Field(alias="customPatterns")
+    orders: list[dict[str, object]]

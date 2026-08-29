@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the Python and FastAPI service for SewnCovers. It keeps the public catalogue and anonymous immutable-design API and adds a local optional account workspace plus private custom-pattern upload processing. The linear local head is `20260818_02`; Phase 10 has not been applied to production. Render alone owns the protected production connection.
+This directory contains the Python and FastAPI service for SewnCovers. It keeps the public catalogue and anonymous immutable-design API and adds a local optional account workspace, private custom-pattern processing, and fictional commerce/operations sandbox. The linear local head is `20260828_01`; Phase 10 has not been applied to production. Render alone owns the protected production connection.
 
 ## Requirements
 
@@ -139,7 +139,7 @@ python -m alembic upgrade head --sql
 python -m alembic downgrade head:base --sql
 ```
 
-The linear deterministic history ends with `20260818_02_add_custom_upload_assets.py`. All Phase 10 revisions are additive, explicit transitions; their downgrades exist for isolated tests only and must not be run against shared databases.
+The linear deterministic history ends with `20260828_01_add_demonstration_commerce.py`. All Phase 10 revisions are additive, explicit transitions; their downgrades exist for isolated tests only and must not be run against shared databases.
 
 Task 10.3 stores no image bytes in PostgreSQL. It adds private quarantine and
 processed-object metadata, the durable processing/moderation state and lease,
@@ -466,7 +466,7 @@ python -m app.production
 
 This entry point is migration-gated and reserved for Render. It loads settings,
 requires `ENVIRONMENT=production`, runs `alembic upgrade head`, verifies the
-exact `20260818_02` revision, expected tables and named primary/unique/check/
+exact `20260828_01` revision, expected tables and named primary/unique/check/
 foreign-key constraints, the two intentional pattern indexes, no extra explicit
 design index, and exactly 15 pattern rows, then starts the existing
 `app.main:app` application on `0.0.0.0` using the platform-provided `PORT` or
@@ -579,4 +579,4 @@ python -m ruff format .
 
 `pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. FastAPI's existing Starlette middleware supplies CORS, so Task 4.3 adds no dependency. Tasks 4.4-4.8 reuse FastAPI, Uvicorn, Pydantic, SQLAlchemy, and Python's standard library and add no dependency. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
 
-Task 5.3 adds pinned Alembic 1.18.5 as the minimum migration runtime dependency for the Python 3.13 and SQLAlchemy 2.0.51 baseline. Task 5.4 reuses it for two portable pattern filter indexes without adding a dependency. Task 10.3 adds only pinned Boto3 and Pillow for private S3-compatible operations and strict raster processing. Imports, startup, the root endpoint, and offline tests do not connect to Neon, object storage, or a moderation provider. Accounts and uploads are local and undeployed; commercial endpoints remain unimplemented. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md) and [`../docs/CUSTOM_UPLOADS.md`](../docs/CUSTOM_UPLOADS.md).
+Task 5.3 adds pinned Alembic 1.18.5 as the minimum migration runtime dependency for the Python 3.13 and SQLAlchemy 2.0.51 baseline. Task 5.4 reuses it for two portable pattern filter indexes without adding a dependency. Task 10.3 adds pinned Boto3 and Pillow for private S3-compatible operations and strict raster processing. Task 10.4 adds pinned Cryptography for AES-GCM shipping-data protection and the configured-only Stripe SDK; all tests use the deterministic sandbox and never call Stripe. Imports, startup, the root endpoint, and offline tests do not connect to Neon, object storage, moderation, or a payment provider. Accounts, uploads, and commerce are local and undeployed. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md), [`../docs/CUSTOM_UPLOADS.md`](../docs/CUSTOM_UPLOADS.md), and [`../docs/COMMERCE.md`](../docs/COMMERCE.md).

@@ -44,6 +44,10 @@ export default function RootLayout({
           navigationItems={[
             { href: "/configure/", label: "Configure" },
             { href: "/projects/", label: "My projects" },
+            { href: "/commerce/", label: "Pricing" },
+            { href: "/cart/", label: "Cart" },
+            { href: "/orders/", label: "Orders" },
+            { href: "/admin/", label: "Admin" },
             { href: "/account/", label: "Account" },
           ]}
         />

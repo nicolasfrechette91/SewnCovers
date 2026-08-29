@@ -55,7 +55,7 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
     const request = route.request();
     const path = new URL(request.url()).pathname;
     if (request.method() === "OPTIONS") return route.fulfill({ headers, status: 204 });
-    if (path === "/account") return json(route, { email: "pattern@example.com", createdAt: "2026-08-18T09:00:00Z" });
+    if (path === "/account") return json(route, { email: "pattern@example.com", createdAt: "2026-08-18T09:00:00Z", role: "customer" });
     if (path === "/account/sessions") return json(route, [{ id: 1, createdAt: "2026-08-18T09:00:00Z", expiresAt, revokedAt: null, current: true }]);
     if (path === "/patterns") return json(route, []);
     if (path === "/uploads" && request.method() === "GET") {

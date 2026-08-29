@@ -143,6 +143,7 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
                 <div><h3 className="font-display text-section-title font-heading">Version {version.versionNumber} {version.isCurrent ? "— Current" : "— Historical"}</h3><p className="text-supporting text-text-muted">Created {new Date(version.createdAt).toLocaleString()}</p></div>
                 <div className="flex flex-wrap gap-2">
                   <Link href={{ pathname: "/configure/", query: { project: projectId, version: version.id } }} className="inline-flex min-h-11 items-center rounded-control border border-border-strong bg-surface px-3 text-button font-control text-text-primary no-underline">Open as editing basis</Link>
+                  <Link href={{ pathname: "/commerce/", query: { version: version.id } }} className="inline-flex min-h-11 items-center rounded-control border border-brand bg-surface px-3 text-button font-control text-brand no-underline">Estimate demo price</Link>
                   <Button size="compact" variant="secondary" onClick={() => void createShare(version)}>Create read-only share</Button>
                 </div>
               </div>

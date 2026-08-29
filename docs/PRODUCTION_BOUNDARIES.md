@@ -10,12 +10,13 @@ repository evidence, and read-only checks of the public deployment. No deployed
 commit is stated because this verification did not independently confirm one
 commit across Pages, Render, and the database.
 
-The repository's local Phase 10.1-10.3 work is newer than that deployment.
+The repository's local Phase 10.1-10.4 work is newer than that deployment.
 Accounts, private projects, versions, revocable shares, and private custom
 uploads described below are implemented and locally verified but are not
 available on the live Pages/Render/Neon system. No production migration,
 bucket, credential, upload, moderation call, account write, or worker change
-was performed for Task 10.3.
+was performed for Tasks 10.3 or 10.4. Local commerce uses only deterministic
+fictional provider data; no live payment or tax API was called.
 
 ## Boundary summary
 
@@ -24,7 +25,7 @@ was performed for Task 10.3.
 | Verified behavior | GitHub Pages serves a Next.js static export under `/SewnCovers/`; the browser calls a Render-hosted FastAPI service backed by Neon PostgreSQL. | Deployment configuration, generated-export checks, startup code, migrations, live HTTPS responses, and retrieval of an existing immutable design. |
 | Known limitation | Portfolio-scale hosting has variable first-request latency and no availability or support SLA. The deployed product has no accounts; the local worktree has an intentionally limited account/project lifecycle. | Recorded smoke observations and the deployed versus local API/UI surfaces only; no uptime, support, quota, or latency commitment is inferred. |
 | Security boundary | Exact CORS, server-side secrets, validation, constraints, migrations, tests, and bundle scans reduce specific risks but do not provide identity, privacy, abuse prevention, or a security review. | Repository and deployed-response evidence only; no claim of hardening, compliance, penetration testing, or commercial readiness. |
-| Future direction | Hardening, account and design ownership, and commerce/operations are prioritized requirements. | Directional future work only, with no dates or delivery promise. |
+| Local future work | Accounts, uploads, and demonstration commerce/operations exist only in the local worktree. | No date, deployment, provider readiness, or commercial availability is promised. |
 
 ## Verified deployed behavior
 
@@ -116,8 +117,10 @@ price, or current Render or Neon policy.
   revoked-share access fails closed. The deterministic filesystem/provider
   checks and mocked S3/OpenAI contracts are integration evidence, not live
   provider verification. See [custom uploads](CUSTOM_UPLOADS.md).
-- The application is not intended to store personal, confidential, regulated,
-  payment, order, or production information. The public pattern catalogue,
+- The deployed application is not intended to store personal, confidential,
+  regulated, payment, order, or production information. Local Task 10.4 stores
+  only fixed fictional shipping fixtures during automated/sandbox workflows;
+  it is not authorized for real customer data. The public pattern catalogue,
   OpenAPI schema, Swagger/ReDoc documentation, API root, and health endpoint
   are intentionally accessible.
 
@@ -176,7 +179,19 @@ price, or current Render or Neon policy.
 The project should not be described as secure, hardened, compliant,
 penetration-tested, private, or commercially production-ready.
 
-## Commercial direction - future work only
+### Local Task 10.4 demonstration commerce (not deployed)
+
+The local worktree adds server-owned CAD pricing, immutable price books and
+quotes, one private cart, a deterministic hosted sandbox, a configured-only
+Stripe Checkout adapter, verified/idempotent webhooks, immutable orders,
+encrypted fictional shipping details, production-asset pinning, manufacturing
+state controls, allowlisted tracking, full sandbox refunds, CLI-only
+administrator promotion, and append-only audit history. Every related screen
+is labelled as a demonstration. No provider credential/object, payment,
+refund, tax calculation, shipment, production action, production migration, or
+deployment was created or invoked. See [demonstration commerce](COMMERCE.md).
+
+## Commercial direction - future production work only
 
 The following stages are prioritized directional requirements and trade-offs.
 None is implemented, scheduled, priced, or promised.
@@ -214,13 +229,14 @@ None is implemented, scheduled, priced, or promised.
 - Add an authorized administrative interface for catalogue, pattern activity,
   production assets, and design support operations.
 
-### 3. Commercial workflow
+### 3. Production commercial workflow
 
-- Define a quote or order handoff that distinguishes customer intent from a
-  planning configuration.
+- Replace the fictional local price model with reviewed commercial pricing and
+  authoritative product/availability inputs.
 - Integrate authoritative product, fabric, and availability data.
-- Add reviewed pricing, taxes, payments, fraud handling, manufacturing, and
-  fulfilment integrations with clear transaction boundaries.
+- Independently review and configure real taxes, payments, fraud handling,
+  manufacturing, and fulfilment integrations while preserving the local
+  transaction boundaries.
 - Establish customer communication, exception handling, returns, and support
   processes.
 - Add analytics only with an explicit privacy, consent, retention, and access
@@ -242,3 +258,4 @@ dynamic workflows would require a deliberate runtime and origin strategy.
 - [Authoritative roadmap and verification record](PROJECT_PROGRESS.md)
 - [Frontend implementation guide](../frontend/README.md)
 - [Backend implementation guide](../backend/README.md)
+- [Local demonstration commerce](COMMERCE.md)

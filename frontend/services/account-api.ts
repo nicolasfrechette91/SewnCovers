@@ -21,6 +21,7 @@ export const AUTH_CHANGED_EVENT = "sewncovers:auth-changed";
 export interface Account {
   readonly email: string;
   readonly createdAt: string;
+  readonly role: "customer" | "administrator";
 }
 
 export interface AuthSession {
@@ -187,9 +188,10 @@ function isConfiguration(value: unknown): value is ProjectConfigurationRequest {
 function isAccount(value: unknown): value is Account {
   return (
     isRecord(value) &&
-    Object.keys(value).length === 2 &&
+    Object.keys(value).length === 3 &&
     typeof value.email === "string" &&
-    typeof value.createdAt === "string"
+    typeof value.createdAt === "string" &&
+    ["customer", "administrator"].includes(String(value.role))
   );
 }
 

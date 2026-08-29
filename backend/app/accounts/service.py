@@ -34,18 +34,28 @@ from app.accounts.throttle import (
     AuthenticationThrottledError,
     authentication_throttle,
 )
+from app.commerce.encryption import ShippingCipher, ShippingEncryptionError
 from app.errors import APIProblem, authentication_failed, authentication_required
 from app.persistence.models import (
     AuthenticatedSession,
+    CartLine,
+    CommerceQuote,
     CustomDerivative,
     CustomerAccount,
+    CustomerOrder,
     CustomUpload,
+    OrderHistory,
+    PaymentAttempt,
+    PaymentEvent,
+    ProductionAssetReservation,
     ProjectCustomPatternReference,
     ProjectVersion,
     SavedProject,
     ShareGrant,
+    ShoppingCart,
 )
 from app.persistence.transactions import service_transaction
+from app.settings import get_settings
 from app.uploads.storage import ObjectStorageError, get_object_storage
 
 SESSION_LIFETIME = timedelta(days=7)
@@ -250,8 +260,50 @@ class AccountService:
                     ],
                 }
             )
+        cipher = ShippingCipher(get_settings())
+        orders: list[dict[str, object]] = []
+        for order in self._session.scalars(
+            select(CustomerOrder)
+            .where(CustomerOrder.account_id == authenticated.account.id)
+            .order_by(CustomerOrder.created_at, CustomerOrder.id)
+        ).all():
+            shipping: dict[str, object] | None = None
+            if (
+                order.shipping_ciphertext
+                and order.shipping_nonce
+                and order.shipping_key_id
+            ):
+                try:
+                    shipping = cipher.decrypt(
+                        order.id,
+                        order.shipping_ciphertext,
+                        order.shipping_nonce,
+                        order.shipping_key_id,
+                    )
+                except ShippingEncryptionError:
+                    raise APIProblem(
+                        503,
+                        "storage_unavailable",
+                        "Order shipping data is temporarily unavailable for export.",
+                        ("service", "shipping"),
+                    ) from None
+            orders.append(
+                {
+                    "reference": order.reference,
+                    "createdAt": order.created_at.isoformat(),
+                    "state": order.state,
+                    "paymentStatus": order.payment_status,
+                    "currency": order.currency,
+                    "subtotalAmountMinor": order.subtotal_amount,
+                    "taxAmountMinor": order.tax_amount,
+                    "shippingAmountMinor": order.shipping_amount,
+                    "totalAmountMinor": order.total_amount,
+                    "lines": list(order.snapshot.get("lines", [])),
+                    "shipping": shipping,
+                }
+            )
         return AccountExportResponse(
-            format_version=2,
+            format_version=3,
             exported_at=self._clock(),
             account=self._account_response(authenticated.account),
             projects=exported_projects,
@@ -274,6 +326,7 @@ class AccountService:
                     .order_by(CustomUpload.created_at, CustomUpload.id)
                 ).all()
             ],
+            orders=orders,
         )
 
     def delete_account(
@@ -281,6 +334,34 @@ class AccountService:
     ) -> AccountDeletedResponse:
         if not verify_password(authenticated.account.password_hash, password):
             raise authentication_failed()
+        active_order = self._session.scalar(
+            select(CustomerOrder.id)
+            .where(
+                CustomerOrder.account_id == authenticated.account.id,
+                CustomerOrder.state.in_(
+                    (
+                        "paid",
+                        "production_review",
+                        "approved_for_production",
+                        "in_production",
+                        "quality_check",
+                        "ready_to_ship",
+                        "shipped",
+                        "manual_review_required",
+                        "refund_pending",
+                    )
+                ),
+            )
+            .limit(1)
+        )
+        if active_order is not None:
+            raise APIProblem(
+                409,
+                "invalid_value",
+                "Account deletion is deferred while a paid order requires "
+                "fulfilment or review.",
+                ("body", "account"),
+            )
         uploads = self._session.scalars(
             select(CustomUpload).where(
                 CustomUpload.account_id == authenticated.account.id
@@ -306,6 +387,61 @@ class AccountService:
             ProjectVersion.project_id.in_(project_ids)
         )
         with service_transaction(self._session):
+            unpaid_order_ids = select(CustomerOrder.id).where(
+                CustomerOrder.account_id == authenticated.account.id,
+                CustomerOrder.payment_status.in_(("pending", "failed", "cancelled")),
+                CustomerOrder.state.in_(("payment_pending", "cancelled")),
+            )
+            unpaid_attempt_ids = select(PaymentAttempt.id).where(
+                PaymentAttempt.order_id.in_(unpaid_order_ids)
+            )
+            self._session.execute(
+                delete(PaymentEvent).where(
+                    PaymentEvent.attempt_id.in_(unpaid_attempt_ids)
+                )
+            )
+            self._session.execute(
+                delete(ProductionAssetReservation).where(
+                    ProductionAssetReservation.attempt_id.in_(unpaid_attempt_ids)
+                )
+            )
+            self._session.execute(
+                delete(PaymentAttempt).where(
+                    PaymentAttempt.order_id.in_(unpaid_order_ids)
+                )
+            )
+            self._session.execute(
+                delete(OrderHistory).where(OrderHistory.order_id.in_(unpaid_order_ids))
+            )
+            self._session.execute(
+                delete(CustomerOrder).where(CustomerOrder.id.in_(unpaid_order_ids))
+            )
+            retained_orders = self._session.scalars(
+                select(CustomerOrder).where(
+                    CustomerOrder.account_id == authenticated.account.id
+                )
+            ).all()
+            for order in retained_orders:
+                order.account_id = None
+                order.shipping_ciphertext = None
+                order.shipping_nonce = None
+                order.shipping_key_id = None
+            cart_ids = select(ShoppingCart.id).where(
+                ShoppingCart.account_id == authenticated.account.id
+            )
+            self._session.execute(
+                delete(CartLine).where(CartLine.cart_id.in_(cart_ids))
+            )
+            self._session.execute(
+                delete(ShoppingCart).where(
+                    ShoppingCart.account_id == authenticated.account.id
+                )
+            )
+            self._session.execute(
+                delete(CommerceQuote).where(
+                    CommerceQuote.account_id == authenticated.account.id
+                )
+            )
             self._session.execute(
                 delete(ProjectCustomPatternReference).where(
                     ProjectCustomPatternReference.account_id == authenticated.account.id
@@ -412,4 +548,6 @@ class AccountService:
 
     @staticmethod
     def _account_response(account: CustomerAccount) -> AccountResponse:
-        return AccountResponse(email=account.email, created_at=account.created_at)
+        return AccountResponse(
+            email=account.email, role=account.role, created_at=account.created_at
+        )

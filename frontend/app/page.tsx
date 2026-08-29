@@ -92,9 +92,9 @@ export default function Home() {
                 Prototype status
               </h2>
               <p className="mt-2 text-supporting text-text-muted">
-                This experience demonstrates the planned design journey. It
-                does not take orders, calculate prices, or produce finished
-                covers.
+                This experience demonstrates the design journey and an optional
+                fictional CAD commerce sandbox. It cannot charge money, create
+                a real shipment, or produce finished covers.
               </p>
             </aside>
           </div>
