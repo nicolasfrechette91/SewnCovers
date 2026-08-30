@@ -117,8 +117,13 @@ test("account workspace preserves immutable history and revocable sharing", asyn
 
   await page.getByRole("link", { name: "Open as editing basis" }).last().press("Enter");
   await expect(page.getByText(/Private project version restored as an editing basis/)).toBeVisible();
+  await page.getByRole("button", { name: "Continue to Measurements" }).press("Enter");
   await expect(page.getByRole("textbox", { name: "Width (cm)" })).toHaveValue("73.25");
-  await page.getByRole("button", { name: "Review configuration" }).press("Enter");
+  for (const nextStage of ["Cover details", "Pattern", "Preview", "Review"]) {
+    await page
+      .getByRole("button", { name: `Continue to ${nextStage}` })
+      .press("Enter");
+  }
   await page.getByRole("button", { name: "Save as new version" }).press("Enter");
   await expect(page.getByText(/Version 3 saved/)).toBeVisible();
   expect(capturedVersion).toEqual({ configuration: { ...configuration, patternScale: 1 } });
@@ -137,6 +142,7 @@ test("account workspace preserves immutable history and revocable sharing", asyn
   await guest.setViewportSize({ width: 1440, height: 900 });
   await guest.goto(shareUrl);
   await expect(guest.getByText(/Read-only project share restored/)).toBeVisible();
+  await guest.getByRole("button", { name: "Continue to Measurements" }).press("Enter");
   await expect(guest.getByRole("textbox", { name: "Width (cm)" })).toHaveValue("73.25");
 
   await page.getByRole("button", { name: "Revoke share" }).first().press("Enter");

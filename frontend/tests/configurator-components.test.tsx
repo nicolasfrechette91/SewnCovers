@@ -20,6 +20,7 @@ import { MeasurementStep } from "../components/configurator/measurement-step";
 import { CoverDetailsStep } from "../components/configurator/cover-details-step";
 import { PatternStep } from "../components/configurator/pattern-step";
 import { PreviewStep } from "../components/configurator/preview-step";
+import { StepIndicator } from "../components/configurator/step-indicator";
 import { deriveReviewReadiness } from "../components/configurator/review-summary";
 import { SaveSharePanel } from "../components/configurator/save-share-panel";
 import type { PatternDefinition } from "../data/patterns";
@@ -142,6 +143,51 @@ function catalogueState(
     ...overrides,
   };
 }
+
+test("communicates staged progress and enables only completed steps for revisiting", () => {
+  const selectedSteps: string[] = [];
+
+  render(
+    <StepIndicator
+      currentStepId="measurements"
+      completedStepIds={["shape"]}
+      revisitableStepIds={["shape"]}
+      onStepSelect={(stepId) => selectedSteps.push(stepId)}
+      steps={[
+        { id: "shape", label: "Shape" },
+        { id: "measurements", label: "Measurements" },
+        { id: "pattern", label: "Pattern" },
+      ]}
+    />,
+  );
+
+  assert.ok(screen.getByText("Stage 2 of 3"));
+  assert.equal(
+    screen.getByText("Measurements").closest("li")?.getAttribute(
+      "aria-current",
+    ),
+    "step",
+  );
+  assert.match(
+    screen.getByText("Shape").closest("li")?.textContent ?? "",
+    /Complete/,
+  );
+  assert.match(
+    screen.getByText("Pattern").closest("li")?.textContent ?? "",
+    /Upcoming/,
+  );
+  assert.equal(
+    screen.queryByRole("button", { name: /Return to Pattern/ }),
+    null,
+  );
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Return to Shape, completed stage 1 of 3",
+    }),
+  );
+  assert.deepEqual(selectedSteps, ["shape"]);
+});
 
 test("selects accessible shape choices and resets context state", () => {
   renderWithConfiguration(<ShapeSelectionStep />);

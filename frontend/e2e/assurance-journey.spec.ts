@@ -91,10 +91,22 @@ test("advanced preview, consent, legal, and trust stay keyboard-accessible", asy
 
   await page.getByRole("radio", { name: "Square cushion" }).focus();
   await page.keyboard.press("Space");
+  await page
+    .getByRole("button", { name: "Continue to Measurements" })
+    .press("Enter");
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("80");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("12");
+  await page
+    .getByRole("button", { name: "Continue to Cover details" })
+    .press("Enter");
+  await page
+    .getByRole("button", { name: "Continue to Pattern" })
+    .press("Enter");
   await page.getByRole("radio", { name: "Botanical sample" }).focus();
   await page.keyboard.press("Space");
+  await page
+    .getByRole("button", { name: "Continue to Preview" })
+    .press("Enter");
   await page.getByRole("button", { name: "Load approximate 3D preview" }).focus();
   await page.keyboard.press("Enter");
 
@@ -136,6 +148,16 @@ test("advanced preview, consent, legal, and trust stay keyboard-accessible", asy
     `${basePath}/configure/?design=AbCdEfGhIjKlMnOpQrStUv`,
   );
   await expect(page.getByText("Shared design restored.")).toBeVisible();
+  for (const nextStage of [
+    "Measurements",
+    "Cover details",
+    "Pattern",
+    "Preview",
+  ]) {
+    await page
+      .getByRole("button", { name: `Continue to ${nextStage}` })
+      .press("Enter");
+  }
   await page.getByRole("button", { name: "Load approximate 3D preview" }).press("Enter");
   await expect(page.getByText(/3D is unavailable.*complete 2D preview/)).toBeVisible();
 });

@@ -176,9 +176,18 @@ test("keeps the complete configurator responsive with usable touch targets", asy
         targetSizes.filter((target) => target.height < 44 || target.width < 44),
       ).toEqual([]);
 
-      await page
-        .getByRole("button", { name: "Review configuration" })
-        .click();
+      for (const nextStage of [
+        "Measurements",
+        "Cover details",
+        "Pattern",
+        "Preview",
+        "Review",
+      ]) {
+        await page
+          .getByRole("button", { name: `Continue to ${nextStage}` })
+          .click();
+        await expectNoHorizontalOverflow(page);
+      }
       await expect(
         page.getByRole("heading", {
           level: 2,
@@ -188,6 +197,105 @@ test("keeps the complete configurator responsive with usable touch targets", asy
       await expectNoHorizontalOverflow(page);
     });
   }
+});
+
+test("gates stages and preserves compatible downstream choices when revisiting", async ({
+  page,
+}) => {
+  await page.goto(configurePath);
+  const progress = page.getByRole("navigation", {
+    name: "Configuration progress",
+  });
+
+  await expect(
+    page.getByRole("button", { name: "Continue to Measurements" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("heading", { name: /Measure your/ }),
+  ).toHaveCount(0);
+  await expect(
+    progress.getByRole("button", { name: /Return to Pattern/ }),
+  ).toHaveCount(0);
+
+  await page.getByText("Rectangle cushion", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "Continue to Measurements" })
+    .click();
+  await expect(
+    page.getByText("Measure your rectangle cushion", { exact: true }),
+  ).toBeFocused();
+
+  const width = page.getByRole("textbox", { name: "Width (cm)" });
+  await width.fill("9");
+  await page.getByRole("textbox", { name: "Height (cm)" }).fill("40");
+  await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("10");
+  await width.press("Tab");
+  await expect(
+    page.getByRole("status").filter({ hasText: "between 10–300 cm" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Continue to Cover details" }),
+  ).toBeDisabled();
+
+  await width.fill("80");
+  await page
+    .getByRole("button", { name: "Continue to Cover details" })
+    .click();
+  await page.getByRole("radio", { name: "Linen blend" }).check();
+  await page
+    .getByRole("button", { name: "Continue to Pattern" })
+    .click();
+  await page.getByText("Fern trail", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "Continue to Preview" })
+    .click();
+  await page.getByRole("slider", { name: "Pattern size" }).fill("1.4");
+  await page
+    .getByRole("button", { name: "Continue to Review" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "SewnCovers configuration summary" }),
+  ).toBeFocused();
+
+  await page.getByRole("button", { name: "Back to Preview" }).click();
+  await expect(page.getByRole("slider", { name: "Pattern size" })).toHaveValue(
+    "1.4",
+  );
+  await progress
+    .getByRole("button", {
+      name: "Return to Measurements, completed stage 2 of 6",
+    })
+    .click();
+  await expect(width).toHaveValue("80");
+  await page.getByRole("radio", { name: "Inches (in)" }).focus();
+  await page.keyboard.press("Space");
+  await expect(
+    page.getByRole("textbox", { name: "Width (in)" }),
+  ).toHaveValue("31.5");
+  await progress
+    .getByRole("button", {
+      name: "Return to Review, completed stage 6 of 6",
+    })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Configuration summary", exact: true }),
+  ).toContainText("31.5 in");
+
+  await page.getByRole("button", { name: "Edit shape" }).click();
+  await page.getByText("Tapered / trapezoid cushion", { exact: true }).click();
+  await expect(
+    progress.getByRole("button", { name: /Return to Pattern/ }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Continue to Measurements" })
+    .click();
+  await page.getByRole("textbox", { name: "Back width (in)" }).fill("20");
+  await progress
+    .getByRole("button", {
+      name: "Return to Pattern, completed stage 4 of 6",
+    })
+    .click();
+  await expect(page.getByRole("radio", { name: "Fern trail" })).toBeChecked();
 });
 
 test("supports keyboard-only editing, validation, save, and clipboard flow", async ({
@@ -211,6 +319,14 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await expect(page.getByRole("radio", { name: "Rectangle cushion" })).toBeChecked();
 
   await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Continue to Measurements" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByText("Measure your rectangle cushion", { exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "Centimetres (cm)" })).toBeFocused();
   await page.keyboard.press("Tab");
   const width = page.getByRole("textbox", { name: "Width (cm)" });
@@ -233,6 +349,18 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await page.keyboard.press("Tab");
   await expect(page.getByText("More measuring tips")).toBeFocused();
   await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Back to Shape" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Continue to Cover details" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Choose cover details" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "Cotton canvas" })).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("radio", { name: "Linen blend" })).toBeChecked();
@@ -249,6 +377,18 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("radio", { name: "Piped edge" })).toBeChecked();
   await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Back to Measurements" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Continue to Pattern" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByText("Choose a pattern", { exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Sign in or register" })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "All categories" })).toBeFocused();
@@ -259,12 +399,23 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("radio", { name: "Fern trail" })).toBeChecked();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("slider", { name: "Pattern size" })).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Back to Cover details" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Continue to Preview" }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("slider", { name: "Pattern size" }),
+  ).toBeFocused();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Review configuration" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Continue to Review" })).toBeFocused();
   await page.keyboard.press("Enter");
 
   await expect(
@@ -336,6 +487,7 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
     navigationLabels: [
       "Primary navigation",
       "Configuration progress",
+      "Shape stage actions",
       "Footer navigation",
     ],
   });
@@ -389,7 +541,17 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
   }));
   expect(motion.labelTransitionProperty).toBe("none");
 
-  await page.getByRole("button", { name: "Review configuration" }).click();
+  for (const nextStage of [
+    "Measurements",
+    "Cover details",
+    "Pattern",
+    "Preview",
+    "Review",
+  ]) {
+    await page
+      .getByRole("button", { name: `Continue to ${nextStage}` })
+      .click();
+  }
   await page.getByRole("button", { name: "Save and create share link" }).click();
   const spinner = page.locator(".motion-safe\\:animate-spin");
   await expect(spinner).toBeVisible();

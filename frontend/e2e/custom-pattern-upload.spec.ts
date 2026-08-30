@@ -81,9 +81,18 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   const boxShape = page.getByRole("radio", { name: "Box / bench cushion" });
   await boxShape.focus();
   await boxShape.press("Space");
+  await page
+    .getByRole("button", { name: "Continue to Measurements" })
+    .press("Enter");
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("73.25");
   await page.getByRole("textbox", { name: "Depth (cm)" }).fill("49.75");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("13.5");
+  await page
+    .getByRole("button", { name: "Continue to Cover details" })
+    .press("Enter");
+  await page
+    .getByRole("button", { name: "Continue to Pattern" })
+    .press("Enter");
   const input = page.getByLabel("Choose a pattern image");
   await expect(input).toHaveAttribute("accept", "image/jpeg,image/png,image/webp");
   const dataUrl = await page.evaluate(() => {

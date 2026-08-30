@@ -98,6 +98,7 @@ export function PatternStep({
       state.height,
       state.thickness,
       state.unit,
+      state.backWidth,
     )
   ) {
     return null;

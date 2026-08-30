@@ -144,6 +144,9 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await expect(
       page.getByRole("radio", { name: "Box / bench cushion" }),
     ).toBeChecked();
+    await page
+      .getByRole("button", { name: "Continue to Measurements" })
+      .click();
 
     await page.getByRole("textbox", { name: "Width (cm)" }).fill("72.25");
     await page.getByRole("textbox", { name: "Depth (cm)" }).fill("48.5");
@@ -153,10 +156,16 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await expect(
       page.getByRole("radio", { name: "Centimetres (cm)" }),
     ).toBeChecked();
+    await page
+      .getByRole("button", { name: "Continue to Cover details" })
+      .click();
     await page.getByRole("radio", { name: "Linen blend" }).check();
     await page.getByRole("radio", { name: "More relaxed fit" }).check();
     await page.getByRole("radio", { name: "Envelope opening" }).check();
     await page.getByRole("radio", { name: "Piped edge" }).check();
+    await page
+      .getByRole("button", { name: "Continue to Pattern" })
+      .click();
     await expect(page.getByText("Showing all 12 patterns.")).toBeVisible();
   });
 
@@ -165,6 +174,9 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await expect(
       page.getByRole("radio", { name: "Fern trail" }),
     ).toBeChecked();
+    await page
+      .getByRole("button", { name: "Continue to Preview" })
+      .click();
 
     const scale = page.getByRole("slider", { name: "Pattern size" });
     await scale.fill("1.3");
@@ -183,7 +195,9 @@ test("restores the exact shared design after a duplicate-safe save", async ({
   });
 
   await test.step("review accessible, user-visible values", async () => {
-    await page.getByRole("button", { name: "Review configuration" }).click();
+    await page
+      .getByRole("button", { name: "Continue to Review" })
+      .click();
     await expect(
       page.getByRole("heading", {
         level: 2,
@@ -257,6 +271,12 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     ).toBeChecked();
     await expect(
       restoredPage.getByRole("textbox", { name: "Width (cm)" }),
+    ).toHaveCount(0);
+    await restoredPage
+      .getByRole("button", { name: "Continue to Measurements" })
+      .click();
+    await expect(
+      restoredPage.getByRole("textbox", { name: "Width (cm)" }),
     ).toHaveValue("72.25");
     await expect(
       restoredPage.getByRole("textbox", { name: "Depth (cm)" }),
@@ -267,9 +287,9 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await expect(
       restoredPage.getByRole("radio", { name: "Centimetres (cm)" }),
     ).toBeChecked();
-    await expect(
-      restoredPage.getByRole("radio", { name: "Fern trail" }),
-    ).toBeChecked();
+    await restoredPage
+      .getByRole("button", { name: "Continue to Cover details" })
+      .click();
     await expect(
       restoredPage.getByRole("radio", { name: "Linen blend" }),
     ).toBeChecked();
@@ -282,6 +302,15 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await expect(
       restoredPage.getByRole("radio", { name: "Piped edge" }),
     ).toBeChecked();
+    await restoredPage
+      .getByRole("button", { name: "Continue to Pattern" })
+      .click();
+    await expect(
+      restoredPage.getByRole("radio", { name: "Fern trail" }),
+    ).toBeChecked();
+    await restoredPage
+      .getByRole("button", { name: "Continue to Preview" })
+      .click();
     await expect(
       restoredPage.getByRole("slider", { name: "Pattern size" }),
     ).toHaveValue("1.3");
@@ -297,7 +326,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await expect(restoredPreview).toContainText("1.3×");
 
     await expect(
-      restoredPage.getByRole("button", { name: "Review configuration" }),
+      restoredPage.getByRole("button", { name: "Continue to Review" }),
     ).toBeEnabled();
 
     await restoredPage.reload();
@@ -307,6 +336,9 @@ test("restores the exact shared design after a duplicate-safe save", async ({
           "Shared design restored. You can keep configuring it without saving a new copy.",
       }),
     ).toBeVisible();
+    await restoredPage
+      .getByRole("button", { name: "Continue to Measurements" })
+      .click();
     await expect(
       restoredPage.getByRole("textbox", { name: "Width (cm)" }),
     ).toHaveValue("72.25");

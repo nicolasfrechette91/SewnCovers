@@ -9,30 +9,25 @@ import {
   useConfiguration,
 } from "@/context/configuration";
 import { getPatternById } from "@/data/patterns";
-import type { SelectedPatternPresentation } from "./preview-step";
 import { getCompleteCatalogueResult } from "@/services/pattern-catalogue";
 import { usePatternCatalogue } from "@/services/use-pattern-catalogue";
 
-import { MeasurementStep } from "./measurement-step";
 import { CoverDetailsStep } from "./cover-details-step";
+import { MeasurementStep } from "./measurement-step";
 import { PatternStep } from "./pattern-step";
-import { PreviewStep } from "./preview-step";
-import {
-  ReviewEntry,
-  ReviewScreen,
-  ReviewUnavailable,
-} from "./review-step";
+import { PreviewStep, type SelectedPatternPresentation } from "./preview-step";
+import { ReviewScreen } from "./review-step";
 import {
   deriveReviewReadiness,
   type ReviewSection,
 } from "./review-summary";
 import { ShapeSelectionStep } from "./shape-selection-step";
 import { SharedDesignLoader } from "./shared-design-loader";
-import { WorkspaceConfigurationLoader } from "./workspace-configuration-loader";
 import {
   StepIndicator,
   type StepIndicatorStep,
 } from "./step-indicator";
+import { WorkspaceConfigurationLoader } from "./workspace-configuration-loader";
 
 const configuratorSteps = [
   { id: "shape", label: "Shape" },
@@ -43,15 +38,30 @@ const configuratorSteps = [
   { id: "review", label: "Review" },
 ] as const satisfies readonly StepIndicatorStep[];
 
-const editTargetIds = {
-  measurements: "configuration-measurements-edit-target",
-  coverDetails: "configuration-cover-details-edit-target",
-  pattern: "configuration-pattern-edit-target",
-  patternScale: "configuration-pattern-scale-edit-target",
-  shape: "configuration-shape-edit-target",
-} as const satisfies Readonly<Record<ReviewSection, string>>;
+type ConfiguratorStepId = (typeof configuratorSteps)[number]["id"];
 
-function focusEditTarget(targetId: string) {
+const focusTargetIds = {
+  details: "configuration-cover-details-edit-target",
+  measurements: "configuration-measurements-edit-target",
+  pattern: "configuration-pattern-edit-target",
+  preview: "configuration-pattern-scale-edit-target",
+  review: "configuration-review-heading",
+  shape: "configuration-shape-edit-target",
+} as const satisfies Readonly<Record<ConfiguratorStepId, string>>;
+
+const reviewSectionSteps = {
+  coverDetails: "details",
+  measurements: "measurements",
+  pattern: "pattern",
+  patternScale: "preview",
+  shape: "shape",
+} as const satisfies Readonly<Record<ReviewSection, ConfiguratorStepId>>;
+
+function getStepIndex(stepId: ConfiguratorStepId): number {
+  return configuratorSteps.findIndex((step) => step.id === stepId);
+}
+
+function focusStage(targetId: string) {
   const target = document.getElementById(targetId);
 
   if (target === null) {
@@ -59,7 +69,7 @@ function focusEditTarget(targetId: string) {
   }
 
   target.focus({ preventScroll: true });
-  target.scrollIntoView({ block: "start" });
+  target.scrollIntoView({ block: "start", behavior: "auto" });
 }
 
 export function Configurator() {
@@ -69,10 +79,10 @@ export function Configurator() {
     setFilters: setPatternFilters,
     state: patternCatalogue,
   } = usePatternCatalogue();
-  const [activeView, setActiveView] =
-    useState<"configure" | "review">("configure");
-  const [reviewHasBeenOpened, setReviewHasBeenOpened] =
-    useState(false);
+  const [requestedStepId, setRequestedStepId] =
+    useState<ConfiguratorStepId>("shape");
+  const [highestStepReached, setHighestStepReached] = useState(0);
+  const [stageAnnouncement, setStageAnnouncement] = useState("");
   const pendingFocusTarget = useRef<string | null>(null);
   const measurementsAreValid = hasValidMeasurementsForShape(
     state.shape,
@@ -82,8 +92,7 @@ export function Configurator() {
     state.unit,
     state.backWidth,
   );
-  const catalogueResult =
-    getCompleteCatalogueResult(patternCatalogue);
+  const catalogueResult = getCompleteCatalogueResult(patternCatalogue);
   const selectedBuiltInPattern = getPatternById(
     patternCatalogue.allPatterns,
     getBuiltInPatternId(state.pattern),
@@ -98,61 +107,225 @@ export function Configurator() {
           }
         : null
       : selectedBuiltInPattern;
-  const reviewReadiness = deriveReviewReadiness(
-    state,
-    catalogueResult,
+  const reviewReadiness = deriveReviewReadiness(state, catalogueResult);
+  const patternIssue =
+    reviewReadiness.status === "incomplete"
+      ? reviewReadiness.issues.find((issue) => issue.section === "pattern")
+      : undefined;
+  const patternCanContinue = patternIssue === undefined;
+
+  let dataAllowsThroughStep = 0;
+  if (state.shape !== null) {
+    dataAllowsThroughStep = measurementsAreValid ? 3 : 1;
+  }
+  if (measurementsAreValid && patternCanContinue) {
+    dataAllowsThroughStep =
+      reviewReadiness.status === "ready" ? 5 : 4;
+  }
+
+  const maximumAccessibleStep = Math.min(
+    highestStepReached,
+    dataAllowsThroughStep,
   );
-  const patternIsSelected = selectedPattern !== null;
-  const reviewIsVisible =
-    activeView === "review" && reviewReadiness.status === "ready";
-  const currentStepId =
-    reviewIsVisible
-      ? "review"
-      : measurementsAreValid && patternIsSelected
-      ? "preview"
-      : measurementsAreValid
-        ? "pattern"
-        : state.shape !== null
-          ? "measurements"
-          : "shape";
+  const requestedStepIndex = getStepIndex(requestedStepId);
+  const activeStepIndex = Math.min(
+    requestedStepIndex,
+    maximumAccessibleStep,
+  );
+  const activeStep = configuratorSteps[activeStepIndex];
+  const activeStepId = activeStep.id;
+  const lastStepIndex = configuratorSteps.length - 1;
+  const stepDataIsCompatible = [
+    state.shape !== null,
+    measurementsAreValid,
+    measurementsAreValid,
+    measurementsAreValid && patternCanContinue,
+    reviewReadiness.status === "ready",
+    reviewReadiness.status === "ready",
+  ] as const;
+  const completedStepIds = configuratorSteps
+    .filter((step, index) => {
+      const wasCompleted =
+        index < highestStepReached ||
+        (highestStepReached === lastStepIndex && index === lastStepIndex);
+
+      return (
+        step.id !== activeStepId &&
+        wasCompleted &&
+        stepDataIsCompatible[index] &&
+        index <= dataAllowsThroughStep
+      );
+    })
+    .map((step) => step.id);
 
   useLayoutEffect(() => {
     if (pendingFocusTarget.current === null) {
       return;
     }
 
-    focusEditTarget(pendingFocusTarget.current);
+    focusStage(pendingFocusTarget.current);
     pendingFocusTarget.current = null;
-  }, [activeView]);
+  }, [activeStepId]);
 
-  const showReview = () => {
-    if (reviewReadiness.status !== "ready") {
+  const navigateToStep = (stepId: ConfiguratorStepId) => {
+    const stepIndex = getStepIndex(stepId);
+    if (stepIndex > maximumAccessibleStep) {
       return;
     }
 
-    pendingFocusTarget.current = "configuration-review-heading";
-    setReviewHasBeenOpened(true);
-    setActiveView("review");
+    pendingFocusTarget.current = focusTargetIds[stepId];
+    setRequestedStepId(stepId);
+    setStageAnnouncement(
+      `Stage ${stepIndex + 1} of ${configuratorSteps.length}: ${configuratorSteps[stepIndex].label}.`,
+    );
+  };
+
+  const continueToNextStep = () => {
+    if (activeStepIndex >= lastStepIndex) {
+      return;
+    }
+
+    const nextStepIndex = activeStepIndex + 1;
+    const nextStep = configuratorSteps[nextStepIndex];
+    pendingFocusTarget.current = focusTargetIds[nextStep.id];
+    setHighestStepReached((current) =>
+      Math.max(current, nextStepIndex),
+    );
+    setRequestedStepId(nextStep.id);
+    setStageAnnouncement(
+      `Stage ${nextStepIndex + 1} of ${configuratorSteps.length}: ${nextStep.label}.`,
+    );
+  };
+
+  const returnToPreviousStep = () => {
+    if (activeStepIndex === 0) {
+      return;
+    }
+
+    navigateToStep(configuratorSteps[activeStepIndex - 1].id);
   };
 
   const editSection = (section: ReviewSection) => {
-    const targetId = editTargetIds[section];
-
-    if (reviewIsVisible) {
-      pendingFocusTarget.current = targetId;
-      setActiveView("configure");
-      return;
-    }
-
-    focusEditTarget(targetId);
+    navigateToStep(reviewSectionSteps[section]);
   };
+
+  const canContinue =
+    activeStepId === "shape"
+      ? state.shape !== null
+      : activeStepId === "measurements"
+        ? measurementsAreValid
+        : activeStepId === "pattern"
+          ? patternCanContinue
+          : activeStepId === "preview"
+            ? reviewReadiness.status === "ready"
+            : true;
+  const continueHelp =
+    activeStepId === "shape" && state.shape === null
+      ? "Choose a cushion shape to continue."
+      : activeStepId === "measurements" && !measurementsAreValid
+        ? "Enter every required measurement within the displayed range to continue."
+        : activeStepId === "pattern" && patternIssue !== undefined
+          ? patternIssue.message
+          : activeStepId === "preview" && reviewReadiness.status === "incomplete"
+            ? reviewReadiness.issues[0]?.message ??
+              "Complete the preview choices to continue."
+            : "Your current choices will be preserved and remain editable.";
+  const previousStep =
+    activeStepIndex > 0
+      ? configuratorSteps[activeStepIndex - 1]
+      : null;
+  const nextStep =
+    activeStepIndex < lastStepIndex
+      ? configuratorSteps[activeStepIndex + 1]
+      : null;
+  const stageActions = (
+    <nav
+      aria-label={`${activeStep.label} stage actions`}
+      className="print-hidden mt-component min-w-0 rounded-card border border-border-strong bg-surface p-control-x py-4 shadow-card"
+    >
+      {nextStep !== null ? (
+        <p
+          id="configuration-stage-action-help"
+          className="break-words text-supporting text-text-muted"
+        >
+          {continueHelp}
+        </p>
+      ) : null}
+      <div className="mt-3 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-between">
+        {previousStep !== null ? (
+          <Button variant="secondary" onClick={returnToPreviousStep}>
+            Back to {previousStep.label}
+          </Button>
+        ) : (
+          <span aria-hidden="true" />
+        )}
+        {nextStep !== null ? (
+          <Button
+            disabled={!canContinue}
+            aria-describedby="configuration-stage-action-help"
+            onClick={continueToNextStep}
+          >
+            Continue to {nextStep.label}
+          </Button>
+        ) : null}
+      </div>
+    </nav>
+  );
+
+  let activeStageContent;
+  if (activeStepId === "shape") {
+    activeStageContent = (
+      <section aria-label="Shape selection" className="mt-layout">
+        <ShapeSelectionStep focusTargetId={focusTargetIds.shape} />
+      </section>
+    );
+  } else if (activeStepId === "measurements") {
+    activeStageContent = (
+      <MeasurementStep focusTargetId={focusTargetIds.measurements} />
+    );
+  } else if (activeStepId === "details") {
+    activeStageContent = (
+      <CoverDetailsStep focusTargetId={focusTargetIds.details} />
+    );
+  } else if (activeStepId === "pattern") {
+    activeStageContent = (
+      <PatternStep
+        catalogue={patternCatalogue}
+        focusTargetId={focusTargetIds.pattern}
+        onFiltersChange={setPatternFilters}
+        onRetry={retryPatternCatalogue}
+      />
+    );
+  } else if (activeStepId === "preview") {
+    activeStageContent = (
+      <PreviewStep
+        focusTargetId={focusTargetIds.preview}
+        selectedPattern={selectedPattern}
+      />
+    );
+  } else {
+    activeStageContent =
+      reviewReadiness.status === "ready" && selectedPattern !== null ? (
+        <ReviewScreen
+          configuration={state}
+          readiness={reviewReadiness}
+          selectedPattern={selectedPattern}
+          onEdit={editSection}
+        />
+      ) : null;
+  }
 
   return (
     <>
       <StepIndicator
         className="configurator-progress print-hidden mt-layout"
-        currentStepId={currentStepId}
+        completedStepIds={completedStepIds}
+        currentStepId={activeStepId}
+        revisitableStepIds={completedStepIds}
         steps={configuratorSteps}
+        onStepSelect={(stepId) =>
+          navigateToStep(stepId as ConfiguratorStepId)
+        }
       />
 
       <SharedDesignLoader
@@ -161,77 +334,20 @@ export function Configurator() {
       />
       <WorkspaceConfigurationLoader />
 
-      <div
-        className="configurator-editing print-hidden"
-        hidden={reviewIsVisible}
+      <p
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
       >
-        {reviewHasBeenOpened ? (
-          <section
-            aria-label="Return to configuration review"
-            className="sticky top-3 z-10 mt-component flex min-w-0 flex-col gap-3 rounded-card border border-border-strong bg-surface p-control-x py-3 shadow-raised sm:flex-row sm:items-center sm:justify-between"
-          >
-            <p
-              id="configuration-return-review-status"
-              className="min-w-0 break-words text-supporting text-text-muted"
-            >
-              {reviewReadiness.status === "ready"
-                ? "Your changes are reflected in the current summary."
-                : "Review output is unavailable until the incomplete items below are resolved."}
-            </p>
-            <Button
-              className="shrink-0"
-              variant="secondary"
-              disabled={reviewReadiness.status !== "ready"}
-              aria-describedby="configuration-return-review-status"
-              onClick={showReview}
-            >
-              Return to review
-            </Button>
-          </section>
-        ) : null}
+        {stageAnnouncement}
+      </p>
 
-        <section aria-label="Shape selection" className="mt-layout">
-          <ShapeSelectionStep focusTargetId={editTargetIds.shape} />
-        </section>
-
-        <MeasurementStep
-          focusTargetId={editTargetIds.measurements}
-        />
-        <CoverDetailsStep
-          focusTargetId={editTargetIds.coverDetails}
-        />
-        <PatternStep
-          catalogue={patternCatalogue}
-          focusTargetId={editTargetIds.pattern}
-          onFiltersChange={setPatternFilters}
-          onRetry={retryPatternCatalogue}
-        />
-        <PreviewStep
-          focusTargetId={editTargetIds.patternScale}
-          selectedPattern={selectedPattern}
-        />
-
-        {reviewReadiness.status === "ready" ? (
-          <ReviewEntry onReview={showReview} />
-        ) : (
-          <ReviewUnavailable
-            canEditPattern={measurementsAreValid}
-            readiness={reviewReadiness}
-            onEdit={editSection}
-          />
-        )}
+      <div className="configurator-active-stage min-w-0">
+        {activeStepId === "review" ? stageActions : null}
+        {activeStageContent}
+        {activeStepId !== "review" ? stageActions : null}
       </div>
-
-      {reviewIsVisible &&
-      reviewReadiness.status === "ready" &&
-      selectedPattern !== null ? (
-        <ReviewScreen
-          configuration={state}
-          readiness={reviewReadiness}
-          selectedPattern={selectedPattern}
-          onEdit={editSection}
-        />
-      ) : null}
     </>
   );
 }
