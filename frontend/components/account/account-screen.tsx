@@ -11,6 +11,8 @@ import {
   type SessionMetadata,
 } from "@/services/account-api";
 
+import { AccountNavigation } from "./account-navigation";
+
 function message(error: unknown): string {
   return error instanceof AccountApiError
     ? error.message
@@ -149,6 +151,7 @@ function AuthenticatedAccount() {
 
   return (
     <div className="space-y-layout">
+      <AccountNavigation currentHref="/account/" />
       <section className="rounded-panel border border-border bg-surface p-card shadow-card">
         <p className="text-label font-control text-accent-strong">Signed in</p>
         <h2 className="mt-2 break-all font-display text-section-title font-heading">{account.email}</h2>

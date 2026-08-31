@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
-import { SiteFooter, SiteHeader } from "@/components/layout";
+import {
+  RouteAwareSiteFooter,
+  RouteAwareSiteHeader,
+} from "@/components/layout";
 import { ConsentPreferences } from "@/components/assurance";
 import { parsePublicApiOrigin } from "@/config/environment";
 import { AuthProvider } from "@/context/auth";
@@ -54,17 +57,15 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <SiteHeader
-          navigationItems={[
+        <RouteAwareSiteHeader
+          primaryItems={[
             { href: "/configure/", label: "Configure" },
             { href: "/projects/", label: "My projects" },
             { href: "/commerce/", label: "Pricing" },
+          ]}
+          utilityItems={[
             { href: "/cart/", label: "Cart" },
-            { href: "/orders/", label: "Orders" },
-            { href: "/admin/", label: "Admin" },
             { href: "/account/", label: "Account" },
-            { href: "/legal/", label: "Legal" },
-            { href: "/trust/", label: "Trust" },
           ]}
         />
         <main
@@ -77,7 +78,7 @@ export default function RootLayout({
             <ConsentPreferences />
           </AuthProvider>
         </main>
-        <SiteFooter
+        <RouteAwareSiteFooter
           navigationItems={[
             { href: "/legal/", label: "Legal and privacy" },
             { href: "/trust/", label: "Trust" },

@@ -71,6 +71,7 @@ test("sandbox quote-to-delivery workflow stays authoritative and role protected"
   await expect(page.getByRole("heading", { name: /Estimated subtotal: \$104.50 CAD/ })).toBeVisible();
   await page.getByRole("button", { name: "Create quote" }).press("Enter");
   await page.getByRole("button", { name: "Add to cart" }).press("Enter");
+  await page.getByRole("button", { name: "Menu" }).press("Enter");
   await page.getByRole("link", { name: "Cart" }).press("Enter");
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.getByRole("spinbutton", { name: "Quantity" }).fill("2");
@@ -85,7 +86,8 @@ test("sandbox quote-to-delivery workflow stays authoritative and role protected"
   await expect(page.getByText(/only a verified payment event/i)).toBeVisible();
   await expect(page.getByText("Paid", { exact: true }).first()).toBeVisible();
   await noOverflow(page);
-  await page.getByRole("link", { name: "Admin" }).press("Enter");
+  await expect(page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Admin" })).toHaveCount(0);
+  await page.goto(`${basePath}/admin/`);
   await expect(page.getByRole("heading", { name: "Administrator access denied" })).toBeVisible();
 
   const adminPage = await context.newPage();

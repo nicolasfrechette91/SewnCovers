@@ -2,16 +2,21 @@ import Link from "next/link";
 import type { ComponentPropsWithoutRef } from "react";
 
 import { classNames } from "../ui/class-names";
-import type { SiteNavigationItem } from "./navigation";
+import {
+  isCurrentNavigationPath,
+  type SiteNavigationItem,
+} from "./navigation";
 
 export interface SiteFooterProps
   extends Omit<ComponentPropsWithoutRef<"footer">, "children"> {
+  currentHref?: string;
   navigationItems?: readonly SiteNavigationItem[];
   year?: number;
 }
 
 export function SiteFooter({
   className,
+  currentHref = "/",
   navigationItems = [],
   year = new Date().getFullYear(),
   ...footerProps
@@ -42,16 +47,27 @@ export function SiteFooter({
         {navigationItems.length > 0 ? (
           <nav aria-label="Footer navigation" className="min-w-0">
             <ul className="flex min-w-0 flex-wrap gap-x-component gap-y-2">
-              {navigationItems.map((item) => (
-                <li key={item.href} className="min-w-0">
-                  <Link
-                    href={item.href}
-                    className="inline-flex min-h-11 max-w-full items-center rounded-control text-supporting font-emphasis break-words text-text-primary underline decoration-1 underline-offset-4 hover:text-brand active:text-brand-active"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
+              {navigationItems.map((item) => {
+                const isCurrent = isCurrentNavigationPath(
+                  currentHref,
+                  item.href,
+                );
+
+                return (
+                  <li key={item.href} className="min-w-0">
+                    <Link
+                      href={item.href}
+                      aria-current={isCurrent ? "page" : undefined}
+                      className={classNames(
+                        "inline-flex min-h-11 max-w-full items-center rounded-control text-supporting font-emphasis break-words text-text-primary underline underline-offset-4 hover:text-brand active:text-brand-active",
+                        isCurrent ? "decoration-2" : "decoration-1",
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
         ) : null}
