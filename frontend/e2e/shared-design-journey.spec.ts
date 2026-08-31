@@ -166,7 +166,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await page
       .getByRole("button", { name: "Continue to Pattern" })
       .click();
-    await expect(page.getByText("Showing all 12 patterns.")).toBeVisible();
+    await expect(page.getByText("Showing 6 of 12 patterns.")).toBeVisible();
   });
 
   await test.step("select a pattern and verify the live preview", async () => {

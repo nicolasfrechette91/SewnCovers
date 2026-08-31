@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PatternCard } from "@/components/configurator/pattern-card";
 import {
@@ -52,6 +52,30 @@ const colorFilterOptions: readonly PatternFilterOption<PatternColorFilter>[] =
     })),
   ];
 
+export const INITIAL_PATTERN_RESULT_LIMIT = 6;
+
+function normalizePatternSearch(value: string): string {
+  return value.trim().toLocaleLowerCase();
+}
+
+function patternMatchesSearch(
+  pattern: PatternCatalogueState["visiblePatterns"][number],
+  normalizedQuery: string,
+): boolean {
+  if (normalizedQuery === "") {
+    return true;
+  }
+
+  return [
+    pattern.name,
+    pattern.description,
+    getPatternCategoryLabel(pattern.categoryId),
+    ...getPatternColorLabels(pattern.colorIds),
+  ].some((value) =>
+    value.toLocaleLowerCase().includes(normalizedQuery),
+  );
+}
+
 export interface PatternStepProps {
   catalogue: PatternCatalogueState;
   focusTargetId?: string;
@@ -69,27 +93,81 @@ export function PatternStep({
   const generatedId = useId();
   const supportingTextId = `${generatedId}-supporting-text`;
   const resultCountId = `${generatedId}-result-count`;
-  const categoryFilterRef = useRef<HTMLFieldSetElement>(null);
+  const resultAnnouncementId = `${generatedId}-result-announcement`;
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showAllMatchingPatterns, setShowAllMatchingPatterns] =
+    useState(false);
+  const [resultAnnouncement, setResultAnnouncement] = useState("");
   const { categoryId, colorId } = catalogue.filters;
   const filtersAreActive =
     categoryId !== ALL_PATTERN_CATEGORIES ||
     colorId !== ALL_PATTERN_COLORS;
+  const normalizedSearchQuery = normalizePatternSearch(searchQuery);
+  const searchIsActive = normalizedSearchQuery !== "";
+  const discoveryCriteriaAreActive = filtersAreActive || searchIsActive;
   const hasCompleteCatalogue = catalogue.allPatterns.length > 0;
+  const matchingPatterns = useMemo(
+    () =>
+      catalogue.visiblePatterns.filter((pattern) =>
+        patternMatchesSearch(pattern, normalizedSearchQuery),
+      ),
+    [catalogue.visiblePatterns, normalizedSearchQuery],
+  );
+  const displayedPatterns = showAllMatchingPatterns
+    ? matchingPatterns
+    : matchingPatterns.slice(0, INITIAL_PATTERN_RESULT_LIMIT);
+  const undisclosedPatternCount =
+    matchingPatterns.length - displayedPatterns.length;
+  const canTogglePatternDisclosure =
+    matchingPatterns.length > INITIAL_PATTERN_RESULT_LIMIT;
   const builtInPatternId = getBuiltInPatternId(state.pattern);
   const selectedPattern = getPatternById(
     catalogue.allPatterns,
     builtInPatternId,
   );
-  const selectedPatternIsHidden =
+  const catalogueIsSettled =
+    catalogue.phase === "ready" || catalogue.phase === "empty";
+  const selectedPatternMatchesCriteria =
     selectedPattern !== null &&
-    (catalogue.phase === "ready" || catalogue.phase === "empty") &&
-    !catalogue.visiblePatterns.some(
-      (pattern) => pattern.id === selectedPattern.id,
-    );
+    matchingPatterns.some((pattern) => pattern.id === selectedPattern.id);
+  const selectedPatternIsDisplayed =
+    selectedPattern !== null &&
+    displayedPatterns.some((pattern) => pattern.id === selectedPattern.id);
+  const selectedPatternIsHiddenByCriteria =
+    selectedPattern !== null &&
+    catalogueIsSettled &&
+    !selectedPatternMatchesCriteria;
+  const selectedPatternIsUndisclosed =
+    selectedPattern !== null &&
+    catalogueIsSettled &&
+    selectedPatternMatchesCriteria &&
+    !selectedPatternIsDisplayed;
   const selectedPatternIsUnavailable =
     hasCompleteCatalogue &&
     builtInPatternId !== null &&
     selectedPattern === null;
+
+  const resultCountMessage =
+    catalogue.phase === "loading"
+      ? catalogue.message
+      : catalogue.phase === "error"
+        ? "Pattern results could not be loaded."
+        : discoveryCriteriaAreActive
+          ? displayedPatterns.length === matchingPatterns.length
+            ? `${matchingPatterns.length} of ${catalogue.allPatterns.length} patterns match. Showing all matches.`
+            : `${matchingPatterns.length} of ${catalogue.allPatterns.length} patterns match. Showing ${displayedPatterns.length}.`
+          : displayedPatterns.length === catalogue.allPatterns.length
+            ? `Showing all ${catalogue.allPatterns.length} patterns.`
+            : `Showing ${displayedPatterns.length} of ${catalogue.allPatterns.length} patterns.`;
+
+  useEffect(() => {
+    const timer = globalThis.setTimeout(() => {
+      setResultAnnouncement(resultCountMessage);
+    }, 250);
+
+    return () => globalThis.clearTimeout(timer);
+  }, [resultCountMessage]);
 
   if (
     !hasValidMeasurementsForShape(
@@ -104,16 +182,28 @@ export function PatternStep({
     return null;
   }
 
-  const clearFilters = () => {
-    onFiltersChange({
-      categoryId: ALL_PATTERN_CATEGORIES,
-      colorId: ALL_PATTERN_COLORS,
-    });
+  const clearDiscoveryCriteria = () => {
+    setSearchQuery("");
+    setShowAllMatchingPatterns(false);
+    if (filtersAreActive) {
+      onFiltersChange({
+        categoryId: ALL_PATTERN_CATEGORIES,
+        colorId: ALL_PATTERN_COLORS,
+      });
+    }
     requestAnimationFrame(() => {
-      categoryFilterRef.current
-        ?.querySelector<HTMLInputElement>("input")
-        ?.focus();
+      searchInputRef.current?.focus();
     });
+  };
+
+  const updateSearchQuery = (value: string) => {
+    setSearchQuery(value);
+    setShowAllMatchingPatterns(false);
+  };
+
+  const updateFilters = (filters: PatternFilters) => {
+    setShowAllMatchingPatterns(false);
+    onFiltersChange(filters);
   };
 
   const errorState = (
@@ -167,6 +257,10 @@ export function PatternStep({
         <h3 className="mt-layout font-display text-section-title font-heading">
           Built-in patterns
         </h3>
+        <p className="mt-2 max-w-3xl break-words text-supporting text-text-muted">
+          Search and filters apply only to built-in patterns. Your private
+          patterns remain separate above.
+        </p>
 
         {!hasCompleteCatalogue ? (
           catalogue.phase === "loading" ? (
@@ -202,27 +296,48 @@ export function PatternStep({
         ) : (
           <>
             <div className="mt-component rounded-card border border-border bg-surface-subtle p-control-x py-4">
+              <div className="max-w-2xl">
+                <label
+                  htmlFor={`${generatedId}-pattern-search`}
+                  className="block text-label font-control tracking-label text-text-primary"
+                >
+                  Search built-in patterns
+                </label>
+                <input
+                  ref={searchInputRef}
+                  id={`${generatedId}-pattern-search`}
+                  type="search"
+                  value={searchQuery}
+                  aria-describedby={resultCountId}
+                  className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x py-control-y text-body text-text-primary transition-[background-color,border-color,box-shadow] placeholder:text-text-muted motion-reduce:transition-none"
+                  placeholder="Name, description, category, or color"
+                  onChange={(event) =>
+                    updateSearchQuery(event.currentTarget.value)
+                  }
+                />
+              </div>
               <div className="grid min-w-0 gap-component lg:grid-cols-2">
                 <PatternFilter
-                  ref={categoryFilterRef}
+                  className="mt-component"
                   legend="Filter by category"
                   name={`${generatedId}-pattern-category`}
                   options={categoryFilterOptions}
                   value={categoryId}
                   onChange={(nextCategoryId) =>
-                    onFiltersChange({
+                    updateFilters({
                       categoryId: nextCategoryId,
                       colorId,
                     })
                   }
                 />
                 <PatternFilter
+                  className="mt-component"
                   legend="Filter by color"
                   name={`${generatedId}-pattern-color`}
                   options={colorFilterOptions}
                   value={colorId}
                   onChange={(nextColorId) =>
-                    onFiltersChange({
+                    updateFilters({
                       categoryId,
                       colorId: nextColorId,
                     })
@@ -232,31 +347,31 @@ export function PatternStep({
               <div className="mt-component flex min-w-0 flex-wrap items-center justify-between gap-3">
                 <p
                   id={resultCountId}
-                  role="status"
-                  aria-live="polite"
-                  aria-atomic="true"
                   className="min-w-0 break-words text-supporting text-text-muted"
                 >
-                  {catalogue.phase === "loading"
-                    ? catalogue.message
-                    : catalogue.phase === "error"
-                      ? "Pattern results could not be loaded."
-                      : filtersAreActive
-                        ? `Showing ${catalogue.visiblePatterns.length} of ${catalogue.allPatterns.length} patterns.`
-                        : `Showing all ${catalogue.allPatterns.length} patterns.`}
+                  {resultCountMessage}
                 </p>
                 <Button
                   variant="secondary"
-                  disabled={!filtersAreActive}
+                  disabled={!discoveryCriteriaAreActive}
                   aria-describedby={resultCountId}
-                  onClick={clearFilters}
+                  onClick={clearDiscoveryCriteria}
                 >
-                  Clear filters
+                  Clear search and filters
                 </Button>
               </div>
+              <p
+                id={resultAnnouncementId}
+                className="sr-only"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {resultAnnouncement}
+              </p>
             </div>
 
-            {selectedPatternIsHidden ? (
+            {selectedPatternIsHiddenByCriteria ? (
               <div
                 className="mt-component rounded-card border border-border-strong bg-surface-subtle p-control-x py-4"
                 role="status"
@@ -264,7 +379,7 @@ export function PatternStep({
                 aria-atomic="true"
               >
                 <h3 className="text-body font-control text-text-primary">
-                  Selected pattern hidden by filters
+                  Selected pattern hidden by discovery criteria
                 </h3>
                 <p className="mt-1 break-words text-supporting text-text-muted">
                   {selectedPattern.name} remains selected for your
@@ -273,10 +388,23 @@ export function PatternStep({
                 <Button
                   className="mt-3"
                   variant="secondary"
-                  onClick={clearFilters}
+                  onClick={clearDiscoveryCriteria}
                 >
-                  Clear filters to show selected pattern
+                  Clear search and filters to show selected pattern
                 </Button>
+              </div>
+            ) : null}
+
+            {selectedPatternIsUndisclosed ? (
+              <div className="mt-component rounded-card border border-border-strong bg-surface-subtle p-control-x py-4">
+                <h3 className="text-body font-control text-text-primary">
+                  Selected pattern outside the initial results
+                </h3>
+                <p className="mt-1 break-words text-supporting text-text-muted">
+                  {selectedPattern.name} remains selected for your
+                  configuration and preview. Show all matching patterns to
+                  return to its card.
+                </p>
               </div>
             ) : null}
 
@@ -306,7 +434,7 @@ export function PatternStep({
               </div>
             ) : catalogue.phase === "error" ? (
               errorState
-            ) : catalogue.visiblePatterns.length === 0 ? (
+            ) : matchingPatterns.length === 0 ? (
               <div
                 className="mt-component rounded-card border border-border-strong bg-surface-subtle p-card"
                 aria-labelledby={`${generatedId}-no-matches-title`}
@@ -315,26 +443,27 @@ export function PatternStep({
                   id={`${generatedId}-no-matches-title`}
                   className="text-body font-control text-text-primary"
                 >
-                  No patterns match these filters
+                  No patterns match your search and filters
                 </h3>
                 <p className="mt-1 break-words text-supporting text-text-muted">
-                  Your current pattern selection has not changed. Clear both
-                  filters to request the complete catalogue.
+                  Your current pattern selection has not changed. Clear the
+                  current discovery criteria to show the complete catalogue.
                 </p>
                 <Button
                   className="mt-3"
                   variant="secondary"
-                  onClick={clearFilters}
+                  onClick={clearDiscoveryCriteria}
                 >
-                  Clear filters and show all patterns
+                  Clear search and filters
                 </Button>
               </div>
             ) : (
               <div
+                id={`${generatedId}-pattern-results`}
                 aria-describedby={resultCountId}
                 className="mt-layout grid min-w-0 gap-component sm:grid-cols-2 lg:grid-cols-3"
               >
-                {catalogue.visiblePatterns.map((pattern) => {
+                {displayedPatterns.map((pattern) => {
                   const optionId = `${generatedId}-${pattern.id}`;
                   const colorLabels = getPatternColorLabels(
                     pattern.colorIds,
@@ -370,6 +499,23 @@ export function PatternStep({
                 })}
               </div>
             )}
+
+            {catalogueIsSettled && canTogglePatternDisclosure ? (
+              <div className="mt-component flex min-w-0 flex-wrap items-center gap-3">
+                <Button
+                  variant="secondary"
+                  aria-controls={`${generatedId}-pattern-results`}
+                  aria-expanded={showAllMatchingPatterns}
+                  onClick={() =>
+                    setShowAllMatchingPatterns((current) => !current)
+                  }
+                >
+                  {showAllMatchingPatterns
+                    ? "Show fewer patterns"
+                    : `Show all ${matchingPatterns.length} patterns (${undisclosedPatternCount} more)`}
+                </Button>
+              </div>
+            ) : null}
           </>
         )}
       </fieldset>

@@ -18,7 +18,10 @@ import type { ConfigurationState } from "../context/configuration/types";
 import { ShapeSelectionStep } from "../components/configurator/shape-selection-step";
 import { MeasurementStep } from "../components/configurator/measurement-step";
 import { CoverDetailsStep } from "../components/configurator/cover-details-step";
-import { PatternStep } from "../components/configurator/pattern-step";
+import {
+  INITIAL_PATTERN_RESULT_LIMIT,
+  PatternStep,
+} from "../components/configurator/pattern-step";
 import { PreviewStep } from "../components/configurator/preview-step";
 import { StepIndicator } from "../components/configurator/step-indicator";
 import { deriveReviewReadiness } from "../components/configurator/review-summary";
@@ -60,6 +63,114 @@ const diamondPattern: PatternDefinition = {
   colorIds: ["ivory", "blue", "charcoal"],
   previewClassName: "pattern-diamond-path",
 };
+const discoveryPatterns: readonly PatternDefinition[] = [
+  fernPattern,
+  {
+    id: "meadow-sprig",
+    name: "Meadow Sprig",
+    description: "Small branching sprigs across an open ground.",
+    categoryId: "botanical",
+    colorIds: ["ivory", "blue", "gold"],
+    previewClassName: "pattern-meadow-sprig",
+  },
+  {
+    id: "prototype-geometric",
+    name: "Geometric Sample",
+    description: "A warm structured direction.",
+    categoryId: "geometric",
+    colorIds: ["ivory", "terracotta"],
+    previewClassName: "prototype-pattern-geometric",
+  },
+  diamondPattern,
+  {
+    id: "arch-grid",
+    name: "Arch Grid",
+    description: "Rounded arches in a compact tiled grid.",
+    categoryId: "geometric",
+    colorIds: ["ivory", "terracotta", "gold"],
+    previewClassName: "pattern-arch-grid",
+  },
+  {
+    id: "harbor-stripe",
+    name: "Harbor Stripe",
+    description: "Broad blue bands with fine light pinstripes.",
+    categoryId: "striped",
+    colorIds: ["ivory", "blue"],
+    previewClassName: "pattern-harbor-stripe",
+  },
+  {
+    id: "orchard-stripe",
+    name: "Orchard Stripe",
+    description: "Uneven green and gold lines.",
+    categoryId: "striped",
+    colorIds: ["ivory", "green", "gold"],
+    previewClassName: "pattern-orchard-stripe",
+  },
+  {
+    id: "ribbon-stripe",
+    name: "Ribbon Stripe",
+    description: "Slim rose bands cross terracotta ribbons.",
+    categoryId: "striped",
+    colorIds: ["ivory", "terracotta", "rose"],
+    previewClassName: "pattern-ribbon-stripe",
+  },
+  {
+    id: "prototype-woven",
+    name: "Woven Sample",
+    description: "A quiet small-scale direction.",
+    categoryId: "woven",
+    colorIds: ["ivory", "charcoal"],
+    previewClassName: "prototype-pattern-woven",
+  },
+  {
+    id: "basket-check",
+    name: "Basket Check",
+    description: "Blocks suggest an oversized basket weave.",
+    categoryId: "woven",
+    colorIds: ["ivory", "blue", "charcoal"],
+    previewClassName: "pattern-basket-check",
+  },
+  {
+    id: "linen-crosshatch",
+    name: "Linen Crosshatch",
+    description: "Fine crossing lines make a textured grid.",
+    categoryId: "woven",
+    colorIds: ["ivory", "gold"],
+    previewClassName: "pattern-linen-crosshatch",
+  },
+  {
+    id: "terrace-wave",
+    name: "Terrace Wave",
+    description: "Layered waves move in alternating cool bands.",
+    categoryId: "abstract",
+    colorIds: ["ivory", "green", "blue"],
+    previewClassName: "pattern-terrace-wave",
+  },
+  {
+    id: "pebble-drift",
+    name: "Pebble Drift",
+    description: "Soft-edged pebble forms gather in clusters.",
+    categoryId: "abstract",
+    colorIds: ["ivory", "terracotta", "charcoal"],
+    previewClassName: "pattern-pebble-drift",
+  },
+  {
+    id: "confetti-grid",
+    name: "Confetti Grid",
+    description: "Playful dashes and dots on a spacious grid.",
+    categoryId: "abstract",
+    colorIds: ["ivory", "green", "gold", "rose"],
+    previewClassName: "pattern-confetti-grid",
+  },
+  {
+    id: "prototype-botanical",
+    name: "Botanical Sample",
+    description: "An organic leaf-inspired direction.",
+    categoryId: "botanical",
+    colorIds: ["ivory", "green", "terracotta"],
+    previewClassName: "prototype-pattern-botanical",
+  },
+];
 const completeConfiguration: ConfigurationState = {
   shape: "rectangle",
   width: 80,
@@ -344,7 +455,7 @@ test("preserves a selected pattern when filters hide it and exposes recovery", (
 
   assert.ok(
     screen.getByRole("heading", {
-      name: "Selected pattern hidden by filters",
+      name: "Selected pattern hidden by discovery criteria",
     }),
   );
   assert.ok(screen.getByText(/Fern Trail remains selected/i));
@@ -358,7 +469,7 @@ test("preserves a selected pattern when filters hide it and exposes recovery", (
 
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Clear filters to show selected pattern",
+      name: "Clear search and filters to show selected pattern",
     }),
   );
   assert.deepEqual(filterChanges, [
@@ -417,12 +528,227 @@ test("announces unavailable selections and filtered empty results without losing
   );
   assert.ok(
     screen.getByRole("heading", {
-      name: "No patterns match these filters",
+      name: "No patterns match your search and filters",
     }),
   );
   assert.equal(
     screen.getByTestId("current-pattern").textContent,
     "removed-pattern",
+  );
+});
+
+test("limits built-in results initially and reveals them without moving focus", () => {
+  const { container } = renderWithConfiguration(
+    <PatternStep
+      catalogue={catalogueState({
+        allPatterns: discoveryPatterns,
+        visiblePatterns: discoveryPatterns,
+      })}
+      onFiltersChange={() => undefined}
+      onRetry={() => undefined}
+    />,
+    completeConfiguration,
+  );
+
+  assert.equal(
+    container.querySelectorAll(".pattern-card-input").length,
+    INITIAL_PATTERN_RESULT_LIMIT,
+  );
+  assert.ok(screen.getByText("Showing 6 of 15 patterns."));
+  assert.equal(screen.queryByRole("radio", { name: "Orchard Stripe" }), null);
+
+  const showAll = screen.getByRole("button", {
+    name: "Show all 15 patterns (9 more)",
+  });
+  showAll.focus();
+  fireEvent.click(showAll);
+
+  assert.equal(container.querySelectorAll(".pattern-card-input").length, 15);
+  assert.equal(document.activeElement, showAll);
+  assert.ok(screen.getByRole("radio", { name: "Confetti Grid" }));
+  assert.ok(screen.getByRole("button", { name: "Show fewer patterns" }));
+
+  fireEvent.click(showAll);
+  assert.equal(
+    container.querySelectorAll(".pattern-card-input").length,
+    INITIAL_PATTERN_RESULT_LIMIT,
+  );
+});
+
+test("searches names and supported metadata case-insensitively with trimmed input", () => {
+  renderWithConfiguration(
+    <PatternStep
+      catalogue={catalogueState({
+        allPatterns: discoveryPatterns,
+        visiblePatterns: discoveryPatterns,
+      })}
+      onFiltersChange={() => undefined}
+      onRetry={() => undefined}
+    />,
+    completeConfiguration,
+  );
+
+  const search = screen.getByRole("searchbox", {
+    name: "Search built-in patterns",
+  });
+
+  fireEvent.change(search, { target: { value: "  dIaMoNd PaTh  " } });
+  assert.ok(screen.getByRole("radio", { name: "Diamond Path" }));
+  assert.equal(screen.queryByRole("radio", { name: "Fern Trail" }), null);
+  assert.ok(screen.getByText("1 of 15 patterns match. Showing all matches."));
+
+  fireEvent.change(search, { target: { value: "cool bands" } });
+  assert.ok(screen.getByRole("radio", { name: "Terrace Wave" }));
+
+  fireEvent.change(search, { target: { value: "woven" } });
+  assert.ok(screen.getByRole("radio", { name: "Woven Sample" }));
+  assert.ok(screen.getByRole("radio", { name: "Basket Check" }));
+  assert.ok(screen.getByRole("radio", { name: "Linen Crosshatch" }));
+
+  fireEvent.change(search, { target: { value: "rose" } });
+  assert.ok(screen.getByRole("radio", { name: "Ribbon Stripe" }));
+  assert.ok(screen.getByRole("radio", { name: "Confetti Grid" }));
+});
+
+test("combines local search with existing filters and keeps filter semantics", () => {
+  const filterChanges: unknown[] = [];
+  const geometricPatterns = discoveryPatterns.filter(
+    (pattern) => pattern.categoryId === "geometric",
+  );
+  renderWithConfiguration(
+    <PatternStep
+      catalogue={catalogueState({
+        allPatterns: discoveryPatterns,
+        filters: {
+          categoryId: "geometric",
+          colorId: ALL_PATTERN_COLORS,
+        },
+        visiblePatterns: geometricPatterns,
+      })}
+      onFiltersChange={(filters) => filterChanges.push(filters)}
+      onRetry={() => undefined}
+    />,
+    completeConfiguration,
+  );
+
+  fireEvent.change(
+    screen.getByRole("searchbox", { name: "Search built-in patterns" }),
+    { target: { value: "blue" } },
+  );
+  assert.ok(screen.getByRole("radio", { name: "Diamond Path" }));
+  assert.equal(screen.queryByRole("radio", { name: "Arch Grid" }), null);
+  assert.ok(screen.getByText("1 of 15 patterns match. Showing all matches."));
+
+  fireEvent.click(screen.getByRole("radio", { name: "Botanical" }));
+  fireEvent.click(screen.getByRole("radio", { name: "Blue" }));
+  assert.deepEqual(filterChanges, [
+    { categoryId: "botanical", colorId: ALL_PATTERN_COLORS },
+    { categoryId: "geometric", colorId: "blue" },
+  ]);
+});
+
+test("clears all discovery criteria and disclosure without clearing selection", () => {
+  const filterChanges: unknown[] = [];
+  const { container } = renderWithConfiguration(
+    <PatternStep
+      catalogue={catalogueState({
+        allPatterns: discoveryPatterns,
+        visiblePatterns: discoveryPatterns,
+      })}
+      onFiltersChange={(filters) => filterChanges.push(filters)}
+      onRetry={() => undefined}
+    />,
+    completeConfiguration,
+  );
+  const search = screen.getByRole("searchbox", {
+    name: "Search built-in patterns",
+  }) as HTMLInputElement;
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Show all 15 patterns (9 more)" }),
+  );
+  fireEvent.change(search, { target: { value: "ivory" } });
+  assert.equal(container.querySelectorAll(".pattern-card-input").length, 6);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Clear search and filters" }),
+  );
+
+  assert.equal(search.value, "");
+  assert.equal(document.activeElement, search);
+  assert.equal(container.querySelectorAll(".pattern-card-input").length, 6);
+  assert.equal(screen.getByTestId("current-pattern").textContent, "fern-trail");
+  assert.deepEqual(filterChanges, []);
+});
+
+test("shows no-results recovery and preserves private/custom separation", () => {
+  const customConfiguration: ConfigurationState = {
+    ...completeConfiguration,
+    pattern: {
+      kind: "custom",
+      assetId: "AAAAAAAAAAAAAAAAAAAAAA",
+      derivativeId: "BBBBBBBBBBBBBBBBBBBBBB",
+      processingVersion: "1",
+      label: "Private linen study",
+      previewUrl: "https://assets.example.test/private-pattern",
+    },
+  };
+  renderWithConfiguration(
+    <PatternStep
+      catalogue={catalogueState({
+        allPatterns: discoveryPatterns,
+        visiblePatterns: discoveryPatterns,
+      })}
+      onFiltersChange={() => undefined}
+      onRetry={() => undefined}
+    />,
+    customConfiguration,
+  );
+
+  fireEvent.change(
+    screen.getByRole("searchbox", { name: "Search built-in patterns" }),
+    { target: { value: "not in this catalogue" } },
+  );
+  assert.ok(
+    screen.getByRole("heading", {
+      name: "No patterns match your search and filters",
+    }),
+  );
+  assert.ok(screen.getByRole("region", { name: "Your patterns" }));
+  assert.equal(
+    screen.getByTestId("current-pattern").textContent,
+    "Private linen study",
+  );
+});
+
+test("preserves undisclosed selection and replaces it through native radio controls", () => {
+  const undisclosedConfiguration: ConfigurationState = {
+    ...completeConfiguration,
+    pattern: { kind: "built-in", patternId: "terrace-wave" },
+  };
+  renderWithConfiguration(
+    <PatternStep
+      catalogue={catalogueState({
+        allPatterns: discoveryPatterns,
+        visiblePatterns: discoveryPatterns,
+      })}
+      onFiltersChange={() => undefined}
+      onRetry={() => undefined}
+    />,
+    undisclosedConfiguration,
+  );
+
+  assert.ok(
+    screen.getByRole("heading", {
+      name: "Selected pattern outside the initial results",
+    }),
+  );
+  assert.equal(screen.getByTestId("current-pattern").textContent, "terrace-wave");
+  fireEvent.click(screen.getByRole("radio", { name: "Diamond Path" }));
+  assert.equal(screen.getByTestId("current-pattern").textContent, "diamond-path");
+  assert.equal(
+    (screen.getByRole("radio", { name: "Diamond Path" }) as HTMLInputElement)
+      .checked,
+    true,
   );
 });
 

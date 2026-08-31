@@ -132,6 +132,8 @@ test("keeps the complete configurator responsive with usable touch targets", asy
 }) => {
   for (const viewport of [
     { height: 568, name: "mobile", width: 320 },
+    { height: 667, name: "small mobile", width: 375 },
+    { height: 932, name: "large mobile", width: 430 },
     { height: 1024, name: "tablet", width: 768 },
     { height: 900, name: "desktop", width: 1440 },
   ]) {
@@ -391,6 +393,10 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Sign in or register" })).toBeFocused();
   await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("searchbox", { name: "Search built-in patterns" }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "All categories" })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "All colors" })).toBeFocused();
@@ -398,6 +404,10 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await expect(page.getByRole("radio", { name: "Botanical sample" })).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("radio", { name: "Fern trail" })).toBeChecked();
+  await page.keyboard.press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Show all 12 patterns (6 more)" }),
+  ).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(
     page.getByRole("button", { name: "Back to Cover details" }),
