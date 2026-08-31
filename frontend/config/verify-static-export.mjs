@@ -157,6 +157,12 @@ assert.match(adminHtml, /<title>Demonstration administration \| SewnCovers<\/tit
 assert.match(legalHtml, /<title>Legal and consent information \| SewnCovers<\/title>/);
 assert.match(trustHtml, /<title>Trust and implementation boundaries \| SewnCovers<\/title>/);
 assert.match(homeHtml, new RegExp(`href="${basePath || ""}\\/"`));
+assert.match(
+  homeHtml,
+  new RegExp(
+    `href="${(basePath || "").replace(/\//g, "\\/")}\\/configure\\/"[^>]*>Start configuring<\\/a>`,
+  ),
+);
 assert.match(configureHtml, new RegExp(`href="${basePath || ""}\\/"`));
 
 const textBundle = (

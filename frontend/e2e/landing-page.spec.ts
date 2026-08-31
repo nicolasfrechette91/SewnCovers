@@ -1,0 +1,153 @@
+import { expect, test, type Page } from "@playwright/test";
+
+const appOrigin = "http://127.0.0.1:3100";
+const basePath =
+  process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
+const homePath = `${basePath}/`;
+const configurePath = `${basePath}/configure/`;
+
+async function expectNoHorizontalOverflow(page: Page) {
+  const dimensions = await page.evaluate(() => ({
+    body: document.body.scrollWidth,
+    document: document.documentElement.scrollWidth,
+    viewport: document.documentElement.clientWidth,
+  }));
+
+  expect(dimensions.body).toBeLessThanOrEqual(dimensions.viewport);
+  expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
+}
+
+test("renders the hero action hierarchy and preserves its content", async ({
+  page,
+}) => {
+  await page.goto(homePath);
+  const hero = page.locator('section[aria-labelledby="landing-title"]');
+  const actions = hero.getByRole("link");
+
+  await expect(actions).toHaveText([
+    "Start configuring",
+    "Explore cover examples",
+    "See how the idea works",
+  ]);
+  const start = hero.getByRole("link", {
+    name: "Start configuring",
+    exact: true,
+  });
+  await expect(start).toHaveAttribute("href", configurePath);
+  expect(await start.evaluate((element) => element.tagName)).toBe("A");
+  await expect(
+    hero.getByRole("link", { name: "Explore cover examples" }),
+  ).toHaveAttribute("href", "#examples");
+  await expect(
+    hero.getByRole("link", { name: "See how the idea works" }),
+  ).toHaveAttribute("href", "#how-it-works");
+  await expect(page.locator("#examples")).toHaveCount(1);
+  await expect(page.locator("#how-it-works")).toHaveCount(1);
+  await expect(
+    hero.getByRole("complementary", { name: "Prototype status" }),
+  ).toContainText(
+    "It cannot charge money, create a real shipment, or produce finished covers.",
+  );
+  await expect(hero.locator("figure")).toBeVisible();
+});
+
+test("starts the unauthenticated configurator by pointer and keyboard at Shape", async ({
+  page,
+}) => {
+  await page.goto(homePath);
+  await page.getByRole("link", { name: "Start configuring" }).click();
+  await expect(page).toHaveURL(`${appOrigin}${configurePath}`);
+  await expect(
+    page.getByRole("group", { name: "Choose your cushion shape" }),
+  ).toBeVisible();
+  await expect(page.locator('[aria-current="step"]')).toContainText("Shape");
+
+  await page.goto(homePath);
+  const start = page.getByRole("link", { name: "Start configuring" });
+  await start.focus();
+  await expect(start).toBeFocused();
+  await start.press("Enter");
+  await expect(page).toHaveURL(`${appOrigin}${configurePath}`);
+  await expect(
+    page.getByRole("group", { name: "Choose your cushion shape" }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: /sign in/i })).toHaveCount(0);
+});
+
+test("keeps hero actions distinct, focused, and overflow-free", async ({ page }) => {
+  for (const viewport of [
+    { width: 320, height: 568 },
+    { width: 375, height: 667 },
+    { width: 430, height: 932 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(homePath);
+    await expectNoHorizontalOverflow(page);
+
+    const hero = page.locator('section[aria-labelledby="landing-title"]');
+    const actionBoxes = await hero.getByRole("link").evaluateAll((links) =>
+      links.map((link) => {
+        const rect = link.getBoundingClientRect();
+        return {
+          bottom: rect.bottom,
+          height: rect.height,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+        };
+      }),
+    );
+
+    expect(actionBoxes).toHaveLength(3);
+    for (const box of actionBoxes) {
+      expect(box.left).toBeGreaterThanOrEqual(0);
+      expect(box.right).toBeLessThanOrEqual(viewport.width);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    for (let first = 0; first < actionBoxes.length; first += 1) {
+      for (let second = first + 1; second < actionBoxes.length; second += 1) {
+        const a = actionBoxes[first];
+        const b = actionBoxes[second];
+        const overlaps =
+          a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+        expect(overlaps).toBe(false);
+      }
+    }
+  }
+
+  const hero = page.locator('section[aria-labelledby="landing-title"]');
+  const start = hero.getByRole("link", { name: "Start configuring" });
+  const examples = hero.getByRole("link", { name: "Explore cover examples" });
+  const visualHierarchy = await Promise.all(
+    [start, examples].map((action) =>
+      action.evaluate((element) => {
+        const styles = getComputedStyle(element);
+        return {
+          backgroundColor: styles.backgroundColor,
+          borderColor: styles.borderColor,
+          boxShadow: styles.boxShadow,
+        };
+      }),
+    ),
+  );
+  expect(visualHierarchy[0].backgroundColor).not.toBe(
+    visualHierarchy[1].backgroundColor,
+  );
+  expect(visualHierarchy[0].borderColor).not.toBe(
+    visualHierarchy[1].borderColor,
+  );
+
+  await start.focus();
+  await expect(start).toBeFocused();
+  await expect
+    .poll(() => start.evaluate((element) => getComputedStyle(element).boxShadow))
+    .not.toBe("none");
+
+  await page.emulateMedia({ forcedColors: "active" });
+  await start.focus();
+  await expect
+    .poll(() => start.evaluate((element) => getComputedStyle(element).outlineStyle))
+    .not.toBe("none");
+});

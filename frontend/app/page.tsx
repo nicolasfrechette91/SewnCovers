@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { CushionExample } from "@/components/landing";
 
 const coverExamples = [
@@ -45,6 +47,9 @@ const designSteps = [
 const primaryLinkClasses =
   "inline-flex min-h-12 max-w-full items-center justify-center rounded-control border border-brand bg-brand px-control-x py-control-y text-center text-button font-control tracking-label break-words text-on-brand shadow-raised transition-[background-color,border-color,box-shadow] hover:border-brand-hover hover:bg-brand-hover active:border-brand-active active:bg-brand-active motion-reduce:transition-none";
 
+const secondaryLinkClasses =
+  "inline-flex min-h-12 max-w-full items-center justify-center rounded-control border border-border-strong bg-surface px-control-x py-control-y text-center text-button font-control tracking-label break-words text-text-primary shadow-card transition-[background-color,border-color,color,box-shadow] hover:bg-surface-subtle active:bg-surface-subtle active:text-brand-active active:shadow-none motion-reduce:transition-none";
+
 export default function Home() {
   return (
     <>
@@ -69,8 +74,11 @@ export default function Home() {
               shape, exact dimensions, and a fabric direction before saving a
               design.
             </p>
-            <div className="mt-8 flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center">
-              <a href="#examples" className={primaryLinkClasses}>
+            <div className="mt-8 flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+              <Link href="/configure/" className={primaryLinkClasses}>
+                Start configuring
+              </Link>
+              <a href="#examples" className={secondaryLinkClasses}>
                 Explore cover examples
               </a>
               <a
