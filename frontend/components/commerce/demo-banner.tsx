@@ -9,11 +9,14 @@ export function DemoBanner() {
 
 export function SignInForCommerce() {
   return (
-    <section className="rounded-panel border border-border bg-surface p-card">
-      <h2 className="font-display text-section-title font-heading">Sign in for demonstration commerce</h2>
-      <p className="mt-2 text-text-muted">The configurator and sharing remain free. An account is required only to keep quotes, a cart, and orders private.</p>
-      <a href="../account/" className="mt-4 inline-flex min-h-12 items-center rounded-control bg-brand px-control-x text-button font-control text-on-brand no-underline">Sign in or register</a>
-    </section>
+    <div className="space-y-component">
+      <DemoBanner />
+      <section className="rounded-panel border border-border bg-surface p-card">
+        <h2 className="font-display text-section-title font-heading">Sign in for demonstration commerce</h2>
+        <p className="mt-2 text-text-muted">The configurator and public sharing remain available to guests. An account is required only to keep fictional quotes, a cart, and orders private.</p>
+        <a href="../account/" className="mt-4 inline-flex min-h-12 items-center rounded-control bg-brand px-control-x text-button font-control text-on-brand no-underline">Sign in or register</a>
+      </section>
+    </div>
   );
 }
 

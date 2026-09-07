@@ -171,9 +171,8 @@ export function ReviewScreen({
           SewnCovers configuration summary
         </h2>
         <p className="mt-3 max-w-3xl break-words text-body text-text-muted">
-          Review the current prototype configuration. The text details below
-          are the authoritative summary; the preview is a decorative planning
-          aid.
+          Review the current prototype design. The text details below are the
+          complete summary; the preview is an illustrative planning aid.
         </p>
       </header>
 

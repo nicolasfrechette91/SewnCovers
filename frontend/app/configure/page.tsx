@@ -17,14 +17,14 @@ export default function ConfigurePage() {
             Cushion configurator
           </p>
           <h1 className="mt-2 font-display text-page-title font-heading tracking-heading text-text-primary">
-            Build your custom cover specification.
+            Build your custom cover design.
           </h1>
           <p className="mt-component break-words text-body text-text-muted">
             Choose from five cover shapes, follow the shape-specific
             measurement guidance, and set material, fit, closure, seam,
             pattern, and motif size. The proportional 2D preview and review
-            summary keep the complete prototype specification together
-            before you save or share it.
+            summary keep your choices together before you save or share them.
+            Previews are illustrative and are not manufacturing specifications.
           </p>
         </header>
 

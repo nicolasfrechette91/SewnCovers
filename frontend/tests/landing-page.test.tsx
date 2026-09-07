@@ -14,7 +14,9 @@ test("renders the hero CTA hierarchy with semantic destinations", () => {
   const hero = screen.getByRole("region", {
     name: /Plan a replacement cover around your cushion's real measurements/i,
   });
-  const links = within(hero).getAllByRole("link");
+  const actions = hero.querySelector<HTMLElement>(".landing-hero-actions");
+  assert.ok(actions);
+  const links = within(actions).getAllByRole("link");
 
   assert.deepEqual(
     links.map((link) => link.textContent?.trim()),
@@ -42,4 +44,8 @@ test("preserves the hero prototype disclosure", () => {
     status.textContent ?? "",
     /cannot charge money, create a real shipment, or produce finished covers/i,
   );
+  const details = within(status).getByRole("link", {
+    name: "View prototype details",
+  });
+  assert.equal(details.getAttribute("href"), "/trust");
 });

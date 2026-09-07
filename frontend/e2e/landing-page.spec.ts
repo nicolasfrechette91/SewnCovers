@@ -22,7 +22,7 @@ test("renders the hero action hierarchy and preserves its content", async ({
 }) => {
   await page.goto(homePath);
   const hero = page.locator('section[aria-labelledby="landing-title"]');
-  const actions = hero.getByRole("link");
+  const actions = hero.locator(".landing-hero-actions").getByRole("link");
 
   await expect(actions).toHaveText([
     "Start configuring",
@@ -48,6 +48,9 @@ test("renders the hero action hierarchy and preserves its content", async ({
   ).toContainText(
     "It cannot charge money, create a real shipment, or produce finished covers.",
   );
+  await expect(
+    hero.getByRole("link", { name: "View prototype details" }),
+  ).toHaveAttribute("href", `${basePath}/trust/`);
   await expect(hero.locator("figure")).toBeVisible();
 });
 
@@ -87,7 +90,7 @@ test("keeps hero actions distinct, focused, and overflow-free", async ({ page })
     await expectNoHorizontalOverflow(page);
 
     const hero = page.locator('section[aria-labelledby="landing-title"]');
-    const actionBoxes = await hero.getByRole("link").evaluateAll((links) =>
+    const actionBoxes = await hero.locator(".landing-hero-actions").getByRole("link").evaluateAll((links) =>
       links.map((link) => {
         const rect = link.getBoundingClientRect();
         return {

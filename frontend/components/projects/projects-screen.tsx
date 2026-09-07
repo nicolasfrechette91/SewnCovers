@@ -120,7 +120,7 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
       <section className="rounded-panel border border-border bg-surface p-card shadow-raised">
         <p className="text-label font-control text-accent-strong">{detail.privacy === "shared" ? "Shared — one or more revocable links are active" : "Private — no active project share links"}</p>
         <h2 className="mt-2 font-display text-page-title font-heading">{detail.name}</h2>
-        <p className="mt-2 text-supporting text-text-muted">{detail.versionCount} immutable {detail.versionCount === 1 ? "version" : "versions"} · Updated {new Date(detail.updatedAt).toLocaleString()}</p>
+        <p className="mt-2 text-supporting text-text-muted">{detail.versionCount} saved {detail.versionCount === 1 ? "version" : "versions"} · Updated {new Date(detail.updatedAt).toLocaleString()}</p>
         <form className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row" onSubmit={(event) => void rename(event)}>
           <label htmlFor="project-name" className="sr-only">New project name</label>
           <input ref={renameRef} id="project-name" name="name" required maxLength={120} defaultValue={detail.name} className="min-h-12 min-w-0 flex-1 rounded-control border border-border-strong bg-surface px-control-x" />
@@ -131,7 +131,7 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
       {shareUrl ? (
         <section className="rounded-card border border-brand bg-surface p-card" aria-live="polite">
           <h2 className="font-display text-section-title font-heading">Read-only share created</h2>
-          <p className="mt-2 text-body text-text-muted">Anyone with this bearer-style URL can read this version until you revoke its grant. The token is shown only now.</p>
+          <p className="mt-2 text-body text-text-muted">Anyone with this link can view this version until you revoke the share. Copy it now; the complete link is shown only once.</p>
           <label htmlFor="project-share-url" className="mt-3 block text-label font-control">Share URL</label>
           <input ref={shareRef} id="project-share-url" type="url" readOnly value={shareUrl} onFocus={(event) => event.currentTarget.select()} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface-subtle px-control-x" />
           <Button className="mt-3" variant="secondary" onClick={async () => { try { await navigator.clipboard.writeText(shareUrl); shareRef.current?.focus(); } catch { setActionError("Copying is unavailable. The share URL is selected for manual copying."); shareRef.current?.focus(); shareRef.current?.select(); } }}>Copy share link</Button>
@@ -169,7 +169,7 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
 
       <section className="rounded-panel border-2 border-accent-strong bg-surface p-card">
         <h2 className="font-display text-section-title font-heading">Delete project</h2>
-        <p className="mt-2 text-body">This permanently deletes the project, every immutable version, and every project share. It does not delete your account or anonymous designs.</p>
+        <p className="mt-2 text-body">This permanently deletes the project, every saved version, and every project share. It does not delete your account or public designs created without an account.</p>
         {!confirmDelete ? <Button ref={deleteButtonRef} className="mt-3" variant="secondary" onClick={() => { setConfirmDelete(true); requestAnimationFrame(() => confirmDeleteButtonRef.current?.focus()); }}>Review project deletion</Button> : <div className="mt-3 flex flex-wrap gap-3" role="group" aria-label="Confirm project deletion"><Button ref={confirmDeleteButtonRef} onClick={() => void removeProject()}>Permanently delete project</Button><Button variant="secondary" onClick={() => { setConfirmDelete(false); requestAnimationFrame(() => deleteButtonRef.current?.focus()); }}>Cancel</Button></div>}
       </section>
     </div>
@@ -183,7 +183,7 @@ export function ProjectsScreen() {
   if (state.status === "guest") return (
     <section className="rounded-panel border border-border bg-surface p-card">
       <h2 className="font-display text-section-title font-heading">Sign in to view private projects</h2>
-      <p className="mt-2 text-body text-text-muted">Accounts are optional. You can still use the configurator and create anonymous immutable public links without signing in.</p>
+      <p className="mt-2 text-body text-text-muted">Accounts are optional. You can still use the complete configurator and create a public design link without signing in.</p>
       <div className="mt-4 flex flex-wrap gap-3"><Link href="/account/" className="inline-flex min-h-12 items-center rounded-control bg-brand px-control-x text-button font-control text-on-brand no-underline">Sign in or register</Link><Link href="/configure/" className="inline-flex min-h-12 items-center rounded-control border border-border-strong px-control-x text-button font-control text-text-primary no-underline">Continue as guest</Link></div>
     </section>
   );

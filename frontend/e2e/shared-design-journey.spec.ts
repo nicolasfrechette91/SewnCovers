@@ -136,7 +136,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Build your custom cover specification.",
+        name: "Build your custom cover design.",
       }),
     ).toBeVisible();
 

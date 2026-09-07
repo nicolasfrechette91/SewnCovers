@@ -38,7 +38,7 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
         const name = String(new FormData(event.currentTarget).get("name") ?? "").trim();
         if (!name) { setError("Enter a project name."); requestAnimationFrame(() => nameRef.current?.focus()); return; }
         const project = await accountApi.createProject(auth.token, name, snapshot);
-        setSuccess({ projectId: project.id, message: "Private project created with immutable version 1." });
+        setSuccess({ projectId: project.id, message: "Private project created with version 1." });
       }
       requestAnimationFrame(() => statusRef.current?.focus());
     } catch (caught) {
@@ -50,10 +50,10 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
   return (
     <section aria-labelledby="private-project-heading" className="print-hidden mt-layout rounded-panel border border-border-strong bg-surface p-card shadow-raised">
       <p className="text-label font-control text-accent-strong">Private account workspace</p>
-      <h3 id="private-project-heading" className="mt-2 font-display text-section-title font-heading">{projectId ? "Save a new immutable version" : "Save to a private project"}</h3>
-      <p className="mt-3 max-w-3xl text-body text-text-muted">{projectId ? "This configuration was opened from project history. Saving appends the next version; it never rewrites the historical snapshot." : "A named project is private by default. It is separate from the anonymous public design link below and becomes readable anonymously only if you explicitly create a revocable project share."}</p>
+      <h3 id="private-project-heading" className="mt-2 font-display text-section-title font-heading">{projectId ? "Save a new version" : "Save to a private project"}</h3>
+      <p className="mt-3 max-w-3xl text-body text-text-muted">{projectId ? "This design was opened from project history. Saving adds the next version and leaves earlier versions unchanged." : "A named project is private in your account. It is separate from the public design link above; other people can view a project version only if you create a read-only share link."}</p>
       {auth.status === "initializing" ? <p className="mt-3" role="status">Restoring your session…</p> : null}
-      {auth.status === "guest" ? <div className="mt-3"><p className="text-supporting text-text-muted">Accounts are optional. Sign in to use projects, or keep using anonymous immutable sharing.</p><Link href="/account/" className="mt-3 inline-flex min-h-11 items-center text-button font-control text-brand underline">Sign in or register</Link></div> : null}
+      {auth.status === "guest" ? <div className="mt-3"><p className="text-supporting text-text-muted">Accounts are optional. Sign in to save private projects, or keep configuring and sharing a public design as a guest.</p><Link href="/account/" className="mt-3 inline-flex min-h-11 items-center text-button font-control text-brand underline">Sign in or register</Link></div> : null}
       {auth.status === "authenticated" ? (
         <form className="mt-4" onSubmit={(event) => void save(event)}>
           {!projectId ? <><label htmlFor="private-project-name" className="block text-label font-control">Project name</label><input ref={nameRef} id="private-project-name" name="name" required maxLength={120} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-control-x" /></> : null}

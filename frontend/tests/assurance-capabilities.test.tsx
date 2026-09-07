@@ -198,7 +198,7 @@ test("shows WebGL and private-texture authorization fallback states", async () =
     />,
   );
   assert.ok(
-    await screen.findByText(/Custom texture authorization expired/),
+    await screen.findByText(/Access to this custom pattern expired/),
   );
   assert.match(
     screen.getByText(/Pattern/).parentElement?.textContent ?? "",
@@ -262,6 +262,10 @@ test("renders legal, trust, unauthorized, and review-required surfaces", async (
   );
   assert.match(document.body.textContent ?? "", /Not implemented/);
   assert.match(document.body.textContent ?? "", /not a certification/);
+  assert.match(document.body.textContent ?? "", /stored as hashes/);
+  assert.match(document.body.textContent ?? "", /Browser-supplied totals are not accepted/);
+  assert.match(document.body.textContent ?? "", /Verified raw-body webhook processing/);
+  assert.match(document.body.textContent ?? "", /Configured, not live-verified/);
   cleanup();
 
   render(

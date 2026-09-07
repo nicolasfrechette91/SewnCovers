@@ -71,7 +71,7 @@ export function ConfigurationReadonly({ configuration }: Readonly<{ configuratio
         <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-card border border-border bg-surface">
           {configuration.pattern.kind === "built-in" ? <div className={`pattern-${configuration.pattern.patternId} h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised`} style={{ backgroundSize: `${Math.round(48 / configuration.patternScale)}px` }} aria-hidden="true" /> : custom && "url" in custom ? <div className="h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised" style={{ backgroundImage: `url("${custom.url}")`, backgroundRepeat: "repeat", backgroundSize: `${Math.round(160 * configuration.patternScale)}px auto` }} aria-hidden="true" /> : <p className="p-4 text-center text-supporting text-text-muted">Custom asset deleted or unavailable.</p>}
         </div>
-        <figcaption className="mt-2 text-supporting text-text-muted">Read-only preview for the saved {configuration.shape} snapshot. The complete text specification is authoritative.</figcaption>
+        <figcaption className="mt-2 text-supporting text-text-muted">Read-only preview of the saved {configuration.shape} design. Use the complete text details for the saved choices.</figcaption>
       </figure>
     </div>
   );

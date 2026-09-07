@@ -76,18 +76,18 @@ export function PricingQuotesScreen() {
       {error ? <CommerceError message={error} /> : null}
       {status ? <p ref={statusRef} tabIndex={-1} className="rounded-card border border-brand bg-surface p-3 text-brand" role="status">{status}</p> : null}
       <section className="rounded-panel border border-border bg-surface p-card">
-        <h2 className="font-display text-section-title font-heading">Price an immutable project version</h2>
-        {projects.length ? <form className="mt-4 grid gap-4 sm:grid-cols-[1fr_8rem_auto_auto] sm:items-end" onSubmit={(event) => { event.preventDefault(); void act("preview", async () => { setPricing(await commerceApi.preview(token, versionId, quantity)); setStatus("Server-calculated estimate refreshed."); }); }}>
+        <h2 className="font-display text-section-title font-heading">Price a saved project version</h2>
+        {projects.length ? <form className="mt-4 grid gap-4 sm:grid-cols-[1fr_8rem_auto_auto] sm:items-end" onSubmit={(event) => { event.preventDefault(); void act("preview", async () => { setPricing(await commerceApi.preview(token, versionId, quantity)); setStatus("Fictional estimate refreshed."); }); }}>
           <label className="grid gap-1 text-label font-control">Saved version<select required value={versionId} onChange={(event) => { setVersionId(event.target.value); setPricing(null); }} className="min-h-12 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body">{projects.map((project) => <option key={project.currentVersion.id} value={project.currentVersion.id}>{project.name} · version {project.currentVersion.versionNumber}</option>)}</select></label>
           <label className="grid gap-1 text-label font-control">Quantity<input type="number" required min="1" max="20" step="1" value={quantity} onChange={(event) => setQuantity(event.currentTarget.valueAsNumber)} className="min-h-12 rounded-control border border-border-strong px-3 text-body" /></label>
           <Button type="submit" variant="secondary" isLoading={busy === "preview"}>Preview price</Button>
-          <Button disabled={!pricing} isLoading={busy === "quote"} onClick={() => void act("quote", async () => { const created = await commerceApi.createQuote(token, versionId, quantity); setQuotes((current) => [created, ...current]); setPricing(created); setStatus(`Immutable quote created; valid until ${new Date(created.expiresAt).toLocaleString()}.`); })}>Create quote</Button>
-        </form> : <p className="mt-3 text-text-muted">Save a private configuration first, then return here for a server-calculated estimate.</p>}
+          <Button disabled={!pricing} isLoading={busy === "quote"} onClick={() => void act("quote", async () => { const created = await commerceApi.createQuote(token, versionId, quantity); setQuotes((current) => [created, ...current]); setPricing(created); setStatus(`Quote created; valid until ${new Date(created.expiresAt).toLocaleString()}.`); })}>Create quote</Button>
+        </form> : <p className="mt-3 text-text-muted">Save a private project first, then return here to try a fictional estimate.</p>}
       </section>
       {pricing ? <PricingCard pricing={pricing} /> : null}
       <section aria-labelledby="quotes-heading">
-        <h2 id="quotes-heading" className="font-display text-section-title font-heading">Immutable quote history</h2>
-        <p className="mt-1 text-text-muted">Expired quotes remain readable. Repricing creates a new snapshot and never changes the original.</p>
+        <h2 id="quotes-heading" className="font-display text-section-title font-heading">Quote history</h2>
+        <p className="mt-1 text-text-muted">Expired quotes remain readable. Repricing creates a new quote and leaves the earlier one unchanged.</p>
         {quotes.length ? <ul className="mt-4 grid gap-component lg:grid-cols-2">{quotes.map((quote) => <li key={quote.id} className="rounded-panel border border-border bg-surface p-card">
           <p className="text-label font-control uppercase text-accent-strong">Demo quote · {quote.status}</p><h3 className="mt-2 font-display text-section-title font-heading">{quote.subtotalFormatted}</h3>
           <p className="mt-2 text-supporting text-text-muted">Quantity {quote.quantity} · CAD · price book v{quote.priceBookVersion}<br />Created {new Date(quote.createdAt).toLocaleString()}<br />Expires {new Date(quote.expiresAt).toLocaleString()}</p>

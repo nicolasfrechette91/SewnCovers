@@ -4,7 +4,7 @@ import { AccountScreen } from "@/components/account";
 
 export const metadata: Metadata = {
   title: "Account | SewnCovers",
-  description: "Sign in or manage SewnCovers account sessions and private data.",
+  description: "Sign in or manage a SewnCovers account and its private data.",
 };
 
 export default function AccountPage() {
@@ -14,7 +14,7 @@ export default function AccountPage() {
         <header className="mb-layout max-w-3xl">
           <p className="text-label font-control text-accent-strong">Optional account workspace</p>
           <h1 className="mt-2 font-display text-page-title font-heading">Account and privacy controls</h1>
-          <p className="mt-3 text-body text-text-muted">Guest configuration and immutable public design links remain available without signing in. Accounts add private projects, immutable version history, and explicitly revocable read-only shares.</p>
+          <p className="mt-3 text-body text-text-muted">You can configure and create public design links without signing in. An account adds private projects, saved version history, custom pattern uploads, and read-only project links that you can revoke.</p>
         </header>
         <AccountScreen />
       </div>

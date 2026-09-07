@@ -131,7 +131,7 @@ export function YourPatterns() {
       setError("Acknowledge upload notice version 1 before uploading.");
       return;
     }
-    setPhase("uploading"); setError(null); setMessage("Creating a private upload operation…");
+    setPhase("uploading"); setError(null); setMessage("Preparing your private upload…");
     try {
       await assuranceApi.acknowledge(
         auth.token,
@@ -139,14 +139,14 @@ export function YourPatterns() {
         "upload_rights",
       );
       const intent = await accountApi.createUploadIntent(auth.token, label.trim(), file);
-      setMessage("Uploading directly to private quarantine storage…");
+      setMessage("Uploading your image…");
       await performUpload(intent.upload, file);
-      setMessage("Upload transferred. Verifying checksum and queueing safe processing…");
+      setMessage("Upload complete. Preparing the image for review…");
       const confirmed = await accountApi.confirmUpload(auth.token, intent.id, await sha256File(file));
       setUploads((items) => [confirmed, ...items.filter((item) => item.id !== confirmed.id)]);
       setFile(null); setLocalPreview(null); setDimensions(null); setLabel("");
       setRightsAcknowledged(false);
-      setMessage("Upload queued. Processing and moderation continue in the durable worker.");
+      setMessage("Upload received. Processing and moderation will continue in the background.");
       requestAnimationFrame(() => statusRef.current?.focus());
       void poll(intent.id);
     } catch (caught) {
@@ -190,26 +190,26 @@ export function YourPatterns() {
     if (auth.status !== "authenticated") return;
     const warning = item.referencedByVersions > 0
       ? `This pattern is referenced by ${item.referencedByVersions} saved version${item.referencedByVersions === 1 ? "" : "s"}. Those versions will show “custom asset deleted.” Delete it anyway?`
-      : "Delete this custom pattern and revoke all asset access?";
+      : "Delete this custom pattern? It will no longer be available in the configurator.";
     if (!window.confirm(warning)) return;
     try {
       await accountApi.deleteUpload(auth.token, item.id);
       if (configuration.pattern?.kind === "custom" && configuration.pattern.assetId === item.id) {
         dispatch({ type: "setCustomPattern", pattern: { ...configuration.pattern, previewUrl: null, unavailableReason: "deleted" } });
       }
-      await load(); setMessage("Custom pattern deleted and access revoked.");
+      await load(); setMessage("Custom pattern deleted. It will no longer appear in saved projects or previews.");
       requestAnimationFrame(() => fileInput.current?.focus());
     } catch (caught) { setError(caught instanceof AccountApiError ? caught.message : "The custom pattern could not be deleted."); }
   };
 
   return (
     <section aria-labelledby={`${id}-heading`} className="mt-layout rounded-card border border-border-strong bg-surface-subtle p-card">
-      <p className="text-label font-control text-accent-strong">Private account assets</p>
+      <p className="text-label font-control text-accent-strong">Private account feature</p>
       <h3 id={`${id}-heading`} className="mt-2 font-display text-section-title font-heading">Your patterns</h3>
       {auth.status === "guest" ? <div className="mt-3"><p className="text-body text-text-muted">Sign in to upload private custom patterns. Guests can keep using all built-in patterns below.</p><Link className="mt-3 inline-flex min-h-11 items-center font-control text-brand underline" href="/account/">Sign in or register</Link></div> : null}
       {auth.status === "initializing" ? <LoadingState className="mt-3" label="Waking your private pattern workspace…" /> : null}
       {auth.status === "authenticated" ? <>
-        <p className="mt-3 text-supporting text-text-muted">JPEG, PNG, or WebP; 1 byte–10 MB; 64–4096 px per side; one still frame; at most 16 million pixels. Originals stay private and are never served. An external moderation provider may process the normalized image when configured.</p>
+        <p className="mt-3 text-supporting text-text-muted">JPEG, PNG, or WebP; 1 byte–10 MB; 64–4096 px per side; one still frame; at most 16 million pixels. Your original stays private. If external moderation is available, a processed copy may be checked before you can use the pattern.</p>
         <label className="mt-3 flex items-start gap-2 text-supporting">
           <input
             className="mt-1 size-5 shrink-0"
@@ -236,7 +236,7 @@ export function YourPatterns() {
         {phase === "loading" ? <LoadingState className="mt-4" label="Loading your patterns…" /> : null}
         {error ? <ErrorMessage className="mt-4">{error}</ErrorMessage> : null}
         {message ? <p ref={statusRef} tabIndex={-1} role="status" aria-live="polite" className="mt-4 text-supporting text-text-muted">{message}</p> : null}
-        {uploads.length > 0 ? <ul className="mt-4 grid gap-3 sm:grid-cols-2">{uploads.map((item) => <li key={item.id} className="rounded-card border border-border bg-surface p-control-x py-4"><div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><p className="break-words font-control">{item.label}</p><p className="mt-1 text-supporting text-text-muted">{stateLabels[item.state]}{item.moderationState === "unavailable" ? " — moderation unavailable; approval is fail-closed" : ""}</p></div>{item.state === "approved" ? <input type="radio" name="cushion-pattern" aria-label={`Select custom pattern ${item.label}`} checked={configuration.pattern?.kind === "custom" && configuration.pattern.assetId === item.id} onChange={() => void select(item)} /> : null}</div><div className="mt-3 flex flex-wrap gap-2">{item.state !== "deleted" && item.state !== "expired" ? <Button variant="secondary" onClick={() => void rename(item)}>Rename</Button> : null}{item.retryEligible ? <Button variant="secondary" onClick={() => void retry(item)}>Retry</Button> : null}{item.state !== "deleted" && item.state !== "expired" ? <Button variant="secondary" onClick={() => void remove(item)}>Delete</Button> : null}</div></li>)}</ul> : phase !== "loading" ? <p className="mt-4 text-supporting text-text-muted">No custom patterns yet.</p> : null}
+        {uploads.length > 0 ? <ul className="mt-4 grid gap-3 sm:grid-cols-2">{uploads.map((item) => <li key={item.id} className="rounded-card border border-border bg-surface p-control-x py-4"><div className="flex min-w-0 items-start justify-between gap-3"><div className="min-w-0"><p className="break-words font-control">{item.label}</p><p className="mt-1 text-supporting text-text-muted">{stateLabels[item.state]}{item.moderationState === "unavailable" ? " — moderation is unavailable, so this image cannot be approved" : ""}</p></div>{item.state === "approved" ? <input type="radio" name="cushion-pattern" aria-label={`Select custom pattern ${item.label}`} checked={configuration.pattern?.kind === "custom" && configuration.pattern.assetId === item.id} onChange={() => void select(item)} /> : null}</div><div className="mt-3 flex flex-wrap gap-2">{item.state !== "deleted" && item.state !== "expired" ? <Button variant="secondary" onClick={() => void rename(item)}>Rename</Button> : null}{item.retryEligible ? <Button variant="secondary" onClick={() => void retry(item)}>Retry</Button> : null}{item.state !== "deleted" && item.state !== "expired" ? <Button variant="secondary" onClick={() => void remove(item)}>Delete</Button> : null}</div></li>)}</ul> : phase !== "loading" ? <p className="mt-4 text-supporting text-text-muted">No custom patterns yet.</p> : null}
       </> : null}
     </section>
   );

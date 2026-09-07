@@ -46,7 +46,7 @@ test("sandbox quote-to-delivery workflow stays authoritative and role protected"
     if (path === "/commerce/quotes" && method === "POST") { quoted = true; return json(route, quote, 201); }
     if (path === "/commerce/cart" && method === "GET") return json(route, { id: cartId, demonstration: true, state: "active", currency: "CAD", lines: inCart ? [{ id: lineId, quote: { ...quote, quantity, subtotalAmountMinor: 10450 * quantity, subtotalFormatted: `$${(104.5 * quantity).toFixed(2)} CAD` }, quantity, extendedAmountMinor: 10450 * quantity }] : [], subtotalAmountMinor: inCart ? 10450 * quantity : 0, subtotalFormatted: `$${(inCart ? 104.5 * quantity : 0).toFixed(2)} CAD`, notices: [] });
     if (path === "/commerce/cart/lines" && method === "POST") { inCart = true; return json(route, { id: cartId, demonstration: true, state: "active", currency: "CAD", lines: [{ id: lineId, quote, quantity: 1, extendedAmountMinor: 10450 }], subtotalAmountMinor: 10450, subtotalFormatted: "$104.50 CAD", notices: [] }); }
-    if (path === `/commerce/cart/lines/${lineId}` && method === "PATCH") { quantity = request.postDataJSON().quantity; return json(route, { id: cartId, demonstration: true, state: "active", currency: "CAD", lines: [{ id: lineId, quote: { ...quote, quantity, subtotalAmountMinor: 10450 * quantity, subtotalFormatted: `$${(104.5 * quantity).toFixed(2)} CAD` }, quantity, extendedAmountMinor: 10450 * quantity }], subtotalAmountMinor: 10450 * quantity, subtotalFormatted: `$${(104.5 * quantity).toFixed(2)} CAD`, notices: ["Quantity changed using a new immutable quote."] }); }
+    if (path === `/commerce/cart/lines/${lineId}` && method === "PATCH") { quantity = request.postDataJSON().quantity; return json(route, { id: cartId, demonstration: true, state: "active", currency: "CAD", lines: [{ id: lineId, quote: { ...quote, quantity, subtotalAmountMinor: 10450 * quantity, subtotalFormatted: `$${(104.5 * quantity).toFixed(2)} CAD` }, quantity, extendedAmountMinor: 10450 * quantity }], subtotalAmountMinor: 10450 * quantity, subtotalFormatted: `$${(104.5 * quantity).toFixed(2)} CAD`, notices: ["Quantity changed and a new quote was created."] }); }
     if (path === "/commerce/checkout") return json(route, { demonstration: true, orderId, orderReference: "SC-DEMO-ORDER0001", checkoutUrl: `${appOrigin}${basePath}/checkout/sandbox/?session=${attemptSession}&order=${orderId}`, expiresAt: expiry }, 201);
     if (path === `/commerce/sandbox/checkouts/${attemptSession}` && method === "GET") return json(route, { demonstration: true, sessionId: attemptSession, orderReference: "SC-DEMO-ORDER0001", amountMinor: 10450 * quantity, currency: "CAD", status: paid ? "paid" : "pending", expiresAt: expiry });
     if (path.endsWith("/complete")) { paid = true; orderState = "paid"; paymentStatus = "paid"; return json(route, { received: true, duplicate: false, outcome: "paid" }); }
@@ -65,7 +65,7 @@ test("sandbox quote-to-delivery workflow stays authoritative and role protected"
   const page = await context.newPage();
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto(`${basePath}/commerce/`);
-  await expect(page.getByRole("heading", { name: "Price an immutable project version" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Price a saved project version" })).toBeVisible();
   await noOverflow(page);
   await page.getByRole("button", { name: "Preview price" }).press("Enter");
   await expect(page.getByRole("heading", { name: /Estimated subtotal: \$104.50 CAD/ })).toBeVisible();
@@ -83,7 +83,7 @@ test("sandbox quote-to-delivery workflow stays authoritative and role protected"
   await page.getByRole("checkbox", { name: /commerce notice version 1/i }).check();
   await page.getByRole("button", { name: "Submit fictional successful payment" }).press("Enter");
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.getByText(/only a verified payment event/i)).toBeVisible();
+  await expect(page.getByText(/Returning from checkout does not confirm payment/i)).toBeVisible();
   await expect(page.getByText("Paid", { exact: true }).first()).toBeVisible();
   await noOverflow(page);
   await expect(page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Admin" })).toHaveCount(0);

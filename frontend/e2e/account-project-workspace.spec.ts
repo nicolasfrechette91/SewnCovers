@@ -116,7 +116,7 @@ test("account workspace preserves immutable history and revocable sharing", asyn
   await expect(page.getByRole("heading", { name: "Patio bench renamed" })).toBeVisible();
 
   await page.getByRole("link", { name: "Open as editing basis" }).last().press("Enter");
-  await expect(page.getByText(/Private project version restored as an editing basis/)).toBeVisible();
+  await expect(page.getByText(/Private project version restored for editing/)).toBeVisible();
   await page.getByRole("button", { name: "Continue to Measurements" }).press("Enter");
   await expect(page.getByRole("textbox", { name: "Width (cm)" })).toHaveValue("73.25");
   for (const nextStage of ["Cover details", "Pattern", "Preview", "Review"]) {
@@ -179,5 +179,5 @@ test("an authenticated 401 clears the tab session and returns to sign in", async
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
   await page.goto(configurePath);
-  await expect(page.getByRole("heading", { name: "Build your custom cover specification." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Build your custom cover design." })).toBeVisible();
 });

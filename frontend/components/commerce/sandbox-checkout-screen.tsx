@@ -130,8 +130,8 @@ export function SandboxCheckoutScreen() {
           </p>
           <p className="mt-2 text-text-muted">
             This sandbox has no card fields and cannot charge anyone. It adds
-            deterministic fictional shipping and tax before submitting a
-            signed server-side payment event.
+            fixed fictional shipping and tax, then simulates a payment result
+            for the demonstration order.
           </p>
           <form
             className="mt-component"

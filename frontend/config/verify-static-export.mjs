@@ -163,6 +163,12 @@ assert.match(
     `href="${(basePath || "").replace(/\//g, "\\/")}\\/configure\\/"[^>]*>Start configuring<\\/a>`,
   ),
 );
+assert.match(
+  homeHtml,
+  new RegExp(
+    `href="${(basePath || "").replace(/\//g, "\\/")}\\/trust\\/"[^>]*>View prototype details<\\/a>`,
+  ),
+);
 assert.match(configureHtml, new RegExp(`href="${basePath || ""}\\/"`));
 
 const textBundle = (

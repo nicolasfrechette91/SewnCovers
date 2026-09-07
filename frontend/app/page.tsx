@@ -74,7 +74,7 @@ export default function Home() {
               shape, exact dimensions, and a fabric direction before saving a
               design.
             </p>
-            <div className="mt-8 flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="landing-hero-actions mt-8 flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center">
               <Link href="/configure/" className={primaryLinkClasses}>
                 Start configuring
               </Link>
@@ -104,6 +104,12 @@ export default function Home() {
                 fictional CAD commerce sandbox. It cannot charge money, create
                 a real shipment, or produce finished covers.
               </p>
+              <Link
+                href="/trust/"
+                className="mt-3 inline-flex min-h-11 items-center text-button font-control text-brand underline decoration-2 underline-offset-4 hover:text-brand-hover active:text-brand-active"
+              >
+                View prototype details
+              </Link>
             </aside>
           </div>
 

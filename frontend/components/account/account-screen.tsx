@@ -59,7 +59,7 @@ function AuthForm({ mode }: Readonly<{ mode: "login" | "register" }>) {
       <p className="mt-2 text-supporting text-text-muted">
         {isRegister
           ? "Use a passphrase of 12–128 characters. Email verification and password recovery are not available in this portfolio implementation."
-          : "Your private projects become available only after the server verifies this session."}
+          : "Sign in to open your private projects and account information."}
       </p>
       <label className="mt-4 block text-label font-control text-text-primary" htmlFor={`${mode}-email`}>Email</label>
       <input ref={emailRef} id={`${mode}-email`} name="email" type="email" autoComplete="email" required maxLength={254} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-control-x" />
@@ -155,7 +155,7 @@ function AuthenticatedAccount() {
       <section className="rounded-panel border border-border bg-surface p-card shadow-card">
         <p className="text-label font-control text-accent-strong">Signed in</p>
         <h2 className="mt-2 break-all font-display text-section-title font-heading">{account.email}</h2>
-        <p className="mt-3 text-supporting text-text-muted">The bearer token stays in this tab&apos;s session storage. It is never placed in a URL or local storage.</p>
+        <p className="mt-3 text-supporting text-text-muted">You are signed in for this browser tab. Closing the tab ends the locally stored sign-in.</p>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link href="/projects/" className="inline-flex min-h-12 items-center rounded-control bg-brand px-control-x py-control-y text-button font-control text-on-brand no-underline">Open My projects</Link>
           <Button variant="secondary" onClick={() => void logout()}>Sign out</Button>
@@ -182,13 +182,13 @@ function AuthenticatedAccount() {
 
       <section className="rounded-panel border border-border bg-surface p-card">
         <h2 className="font-display text-section-title font-heading">Your data</h2>
-        <p className="mt-2 text-body text-text-muted">Export downloads a versioned JSON file containing your account identity, projects, and immutable versions. It excludes password and bearer material.</p>
+        <p className="mt-2 text-body text-text-muted">Export downloads a JSON file containing your account information, projects, and saved versions. It does not include your password or sign-in credentials.</p>
         <Button className="mt-3" variant="secondary" disabled={pending} onClick={() => void exportData()}>Export my data</Button>
       </section>
 
       <section className="rounded-panel border-2 border-accent-strong bg-surface p-card">
         <h2 className="font-display text-section-title font-heading">Delete account</h2>
-        <p className="mt-2 text-body text-text-primary">This permanently deletes this account, every session, private project, immutable project version, and revocable share grant. Legacy anonymous designs are unaffected.</p>
+        <p className="mt-2 text-body text-text-primary">This permanently deletes this account, every signed-in session, private project, saved project version, and project share link. Public designs created without an account are unaffected.</p>
         {!confirmDelete ? (
           <Button ref={deleteButtonRef} className="mt-3" variant="secondary" onClick={() => { setConfirmDelete(true); requestAnimationFrame(() => passwordRef.current?.focus()); }}>Review account deletion</Button>
         ) : (

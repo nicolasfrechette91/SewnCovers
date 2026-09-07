@@ -337,7 +337,7 @@ class CommerceService:
             line.quantity = quantity
             cart.updated_at = self._clock()
         return self._cart_response(
-            cart, ["Quantity changed using a new immutable quote."]
+            cart, ["Quantity changed and a new quote was created."]
         )
 
     def remove_cart_line(

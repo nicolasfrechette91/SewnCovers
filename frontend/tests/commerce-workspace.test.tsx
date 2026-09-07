@@ -5,6 +5,7 @@ import React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { AdminScreen, CartScreen } from "../components/commerce";
+import { SignInForCommerce } from "../components/commerce/demo-banner";
 import { OrderCard } from "../components/commerce/orders-screen";
 import { AuthProvider } from "../context/auth";
 import { storeSessionToken } from "../services/account-api";
@@ -60,7 +61,7 @@ test("labels the cart as a sandbox and changes quantity through a replacement qu
   mockAccount("customer", (url, init) => {
     requests.push(`${init?.method ?? "GET"} ${url}`);
     if (url.endsWith("/commerce/cart")) return json(cart);
-    if (url.includes(`/commerce/cart/lines/${"L".repeat(22)}`)) return json({ ...cart, lines: [{ ...cart.lines[0], quantity: 2, quote: { ...quote, quantity: 2, subtotalAmountMinor: 20900, subtotalFormatted: "$209.00 CAD" }, extendedAmountMinor: 20900 }], subtotalAmountMinor: 20900, subtotalFormatted: "$209.00 CAD", notices: ["Quantity changed using a new immutable quote."] });
+    if (url.includes(`/commerce/cart/lines/${"L".repeat(22)}`)) return json({ ...cart, lines: [{ ...cart.lines[0], quantity: 2, quote: { ...quote, quantity: 2, subtotalAmountMinor: 20900, subtotalFormatted: "$209.00 CAD" }, extendedAmountMinor: 20900 }], subtotalAmountMinor: 20900, subtotalFormatted: "$209.00 CAD", notices: ["Quantity changed and a new quote was created."] });
     return json({ errors: [{ code: "missing", message: "Missing" }] }, 404);
   });
   render(<AuthProvider><CartScreen /></AuthProvider>);
@@ -70,7 +71,16 @@ test("labels the cart as a sandbox and changes quantity through a replacement qu
   fireEvent.click(screen.getByRole("button", { name: "Update" }));
   await screen.findByRole("heading", { name: "$209.00 CAD" });
   assert.ok(requests.some((request) => request.startsWith("PATCH") && request.includes("/commerce/cart/lines/")));
-  assert.equal(screen.getAllByText(/new immutable quote/).length, 2);
+  assert.equal(screen.getAllByText(/new quote was created/).length, 2);
+});
+
+test("keeps the fictional-commerce warning visible when sign-in is required", () => {
+  render(<SignInForCommerce />);
+  assert.ok(screen.getByText(/Fictional CAD prices and payment events only/));
+  assert.ok(screen.getByText(/No live charge, tax, shipment, or production service/));
+  assert.ok(screen.getByRole("heading", { name: "Sign in for demonstration commerce" }));
+  assert.ok(screen.getByText(/configurator and public sharing remain available to guests/));
+  assert.ok(screen.getByRole("link", { name: "Sign in or register" }));
 });
 
 test("denies the administrator workspace to a customer role", async () => {

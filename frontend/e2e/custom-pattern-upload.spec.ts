@@ -108,7 +108,7 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   await page.getByRole("checkbox", { name: /upload notice version 1/i }).check();
   await page.getByRole("button", { name: "Upload for review" }).press("Enter");
   await expect(page.getByText("My garden repeat")).toBeVisible();
-  await expect(page.getByText(/moderation unavailable; approval is fail-closed/)).toBeVisible();
+  await expect(page.getByText(/moderation is unavailable, so this image cannot be approved/)).toBeVisible();
   await expect(page.getByText("Processing failed", { exact: true })).toBeVisible();
   await page.getByRole("radio", { name: "Select custom pattern My garden repeat" }).press("Space");
   await expect(page.getByText(/selected for this private project configuration/)).toBeVisible();
@@ -119,5 +119,5 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
     await dialog.accept();
   });
   await page.getByRole("button", { name: "Delete" }).first().press("Enter");
-  await expect(page.getByText(/Custom pattern deleted and access revoked/)).toBeVisible();
+  await expect(page.getByText(/Custom pattern deleted.*no longer appear in saved projects or previews/)).toBeVisible();
 });

@@ -408,7 +408,7 @@ export function AdvancedPreview({
             {state === "unavailable" &&
               "3D is unavailable for this shape or browser. The complete 2D preview remains above."}
             {state === "authorization-expired" &&
-              "Custom texture authorization expired. Refresh access or use the complete 2D fallback."}
+              "Access to this custom pattern expired. Refresh the page or use the complete 2D fallback."}
             {state === "failed" &&
               "The 3D renderer could not initialize. The complete 2D preview remains available."}
           </p>

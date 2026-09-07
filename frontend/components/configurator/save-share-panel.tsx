@@ -114,16 +114,16 @@ export function SaveSharePanel({
         Create a public link
       </h3>
       <p className="mt-3 max-w-3xl break-words text-body text-text-muted">
-        Saving creates an immutable public copy of the reviewed
-        configuration. It does not place an order or change your current
-        configuration.
+        Saving creates a public, read-only copy of the reviewed design. Anyone
+        with the link can view it. This does not place an order or change your
+        current design.
       </p>
 
       {customPatternSelected ? (
         <p className="mt-component rounded-card border border-border-strong bg-surface-subtle p-control-x py-4 text-supporting text-text-muted">
-          Anonymous permanent design links support built-in patterns only. Save
-          this configuration to a private project, then create a revocable
-          project share so asset access follows the share grant.
+          Public guest links support built-in patterns only. To share a custom
+          pattern, save this design to a private project and create a read-only
+          project link that you can revoke later.
         </p>
       ) : null}
 
@@ -199,8 +199,8 @@ export function SaveSharePanel({
             id="configuration-share-url-help"
             className="mt-2 break-words text-supporting text-text-muted"
           >
-            This link identifies the saved configuration by its public
-            design ID.
+            Anyone with this link can view the saved design. It does not reveal
+            a private project or account.
           </p>
           <Button
             className="mt-3"

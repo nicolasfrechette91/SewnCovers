@@ -120,13 +120,14 @@ test("renders native sign-in and registration forms with documented limits", asy
   assert.ok(screen.getByText(/Email verification and password recovery are not available/));
 });
 
-test("distinguishes private project saving from anonymous immutable sharing", async () => {
+test("distinguishes private project saving from public guest sharing", async () => {
   render(<AuthProvider><PrivateProjectPanel configuration={configurationState} onSavingChange={() => undefined} /></AuthProvider>);
   await screen.findByRole("heading", { name: "Save to a private project" });
   await screen.findByRole("link", { name: "Sign in or register" });
   assert.ok(screen.getByText(/Accounts are optional/));
   assert.ok(screen.getByRole("link", { name: "Sign in or register" }));
-  assert.ok(screen.getByText(/anonymous public design link/));
+  assert.ok(screen.getByText(/separate from the public design link/));
+  assert.ok(screen.getByText(/sharing a public design as a guest/));
 });
 
 test("shows every Task 10.1 field in a read-only version summary", () => {
@@ -174,7 +175,7 @@ test("shows every custom upload lifecycle state and selects only approved assets
     fireEvent.click(await screen.findByRole("button", { name: "Enter test account" }));
     await screen.findByText("approved pattern");
     for (const label of ["Awaiting upload", "Queued for processing", "Processing", "Approved", "Rejected", "Processing failed", "Deleted", "Upload expired"]) assert.ok(screen.getByText(label, { exact: true }));
-    assert.ok(screen.getByText(/Awaiting moderation — moderation unavailable/));
+    assert.ok(screen.getByText(/moderation is unavailable, so this image cannot be approved/));
     assert.equal(screen.getAllByRole("radio").length, 1);
     fireEvent.click(screen.getByRole("radio", { name: "Select custom pattern approved pattern" }));
     await waitFor(() => assert.equal(screen.getByTestId("selected-custom").textContent, "approved pattern"));
