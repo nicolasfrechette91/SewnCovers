@@ -221,6 +221,7 @@ test("authentication failures, registration, and duplicate submission recover sa
   await expect(page.getByRole("button", { name: "Sign in" })).toBeEnabled();
 
   await page.getByRole("link", { name: "Create account" }).click();
+  await expect(page.getByRole("heading", { name: "Create account" })).toBeVisible();
   await page.getByLabel("Email").fill("existing@example.invalid");
   await page.getByLabel("Passphrase").fill(passphrase);
   await page.getByRole("checkbox", { name: /account terms version 1/i }).check();
@@ -229,6 +230,7 @@ test("authentication failures, registration, and duplicate submission recover sa
   await expect(page.getByLabel("Email")).toHaveValue("existing@example.invalid");
 
   await page.getByRole("link", { name: "Sign in" }).click();
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   const beforeSlowRequest = loginRequests;
   await page.getByLabel("Email").fill("slow@example.invalid");
   await page.getByLabel("Passphrase").fill(passphrase);
@@ -240,7 +242,8 @@ test("authentication failures, registration, and duplicate submission recover sa
 
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page.getByRole("link", { name: "Create account" }).click();
-  await page.getByLabel("Email").fill("new-fixture@example.invalid");
+  await expect(page.getByRole("heading", { name: "Create account" })).toBeVisible();
+  await page.locator("#register-email").fill("new-fixture@example.invalid");
   await page.getByLabel("Passphrase").fill(passphrase);
   await page.getByRole("checkbox", { name: /account terms version 1/i }).check();
   await page.getByLabel("Passphrase").press("Enter");
