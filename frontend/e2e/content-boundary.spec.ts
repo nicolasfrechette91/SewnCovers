@@ -27,26 +27,29 @@ test("keeps guest pages task-focused while preserving prototype and account disc
   await page.goto(`${basePath}/projects/`);
   await expect(page.getByRole("heading", { name: "My projects" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sign in to view private projects" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Continue as guest" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continue configuring as a guest" })).toBeVisible();
   await expectCustomerLanguage(page);
 
-  for (const [route, heading] of [
-    ["commerce", "Pricing and quotes"],
-    ["cart", "Cart"],
-    ["orders", "Orders"],
+  for (const [route, heading, lockedHeading] of [
+    ["commerce", "Pricing and quotes", "Sign in to use demonstration pricing"],
+    ["cart", "Cart", "Sign in to view your demonstration cart"],
+    ["orders", "Orders", "Sign in to view demonstration orders"],
   ] as const) {
     await page.goto(`${basePath}/${route}/`);
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
     await expect(page.getByText(/Fictional CAD prices and payment events only/i)).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Sign in for demonstration commerce" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: lockedHeading })).toBeVisible();
     await expectCustomerLanguage(page);
   }
 
   await page.goto(`${basePath}/account/`);
   await expect(page.getByRole("heading", { name: "Account and privacy controls" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Create an account" })).toBeVisible();
-  await expect(page.getByText(/Email verification and password recovery are not available/i)).toBeVisible();
+  await expect(page.locator("form")).toHaveCount(1);
+  await expect(page.getByRole("heading", { name: "Create account" })).toHaveCount(0);
+  await page.getByRole("link", { name: "Create account" }).click();
+  await expect(page.getByRole("heading", { name: "Create account" })).toBeVisible();
+  await expect(page.getByText(/Email verification and password recovery are unavailable/i)).toBeVisible();
   await expectCustomerLanguage(page);
 });
 

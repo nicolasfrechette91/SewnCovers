@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -11,6 +10,7 @@ import {
   type DragEvent,
 } from "react";
 
+import { AccountRequired } from "@/components/account";
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useConfiguration } from "@/context/configuration";
@@ -206,7 +206,22 @@ export function YourPatterns() {
     <section aria-labelledby={`${id}-heading`} className="mt-layout rounded-card border border-border-strong bg-surface-subtle p-card">
       <p className="text-label font-control text-accent-strong">Private account feature</p>
       <h3 id={`${id}-heading`} className="mt-2 font-display text-section-title font-heading">Your patterns</h3>
-      {auth.status === "guest" ? <div className="mt-3"><p className="text-body text-text-muted">Sign in to upload private custom patterns. Guests can keep using all built-in patterns below.</p><Link className="mt-3 inline-flex min-h-11 items-center font-control text-brand underline" href="/account/">Sign in or register</Link></div> : null}
+      {auth.status === "guest" ? (
+        <AccountRequired
+          className="mt-4 bg-surface shadow-none"
+          headingLevel="h4"
+          title="Sign in to use private custom patterns"
+          description="Custom uploads require an account because originals, processed derivatives, moderation state, and saved references remain private to their owner."
+          unlocks="Signing in opens custom patterns already associated with your account. Creating an account starts a new private pattern workspace."
+          returnTo="configure"
+          sessionNotice={auth.notice}
+          guestAlternative={{
+            href: "/configure/",
+            label: "Continue with built-in patterns",
+            description: "All built-in patterns and the guest configuration stages remain available without an account.",
+          }}
+        />
+      ) : null}
       {auth.status === "initializing" ? <LoadingState className="mt-3" label="Waking your private pattern workspace…" /> : null}
       {auth.status === "authenticated" ? <>
         <p className="mt-3 text-supporting text-text-muted">JPEG, PNG, or WebP; 1 byte–10 MB; 64–4096 px per side; one still frame; at most 16 million pixels. Your original stays private. If external moderation is available, a processed copy may be checked before you can use the pattern.</p>

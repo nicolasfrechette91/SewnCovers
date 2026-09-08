@@ -61,7 +61,7 @@ export function PricingQuotesScreen() {
   }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (state.status === "initializing" || loading) return <LoadingState label="Loading demonstration prices and quotes…" />;
-  if (state.status === "guest") return <SignInForCommerce />;
+  if (state.status === "guest") return <SignInForCommerce context="pricing" sessionNotice={state.notice} />;
   const token = state.token;
   const act = async (name: string, task: () => Promise<void>) => {
     setBusy(name); setError(null); setStatus(null);

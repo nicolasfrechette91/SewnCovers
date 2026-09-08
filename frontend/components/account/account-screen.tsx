@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import { useAuth } from "@/context/auth";
@@ -10,6 +11,13 @@ import {
   AccountApiError,
   type SessionMetadata,
 } from "@/services/account-api";
+import {
+  buildAccountHref,
+  parseAuthenticationMode,
+  parseAuthenticationReturnTarget,
+  resolveAuthenticationReturnDestination,
+  type AuthenticationMode,
+} from "@/services/auth-navigation";
 
 import { AccountNavigation } from "./account-navigation";
 
@@ -19,20 +27,113 @@ function message(error: unknown): string {
     : "The request could not be completed. Try again.";
 }
 
-function AuthForm({ mode }: Readonly<{ mode: "login" | "register" }>) {
+interface AuthFieldErrors {
+  readonly acceptedTerms?: string;
+  readonly email?: string;
+  readonly password?: string;
+}
+
+const RETURN_LABELS = {
+  cart: "your demonstration cart",
+  configure: "the configurator",
+  orders: "your demonstration orders",
+  pricing: "demonstration pricing and quotes",
+  projects: "your private projects",
+} as const;
+
+function validateAuthForm(
+  form: HTMLFormElement,
+  isRegister: boolean,
+): AuthFieldErrors {
+  const data = new FormData(form);
+  const email = String(data.get("email") ?? "").trim();
+  const password = String(data.get("password") ?? "");
+  const errors: {
+    acceptedTerms?: string;
+    email?: string;
+    password?: string;
+  } = {};
+
+  if (!email) {
+    errors.email = "Enter your email address.";
+  } else if (
+    email.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
+    errors.email = "Enter a valid email address.";
+  }
+
+  if (!password) {
+    errors.password = "Enter your passphrase.";
+  } else if (password.length < 12 || password.length > 128) {
+    errors.password = "Passphrase must be 12–128 characters.";
+  }
+
+  if (isRegister && !data.get("acceptedTerms")) {
+    errors.acceptedTerms = "Acknowledge the account terms to create an account.";
+  }
+
+  return errors;
+}
+
+function AuthForm({
+  focusHeading,
+  mode,
+  onSuccess,
+}: Readonly<{
+  focusHeading: boolean;
+  mode: AuthenticationMode;
+  onSuccess: () => void;
+}>) {
   const { login, register } = useAuth();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
+  const pendingRef = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const termsRef = useRef<HTMLInputElement>(null);
   const isRegister = mode === "register";
+
+  useEffect(() => {
+    if (!focusHeading) return;
+    const frame = requestAnimationFrame(() => headingRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [focusHeading]);
+
+  const clearFieldError = (field: keyof AuthFieldErrors) => {
+    setFieldErrors((current) =>
+      current[field] ? { ...current, [field]: undefined } : current,
+    );
+  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    setPending(true);
+    if (pendingRef.current) return;
+    const form = event.currentTarget;
+    const validationErrors = validateAuthForm(form, isRegister);
+    setFieldErrors(validationErrors);
     setError(null);
+    const firstInvalid = validationErrors.email
+      ? emailRef.current
+      : validationErrors.password
+        ? passwordRef.current
+        : validationErrors.acceptedTerms
+          ? termsRef.current
+          : null;
+    if (firstInvalid) {
+      requestAnimationFrame(() => firstInvalid.focus());
+      return;
+    }
+
+    const data = new FormData(form);
+    pendingRef.current = true;
+    setPending(true);
     try {
-      const email = String(data.get("email"));
+      const email = String(data.get("email")).trim();
       const password = String(data.get("password"));
       if (isRegister) {
         await register(
@@ -43,47 +144,142 @@ function AuthForm({ mode }: Readonly<{ mode: "login" | "register" }>) {
       } else {
         await login(email, password);
       }
+      form.reset();
+      onSuccess();
     } catch (caught) {
       setError(message(caught));
-      requestAnimationFrame(() => emailRef.current?.focus());
+      requestAnimationFrame(() => errorRef.current?.focus());
     } finally {
+      pendingRef.current = false;
       setPending(false);
     }
   };
 
+  const emailErrorId = `${mode}-email-error`;
+  const passwordHelpId = `${mode}-password-help`;
+  const passwordErrorId = `${mode}-password-error`;
+  const termsErrorId = `${mode}-terms-error`;
+
   return (
-    <form onSubmit={(event) => void submit(event)} className="rounded-card border border-border bg-surface p-card">
-      <h2 className="font-display text-section-title font-heading text-text-primary">
-        {isRegister ? "Create an account" : "Sign in"}
+    <form
+      ref={formRef}
+      noValidate
+      aria-busy={pending}
+      onSubmit={(event) => void submit(event)}
+      className="min-w-0 rounded-card border border-border bg-surface p-card shadow-card"
+    >
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
+        className="font-display text-section-title font-heading text-text-primary"
+      >
+        {isRegister ? "Create account" : "Sign in"}
       </h2>
       <p className="mt-2 text-supporting text-text-muted">
         {isRegister
-          ? "Use a passphrase of 12–128 characters. Email verification and password recovery are not available in this portfolio implementation."
-          : "Sign in to open your private projects and account information."}
+          ? "Create a private workspace for projects, version history, custom patterns, and demonstration commerce records."
+          : "Use the email and passphrase for your existing SewnCovers account."}
       </p>
-      <label className="mt-4 block text-label font-control text-text-primary" htmlFor={`${mode}-email`}>Email</label>
-      <input ref={emailRef} id={`${mode}-email`} name="email" type="email" autoComplete="email" required maxLength={254} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-control-x" />
-      <label className="mt-4 block text-label font-control text-text-primary" htmlFor={`${mode}-password`}>Passphrase</label>
-      <input id={`${mode}-password`} name="password" type="password" autoComplete={isRegister ? "new-password" : "current-password"} required minLength={12} maxLength={128} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-control-x" />
+      <label
+        className="mt-4 block text-label font-control text-text-primary"
+        htmlFor={`${mode}-email`}
+      >
+        Email
+      </label>
+      <input
+        ref={emailRef}
+        id={`${mode}-email`}
+        name="email"
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        required
+        maxLength={254}
+        aria-invalid={fieldErrors.email ? true : undefined}
+        aria-describedby={fieldErrors.email ? emailErrorId : undefined}
+        onChange={() => clearFieldError("email")}
+        className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x aria-invalid:border-error-border aria-invalid:bg-error-surface"
+      />
+      {fieldErrors.email ? (
+        <p id={emailErrorId} className="mt-2 text-supporting text-error-text">
+          {fieldErrors.email}
+        </p>
+      ) : null}
+      <label
+        className="mt-4 block text-label font-control text-text-primary"
+        htmlFor={`${mode}-password`}
+      >
+        Passphrase
+      </label>
+      <input
+        ref={passwordRef}
+        id={`${mode}-password`}
+        name="password"
+        type="password"
+        autoComplete={isRegister ? "new-password" : "current-password"}
+        required
+        minLength={12}
+        maxLength={128}
+        aria-invalid={fieldErrors.password ? true : undefined}
+        aria-describedby={`${passwordHelpId}${fieldErrors.password ? ` ${passwordErrorId}` : ""}`}
+        onChange={() => clearFieldError("password")}
+        className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x aria-invalid:border-error-border aria-invalid:bg-error-surface"
+      />
+      <p id={passwordHelpId} className="mt-2 text-supporting text-text-muted">
+        {isRegister
+          ? "Use 12–128 characters. There is no composition rule."
+          : "Password recovery is unavailable in this portfolio prototype."}
+      </p>
+      {fieldErrors.password ? (
+        <p id={passwordErrorId} className="mt-2 text-supporting text-error-text">
+          {fieldErrors.password}
+        </p>
+      ) : null}
       {isRegister ? (
-        <label className="mt-4 flex items-start gap-2 text-supporting">
+        <div className="mt-4">
+          <label className="flex items-start gap-2 text-supporting">
           <input
+            ref={termsRef}
             className="mt-1 size-5 shrink-0"
             type="checkbox"
             name="acceptedTerms"
             required
+            aria-invalid={fieldErrors.acceptedTerms ? true : undefined}
+            aria-describedby={fieldErrors.acceptedTerms ? termsErrorId : undefined}
+            onChange={() => clearFieldError("acceptedTerms")}
           />
           <span>
             I acknowledge account terms version 1 and understand this is a
             portfolio demonstration without commercial availability. Optional
             analytics consent remains separate.
           </span>
-        </label>
+          </label>
+          {fieldErrors.acceptedTerms ? (
+            <p id={termsErrorId} className="mt-2 text-supporting text-error-text">
+              {fieldErrors.acceptedTerms}
+            </p>
+          ) : null}
+        </div>
       ) : null}
-      {error ? <ErrorMessage className="mt-3">{error}</ErrorMessage> : null}
-      <Button className="mt-4" type="submit" isLoading={pending} loadingLabel={isRegister ? "Creating account…" : "Signing in…"}>
+      {error ? (
+        <div ref={errorRef} tabIndex={-1} className="mt-3 rounded-control">
+          <ErrorMessage>{error}</ErrorMessage>
+        </div>
+      ) : null}
+      <Button
+        className="mt-4 w-full sm:w-auto"
+        type="submit"
+        isLoading={pending}
+        loadingLabel={isRegister ? "Creating account…" : "Signing in…"}
+      >
         {isRegister ? "Create account" : "Sign in"}
       </Button>
+      {isRegister ? (
+        <p className="mt-4 text-supporting text-text-muted">
+          Email verification and password recovery are unavailable in this
+          portfolio prototype.
+        </p>
+      ) : null}
     </form>
   );
 }
@@ -208,12 +404,57 @@ function AuthenticatedAccount() {
 
 export function AccountScreen() {
   const { state } = useAuth();
+  const searchParameters = useSearchParams() ?? new URLSearchParams(
+    typeof window === "undefined" ? "" : window.location.search,
+  );
+  const mode = parseAuthenticationMode(searchParameters.get("mode"));
+  const returnTo = parseAuthenticationReturnTarget(
+    searchParameters.get("returnTo"),
+  );
   if (state.status === "initializing") return <LoadingState label="Restoring your session…" />;
   if (state.status === "authenticated") return <AuthenticatedAccount />;
+
+  const onSuccess = () => {
+    const destination = resolveAuthenticationReturnDestination(returnTo);
+    if (destination) window.location.assign(destination);
+  };
+
   return (
-    <div className="grid gap-layout lg:grid-cols-2">
-      <AuthForm mode="login" />
-      <AuthForm mode="register" />
+    <div className="min-w-0 space-y-component">
+      {state.notice ? (
+        <ErrorMessage role="status" aria-live="polite">
+          {state.notice}
+        </ErrorMessage>
+      ) : null}
+      {returnTo ? (
+        <p className="rounded-card border border-border bg-surface-subtle p-3 text-supporting text-text-muted">
+          After successful authentication, you will return to {RETURN_LABELS[returnTo]}.
+        </p>
+      ) : null}
+      <nav aria-label="Authentication options" className="rounded-card border border-border bg-surface p-2">
+        <ul className="grid grid-cols-2 gap-2">
+          {(["login", "register"] as const).map((item) => {
+            const active = mode === item;
+            return (
+              <li key={item} className="min-w-0">
+                <Link
+                  href={buildAccountHref(item, returnTo)}
+                  aria-current={active ? "page" : undefined}
+                  className={`inline-flex min-h-11 w-full items-center justify-center rounded-control px-3 py-2 text-center text-button font-control break-words no-underline ${active ? "bg-brand text-on-brand" : "bg-surface-subtle text-text-primary hover:text-brand"}`}
+                >
+                  {item === "login" ? "Sign in" : "Create account"}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+      <AuthForm
+        key={mode}
+        focusHeading={searchParameters.has("mode")}
+        mode={mode}
+        onSuccess={onSuccess}
+      />
     </div>
   );
 }

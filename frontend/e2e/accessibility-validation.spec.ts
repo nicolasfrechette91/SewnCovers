@@ -391,7 +391,11 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
     page.getByText("Choose a pattern", { exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Sign in or register" })).toBeFocused();
+  await expect(page.getByRole("link", { name: "Sign in" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Create account" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Continue with built-in patterns" })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(
     page.getByRole("searchbox", { name: "Search built-in patterns" }),

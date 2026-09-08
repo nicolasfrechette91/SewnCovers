@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
+import { AccountRequired } from "@/components/account";
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
@@ -181,11 +182,18 @@ export function ProjectsScreen() {
   const projectId = useSearchParams().get("project");
   if (state.status === "initializing") return <LoadingState label="Restoring your session…" />;
   if (state.status === "guest") return (
-    <section className="rounded-panel border border-border bg-surface p-card">
-      <h2 className="font-display text-section-title font-heading">Sign in to view private projects</h2>
-      <p className="mt-2 text-body text-text-muted">Accounts are optional. You can still use the complete configurator and create a public design link without signing in.</p>
-      <div className="mt-4 flex flex-wrap gap-3"><Link href="/account/" className="inline-flex min-h-12 items-center rounded-control bg-brand px-control-x text-button font-control text-on-brand no-underline">Sign in or register</Link><Link href="/configure/" className="inline-flex min-h-12 items-center rounded-control border border-border-strong px-control-x text-button font-control text-text-primary no-underline">Continue as guest</Link></div>
-    </section>
+    <AccountRequired
+      title="Sign in to view private projects"
+      description="Private projects require an account so named designs, immutable version history, and revocable project shares stay associated with their owner."
+      unlocks="Signing in opens the private projects and saved versions already associated with your account. Creating an account gives you a new private workspace."
+      returnTo="projects"
+      sessionNotice={state.notice}
+      guestAlternative={{
+        href: "/configure/",
+        label: "Continue configuring as a guest",
+        description: "Without an account, you can still complete a design with built-in patterns and create an existing public, read-only design link.",
+      }}
+    />
   );
   return projectId ? <ProjectView token={state.token} projectId={projectId} /> : <ProjectList token={state.token} />;
 }

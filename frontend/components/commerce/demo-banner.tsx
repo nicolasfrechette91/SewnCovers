@@ -1,3 +1,6 @@
+import { AccountRequired } from "@/components/account";
+import type { AuthenticationReturnTarget } from "@/services/auth-navigation";
+
 export function DemoBanner() {
   return (
     <aside className="rounded-card border-2 border-accent-strong bg-error-surface p-4" aria-label="Demonstration commerce notice">
@@ -7,15 +10,78 @@ export function DemoBanner() {
   );
 }
 
-export function SignInForCommerce() {
+type CommerceAccessContext = "administrator" | "cart" | "checkout" | "orders" | "pricing";
+
+const ACCESS_COPY: Readonly<Record<CommerceAccessContext, {
+  description: string;
+  guestDescription?: string;
+  guestLabel?: string;
+  returnTo?: AuthenticationReturnTarget;
+  title: string;
+  unlocks: string;
+}>> = {
+  administrator: {
+    title: "Sign in to check administrator access",
+    description: "Administration requires a current session whose server-verified role is administrator.",
+    unlocks: "Signing in checks that existing role. Creating an account creates a customer account and cannot grant administrator access.",
+  },
+  cart: {
+    title: "Sign in to view your demonstration cart",
+    description: "The cart is private because it contains fictional quotes saved to one account.",
+    unlocks: "Signing in opens the cart associated with your account. Creating an account starts a new, empty private cart.",
+    returnTo: "cart",
+    guestDescription: "A cart is not needed to configure or publicly share a design with a built-in pattern.",
+    guestLabel: "Return to the configurator",
+  },
+  checkout: {
+    title: "Sign in to check your demonstration order",
+    description: "Checkout return details are private because they refer to an account-owned fictional order.",
+    unlocks: "Signing in opens your demonstration order history, where you can check the latest simulated payment and fulfilment state.",
+    returnTo: "orders",
+    guestDescription: "You can still configure and publicly share a design without viewing private checkout or order records.",
+    guestLabel: "Return to the configurator",
+  },
+  orders: {
+    title: "Sign in to view demonstration orders",
+    description: "Fictional order records and fulfilment timelines are private to the account that created them.",
+    unlocks: "Signing in opens your account's demonstration order history. Creating an account starts with no orders.",
+    returnTo: "orders",
+    guestDescription: "Orders are optional; guest configuration and public sharing with built-in patterns remain available.",
+    guestLabel: "Start a guest design",
+  },
+  pricing: {
+    title: "Sign in to use demonstration pricing",
+    description: "This prototype currently creates fictional prices and quotes only from account-owned saved project versions, keeping quote history private.",
+    unlocks: "Signing in opens eligible private project versions and your fictional quote history. Creating an account starts a new private workspace without prices or saved projects.",
+    returnTo: "pricing",
+    guestDescription: "Pricing remains locked, but the complete configurator and existing public-sharing flow are available without an account.",
+    guestLabel: "Start a guest design",
+  },
+};
+
+export function SignInForCommerce({
+  context = "pricing",
+  sessionNotice,
+}: Readonly<{
+  context?: CommerceAccessContext;
+  sessionNotice?: string;
+}>) {
+  const copy = ACCESS_COPY[context];
   return (
     <div className="space-y-component">
       <DemoBanner />
-      <section className="rounded-panel border border-border bg-surface p-card">
-        <h2 className="font-display text-section-title font-heading">Sign in for demonstration commerce</h2>
-        <p className="mt-2 text-text-muted">The configurator and public sharing remain available to guests. An account is required only to keep fictional quotes, a cart, and orders private.</p>
-        <a href="../account/" className="mt-4 inline-flex min-h-12 items-center rounded-control bg-brand px-control-x text-button font-control text-on-brand no-underline">Sign in or register</a>
-      </section>
+      <AccountRequired
+        title={copy.title}
+        description={copy.description}
+        unlocks={copy.unlocks}
+        returnTo={copy.returnTo}
+        sessionNotice={sessionNotice}
+        guestAlternative={copy.guestDescription && copy.guestLabel ? {
+          href: "/configure/",
+          description: copy.guestDescription,
+          label: copy.guestLabel,
+        } : undefined}
+      />
     </div>
   );
 }

@@ -22,8 +22,11 @@ import { assuranceApi } from "@/services/assurance-api";
 
 export type AuthState =
   | { readonly status: "initializing" }
-  | { readonly status: "guest" }
+  | { readonly status: "guest"; readonly notice?: string }
   | { readonly status: "authenticated"; readonly account: Account; readonly token: string; readonly expiresAt: string };
+
+const SESSION_ENDED_NOTICE =
+  "Your previous sign-in expired or is no longer valid. Sign in again to continue.";
 
 interface AuthContextValue {
   readonly state: AuthState;
@@ -59,14 +62,16 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       setState({ status: "authenticated", account, token, expiresAt: current.expiresAt });
     } catch {
       removeSessionToken();
-      setState({ status: "guest" });
+      setState({ status: "guest", notice: SESSION_ENDED_NOTICE });
     }
   }, []);
 
   useEffect(() => {
     const restoreTimer = globalThis.setTimeout(() => void restore(), 0);
     const handleChange = () => {
-      if (!readSessionToken()) setState({ status: "guest" });
+      if (!readSessionToken()) {
+        setState({ status: "guest", notice: SESSION_ENDED_NOTICE });
+      }
     };
     window.addEventListener(AUTH_CHANGED_EVENT, handleChange);
     return () => {
@@ -87,7 +92,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
 
     function clearStoredSession() {
       removeSessionToken();
-      setState({ status: "guest" });
+      setState({ status: "guest", notice: SESSION_ENDED_NOTICE });
     }
   }, [state]);
 

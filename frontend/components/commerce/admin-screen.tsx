@@ -48,7 +48,7 @@ export function AdminScreen() {
     return () => globalThis.clearTimeout(timer);
   }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
   if (state.status === "initializing" || loading) return <LoadingState label="Loading protected demonstration administration…" />;
-  if (state.status === "guest") return <SignInForCommerce />;
+  if (state.status === "guest") return <SignInForCommerce context="administrator" sessionNotice={state.notice} />;
   if (state.account.role !== "administrator") return <div className="space-y-component"><DemoBanner /><section className="rounded-panel border border-error-border bg-error-surface p-card" role="alert"><h2 className="font-display text-section-title font-heading text-error-text">Administrator access denied</h2><p className="mt-2 text-error-text">Roles are assigned only by the explicit server CLI. Registration and browser requests cannot grant administrative access.</p></section></div>;
   const token = state.token;
   const action = async (name: string, task: () => Promise<void>) => { setBusy(name); setError(null); setStatus(null); try { await task(); requestAnimationFrame(() => focusRef.current?.focus()); } catch (caught) { setError(explain(caught)); } finally { setBusy(null); } };

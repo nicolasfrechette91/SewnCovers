@@ -32,7 +32,7 @@ export function CartScreen() {
     return () => globalThis.clearTimeout(timer);
   }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
   if (state.status === "initializing" || loading) return <LoadingState label="Loading your demonstration cart…" />;
-  if (state.status === "guest") return <SignInForCommerce />;
+  if (state.status === "guest") return <SignInForCommerce context="cart" sessionNotice={state.notice} />;
   const token = state.token;
   const mutate = async (name: string, task: () => Promise<Cart>, success: string) => {
     setBusy(name); setError(null); setStatus(null);

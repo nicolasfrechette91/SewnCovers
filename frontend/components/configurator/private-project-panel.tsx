@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
+import { AccountRequired } from "@/components/account";
 import { Button, ErrorMessage } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import type { ConfigurationState } from "@/context/configuration";
@@ -53,7 +54,22 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
       <h3 id="private-project-heading" className="mt-2 font-display text-section-title font-heading">{projectId ? "Save a new version" : "Save to a private project"}</h3>
       <p className="mt-3 max-w-3xl text-body text-text-muted">{projectId ? "This design was opened from project history. Saving adds the next version and leaves earlier versions unchanged." : "A named project is private in your account. It is separate from the public design link above; other people can view a project version only if you create a read-only share link."}</p>
       {auth.status === "initializing" ? <p className="mt-3" role="status">Restoring your session…</p> : null}
-      {auth.status === "guest" ? <div className="mt-3"><p className="text-supporting text-text-muted">Accounts are optional. Sign in to save private projects, or keep configuring and sharing a public design as a guest.</p><Link href="/account/" className="mt-3 inline-flex min-h-11 items-center text-button font-control text-brand underline">Sign in or register</Link></div> : null}
+      {auth.status === "guest" ? (
+        <AccountRequired
+          className="mt-4 bg-surface-subtle shadow-none"
+          headingLevel="h4"
+          title="Sign in to save this design privately"
+          description="A private project requires an account so its name, saved versions, and revocable project shares remain owner-only."
+          unlocks="Signing in lets you save this configuration to an existing account. Creating an account gives it a new private workspace."
+          returnTo="configure"
+          sessionNotice={auth.notice}
+          guestAlternative={{
+            href: "/configure/",
+            label: "Continue configuring as a guest",
+            description: "You can keep this design in the configurator and use the public-link workflow above when it uses a built-in pattern.",
+          }}
+        />
+      ) : null}
       {auth.status === "authenticated" ? (
         <form className="mt-4" onSubmit={(event) => void save(event)}>
           {!projectId ? <><label htmlFor="private-project-name" className="block text-label font-control">Project name</label><input ref={nameRef} id="private-project-name" name="name" required maxLength={120} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-control-x" /></> : null}

@@ -99,6 +99,7 @@ test("account workspace preserves immutable history and revocable sharing", asyn
   await page.route(`${apiOrigin}/**`, handleApi);
 
   await page.goto(accountPath);
+  await page.getByRole("link", { name: "Create account" }).click();
   await page.locator("#register-email").fill("person@example.com");
   await page.locator("#register-password").fill("correct horse battery staple");
   await page.getByRole("checkbox", { name: /account terms version 1/i }).check();
@@ -177,6 +178,7 @@ test("an authenticated 401 clears the tab session and returns to sign in", async
   await page.route(`${apiOrigin}/**`, (route) => json(route, { errors: [{ code: "authentication_required", message: "Authentication is required or the session is no longer valid.", location: ["header", "Authorization"] }] }, 401));
   await page.goto(accountPath);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByText(/previous sign-in expired or is no longer valid/)).toBeVisible();
   expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
   await page.goto(configurePath);
   await expect(page.getByRole("heading", { name: "Build your custom cover design." })).toBeVisible();

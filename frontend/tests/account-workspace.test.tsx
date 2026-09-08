@@ -20,6 +20,12 @@ import {
   storeSessionToken,
   withBasePath,
 } from "../services/account-api";
+import {
+  buildAccountHref,
+  parseAuthenticationMode,
+  parseAuthenticationReturnTarget,
+  resolveAuthenticationReturnDestination,
+} from "../services/auth-navigation";
 
 const configuration: CreateDesignRequest = {
   shape: "tapered",
@@ -52,6 +58,7 @@ afterEach(() => {
   cleanup();
   window.sessionStorage.clear();
   window.localStorage.clear();
+  window.history.replaceState({}, "", "/");
 });
 
 function PatternProbe() {
@@ -110,24 +117,132 @@ test("keeps opaque authentication only in sessionStorage", () => {
   assert.equal(readSessionToken(), null);
 });
 
-test("renders native sign-in and registration forms with documented limits", async () => {
+test("defaults to one accessible sign-in form with recovery limitations", async () => {
+  const view = render(<AuthProvider><AccountScreen /></AuthProvider>);
+  await screen.findByRole("heading", { name: "Sign in" });
+  assert.equal(view.container.querySelectorAll("form").length, 1);
+  assert.equal(screen.queryByRole("heading", { name: "Create account" }), null);
+  assert.equal(screen.queryByRole("checkbox"), null);
+  const email = screen.getByLabelText("Email") as HTMLInputElement;
+  const passphrase = screen.getByLabelText("Passphrase") as HTMLInputElement;
+  assert.equal(email.id, "login-email");
+  assert.equal(email.autocomplete, "email");
+  assert.equal(passphrase.autocomplete, "current-password");
+  assert.equal(passphrase.minLength, 12);
+  assert.equal(passphrase.maxLength, 128);
+  assert.ok(screen.getByText(/Password recovery is unavailable/));
+  assert.equal(screen.getByRole("link", { name: "Sign in" }).getAttribute("aria-current"), "page");
+});
+
+test("renders only registration controls for a valid registration mode", async () => {
+  window.history.replaceState({}, "", "/account/?mode=register&returnTo=projects");
+  const view = render(<AuthProvider><AccountScreen /></AuthProvider>);
+  await screen.findByRole("heading", { name: "Create account" });
+  assert.equal(view.container.querySelectorAll("form").length, 1);
+  assert.equal(screen.queryByRole("heading", { name: "Sign in" }), null);
+  assert.equal((screen.getByLabelText("Passphrase") as HTMLInputElement).autocomplete, "new-password");
+  assert.ok(screen.getByRole("checkbox", { name: /account terms version 1/i }));
+  assert.ok(screen.getByText(/Use 12–128 characters. There is no composition rule/));
+  assert.ok(screen.getByText(/Email verification and password recovery are unavailable/));
+  assert.ok(screen.getByText(/return to your private projects/));
+});
+
+test("associates local authentication errors and focuses the first invalid field", async () => {
   render(<AuthProvider><AccountScreen /></AuthProvider>);
   await screen.findByRole("heading", { name: "Sign in" });
-  assert.ok(screen.getByRole("heading", { name: "Create an account" }));
-  const passphrases = screen.getAllByLabelText("Passphrase") as HTMLInputElement[];
-  assert.equal(passphrases.length, 2);
-  assert.ok(passphrases.every((input) => input.minLength === 12 && input.maxLength === 128));
-  assert.ok(screen.getByText(/Email verification and password recovery are not available/));
+  fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+  const email = screen.getByLabelText("Email") as HTMLInputElement;
+  assert.equal(document.activeElement, email);
+  assert.equal(email.getAttribute("aria-invalid"), "true");
+  assert.equal(email.getAttribute("aria-describedby"), "login-email-error");
+  assert.ok(screen.getByText("Enter your email address."));
+
+  fireEvent.change(email, { target: { value: "not-an-email" } });
+  fireEvent.change(screen.getByLabelText("Passphrase"), { target: { value: "a sufficiently long passphrase" } });
+  fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+  assert.ok(screen.getByText("Enter a valid email address."));
+});
+
+test("keeps secure credential failures at form level without erasing email", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => json({ errors: [{ code: "authentication_failed", message: "Email or password could not be accepted.", location: ["body", "credentials"] }] }, 401);
+  try {
+    render(<AuthProvider><AccountScreen /></AuthProvider>);
+    await screen.findByRole("heading", { name: "Sign in" });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "person@example.com" } });
+    fireEvent.change(screen.getByLabelText("Passphrase"), { target: { value: "correct horse battery staple" } });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await screen.findByRole("alert");
+    assert.ok(screen.getByText("Email or password could not be accepted."));
+    assert.equal((screen.getByLabelText("Email") as HTMLInputElement).value, "person@example.com");
+    assert.ok(document.activeElement?.contains(screen.getByRole("alert")));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("rejects missing registration terms before making an API request", async () => {
+  window.history.replaceState({}, "", "/account/?mode=register");
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = async () => { requests += 1; throw new Error("unexpected request"); };
+  try {
+    render(<AuthProvider><AccountScreen /></AuthProvider>);
+    await screen.findByRole("heading", { name: "Create account" });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "new@example.com" } });
+    fireEvent.change(screen.getByLabelText("Passphrase"), { target: { value: "correct horse battery staple" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+    const terms = screen.getByRole("checkbox", { name: /account terms version 1/i });
+    assert.equal(document.activeElement, terms);
+    assert.equal(terms.getAttribute("aria-describedby"), "register-terms-error");
+    assert.ok(screen.getByText(/Acknowledge the account terms/));
+    assert.equal(requests, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("allowlists authentication returns and rejects redirect-shaped input", () => {
+  assert.equal(parseAuthenticationMode(null), "login");
+  assert.equal(parseAuthenticationMode("unknown"), "login");
+  assert.equal(parseAuthenticationMode("register"), "register");
+  assert.equal(parseAuthenticationReturnTarget("projects"), "projects");
+  assert.equal(buildAccountHref("register", "cart"), "/account/?mode=register&returnTo=cart");
+  assert.equal(resolveAuthenticationReturnDestination("projects"), "/projects/");
+  assert.equal(resolveAuthenticationReturnDestination("cart"), "/cart/");
+  assert.equal(resolveAuthenticationReturnDestination("orders"), "/orders/");
+  assert.equal(resolveAuthenticationReturnDestination("projects", "/SewnCovers/"), "/SewnCovers/projects/");
+  for (const value of [
+    "https://attacker.example/",
+    "//attacker.example/",
+    "%2F%2Fattacker.example",
+    "/projects/",
+    "../projects",
+    "admin",
+    "projects?next=admin",
+    "",
+  ]) {
+    assert.equal(resolveAuthenticationReturnDestination(value), null);
+  }
 });
 
 test("distinguishes private project saving from public guest sharing", async () => {
   render(<AuthProvider><PrivateProjectPanel configuration={configurationState} onSavingChange={() => undefined} /></AuthProvider>);
   await screen.findByRole("heading", { name: "Save to a private project" });
-  await screen.findByRole("link", { name: "Sign in or register" });
-  assert.ok(screen.getByText(/Accounts are optional/));
-  assert.ok(screen.getByRole("link", { name: "Sign in or register" }));
+  await screen.findByRole("link", { name: "Sign in" });
+  assert.ok(screen.getByRole("link", { name: "Create account" }));
+  assert.ok(screen.getByRole("link", { name: "Continue configuring as a guest" }));
   assert.ok(screen.getByText(/separate from the public design link/));
-  assert.ok(screen.getByText(/sharing a public design as a guest/));
+  assert.ok(screen.getByText(/public-link workflow above/));
+});
+
+test("keeps built-in patterns available when private custom patterns are locked", async () => {
+  render(<AuthProvider><ConfigurationProvider><YourPatterns /></ConfigurationProvider></AuthProvider>);
+  await screen.findByRole("heading", { name: "Sign in to use private custom patterns" });
+  assert.ok(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")?.includes("returnTo=configure"));
+  assert.ok(screen.getByRole("link", { name: "Create account" }));
+  assert.ok(screen.getByRole("link", { name: "Continue with built-in patterns" }));
+  assert.ok(screen.getByText(/All built-in patterns and the guest configuration stages remain available/));
 });
 
 test("shows every Task 10.1 field in a read-only version summary", () => {

@@ -78,9 +78,11 @@ test("keeps the fictional-commerce warning visible when sign-in is required", ()
   render(<SignInForCommerce />);
   assert.ok(screen.getByText(/Fictional CAD prices and payment events only/));
   assert.ok(screen.getByText(/No live charge, tax, shipment, or production service/));
-  assert.ok(screen.getByRole("heading", { name: "Sign in for demonstration commerce" }));
-  assert.ok(screen.getByText(/configurator and public sharing remain available to guests/));
-  assert.ok(screen.getByRole("link", { name: "Sign in or register" }));
+  assert.ok(screen.getByRole("heading", { name: "Sign in to use demonstration pricing" }));
+  assert.ok(screen.getByText(/complete configurator and existing public-sharing flow/));
+  assert.ok(screen.getByRole("link", { name: "Sign in" }));
+  assert.ok(screen.getByRole("link", { name: "Create account" }));
+  assert.ok(screen.getByRole("link", { name: "Start a guest design" }));
 });
 
 test("denies the administrator workspace to a customer role", async () => {
