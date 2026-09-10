@@ -299,6 +299,7 @@ export function Configurator() {
   } else if (activeStepId === "preview") {
     activeStageContent = (
       <PreviewStep
+        onEdit={navigateToStep}
         focusTargetId={focusTargetIds.preview}
         selectedPattern={selectedPattern}
       />

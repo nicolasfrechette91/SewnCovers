@@ -12,6 +12,7 @@ import {
 
 import { Button } from "@/components/ui";
 import type { ConfigurationState } from "@/context/configuration";
+import { closureOptions, findCoverOption, fitOptions, seamOptions } from "@/data/cover-options";
 
 interface AdvancedPreviewProps {
   readonly configuration: Readonly<ConfigurationState>;
@@ -33,7 +34,6 @@ interface ViewState {
 }
 
 const DEFAULT_VIEW: ViewState = { pitch: -0.35, yaw: 0.65, zoom: 1 };
-const VISUALIZATION_RULES_VERSION = "approximate-cover-v1";
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
@@ -198,7 +198,7 @@ export function AdvancedPreview({
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      readyTimer = globalThis.setTimeout(() => setState("ready"), 0);
+      readyTimer = globalThis.setTimeout(() => setState(textureUrl ? "loading" : "ready"), 0);
       if (textureUrl) {
         void fetch(textureUrl, { credentials: "omit", cache: "no-store" })
           .then((response) => {
@@ -209,6 +209,7 @@ export function AdvancedPreview({
             return response.blob();
           })
           .then((blob) => {
+            if (cancelled) return;
             objectUrl = URL.createObjectURL(blob);
             const image = new Image();
             image.onload = () => {
@@ -220,12 +221,14 @@ export function AdvancedPreview({
                 gl.UNSIGNED_BYTE, image,
               );
               resourcesRef.current.objectUrl = objectUrl;
+              setState("ready");
               setView((current) => ({ ...current }));
             };
-            image.onerror = () => setState("failed");
+            image.onerror = () => { if (!cancelled) setState("failed"); };
             image.src = objectUrl;
           })
           .catch((error: unknown) => {
+            if (cancelled) return;
             setState(
               error instanceof Error &&
                 error.message === "authorization-expired"
@@ -392,7 +395,7 @@ export function AdvancedPreview({
       <div className="mt-component min-w-0 overflow-hidden rounded-card border border-border bg-surface-subtle">
         <canvas
           ref={canvasRef}
-          className="block aspect-[4/3] min-h-56 w-full touch-none"
+          className={`aspect-[4/3] min-h-56 w-full touch-none ${state === "ready" ? "block" : "hidden"}`}
           tabIndex={state === "ready" ? 0 : -1}
           aria-describedby={summaryId}
           aria-label="Interactive approximate cushion model. Use arrow keys to rotate, plus and minus to zoom, and Home to reset."
@@ -408,7 +411,7 @@ export function AdvancedPreview({
             {state === "unavailable" &&
               "3D is unavailable for this shape or browser. The complete 2D preview remains above."}
             {state === "authorization-expired" &&
-              "Access to this custom pattern expired. Refresh the page or use the complete 2D fallback."}
+              "Access to this custom pattern expired. Use Change pattern above to choose an available pattern."}
             {state === "failed" &&
               "The 3D renderer could not initialize. The complete 2D preview remains available."}
           </p>
@@ -428,10 +431,9 @@ export function AdvancedPreview({
       <dl id={summaryId} className="mt-component grid gap-2 text-supporting sm:grid-cols-2">
         <div><dt className="font-control">Original measurements</dt><dd>{configuration.width} × {configuration.height} × {configuration.thickness} {configuration.unit}</dd></div>
         <div><dt className="font-control">Display scaling</dt><dd>Relative normalization only; originals remain unchanged</dd></div>
-        <div><dt className="font-control">Pattern</dt><dd>{patternName} at {configuration.patternScale.toFixed(1)}×; arbitrary uploads are not assumed seamless</dd></div>
-        <div><dt className="font-control">Construction</dt><dd>{configuration.fitPreference} fit · {configuration.closureType} access · {configuration.seamStyle} edge</dd></div>
+        <div><dt className="font-control">Pattern</dt><dd>{patternName} selected at {configuration.patternScale.toFixed(1)}×. {textureUrl ? "Custom pattern repeat; uploaded images may have visible joins." : "This 3D view uses a generic texture; see the main preview for the selected built-in artwork."}</dd></div>
+        <div><dt className="font-control">Recorded only in 3D</dt><dd>{findCoverOption(fitOptions, configuration.fitPreference).name} · {findCoverOption(closureOptions, configuration.closureType).name} · {findCoverOption(seamOptions, configuration.seamStyle).name}. These settings do not change this 3D model. Material tint is illustrative; fabric properties are not simulated.</dd></div>
         <div><dt className="font-control">Orientation</dt><dd>Yaw {view.yaw.toFixed(2)}, pitch {view.pitch.toFixed(2)}, zoom {view.zoom.toFixed(2)}</dd></div>
-        <div><dt className="font-control">Rules</dt><dd>{VISUALIZATION_RULES_VERSION}</dd></div>
       </dl>
       <dialog
         ref={dialogRef}

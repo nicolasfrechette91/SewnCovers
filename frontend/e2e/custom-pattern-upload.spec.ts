@@ -44,11 +44,13 @@ async function json(route: Route, body: unknown, code = 200) {
   await route.fulfill({ body: JSON.stringify(body), headers, status: code });
 }
 
-test("authenticated customer uploads, selects, previews, and deletes a moderated pattern", async ({ page }) => {
+test("authenticated customer uploads, selects, previews, and deletes a moderated pattern", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.addInitScript((value) => sessionStorage.setItem("sewncovers.session-token", value), token);
   let uploaded = false;
   let deleted = false;
+  let tileRequests = 0;
+  let grantRequests = 0;
   let imageBytes: Buffer<ArrayBufferLike> = Buffer.alloc(0);
 
   await page.route(`${apiOrigin}/**`, async (route) => {
@@ -72,8 +74,8 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
     if (path === `/uploads/${uploadId}/complete`) { uploaded = true; return json(route, status("approved")); }
     if (path === `/uploads/${uploadId}` && request.method() === "GET") return json(route, status(deleted ? "deleted" : "approved"));
     if (path === `/uploads/${uploadId}` && request.method() === "DELETE") { deleted = true; return json(route, { id: uploadId, state: "deleted", referencedByVersions: 1 }); }
-    if (path === `/uploads/${uploadId}/assets/tile/access`) return json(route, { url: `/assets/direct/${accessToken}/tile`, expiresAt, contentType: "image/png" });
-    if (path === `/assets/direct/${accessToken}/tile`) return route.fulfill({ body: imageBytes, headers: { ...headers, "content-type": "image/png", "cache-control": "private, no-store" } });
+    if (path === `/uploads/${uploadId}/assets/tile/access`) { grantRequests++; return json(route, { url: `/assets/direct/${accessToken}/tile`, expiresAt, contentType: "image/png" }); }
+    if (path === `/assets/direct/${accessToken}/tile`) { tileRequests++; return route.fulfill({ body: imageBytes, headers: { ...headers, "content-type": "image/png", "cache-control": "private, no-store" } }); }
     return json(route, { errors: [{ code: "resource_not_found", message: "Not found.", location: ["path"] }] }, 404);
   });
 
@@ -113,6 +115,24 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   await page.getByRole("radio", { name: "Select custom pattern My garden repeat" }).press("Space");
   await expect(page.getByText(/selected for this private project configuration/)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+
+  await page.getByRole("button", { name: "Continue to Preview" }).press("Enter");
+  const preview = page.getByRole("figure", { name: "Cushion preview" });
+  await expect(preview.getByText("Custom pattern · Selected and shown")).toBeVisible();
+  await expect(preview).toContainText("My garden repeat");
+  expect(await preview.innerText()).not.toMatch(new RegExp(`${uploadId}|${accessToken}|https?://|garden\\.png`));
+  const tileCount = tileRequests;
+  const grantCount = grantRequests;
+  const scale = page.getByRole("slider", { name: "Pattern size" });
+  await scale.press("End");
+  await expect(scale).toHaveValue("2");
+  await scale.press("ArrowLeft");
+  await expect(scale).toHaveValue("1.9");
+  await expect(preview.locator(".cushion-preview-face")).toHaveCSS("--pattern-scale", "1.9");
+  expect(tileRequests).toBe(tileCount);
+  expect(grantRequests).toBe(grantCount);
+  await preview.screenshot({ path: testInfo.outputPath("custom-preview.png") });
+  await page.getByRole("button", { name: "Change pattern", exact: true }).press("Enter");
 
   page.once("dialog", async (dialog) => {
     expect(dialog.message()).toContain("referenced by 1 saved version");

@@ -148,8 +148,8 @@ test("renders every supported approximate 3D shape with keyboard controls and su
       new RegExp(String(configuration.width)),
     );
     assert.match(
-      screen.getByText(/Rules/).parentElement?.textContent ?? "",
-      /approximate-cover-v1/,
+      screen.getByText(/Recorded only in 3D/).parentElement?.textContent ?? "",
+      /These settings do not change this 3D model/,
     );
     cleanup();
   }
@@ -202,7 +202,7 @@ test("shows WebGL and private-texture authorization fallback states", async () =
   );
   assert.match(
     screen.getByText(/Pattern/).parentElement?.textContent ?? "",
-    /not assumed seamless/,
+    /may have visible joins/,
   );
 });
 

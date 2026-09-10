@@ -424,6 +424,10 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await expect(
     page.getByRole("slider", { name: "Pattern size" }),
   ).toBeFocused();
+  // The Preview now offers three contextual edit actions in the tab order.
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");

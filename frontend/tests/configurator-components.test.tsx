@@ -7,6 +7,8 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
+  act,
 } from "@testing-library/react";
 
 import {
@@ -1001,4 +1003,91 @@ test("shows validation and timeout/network failures with explicit retry recovery
   fireEvent.click(screen.getByRole("button", { name: "Try saving again" }));
   assert.ok(await screen.findByText(/could not be reached/i));
   assert.equal(calls, 2);
+});
+
+test("preview identifies sources, scale bounds, current output and contextual edits", () => {
+  const edits: string[] = [];
+  const { container } = renderWithConfiguration(<PreviewStep selectedPattern={fernPattern} onEdit={(stage) => edits.push(stage)} />, { ...completeConfiguration, patternScale: 1 });
+  assert.ok(screen.getByRole("heading", { name: "Currently previewing" }));
+  assert.ok(screen.getByText("Built-in pattern · Selected and shown"));
+  const slider = screen.getByRole("slider", { name: "Pattern size" });
+  assert.equal((slider as HTMLInputElement).value, "1");
+  assert.equal(slider.getAttribute("min"), "0.5");
+  assert.equal(slider.getAttribute("max"), "2");
+  assert.equal(slider.getAttribute("step"), "0.1");
+  for (const value of [0.5, 2]) {
+    fireEvent.change(slider, { target: { value: String(value) } });
+    assert.equal(container.querySelector<HTMLElement>(".cushion-preview-face")?.style.getPropertyValue("--pattern-scale"), String(value));
+    assert.equal(slider.getAttribute("aria-valuetext"), `${value.toFixed(1)}× pattern size`);
+  }
+  assert.equal((screen.getByRole("button", { name: "Larger" }) as HTMLButtonElement).disabled, true);
+  for (const name of ["Edit measurements", "Edit cover details", "Change pattern"]) fireEvent.click(screen.getByRole("button", { name }));
+  assert.deepEqual(edits, ["measurements", "details", "pattern"]);
+  assert.ok(screen.getByText(/not entered cushion dimensions or demonstration pricing/));
+  assert.ok(screen.getByText(/Fit can affect fictional demonstration pricing/));
+  assert.ok(screen.getByText(/not a manufacturing specification/));
+});
+
+test("preview describes fit truthfully for every shape and unit without changing geometry", () => {
+  for (const shape of ["square", "rectangle", "round", "tapered", "box"] as const) {
+    for (const unit of ["cm", "in"] as const) {
+      let geometry: string | null = null;
+      for (const fitPreference of ["close", "standard", "relaxed"] as const) {
+        const configuration = { ...completeConfiguration, shape, unit, width: 40, height: 40, backWidth: shape === "tapered" ? 30 : null, thickness: 5, fitPreference };
+        const { container } = renderWithConfiguration(<PreviewStep selectedPattern={fernPattern} />, configuration);
+        const face = container.querySelector("foreignObject");
+        assert.ok(face);
+        const current = ["x", "y", "width", "height"].map((key) => face.getAttribute(key)).join(",");
+        if (geometry) assert.equal(current, geometry);
+        geometry = current;
+        assert.ok(screen.getAllByText(`40 ${unit}`).length > 0);
+        assert.ok(screen.getByText(shape === "square" || shape === "rectangle" ? /face outline uses/ : /same outline for every fit preference/));
+        assert.ok(screen.getByText(/Fabric feel and drape are not simulated/));
+        assert.ok(screen.getByText(/not visible from this view/));
+        cleanup();
+      }
+    }
+  }
+});
+
+test("custom preview exposes only its label and source, reuses its image, and cleans up", async (t) => {
+  const fetchMock = t.mock.method(globalThis, "fetch", async () => new Response("image"));
+  t.mock.method(URL, "createObjectURL", () => "blob:preview-test");
+  const revokeMock = t.mock.method(URL, "revokeObjectURL", () => undefined);
+  const configuration: ConfigurationState = { ...completeConfiguration, pattern: { kind: "custom", assetId: "A".repeat(22), derivativeId: "D".repeat(22), processingVersion: "tile-v1", label: "Garden drawing", previewUrl: "https://assets.example.test/private?grant=secret" } };
+  const { container } = renderWithConfiguration(<PreviewStep selectedPattern={{ name: "Garden drawing", previewClassName: "", previewUrl: configuration.pattern?.kind === "custom" ? configuration.pattern.previewUrl! : undefined }} />, configuration);
+  assert.ok(screen.getByText("Loading your selected pattern…"));
+  await waitFor(() => assert.ok(container.querySelector("img")));
+  fireEvent.load(container.querySelector("img")!);
+  assert.ok(screen.getByText("Custom pattern · Selected and shown"));
+  assert.doesNotMatch(container.textContent ?? "", /A{22}|D{22}|https:|secret/);
+  fireEvent.change(screen.getByRole("slider", { name: "Pattern size" }), { target: { value: "2" } });
+  assert.equal(fetchMock.mock.callCount(), 1);
+  assert.equal(container.querySelector("img")?.getAttribute("src"), "blob:preview-test");
+  fireEvent.error(container.querySelector("img")!);
+  assert.equal(container.querySelector("svg[data-preview-shape]"), null);
+  assert.ok(screen.getAllByRole("status").length > 0);
+  assert.ok(screen.getByText(/selected pattern could not be displayed/));
+  cleanup();
+  assert.equal(revokeMock.mock.callCount(), 1);
+  renderWithConfiguration(<PreviewStep selectedPattern={null} />, configuration);
+  assert.ok(screen.getByText("Selected pattern unavailable"));
+  assert.ok(screen.getByText(/selected pattern is unavailable/));
+});
+
+test("custom preview reports denied derivatives without substitution and ignores late responses", async (t) => {
+  const createMock = t.mock.method(URL, "createObjectURL", () => "blob:unused");
+  const fetchMock = t.mock.method(globalThis, "fetch", async () => new Response("", { status: 403 }));
+  const pattern = { name: "Private drawing", previewClassName: "", previewUrl: "https://assets.example.test/authorized-tile" };
+  const { container } = renderWithConfiguration(<PreviewStep selectedPattern={pattern} />, completeConfiguration);
+  await screen.findByText(/selected pattern could not be displayed/);
+  assert.equal(container.querySelector("svg[data-preview-shape]"), null);
+  assert.equal(createMock.mock.callCount(), 0);
+  cleanup();
+  let resolveResponse!: (response: Response) => void;
+  fetchMock.mock.mockImplementation(() => new Promise<Response>((resolve) => { resolveResponse = resolve; }));
+  const view = renderWithConfiguration(<PreviewStep selectedPattern={pattern} />, completeConfiguration);
+  view.unmount();
+  await act(async () => { resolveResponse(new Response("image")); });
+  assert.equal(createMock.mock.callCount(), 0);
 });

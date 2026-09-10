@@ -37,8 +37,9 @@ export function AdvancedPreviewLoader({
   ) : (
     <div className="mt-component rounded-card border border-border bg-surface p-4">
       <p className="text-supporting text-text-muted">
-        The complete 2D SVG preview is active. Load the isolated WebGL preview
-        only if this device supports it.
+        The main preview above shows your selected pattern and edge styling.
+        The optional 3D view shows approximate proportions; built-in patterns use
+        a generic texture there. Fit, closure, and edge finish are recorded only in 3D.
       </p>
       <Button
         className="mt-3"

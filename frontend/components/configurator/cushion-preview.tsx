@@ -8,6 +8,7 @@ export interface CushionPreviewProps
   emptyMessage?: ReactNode;
   title?: ReactNode;
   visual?: ReactNode;
+  balanced?: boolean;
 }
 
 export function CushionPreview({
@@ -17,6 +18,7 @@ export function CushionPreview({
   emptyMessage = "Choose a pattern and measurements to see a preview.",
   title = "Preview",
   visual,
+  balanced = false,
   ...sectionProps
 }: CushionPreviewProps) {
   return (
@@ -25,10 +27,11 @@ export function CushionPreview({
       aria-label={ariaLabel}
       className={classNames(
         "min-w-0 rounded-panel border border-border bg-surface p-card shadow-raised",
+        balanced && "grid gap-x-component lg:grid-cols-2 lg:items-start",
         className,
       )}
     >
-      <h2 className="break-words font-display text-section-title font-heading tracking-heading text-text-primary">
+      <h2 className={classNames("break-words font-display text-section-title font-heading tracking-heading text-text-primary", balanced && "lg:col-span-2")}>
         {title}
       </h2>
       <div className="mt-component flex aspect-[4/3] min-h-48 w-full min-w-0 items-center justify-center overflow-hidden rounded-card border border-border bg-surface-subtle p-card">
@@ -45,7 +48,7 @@ export function CushionPreview({
               aria-hidden="true"
               className="block h-20 w-28 rounded-panel border border-border-strong bg-surface shadow-card sm:h-28 sm:w-40"
             />
-            <p className="break-words text-supporting text-text-muted">
+            <p role="status" className="break-words text-supporting text-text-muted">
               {emptyMessage}
             </p>
           </div>

@@ -2,6 +2,8 @@
 
 import {
   useId,
+  useEffect,
+  useState,
   type CSSProperties,
   type ChangeEvent,
 } from "react";
@@ -32,6 +34,7 @@ import {
 } from "@/data/shapes";
 
 import { CushionPreview } from "./cushion-preview";
+import { Button } from "../ui";
 import { AdvancedPreviewLoader } from "./advanced-preview-loader";
 import {
   calculatePreviewGeometry,
@@ -254,17 +257,55 @@ function formatValidMeasurement(
 }
 
 export interface PreviewStepProps {
+  onEdit?: (stage: "measurements" | "details" | "pattern") => void;
   focusTargetId?: string;
   selectedPattern: SelectedPatternPresentation | null;
   showScaleControls?: boolean;
 }
 
-export function PreviewStep({
+export function PreviewStep(props: PreviewStepProps) {
+  // Image readiness belongs to this source, never to a previously revoked URL.
+  // Configuration and scale remain in the existing provider.
+  return <PreviewStepContent key={props.selectedPattern?.previewUrl ?? "built-in"} {...props} />;
+}
+
+function PreviewStepContent({
+  onEdit,
   focusTargetId,
   selectedPattern,
   showScaleControls = true,
 }: PreviewStepProps) {
   const { state, dispatch } = useConfiguration();
+  const [failedPatternUrl, setFailedPatternUrl] = useState<string | null>(null);
+  const [loadedPatternUrl, setLoadedPatternUrl] = useState<string | null>(null);
+  const [patternImage, setPatternImage] = useState<{ source: string; url: string } | null>(null);
+  const patternSourceUrl = selectedPattern?.previewUrl;
+  const patternObjectUrl = patternImage?.source === patternSourceUrl ? patternImage?.url : undefined;
+  useEffect(() => {
+    if (!patternSourceUrl) return;
+    let cancelled = false;
+    let objectUrl: string | undefined;
+    // Consume only the derivative already authorized by the existing selection
+    // flow. A local object URL respects the image CSP without broadening it.
+    void fetch(patternSourceUrl, { credentials: "omit", cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) throw new Error("Pattern unavailable");
+        return response.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPatternImage({ source: patternSourceUrl, url: objectUrl });
+      })
+      .catch(() => { if (!cancelled) setFailedPatternUrl(patternSourceUrl); });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [patternSourceUrl]);
+  const patternIsLoading = Boolean(selectedPattern?.previewUrl &&
+    selectedPattern.previewUrl !== failedPatternUrl &&
+    selectedPattern.previewUrl !== loadedPatternUrl);
   const generatedId = useId();
   const scaleControlId =
     focusTargetId ?? `${generatedId}-pattern-scale`;
@@ -291,6 +332,8 @@ export function PreviewStep({
   const previewIsComplete =
     measurementsAreValid &&
     selectedPattern !== null &&
+    !patternIsLoading &&
+    (!selectedPattern.previewUrl || selectedPattern.previewUrl !== failedPatternUrl) &&
     patternScaleIsValid &&
     geometry !== null;
   const formattedScale =
@@ -302,6 +345,12 @@ export function PreviewStep({
 
   const shape = state.shape;
   const definition = getCushionShapeDefinition(shape);
+  const fitIsDrawn = shape === "square" || shape === "rectangle";
+  const fitCharacter = state.fitPreference === "close"
+    ? "A neater, crisper profile"
+    : state.fitPreference === "relaxed"
+      ? "A softer, more relaxed profile"
+      : "A balanced profile";
   const measurementValues = {
     backWidth: state.backWidth,
     height: state.height,
@@ -346,8 +395,12 @@ export function PreviewStep({
       className="mt-layout scroll-mt-layout"
     >
       <CushionPreview
+        balanced
         title={`Preview your ${definition.name.toLowerCase()} cushion`}
-        emptyMessage={getEmptyMessage(
+        emptyMessage={failedPatternUrl && failedPatternUrl === selectedPattern?.previewUrl
+          ? "The selected pattern could not be displayed. Change pattern to choose an available pattern. Your measurements remain saved."
+          : patternIsLoading ? "Loading your selected pattern…"
+          : getEmptyMessage(
           shape,
           measurementsAreValid,
           selectedPattern !== null,
@@ -360,7 +413,7 @@ export function PreviewStep({
               fitPreference={state.fitPreference}
               geometry={geometry}
               patternClassName={selectedPattern.previewClassName}
-              patternUrl={selectedPattern.previewUrl}
+              patternUrl={patternObjectUrl}
               patternScale={state.patternScale}
               shape={shape}
               seamStyle={state.seamStyle}
@@ -369,32 +422,27 @@ export function PreviewStep({
         }
         description={
           <div className="min-w-0">
-            <p className="text-body font-control text-text-primary">
+            <h3 className="text-body font-control text-text-primary">Currently previewing</h3>
+            <p role="status" className="mt-2 text-supporting text-text-muted">
               {previewIsComplete
                 ? "Current proportional preview"
                 : "Preview incomplete"}
             </p>
+            {selectedPattern?.previewUrl && patternObjectUrl ? (
+              // Observe failure of the same authorized derivative used by the face.
+              // No new grant, original, or fallback URL is requested.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={patternObjectUrl} hidden alt="" src={patternObjectUrl} onLoad={() => setLoadedPatternUrl(selectedPattern.previewUrl!)} onError={() => setFailedPatternUrl(selectedPattern.previewUrl!)} />
+            ) : null}
             <dl className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
               <div className="min-w-0">
                 <dt className="font-control text-text-primary">Shape</dt>
                 <dd className="break-words">{definition.name}</dd>
               </div>
               <div className="min-w-0">
-                <dt className="font-control text-text-primary">Material</dt>
-                <dd className="break-words">
-                  {findCoverOption(materialOptions, state.materialId).name}
-                </dd>
-              </div>
-              <div className="min-w-0">
                 <dt className="font-control text-text-primary">Fit preference</dt>
                 <dd className="break-words">
                   {findCoverOption(fitOptions, state.fitPreference).name}
-                </dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="font-control text-text-primary">Closure / access</dt>
-                <dd className="break-words">
-                  {findCoverOption(closureOptions, state.closureType).name}
                 </dd>
               </div>
               <div className="min-w-0">
@@ -412,6 +460,7 @@ export function PreviewStep({
                     (state.pattern === null
                       ? "Not selected"
                       : "Selected pattern unavailable")}
+                  {state.pattern ? <span className="block text-supporting">{state.pattern.kind === "custom" ? "Custom pattern" : "Built-in pattern"} · {previewIsComplete ? "Selected and shown" : patternIsLoading ? "Selected; loading preview" : "Selected; preview unavailable"}</span> : null}
                 </dd>
               </div>
               {dimensionDetails.map((detail) => (
@@ -429,10 +478,7 @@ export function PreviewStep({
                 <dd className="break-words">{formattedScale}</dd>
               </div>
             </dl>
-            <p className="mt-3 text-supporting text-text-muted">
-              Fit styling is indicative only and does not alter the entered measurements. Closure details are listed but not drawn because this view does not show the opening.
-            </p>
-
+            <p className="mt-3 hidden forced-colors:block">High-contrast settings may hide pattern colors and motifs. Use the selected pattern name and scale above as your text alternative.</p>
             {selectedPattern && showScaleControls ? (
               <div className="mt-component rounded-card border border-border bg-surface-subtle p-control-x py-4">
                 <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
@@ -443,6 +489,8 @@ export function PreviewStep({
                     Pattern size
                   </label>
                   <output
+                    id={`${scaleControlId}-output`}
+                    aria-live="off"
                     htmlFor={scaleControlId}
                     className="text-body font-control text-brand"
                   >
@@ -457,7 +505,7 @@ export function PreviewStep({
                   max={PATTERN_SCALE_MAX}
                   step={PATTERN_SCALE_STEP}
                   value={state.patternScale}
-                  aria-describedby={scaleDescriptionId}
+                  aria-describedby={`${scaleDescriptionId} ${scaleControlId}-output`}
                   aria-valuetext={`${formattedScale} pattern size`}
                   onChange={changePatternScale}
                 />
@@ -495,11 +543,32 @@ export function PreviewStep({
                 >
                   Adjust from {PATTERN_SCALE_MIN.toFixed(1)}× to{" "}
                   {PATTERN_SCALE_MAX.toFixed(1)}× with the slider or buttons.
-                  This changes only the preview motif size and is not a
-                  real-world measurement.
+                  Smaller values show finer motifs; larger values show bolder motifs.
+                  1.0× is the default visual scale, not actual fabric size.
+                  Pattern size changes the preview motif only, not entered cushion dimensions or demonstration pricing.
                 </p>
               </div>
             ) : null}
+            <div className="mt-component space-y-3">
+              <div><h3 className="font-control text-text-primary">How fit is represented</h3>
+                <p>{fitCharacter}. {fitIsDrawn
+                  ? `The face outline uses ${state.fitPreference === "close" ? "tighter" : state.fitPreference === "relaxed" ? "rounder" : "moderately rounded"} corners to suggest this preference.`
+                  : "This shape has the same outline for every fit preference; fit is recorded only."} Fit styling is indicative only and does not alter the entered measurements. No fit allowances are calculated. Fit can affect fictional demonstration pricing.</p>
+              </div>
+              <div><h3 className="font-control text-text-primary">Shown in this preview</h3>
+                <p>{previewIsComplete ? `Shape, face proportions, projected thickness, pattern and motif scale, and ${state.seamStyle === "piped" ? "a piped edge outline" : "a plain edge outline"}${fitIsDrawn ? ", with qualitative fit corners" : ""}.` : "The visual is unavailable until the preview is complete; current design values remain listed above."}</p>
+              </div>
+              <div><h3 className="font-control text-text-primary">Recorded in your design</h3>
+                <p>Material: {findCoverOption(materialOptions, state.materialId).name}. Fabric feel and drape are not simulated. Closure / access: {findCoverOption(closureOptions, state.closureType).name}; not visible from this view. Construction details are not drawn{fitIsDrawn ? "." : "; fit is also recorded without a visual change for this shape."}</p>
+              </div>
+            </div>
+
+            {onEdit ? <nav aria-label="Adjust this preview" className="mt-component flex flex-wrap gap-3">
+              <Button variant="secondary" onClick={() => onEdit("measurements")}>Edit measurements</Button>
+              <Button variant="secondary" onClick={() => onEdit("details")}>Edit cover details</Button>
+              <Button variant="secondary" onClick={() => onEdit("pattern")}>Change pattern</Button>
+            </nav> : null}
+            <p className="mt-component rounded-card border border-border-strong p-3 text-supporting text-text-muted">Illustrative preview only, not a manufacturing specification. It does not calculate seam allowances or cutting instructions, and cannot guarantee color, texture, scale, fit, or finished appearance. Not every saved setting is visually represented.</p>
           </div>
         }
       />
@@ -509,7 +578,7 @@ export function PreviewStep({
         <AdvancedPreviewLoader
           configuration={state}
           patternName={selectedPattern.name}
-          textureUrl={selectedPattern.previewUrl}
+          textureUrl={patternObjectUrl}
         />
       ) : null}
     </section>
