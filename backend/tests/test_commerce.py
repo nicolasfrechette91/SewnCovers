@@ -3,6 +3,7 @@
 import json
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
+from importlib import import_module
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -17,6 +18,7 @@ from app.commerce import cli as commerce_cli
 from app.commerce.cli import promote_existing_account
 from app.commerce.encryption import ShippingCipher, ShippingEncryptionError
 from app.commerce.providers import sandbox_signature
+from app.commerce.service import calculate_demonstration_pricing
 from app.main import create_application
 from app.persistence.database import Database, get_session
 from app.persistence.models import (
@@ -28,6 +30,7 @@ from app.persistence.models import (
     PaymentEvent,
     PriceBook,
 )
+from app.projects.schema import ProjectConfiguration
 from app.settings import Settings, reset_settings_cache
 
 CONFIGURATION = {
@@ -53,6 +56,48 @@ FICTIONAL_SHIPPING = {
     "postalCode": "K1A 0B1",
     "country": "CA",
 }
+
+
+def test_public_pricing_examples_match_authoritative_price_book() -> None:
+    examples_path = (
+        Path(__file__).parents[2] / "frontend" / "data" / "public-pricing-examples.json"
+    )
+    public_data = json.loads(examples_path.read_text(encoding="utf-8"))
+    migration_module = import_module(
+        "migrations.versions.20260828_01_add_demonstration_commerce"
+    )
+    pattern_migration = import_module(
+        "migrations.versions.20260729_01_seed_canonical_patterns"
+    )
+    active_pattern_ids = {
+        item["id"] for item in pattern_migration.PATTERN_ROWS if item["is_active"]
+    }
+    book = PriceBook(
+        id="DEMOPriceBook000000001",
+        version=1,
+        label="Demonstration CAD price model v1",
+        state="published",
+        currency="CAD",
+        configuration=migration_module.DEMONSTRATION_PRICE_CONFIGURATION,
+    )
+
+    assert public_data["schemaVersion"] == 1
+    assert public_data["priceBookVersion"] == book.version
+    assert public_data["currency"] == book.currency == "CAD"
+    assert public_data["quantity"] == 1
+    assert len(public_data["examples"]) >= 3
+    assert len({item["id"] for item in public_data["examples"]}) == len(
+        public_data["examples"]
+    )
+
+    for example in public_data["examples"]:
+        configuration = ProjectConfiguration.model_validate(example["configuration"])
+        if configuration.pattern.kind == "built-in":
+            assert configuration.pattern.pattern_id in active_pattern_ids
+        calculated = calculate_demonstration_pricing(
+            book, configuration, public_data["quantity"]
+        )
+        assert example["amountMinor"] == calculated["subtotal_amount"], example["id"]
 
 
 @pytest.fixture

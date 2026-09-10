@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "priceBookVersion": 1,
+  "currency": "CAD",
+  "quantity": 1,
+  "examples": [
+    {
+      "id": "square-everyday",
+      "name": "Everyday square cushion",
+      "shapeLabel": "Square",
+      "dimensionLabel": "50 × 50 × 10 cm",
+      "materialLabel": "Cotton canvas",
+      "fitLabel": "Standard fit",
+      "closureLabel": "Zipper",
+      "edgeLabel": "Plain edge",
+      "patternLabel": "Built-in pattern",
+      "amountMinor": 7525,
+      "configuration": {
+        "shape": "square",
+        "width": 50.0,
+        "height": 50.0,
+        "backWidth": null,
+        "thickness": 10.0,
+        "unit": "cm",
+        "pattern": { "kind": "built-in", "patternId": "terrace-wave" },
+        "patternScale": 1.0,
+        "materialId": "cotton-canvas",
+        "fitPreference": "standard",
+        "closureType": "zipper",
+        "seamStyle": "plain"
+      }
+    },
+    {
+      "id": "rectangle-relaxed",
+      "name": "Relaxed rectangular cushion",
+      "shapeLabel": "Rectangle",
+      "dimensionLabel": "60 × 40 × 8 cm",
+      "materialLabel": "Polyester weave",
+      "fitLabel": "Relaxed fit",
+      "closureLabel": "Slip-on access",
+      "edgeLabel": "Piped edge",
+      "patternLabel": "Built-in pattern",
+      "amountMinor": 9002,
+      "configuration": {
+        "shape": "rectangle",
+        "width": 60.0,
+        "height": 40.0,
+        "backWidth": null,
+        "thickness": 8.0,
+        "unit": "cm",
+        "pattern": { "kind": "built-in", "patternId": "meadow-sprig" },
+        "patternScale": 1.4,
+        "materialId": "polyester-weave",
+        "fitPreference": "relaxed",
+        "closureType": "slip-on",
+        "seamStyle": "piped"
+      }
+    },
+    {
+      "id": "tapered-bench",
+      "name": "Large tapered bench cushion",
+      "shapeLabel": "Tapered",
+      "dimensionLabel": "120 cm front × 100 cm back × 55 × 12 cm",
+      "materialLabel": "Linen blend",
+      "fitLabel": "Close fit",
+      "closureLabel": "Zipper",
+      "edgeLabel": "Piped edge",
+      "patternLabel": "Built-in pattern",
+      "amountMinor": 13807,
+      "configuration": {
+        "shape": "tapered",
+        "width": 120.0,
+        "height": 55.0,
+        "backWidth": 100.0,
+        "thickness": 12.0,
+        "unit": "cm",
+        "pattern": { "kind": "built-in", "patternId": "harbor-stripe" },
+        "patternScale": 0.8,
+        "materialId": "linen-blend",
+        "fitPreference": "close",
+        "closureType": "zipper",
+        "seamStyle": "piped"
+      }
+    }
+  ]
+}

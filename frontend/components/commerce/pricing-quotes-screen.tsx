@@ -28,8 +28,14 @@ function PricingCard({ pricing }: Readonly<{ pricing: Pricing }>) {
 }
 
 export function PricingQuotesScreen() {
-  const { state } = useAuth();
   const requestedVersion = useSearchParams().get("version");
+  return <PrivatePricingWorkspace requestedVersion={requestedVersion} />;
+}
+
+export function PrivatePricingWorkspace({
+  requestedVersion,
+}: Readonly<{ requestedVersion: string | null }>) {
+  const { state } = useAuth();
   const [projects, setProjects] = useState<readonly ProjectDetail[]>([]);
   const [quotes, setQuotes] = useState<readonly Quote[]>([]);
   const [versionId, setVersionId] = useState(requestedVersion ?? "");

@@ -31,7 +31,7 @@ test("keeps guest pages task-focused while preserving prototype and account disc
   await expectCustomerLanguage(page);
 
   for (const [route, heading, lockedHeading] of [
-    ["commerce", "Pricing and quotes", "Sign in to use demonstration pricing"],
+    ["commerce", "Pricing and quotes", "Sign in to create an owned demonstration quote"],
     ["cart", "Cart", "Sign in to view your demonstration cart"],
     ["orders", "Orders", "Sign in to view demonstration orders"],
   ] as const) {

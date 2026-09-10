@@ -328,7 +328,7 @@ test("locked routes stay private, offer guest configuration, and fit required wi
 
   const locked = [
     ["projects", "Sign in to view private projects", "projects"],
-    ["commerce", "Sign in to use demonstration pricing", "pricing"],
+    ["commerce", "Sign in to create an owned demonstration quote", "pricing"],
     ["cart", "Sign in to view your demonstration cart", "cart"],
     ["orders", "Sign in to view demonstration orders", "orders"],
     ["checkout/return/?order=O", "Sign in to check your demonstration order", "orders"],
@@ -336,9 +336,9 @@ test("locked routes stay private, offer guest configuration, and fit required wi
   for (const [path, heading, returnTo] of locked) {
     await page.goto(`${basePath}/${path}${path.includes("?") ? "" : "/"}`);
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", new RegExp(`returnTo=${returnTo}$`));
+    await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", new RegExp(`returnTo=${returnTo}$`));
     await expect(page.getByRole("link", { name: "Create account" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /guest design|configurator|configuring as a guest/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /guest design|configurator|configuring as a guest|start configuring/i }).first()).toBeVisible();
   }
   expect(protectedRequests).toBe(0);
 

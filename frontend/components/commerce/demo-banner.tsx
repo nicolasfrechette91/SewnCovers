@@ -50,12 +50,12 @@ const ACCESS_COPY: Readonly<Record<CommerceAccessContext, {
     guestLabel: "Start a guest design",
   },
   pricing: {
-    title: "Sign in to use demonstration pricing",
-    description: "This prototype currently creates fictional prices and quotes only from account-owned saved project versions, keeping quote history private.",
+    title: "Sign in to create an owned demonstration quote",
+    description: "Owned demonstration estimates and quotes use account-owned saved project versions, keeping quote history private.",
     unlocks: "Signing in opens eligible private project versions and your fictional quote history. Creating an account starts a new private workspace without prices or saved projects.",
     returnTo: "pricing",
-    guestDescription: "Pricing remains locked, but the complete configurator and existing public-sharing flow are available without an account.",
-    guestLabel: "Start a guest design",
+    guestDescription: "The public examples above remain available, and configuring does not require an account or create a quote.",
+    guestLabel: "Start configuring",
   },
 };
 

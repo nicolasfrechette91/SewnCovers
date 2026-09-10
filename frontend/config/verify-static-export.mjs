@@ -152,6 +152,14 @@ assert.match(
 assert.match(accountHtml, /<title>Account \| SewnCovers<\/title>/);
 assert.match(projectsHtml, /<title>My projects \| SewnCovers<\/title>/);
 assert.match(commerceHtml, /<title>Demonstration pricing and quotes \| SewnCovers<\/title>/);
+assert.match(commerceHtml, /How demonstration prices work/);
+assert.match(commerceHtml, /Everyday square cushion/);
+assert.match(commerceHtml, /\$75\.25 CAD/);
+assert.match(
+  commerceHtml,
+  new RegExp(`href="${(basePath || "").replace(/\//g, "\\/")}\\/configure\\/"[^>]*>Start configuring<\\/a>`),
+);
+assert.match(commerceHtml, /returnTo=pricing/);
 assert.match(ordersHtml, /<title>Demonstration orders \| SewnCovers<\/title>/);
 assert.match(adminHtml, /<title>Demonstration administration \| SewnCovers<\/title>/);
 assert.match(legalHtml, /<title>Legal and consent information \| SewnCovers<\/title>/);

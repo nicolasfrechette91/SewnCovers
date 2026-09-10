@@ -162,6 +162,116 @@ def _problem(status: int, code: str, message: str, field: str) -> APIProblem:
     return APIProblem(status, code, message, ("request", field))  # type: ignore[arg-type]
 
 
+def calculate_demonstration_pricing(
+    book: PriceBook, configuration: ProjectConfiguration, quantity: int
+) -> dict[str, object]:
+    """Calculate the authoritative price-book result without persistence."""
+    rules = PriceBookConfiguration.model_validate(book.configuration)
+    if quantity < rules.quantity_minimum or quantity > rules.quantity_maximum:
+        raise _problem(
+            422,
+            "value_out_of_range",
+            "Quantity is outside the published price-book bounds.",
+            "quantity",
+        )
+    factor = Decimal("1") if configuration.unit == "cm" else Decimal("2.54")
+    width = Decimal(str(configuration.width)) * factor
+    height = Decimal(str(configuration.height)) * factor
+    thickness = Decimal(str(configuration.thickness)) * factor
+    back = (
+        Decimal(str(configuration.back_width)) * factor
+        if configuration.back_width is not None
+        else None
+    )
+    if configuration.shape == "round":
+        area = PI * (width / 2) ** 2
+    elif configuration.shape == "tapered" and back is not None:
+        area = (width + back) / 2 * height
+    else:
+        area = width * height
+    dimensions = width + height + thickness + (back or Decimal("0"))
+    values = [
+        (
+            "shape-base",
+            "Shape base",
+            Decimal(rules.shape_base_minor[configuration.shape]),
+            configuration.shape,
+        ),
+        (
+            "area",
+            "Face-area component",
+            area * rules.area_rate_minor_per_square_cm,
+            f"{area.quantize(Decimal('0.01'))} cm²",
+        ),
+        (
+            "dimensions",
+            "Dimension component",
+            dimensions * rules.dimension_rate_minor_per_cm,
+            f"{dimensions.quantize(Decimal('0.01'))} cm",
+        ),
+        (
+            "material",
+            "Material adjustment",
+            Decimal(rules.material_adjustment_minor[configuration.material_id]),
+            configuration.material_id,
+        ),
+        (
+            "fit",
+            "Fit adjustment",
+            Decimal(rules.fit_adjustment_minor[configuration.fit_preference]),
+            configuration.fit_preference,
+        ),
+        (
+            "closure",
+            "Closure/access adjustment",
+            Decimal(rules.closure_adjustment_minor[configuration.closure_type]),
+            configuration.closure_type,
+        ),
+        (
+            "edge",
+            "Edge-finish adjustment",
+            Decimal(rules.edge_adjustment_minor[configuration.seam_style]),
+            configuration.seam_style,
+        ),
+        (
+            "pattern",
+            "Pattern adjustment",
+            Decimal(rules.pattern_adjustment_minor[configuration.pattern.kind]),
+            configuration.pattern.kind,
+        ),
+    ]
+    breakdown: list[dict[str, object]] = []
+    total = 0
+    for code, label, raw, basis in values:
+        minor = int(raw.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+        total += minor
+        breakdown.append(
+            {"code": code, "label": label, "amountMinor": minor, "basis": basis}
+        )
+    if total < 0 or total > MAX_AMOUNT_MINOR or total * quantity > MAX_AMOUNT_MINOR:
+        raise _problem(
+            422,
+            "value_out_of_range",
+            "Calculated amount is outside the demonstration bounds.",
+            "configuration",
+        )
+    return {
+        "unit_amount": total,
+        "subtotal_amount": total * quantity,
+        "snapshot": {
+            "priceBookId": book.id,
+            "priceBookVersion": book.version,
+            "priceBookLabel": book.label,
+            "currency": book.currency,
+            "rounding": rules.rounding,
+            "breakdown": breakdown,
+            "unitAmountMinor": total,
+            "subtotalAmountMinor": total * quantity,
+            "configuration": rules.model_dump(mode="json", by_alias=True),
+        },
+    }
+
+
 class CommerceService:
     def __init__(
         self,
@@ -1251,110 +1361,7 @@ class CommerceService:
     def _calculate(
         self, book: PriceBook, configuration: ProjectConfiguration, quantity: int
     ) -> dict[str, object]:
-        rules = PriceBookConfiguration.model_validate(book.configuration)
-        if quantity < rules.quantity_minimum or quantity > rules.quantity_maximum:
-            raise _problem(
-                422,
-                "value_out_of_range",
-                "Quantity is outside the published price-book bounds.",
-                "quantity",
-            )
-        factor = Decimal("1") if configuration.unit == "cm" else Decimal("2.54")
-        width = Decimal(str(configuration.width)) * factor
-        height = Decimal(str(configuration.height)) * factor
-        thickness = Decimal(str(configuration.thickness)) * factor
-        back = (
-            Decimal(str(configuration.back_width)) * factor
-            if configuration.back_width is not None
-            else None
-        )
-        if configuration.shape == "round":
-            area = PI * (width / 2) ** 2
-        elif configuration.shape == "tapered" and back is not None:
-            area = (width + back) / 2 * height
-        else:
-            area = width * height
-        dimensions = width + height + thickness + (back or Decimal("0"))
-        values = [
-            (
-                "shape-base",
-                "Shape base",
-                Decimal(rules.shape_base_minor[configuration.shape]),
-                configuration.shape,
-            ),
-            (
-                "area",
-                "Face-area component",
-                area * rules.area_rate_minor_per_square_cm,
-                f"{area.quantize(Decimal('0.01'))} cm²",
-            ),
-            (
-                "dimensions",
-                "Dimension component",
-                dimensions * rules.dimension_rate_minor_per_cm,
-                f"{dimensions.quantize(Decimal('0.01'))} cm",
-            ),
-            (
-                "material",
-                "Material adjustment",
-                Decimal(rules.material_adjustment_minor[configuration.material_id]),
-                configuration.material_id,
-            ),
-            (
-                "fit",
-                "Fit adjustment",
-                Decimal(rules.fit_adjustment_minor[configuration.fit_preference]),
-                configuration.fit_preference,
-            ),
-            (
-                "closure",
-                "Closure/access adjustment",
-                Decimal(rules.closure_adjustment_minor[configuration.closure_type]),
-                configuration.closure_type,
-            ),
-            (
-                "edge",
-                "Edge-finish adjustment",
-                Decimal(rules.edge_adjustment_minor[configuration.seam_style]),
-                configuration.seam_style,
-            ),
-            (
-                "pattern",
-                "Pattern adjustment",
-                Decimal(rules.pattern_adjustment_minor[configuration.pattern.kind]),
-                configuration.pattern.kind,
-            ),
-        ]
-        breakdown: list[dict[str, object]] = []
-        total = 0
-        for code, label, raw, basis in values:
-            minor = int(raw.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-            total += minor
-            breakdown.append(
-                {"code": code, "label": label, "amountMinor": minor, "basis": basis}
-            )
-        if total < 0 or total > MAX_AMOUNT_MINOR or total * quantity > MAX_AMOUNT_MINOR:
-            raise _problem(
-                422,
-                "value_out_of_range",
-                "Calculated amount is outside the demonstration bounds.",
-                "configuration",
-            )
-        return {
-            "unit_amount": total,
-            "subtotal_amount": total * quantity,
-            "snapshot": {
-                "priceBookId": book.id,
-                "priceBookVersion": book.version,
-                "priceBookLabel": book.label,
-                "currency": book.currency,
-                "rounding": rules.rounding,
-                "breakdown": breakdown,
-                "unitAmountMinor": total,
-                "subtotalAmountMinor": total * quantity,
-                "configuration": rules.model_dump(mode="json", by_alias=True),
-            },
-        }
+        return calculate_demonstration_pricing(book, configuration, quantity)
 
     def _pricing_response(
         self, calculated: dict[str, object], quantity: int

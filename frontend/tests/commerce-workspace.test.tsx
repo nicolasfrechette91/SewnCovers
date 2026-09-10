@@ -7,6 +7,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { AdminScreen, CartScreen } from "../components/commerce";
 import { SignInForCommerce } from "../components/commerce/demo-banner";
 import { OrderCard } from "../components/commerce/orders-screen";
+import { PrivatePricingWorkspace } from "../components/commerce/pricing-quotes-screen";
+import { formatPublicCad, PublicPricingOverview } from "../components/commerce/public-pricing-overview";
 import { AuthProvider } from "../context/auth";
 import { storeSessionToken } from "../services/account-api";
 import type { Order } from "../services/commerce-api";
@@ -78,11 +80,56 @@ test("keeps the fictional-commerce warning visible when sign-in is required", ()
   render(<SignInForCommerce />);
   assert.ok(screen.getByText(/Fictional CAD prices and payment events only/));
   assert.ok(screen.getByText(/No live charge, tax, shipment, or production service/));
-  assert.ok(screen.getByRole("heading", { name: "Sign in to use demonstration pricing" }));
-  assert.ok(screen.getByText(/complete configurator and existing public-sharing flow/));
+  assert.ok(screen.getByRole("heading", { name: "Sign in to create an owned demonstration quote" }));
+  assert.ok(screen.getByText(/public examples above remain available/));
   assert.ok(screen.getByRole("link", { name: "Sign in" }));
   assert.ok(screen.getByRole("link", { name: "Create account" }));
-  assert.ok(screen.getByRole("link", { name: "Start a guest design" }));
+  assert.ok(screen.getByRole("link", { name: "Start configuring" }));
+});
+
+test("shows public pricing, deterministic CAD examples, safe actions, and limitations to guests", async () => {
+  render(<AuthProvider><PublicPricingOverview /></AuthProvider>);
+
+  assert.ok(screen.getByRole("heading", { name: "How demonstration prices work" }));
+  assert.equal(screen.getAllByText(/Fictional example · not a quote/).length, 3);
+  assert.ok(screen.getByText("$75.25 CAD"));
+  assert.ok(screen.getByText("$90.02 CAD"));
+  assert.ok(screen.getByText("$138.07 CAD"));
+  assert.equal(formatPublicCad(123456), "$1,234.56 CAD");
+  assert.ok(screen.getByText(/Shape, face area, and the configured dimensions/));
+  assert.ok(screen.getByText(/specific built-in artwork and its display scale are visual choices/));
+  assert.ok(screen.getAllByText(/Excludes fictional tax and shipping/).length >= 3);
+  assert.ok(screen.getByText(/cannot charge real money/));
+  assert.ok(screen.getByText(/no commercial offer or price guarantee/));
+  assert.equal(screen.queryByRole("button", { name: /create quote/i }), null);
+  assert.equal(screen.queryByRole("button", { name: /add to cart/i }), null);
+
+  assert.equal(screen.getByRole("link", { name: "Start configuring" }).getAttribute("href"), "/configure");
+  assert.equal(screen.getByRole("link", { name: "Sign in for an owned demo quote" }).getAttribute("href"), "/account?mode=login&returnTo=pricing");
+  assert.equal(screen.getByRole("link", { name: "Create an account" }).getAttribute("href"), "/account?mode=register&returnTo=pricing");
+});
+
+test("keeps public pricing visible while session verification is unresolved", () => {
+  storeSessionToken(token);
+  globalThis.fetch = async () => new Promise<Response>(() => undefined);
+  render(<AuthProvider><PublicPricingOverview /></AuthProvider>);
+
+  assert.ok(screen.getByRole("heading", { name: "Illustrative examples" }));
+  assert.equal(screen.getAllByText(/Fictional example · not a quote/).length, 3);
+});
+
+test("keeps public pricing visible when the private pricing workspace fails", async () => {
+  mockAccount("customer", (url) => {
+    if (url.endsWith("/projects")) return json({ errors: [{ code: "unavailable", message: "Unavailable" }] }, 503);
+    if (url.endsWith("/commerce/quotes")) return json([]);
+    return json({ errors: [] }, 404);
+  });
+  render(<AuthProvider><PublicPricingOverview /><PrivatePricingWorkspace requestedVersion={null} /></AuthProvider>);
+
+  assert.ok(screen.getByRole("heading", { name: "Illustrative examples" }));
+  await screen.findByRole("alert");
+  assert.ok(screen.getByRole("heading", { name: "Illustrative examples" }));
+  assert.equal(screen.getAllByText(/Fictional example · not a quote/).length, 3);
 });
 
 test("denies the administrator workspace to a customer role", async () => {

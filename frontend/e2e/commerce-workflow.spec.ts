@@ -23,6 +23,35 @@ const corsHeaders = { "access-control-allow-origin": appOrigin, "access-control-
 async function json(route: Route, body: unknown, status = 200) { await route.fulfill({ body: JSON.stringify(body), headers: corsHeaders, status }); }
 async function noOverflow(page: Page) { expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true); }
 
+test("public pricing stays useful and non-transactional for guests", async ({ page }) => {
+  let privateCommerceRequests = 0;
+  await page.route(`${apiOrigin}/**`, async (route) => {
+    if (new URL(route.request().url()).pathname.startsWith("/commerce")) privateCommerceRequests += 1;
+    await route.abort();
+  });
+
+  for (const width of [320, 375, 430, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`${basePath}/commerce/`);
+    await expect(page.getByRole("heading", { name: "How demonstration prices work" })).toBeVisible();
+    await expect(page.getByText("Fictional example · not a quote")).toHaveCount(3);
+    await expect(page.getByText("$75.25 CAD")).toBeVisible();
+    await expect(page.getByText("$90.02 CAD")).toBeVisible();
+    await expect(page.getByText("$138.07 CAD")).toBeVisible();
+    await expect(page.getByText(/SewnCovers cannot charge real money/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /create quote/i })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /add to cart/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Start configuring" }).first()).toHaveAttribute("href", `${basePath}/configure/`);
+    await expect(page.getByRole("link", { name: "Sign in for an owned demo quote" })).toHaveAttribute("href", `${basePath}/account/?mode=login&returnTo=pricing`);
+    await expect(page.getByRole("link", { name: "Create an account" }).first()).toHaveAttribute("href", `${basePath}/account/?mode=register&returnTo=pricing`);
+    await noOverflow(page);
+  }
+  expect(privateCommerceRequests).toBe(0);
+
+  await page.getByRole("link", { name: "Start configuring" }).first().click();
+  await expect(page.getByRole("group", { name: "Choose your cushion shape" })).toBeVisible();
+});
+
 test("sandbox quote-to-delivery workflow stays authoritative and role protected", async ({ browser }) => {
   let quoted = false;
   let inCart = false;
