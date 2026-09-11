@@ -4,8 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import {
   RouteAwareSiteFooter,
   RouteAwareSiteHeader,
-} from "@/components/layout";
-import { ConsentPreferences } from "@/components/assurance";
+} from "@/components/layout/route-aware-site-layout";
+import { ConsentPreferences } from "@/components/assurance/consent-preferences";
 import { parsePublicApiOrigin } from "@/config/environment";
 import { AuthProvider } from "@/context/auth";
 import { ConfigurationProvider } from "@/context/configuration";

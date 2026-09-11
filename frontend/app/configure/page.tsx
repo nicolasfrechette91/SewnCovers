@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { Configurator } from "@/components/configurator";
+import { Configurator } from "@/components/configurator/configurator";
 
 export const metadata: Metadata = {
   title: "Configure a cushion | SewnCovers",

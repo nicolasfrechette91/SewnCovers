@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { LoadingState } from "@/components/ui";
-import { ProjectsScreen } from "@/components/projects";
+import { ProjectsScreen } from "@/components/projects/projects-screen";
 
 export const metadata: Metadata = {
   title: "My projects | SewnCovers",

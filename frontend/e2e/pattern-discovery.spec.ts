@@ -125,6 +125,12 @@ test("discovers built-in patterns progressively without losing selection", async
   page,
 }) => {
   const patternQueries: string[] = [];
+  const mediaRequests: string[] = [];
+  page.on("request", (request) => {
+    if (["image", "media"].includes(request.resourceType())) {
+      mediaRequests.push(request.url());
+    }
+  });
   await mockApi(context, patternQueries);
   await page.goto(`${configurePath}?design=${publicId}`);
   await expect(
@@ -143,6 +149,7 @@ test("discovers built-in patterns progressively without losing selection", async
     page.getByRole("button", { name: "Continue to Preview" }),
   ).toBeEnabled();
   await expect(page.getByRole("region", { name: "Your patterns" })).toBeVisible();
+  const initialMediaRequests = [...mediaRequests];
 
   const search = page.getByRole("searchbox", {
     name: "Search built-in patterns",
@@ -150,6 +157,7 @@ test("discovers built-in patterns progressively without losing selection", async
   await search.fill("  TERRACE  ");
   await expect(page.locator(".pattern-card-input")).toHaveCount(1);
   await expect(page.getByRole("radio", { name: "Terrace wave" })).toBeChecked();
+  expect(mediaRequests).toEqual(initialMediaRequests);
   await expect(
     page.getByText("1 of 15 patterns match. Showing all matches."),
   ).toBeVisible();
@@ -232,12 +240,7 @@ test("discovers built-in patterns progressively without losing selection", async
     page.getByRole("button", { name: "Continue to Preview" }),
   ).toBeEnabled();
 
-  expect(patternQueries).toEqual([
-    "",
-    "?category=geometric",
-    "?category=geometric&color=blue",
-    "",
-  ]);
+  expect(patternQueries).toEqual([""]);
 });
 
 test("keeps Continue validation and native selection semantics", async ({

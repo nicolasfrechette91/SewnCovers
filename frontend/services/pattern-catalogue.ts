@@ -45,13 +45,6 @@ const initialState: PatternCatalogueState = Object.freeze({
   visiblePatterns: [],
 });
 
-function filtersAreActive(filters: PatternFilters): boolean {
-  return (
-    filters.categoryId !== ALL_PATTERN_CATEGORIES ||
-    filters.colorId !== ALL_PATTERN_COLORS
-  );
-}
-
 function buildPatternQuery(filters: PatternFilters): PatternQuery {
   return {
     category:
@@ -124,7 +117,27 @@ export class PatternCatalogueController {
   }
 
   setFilters(filters: PatternFilters): Promise<void> {
-    return this.#load(Object.freeze({ ...filters }));
+    const nextFilters = Object.freeze({ ...filters });
+    const visiblePatterns = this.#state.allPatterns.filter(
+      (pattern) =>
+        (nextFilters.categoryId === ALL_PATTERN_CATEGORIES ||
+          pattern.categoryId === nextFilters.categoryId) &&
+        (nextFilters.colorId === ALL_PATTERN_COLORS ||
+          pattern.colorIds.includes(nextFilters.colorId)),
+    );
+
+    this.#publish({
+      ...this.#state,
+      filters: nextFilters,
+      issues: [],
+      message:
+        visiblePatterns.length > 0
+          ? "Patterns loaded."
+          : "No patterns match these filters.",
+      phase: visiblePatterns.length > 0 ? "ready" : "empty",
+      visiblePatterns,
+    });
+    return Promise.resolve();
   }
 
   #publish(state: PatternCatalogueState): void {
@@ -135,7 +148,9 @@ export class PatternCatalogueController {
   async #load(filters: PatternFilters): Promise<void> {
     const requestVersion = this.#requestVersion + 1;
     this.#requestVersion = requestVersion;
-    const completeCatalogue = !filtersAreActive(filters);
+    const completeCatalogue =
+      filters.categoryId === ALL_PATTERN_CATEGORIES &&
+      filters.colorId === ALL_PATTERN_COLORS;
 
     this.#publish({
       ...this.#state,

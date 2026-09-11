@@ -140,7 +140,7 @@ test("loads API metadata in response order and resolves artwork by stable ID", a
   );
 });
 
-test("sends category, color, and combined filters through the API", async () => {
+test("filters the complete catalogue locally without additional API requests", async () => {
   const { PatternCatalogueController } = await loadCatalogueModule();
   const patterns = completeCatalogue();
   const { client, requests } = createMockClient(async (query) =>
@@ -167,10 +167,8 @@ test("sends category, color, and combined filters through the API", async () => 
     colorId: "blue",
   });
 
-  assert.deepEqual(requests.slice(1), [
-    { category: "botanical", color: undefined },
-    { category: undefined, color: "blue" },
-    { category: "geometric", color: "blue" },
+  assert.deepEqual(requests, [
+    { category: undefined, color: undefined },
   ]);
   assert.deepEqual(
     controller.getSnapshot().visiblePatterns.map(({ id }) => id),
@@ -217,18 +215,14 @@ test("represents empty API catalogues and empty filtered results separately", as
   assert.deepEqual(emptyController.getSnapshot().allPatterns, []);
 
   const patterns = completeCatalogue();
-  const filteredMock = createMockClient(async (query) =>
-    query.category === "abstract" && query.color === "rose"
-      ? []
-      : patterns,
-  );
+  const filteredMock = createMockClient(async () => patterns);
   const filteredController = new PatternCatalogueController(
     filteredMock.client,
   );
   await filteredController.loadInitial();
   await filteredController.setFilters({
-    categoryId: "abstract",
-    colorId: "rose",
+    categoryId: "botanical",
+    colorId: "charcoal",
   });
 
   assert.equal(filteredController.getSnapshot().phase, "empty");
@@ -297,20 +291,10 @@ test("surfaces cold-start status and recovers when the mocked request resolves",
   assert.equal(controller.getSnapshot().message, "Patterns loaded.");
 });
 
-test("ignores stale responses when filters change quickly", async () => {
+test("applies rapid local filter changes in their final order", async () => {
   const { PatternCatalogueController } = await loadCatalogueModule();
-  const categoryRequest = deferred();
-  const colorRequest = deferred();
   const patterns = completeCatalogue();
-  const { client } = createMockClient(async (query) => {
-    if (query.category === "botanical") {
-      return categoryRequest.promise;
-    }
-    if (query.color === "blue") {
-      return colorRequest.promise;
-    }
-    return patterns;
-  });
+  const { client, requests } = createMockClient(async () => patterns);
   const controller = new PatternCatalogueController(client);
   await controller.loadInitial();
 
@@ -323,15 +307,11 @@ test("ignores stale responses when filters change quickly", async () => {
     colorId: "blue",
   });
 
-  colorRequest.resolve(filterResponses(patterns, { color: "blue" }));
   await second;
   const expectedIds = controller
     .getSnapshot()
     .visiblePatterns.map(({ id }) => id);
 
-  categoryRequest.resolve(
-    filterResponses(patterns, { category: "botanical" }),
-  );
   await first;
 
   assert.deepEqual(controller.getSnapshot().filters, {
@@ -342,6 +322,7 @@ test("ignores stale responses when filters change quickly", async () => {
     controller.getSnapshot().visiblePatterns.map(({ id }) => id),
     expectedIds,
   );
+  assert.equal(requests.length, 1);
 });
 
 test("rejects semantically malformed responses and missing visual mappings", async () => {
@@ -381,23 +362,4 @@ test("rejects semantically malformed responses and missing visual mappings", asy
     /no frontend artwork mapping/i,
   );
 
-  const filterMismatchMock = createMockClient(async (query) =>
-    query.category === "geometric"
-      ? [completeCatalogue().find(({ id }) => id === "fern-trail")]
-      : completeCatalogue(),
-  );
-  const filterMismatchController = new PatternCatalogueController(
-    filterMismatchMock.client,
-  );
-
-  await filterMismatchController.loadInitial();
-  await filterMismatchController.setFilters({
-    categoryId: "geometric",
-    colorId: "all-colors",
-  });
-  assert.equal(filterMismatchController.getSnapshot().phase, "error");
-  assert.match(
-    filterMismatchController.getSnapshot().issues.join(" "),
-    /does not match the requested category/i,
-  );
 });

@@ -132,6 +132,10 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   expect(tileRequests).toBe(tileCount);
   expect(grantRequests).toBe(grantCount);
   await preview.screenshot({ path: testInfo.outputPath("custom-preview.png") });
+  await page.getByRole("button", { name: "Load approximate 3D preview" }).press("Enter");
+  await expect(page.getByText(/Custom pattern repeat/)).toBeVisible();
+  expect(tileRequests).toBe(tileCount);
+  expect(grantRequests).toBe(grantCount);
   await page.getByRole("button", { name: "Change pattern", exact: true }).press("Enter");
 
   page.once("dialog", async (dialog) => {

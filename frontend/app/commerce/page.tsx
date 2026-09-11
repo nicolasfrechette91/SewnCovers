@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { PricingQuotesScreen } from "@/components/commerce";
+import { PricingQuotesScreen } from "@/components/commerce/pricing-quotes-screen";
 import { PublicPricingOverview } from "@/components/commerce/public-pricing-overview";
 import { LoadingState } from "@/components/ui";
 

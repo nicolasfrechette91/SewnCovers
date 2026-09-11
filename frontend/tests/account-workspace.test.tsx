@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { AccountScreen } from "../components/account";
 import { PrivateProjectPanel } from "../components/configurator/private-project-panel";
@@ -329,6 +329,7 @@ test("validates the accessible file control and shows a local repeat preview", a
     render(<AuthProvider><SignInForTest><ConfigurationProvider><YourPatterns /></ConfigurationProvider></SignInForTest></AuthProvider>);
     fireEvent.click(await screen.findByRole("button", { name: "Enter test account" }));
     const input = await screen.findByLabelText("Choose a pattern image") as HTMLInputElement;
+    await screen.findByText("No custom patterns yet.");
     assert.equal(input.accept, "image/jpeg,image/png,image/webp");
     assert.equal(input.accept.includes("svg"), false);
     fireEvent.change(input, { target: { files: [new File([new Uint8Array([1, 2, 3])], "calm.png", { type: "image/png" })] } });
@@ -337,6 +338,90 @@ test("validates the accessible file control and shows a local repeat preview", a
     assert.ok(screen.getByText("128 × 96 px. The complete image is used without cropping."));
     assert.ok(screen.getByText(/Local repeat preview ready/));
   } finally {
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "Image", { configurable: true, value: originalImage });
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: originalCreate });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: originalRevoke });
+  }
+});
+
+test("revokes a temporary upload URL when image decoding fails", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalImage = globalThis.Image;
+  const originalCreate = URL.createObjectURL;
+  const originalRevoke = URL.revokeObjectURL;
+  const revoked: string[] = [];
+  class FailedPreviewImage {
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    set src(_value: string) { queueMicrotask(() => this.onerror?.()); }
+  }
+  Object.defineProperty(globalThis, "Image", { configurable: true, value: FailedPreviewImage });
+  Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:failed-pattern" });
+  Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: (url: string) => revoked.push(url) });
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/login")) return json({ account: { email: "preview@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" }, token: "Q".repeat(43), expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
+    if (url.endsWith("/uploads")) return json([]);
+    throw new Error(`Unexpected request GET ${url}`);
+  };
+  try {
+    render(<AuthProvider><SignInForTest><ConfigurationProvider><YourPatterns /></ConfigurationProvider></SignInForTest></AuthProvider>);
+    fireEvent.click(await screen.findByRole("button", { name: "Enter test account" }));
+    const input = await screen.findByLabelText("Choose a pattern image") as HTMLInputElement;
+    await screen.findByText("No custom patterns yet.");
+    fireEvent.change(input, { target: { files: [new File([new Uint8Array([1])], "broken.png", { type: "image/png" })] } });
+    await waitFor(() => assert.deepEqual(revoked, ["blob:failed-pattern"]));
+    await screen.findByText("The browser could not preview this image.");
+    assert.deepEqual(revoked, ["blob:failed-pattern"]);
+  } finally {
+    cleanup();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "Image", { configurable: true, value: originalImage });
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: originalCreate });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: originalRevoke });
+  }
+});
+
+test("revokes replaced, stale, and unmounted upload previews exactly once", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalImage = globalThis.Image;
+  const originalCreate = URL.createObjectURL;
+  const originalRevoke = URL.revokeObjectURL;
+  const images: PendingPreviewImage[] = [];
+  const revoked: string[] = [];
+  let urlSequence = 0;
+  class PendingPreviewImage {
+    naturalWidth = 128;
+    naturalHeight = 96;
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor() { images.push(this); }
+    set src(_value: string) {}
+  }
+  Object.defineProperty(globalThis, "Image", { configurable: true, value: PendingPreviewImage });
+  Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => `blob:pattern-${++urlSequence}` });
+  Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: (url: string) => revoked.push(url) });
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/login")) return json({ account: { email: "preview@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" }, token: "Q".repeat(43), expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
+    if (url.endsWith("/uploads")) return json([]);
+    throw new Error(`Unexpected request GET ${url}`);
+  };
+  try {
+    const view = render(<AuthProvider><SignInForTest><ConfigurationProvider><YourPatterns /></ConfigurationProvider></SignInForTest></AuthProvider>);
+    fireEvent.click(await screen.findByRole("button", { name: "Enter test account" }));
+    const input = await screen.findByLabelText("Choose a pattern image") as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File([new Uint8Array([1])], "first.png", { type: "image/png" })] } });
+    fireEvent.change(input, { target: { files: [new File([new Uint8Array([2])], "second.png", { type: "image/png" })] } });
+    await act(async () => { images[1].onload?.(); });
+    await screen.findByText("128 × 96 px. The complete image is used without cropping.");
+    await act(async () => { images[0].onload?.(); });
+    assert.deepEqual(revoked, ["blob:pattern-1"]);
+    view.unmount();
+    assert.deepEqual(revoked, ["blob:pattern-1", "blob:pattern-2"]);
+  } finally {
+    cleanup();
     globalThis.fetch = originalFetch;
     Object.defineProperty(globalThis, "Image", { configurable: true, value: originalImage });
     Object.defineProperty(URL, "createObjectURL", { configurable: true, value: originalCreate });

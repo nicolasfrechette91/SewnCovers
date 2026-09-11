@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { SandboxCheckoutScreen } from "@/components/commerce";
+import { SandboxCheckoutScreen } from "@/components/commerce/sandbox-checkout-screen";
 import { LoadingState } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Fictional hosted checkout | SewnCovers", description: "Deterministic local checkout with no card or live payment fields." };

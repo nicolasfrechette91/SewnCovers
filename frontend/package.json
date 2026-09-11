@@ -10,7 +10,8 @@
     "test:e2e": "node e2e/run-playwright.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "verify:export": "node config/verify-static-export.mjs"
+    "verify:export": "node config/verify-static-export.mjs",
+    "verify:performance": "node config/verify-performance-budget.mjs"
   },
   "dependencies": {
     "next": "16.2.11",

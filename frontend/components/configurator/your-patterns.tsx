@@ -44,10 +44,12 @@ function defaultLabel(file: File): string {
   return file.name.replace(/\.[^.]+$/, "").trim().slice(0, 120) || "My pattern";
 }
 
-async function validateImage(file: File): Promise<{ height: number; url: string; width: number }> {
+async function validateImage(
+  file: File,
+  url: string,
+): Promise<{ height: number; url: string; width: number }> {
   if (!ALLOWED_TYPES.has(file.type)) throw new Error("Choose a JPEG, PNG, or WebP image.");
   if (file.size < 1 || file.size > MAX_BYTES) throw new Error("Choose an image no larger than 10 MB.");
-  const url = URL.createObjectURL(file);
   const dimensions = await new Promise<{ height: number; width: number }>((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve({ height: image.naturalHeight, width: image.naturalWidth });
@@ -55,7 +57,6 @@ async function validateImage(file: File): Promise<{ height: number; url: string;
     image.src = url;
   });
   if (dimensions.width < 64 || dimensions.height < 64 || dimensions.width > 4096 || dimensions.height > 4096 || dimensions.width * dimensions.height > 16_000_000) {
-    URL.revokeObjectURL(url);
     throw new Error("Image dimensions must be 64–4096 px per side and at most 16 million pixels.");
   }
   return { ...dimensions, url };
@@ -67,6 +68,8 @@ export function YourPatterns() {
   const id = useId();
   const fileInput = useRef<HTMLInputElement>(null);
   const statusRef = useRef<HTMLParagraphElement>(null);
+  const pendingValidationUrls = useRef(new Set<string>());
+  const currentValidationUrl = useRef<string | null>(null);
   const [uploads, setUploads] = useState<readonly CustomUpload[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [label, setLabel] = useState("");
@@ -95,22 +98,42 @@ export function YourPatterns() {
     return () => globalThis.clearTimeout(timer);
   }, [load]);
   useEffect(() => () => { if (localPreview) URL.revokeObjectURL(localPreview); }, [localPreview]);
+  useEffect(() => () => {
+    pendingValidationUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    pendingValidationUrls.current.clear();
+  }, []);
 
   const chooseFile = async (next: File | null) => {
+    currentValidationUrl.current = null;
     setError(null);
-    if (localPreview) URL.revokeObjectURL(localPreview);
     setLocalPreview(null);
     setFile(null);
     setDimensions(null);
     if (!next) return;
+    const validationUrl = URL.createObjectURL(next);
+    currentValidationUrl.current = validationUrl;
+    pendingValidationUrls.current.add(validationUrl);
     try {
-      const preview = await validateImage(next);
+      const preview = await validateImage(next, validationUrl);
+      if (currentValidationUrl.current !== validationUrl) {
+        if (pendingValidationUrls.current.delete(preview.url)) {
+          URL.revokeObjectURL(preview.url);
+        }
+        return;
+      }
+      currentValidationUrl.current = null;
+      pendingValidationUrls.current.delete(preview.url);
       setFile(next);
       setLabel(defaultLabel(next));
       setLocalPreview(preview.url);
       setDimensions(`${preview.width} × ${preview.height} px`);
       setMessage("Local repeat preview ready. The full image will be retained; no silent crop is applied.");
     } catch (caught) {
+      if (pendingValidationUrls.current.delete(validationUrl)) {
+        URL.revokeObjectURL(validationUrl);
+      }
+      if (currentValidationUrl.current !== validationUrl) return;
+      currentValidationUrl.current = null;
       setError(caught instanceof Error ? caught.message : "Choose a valid image.");
       requestAnimationFrame(() => fileInput.current?.focus());
     }

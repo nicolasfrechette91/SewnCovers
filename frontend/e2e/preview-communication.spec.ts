@@ -30,6 +30,22 @@ const patterns = patternRecords.map(
 );
 
 test("preview stays synchronized through contextual edits and accessible at all widths", async ({ page }, testInfo) => {
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    let webglContexts = 0;
+    Object.defineProperty(HTMLCanvasElement.prototype, "getContext", {
+      configurable: true,
+      value(this: HTMLCanvasElement, type: string, ...arguments_: unknown[]) {
+        if (type === "webgl" || type === "webgl2") webglContexts += 1;
+        return Reflect.apply(original, this, [type, ...arguments_]);
+      },
+    });
+    Object.defineProperty(window, "__sewncoversWebglContexts", { get: () => webglContexts });
+  });
+  const scriptRequests: string[] = [];
+  page.on("request", request => {
+    if (request.resourceType() === "script") scriptRequests.push(request.url());
+  });
   let requests = 0;
   await page.route("http://api.sewncovers.test/**", async route => {
     const headers = { "access-control-allow-origin": "http://127.0.0.1:3100", "access-control-allow-headers": "content-type", "access-control-allow-methods": "GET, OPTIONS", "content-type": "application/json" };
@@ -84,8 +100,12 @@ test("preview stays synchronized through contextual edits and accessible at all 
   await slider.press("ArrowRight");
   await expect(slider).toHaveValue("0.7");
   await figure.screenshot({ path: testInfo.outputPath("preview-forced-colors.png") });
+  expect(await page.evaluate(() => (window as unknown as { __sewncoversWebglContexts: number }).__sewncoversWebglContexts)).toBe(0);
+  const scriptsBefore3d = scriptRequests.length;
   await button("Load approximate 3D preview").click();
   await expect(page.getByText(/This 3D view uses a generic texture/)).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __sewncoversWebglContexts: number }).__sewncoversWebglContexts)).toBe(1);
+  expect(scriptRequests.length).toBe(scriptsBefore3d + 1);
   await expect(figure.getByText(/not a manufacturing specification/)).toBeVisible();
 });
 

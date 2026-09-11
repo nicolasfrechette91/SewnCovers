@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { AccountNavigation } from "@/components/account";
-import { OrdersScreen } from "@/components/commerce";
+import { AccountNavigation } from "@/components/account/account-navigation";
+import { OrdersScreen } from "@/components/commerce/orders-screen";
 import { LoadingState } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Demonstration orders | SewnCovers", description: "Private fictional order history, production states, and fulfilment timelines." };

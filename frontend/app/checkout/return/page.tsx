@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { OrdersScreen } from "@/components/commerce";
+import { OrdersScreen } from "@/components/commerce/orders-screen";
 import { LoadingState } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Checkout return | SewnCovers", description: "Return from the fictional checkout to check the demonstration order status." };

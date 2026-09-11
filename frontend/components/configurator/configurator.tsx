@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui";
@@ -12,11 +13,7 @@ import { getPatternById } from "@/data/patterns";
 import { getCompleteCatalogueResult } from "@/services/pattern-catalogue";
 import { usePatternCatalogue } from "@/services/use-pattern-catalogue";
 
-import { CoverDetailsStep } from "./cover-details-step";
-import { MeasurementStep } from "./measurement-step";
-import { PatternStep } from "./pattern-step";
-import { PreviewStep, type SelectedPatternPresentation } from "./preview-step";
-import { ReviewScreen } from "./review-step";
+import type { SelectedPatternPresentation } from "./preview-step";
 import {
   deriveReviewReadiness,
   type ReviewSection,
@@ -28,6 +25,35 @@ import {
   type StepIndicatorStep,
 } from "./step-indicator";
 import { WorkspaceConfigurationLoader } from "./workspace-configuration-loader";
+
+function StageLoading() {
+  return (
+    <p className="mt-layout text-supporting text-text-muted" role="status">
+      Loading this configuration stage…
+    </p>
+  );
+}
+
+const MeasurementStep = dynamic(
+  () => import("./measurement-step").then((loaded) => loaded.MeasurementStep),
+  { loading: StageLoading },
+);
+const CoverDetailsStep = dynamic(
+  () => import("./cover-details-step").then((loaded) => loaded.CoverDetailsStep),
+  { loading: StageLoading },
+);
+const PatternStep = dynamic(
+  () => import("./pattern-step").then((loaded) => loaded.PatternStep),
+  { loading: StageLoading },
+);
+const PreviewStep = dynamic(
+  () => import("./preview-step").then((loaded) => loaded.PreviewStep),
+  { loading: StageLoading },
+);
+const ReviewScreen = dynamic(
+  () => import("./review-step").then((loaded) => loaded.ReviewScreen),
+  { loading: StageLoading },
+);
 
 const configuratorSteps = [
   { id: "shape", label: "Shape" },
@@ -61,15 +87,16 @@ function getStepIndex(stepId: ConfiguratorStepId): number {
   return configuratorSteps.findIndex((step) => step.id === stepId);
 }
 
-function focusStage(targetId: string) {
+function focusStage(targetId: string): boolean {
   const target = document.getElementById(targetId);
 
   if (target === null) {
-    return;
+    return false;
   }
 
   target.focus({ preventScroll: true });
   target.scrollIntoView({ block: "start", behavior: "auto" });
+  return true;
 }
 
 export function Configurator() {
@@ -159,12 +186,20 @@ export function Configurator() {
     .map((step) => step.id);
 
   useLayoutEffect(() => {
-    if (pendingFocusTarget.current === null) {
-      return;
-    }
-
-    focusStage(pendingFocusTarget.current);
-    pendingFocusTarget.current = null;
+    let frame: number | undefined;
+    const focusPendingStage = () => {
+      const targetId = pendingFocusTarget.current;
+      if (targetId === null) return;
+      if (focusStage(targetId)) {
+        pendingFocusTarget.current = null;
+        return;
+      }
+      frame = requestAnimationFrame(focusPendingStage);
+    };
+    focusPendingStage();
+    return () => {
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    };
   }, [activeStepId]);
 
   const navigateToStep = (stepId: ConfiguratorStepId) => {
