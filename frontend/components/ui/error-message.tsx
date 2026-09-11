@@ -21,7 +21,7 @@ export function ErrorMessage({
       aria-live={ariaLive}
       aria-atomic="true"
       className={classNames(
-        "flex items-start gap-icon rounded-control border border-error-border bg-error-surface px-control-x py-3 text-supporting text-error-text",
+        "flex min-w-0 wrap-anywhere items-start gap-icon rounded-control border border-error-border bg-error-surface px-control-x py-3 text-supporting text-error-text",
         className,
       )}
     >

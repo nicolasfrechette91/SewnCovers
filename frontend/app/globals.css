@@ -99,6 +99,19 @@ body {
   line-height: var(--text-body--line-height);
 }
 
+/* Shared by the verified dense commerce/operations forms. Native controls
+ * must shrink with their grid track, including date/time and long options. */
+.responsive-form :where(label, fieldset) {
+  min-width: 0;
+}
+
+.responsive-form :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  font-size: var(--text-body);
+}
+
 .landing-cushion {
   position: relative;
   aspect-ratio: 1;

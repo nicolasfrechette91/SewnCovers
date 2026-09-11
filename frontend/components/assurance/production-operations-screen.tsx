@@ -136,7 +136,7 @@ export function ProductionOperationsScreen() {
   };
 
   return (
-    <div className="mt-layout grid min-w-0 gap-layout">
+    <div className="responsive-form mt-layout grid min-w-0 grid-cols-1 wrap-anywhere gap-layout">
       <section aria-labelledby="production-queue-heading">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -156,7 +156,7 @@ export function ProductionOperationsScreen() {
           </Button>
         </div>
         <form
-          className="mt-4 grid gap-3 rounded-card border border-border bg-surface p-4 sm:grid-cols-3"
+          className="mt-4 grid gap-3 rounded-card border border-border bg-surface p-4 lg:grid-cols-3"
           onSubmit={(event) => {
             event.preventDefault();
             void load();
@@ -281,7 +281,7 @@ export function ProductionOperationsScreen() {
               const complete = item.status === "complete";
               return (
                 <li
-                  className="flex items-center justify-between gap-2 rounded-card border border-border p-3"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-border p-3"
                   key={key}
                 >
                   <span>{key.replaceAll("_", " ")}</span>
@@ -307,7 +307,7 @@ export function ProductionOperationsScreen() {
               );
             })}
           </ul>
-          <div className="mt-component grid gap-3 rounded-card border border-border p-4 sm:grid-cols-[1fr_auto]">
+          <div className="mt-component grid gap-3 rounded-card border border-border p-4 lg:grid-cols-2">
             <label className="font-control">
               Structured reason
               <input

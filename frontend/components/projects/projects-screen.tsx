@@ -45,9 +45,9 @@ function ProjectList({ token }: Readonly<{ token: string }>) {
     </section>
   );
   return (
-    <ul className="grid gap-component sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="grid min-w-0 wrap-anywhere gap-component sm:grid-cols-2 lg:grid-cols-3">
       {state.value.map((project) => (
-        <li key={project.id} className="rounded-card border border-border bg-surface p-card shadow-card">
+        <li key={project.id} className="min-w-0 rounded-card border border-border bg-surface p-card shadow-card">
           <p className="text-label font-control text-accent-strong">{project.privacy === "shared" ? "Shared by revocable link" : "Private"}</p>
           <h2 className="mt-2 break-words font-display text-section-title font-heading">{project.name}</h2>
           <p className="mt-2 text-supporting text-text-muted">{project.versionCount} {project.versionCount === 1 ? "version" : "versions"} · Updated {new Date(project.updatedAt).toLocaleString()}</p>
@@ -116,7 +116,7 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
   };
 
   return (
-    <div className="space-y-layout">
+    <div className="min-w-0 wrap-anywhere space-y-layout">
       <Link href="/projects/" className="inline-flex min-h-11 items-center text-button font-control text-brand underline">← All projects</Link>
       <section className="rounded-panel border border-border bg-surface p-card shadow-raised">
         <p className="text-label font-control text-accent-strong">{detail.privacy === "shared" ? "Shared — one or more revocable links are active" : "Private — no active project share links"}</p>

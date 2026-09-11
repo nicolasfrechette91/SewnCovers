@@ -130,14 +130,15 @@ export default function LegalPage() {
           <h2 className="font-display text-section-title font-heading">
             Third-party processing categories and retention map
           </h2>
-          <div className="mt-3 overflow-x-auto">
+          <p id="retention-scroll-help" className="mt-3 text-supporting text-text-muted">Scroll horizontally to read all columns when needed.</p>
+          <div role="region" aria-label="Processing categories and retention" aria-describedby="retention-scroll-help" tabIndex={0} className="mt-3 overflow-x-auto rounded-control">
             <table className="w-full min-w-[36rem] border-collapse text-left text-supporting">
-              <thead><tr><th className="border border-border p-2">Category</th><th className="border border-border p-2">Configured boundary</th><th className="border border-border p-2">Portfolio retention</th></tr></thead>
+              <thead><tr><th scope="col" className="border border-border p-2">Category</th><th scope="col" className="border border-border p-2">Configured boundary</th><th scope="col" className="border border-border p-2">Portfolio retention</th></tr></thead>
               <tbody>
-                <tr><th className="border border-border p-2">Payments</th><td className="border border-border p-2">Stripe configured-only; sandbox local</td><td className="border border-border p-2">No raw payment payload; immutable order and verified-event digest retained</td></tr>
-                <tr><th className="border border-border p-2">Uploads</th><td className="border border-border p-2">Private S3-compatible storage and external moderation configured-only</td><td className="border border-border p-2">Private objects deleted on account/upload deletion except protected paid-order derivatives</td></tr>
-                <tr><th className="border border-border p-2">Analytics</th><td className="border border-border p-2">First-party local adapter only</td><td className="border border-border p-2">Raw optional events: documented 30-day target; suppressed aggregates may persist</td></tr>
-                <tr><th className="border border-border p-2">Shipping</th><td className="border border-border p-2">Encrypted database fields; allowlisted fictional carriers</td><td className="border border-border p-2">Removed when a retained order is detached on account deletion</td></tr>
+                <tr><th scope="row" className="border border-border p-2">Payments</th><td className="border border-border p-2">Stripe configured-only; sandbox local</td><td className="border border-border p-2">No raw payment payload; immutable order and verified-event digest retained</td></tr>
+                <tr><th scope="row" className="border border-border p-2">Uploads</th><td className="border border-border p-2">Private S3-compatible storage and external moderation configured-only</td><td className="border border-border p-2">Private objects deleted on account/upload deletion except protected paid-order derivatives</td></tr>
+                <tr><th scope="row" className="border border-border p-2">Analytics</th><td className="border border-border p-2">First-party local adapter only</td><td className="border border-border p-2">Raw optional events: documented 30-day target; suppressed aggregates may persist</td></tr>
+                <tr><th scope="row" className="border border-border p-2">Shipping</th><td className="border border-border p-2">Encrypted database fields; allowlisted fictional carriers</td><td className="border border-border p-2">Removed when a retained order is detached on account deletion</td></tr>
               </tbody>
             </table>
           </div>

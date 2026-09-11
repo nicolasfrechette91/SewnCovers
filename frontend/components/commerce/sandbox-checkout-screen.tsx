@@ -134,7 +134,7 @@ export function SandboxCheckoutScreen() {
             for the demonstration order.
           </p>
           <form
-            className="mt-component"
+            className="responsive-form mt-component"
             onSubmit={(event: FormEvent) => {
               event.preventDefault();
               void finish("success");

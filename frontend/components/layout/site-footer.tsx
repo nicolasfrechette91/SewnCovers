@@ -59,7 +59,7 @@ export function SiteFooter({
                       href={item.href}
                       aria-current={isCurrent ? "page" : undefined}
                       className={classNames(
-                        "inline-flex min-h-11 max-w-full items-center rounded-control text-supporting font-emphasis break-words text-text-primary underline underline-offset-4 hover:text-brand active:text-brand-active",
+                        "inline-flex min-h-11 min-w-11 max-w-full items-center rounded-control text-supporting font-emphasis break-words text-text-primary underline underline-offset-4 hover:text-brand active:text-brand-active",
                         isCurrent ? "decoration-2" : "decoration-1",
                       )}
                     >

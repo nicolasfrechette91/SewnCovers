@@ -87,5 +87,5 @@ export function SignInForCommerce({
 }
 
 export function CommerceError({ message }: Readonly<{ message: string }>) {
-  return <p className="rounded-card border border-error-border bg-error-surface p-3 text-error-text" role="alert">{message}</p>;
+  return <p className="wrap-anywhere rounded-card border border-error-border bg-error-surface p-3 text-error-text" role="alert">{message}</p>;
 }

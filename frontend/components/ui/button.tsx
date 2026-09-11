@@ -22,7 +22,7 @@ const variantClasses: Record<ButtonVariant, string> = {
 
 const sizeClasses: Record<ButtonSize, string> = {
   default: "min-h-12 px-control-x py-control-y",
-  compact: "min-h-10 px-3 py-2",
+  compact: "min-h-11 px-3 py-2",
 };
 
 export function Button({
@@ -48,7 +48,7 @@ export function Button({
       disabled={isDisabled}
       aria-busy={isLoading ? true : ariaBusy}
       className={classNames(
-        "relative inline-flex items-center justify-center gap-icon rounded-control border text-button font-control tracking-label transition-[background-color,border-color,color,box-shadow] motion-reduce:transition-none disabled:cursor-not-allowed disabled:border-control-disabled-border disabled:bg-control-disabled-surface disabled:text-control-disabled-text disabled:shadow-none",
+        "relative inline-flex min-h-11 min-w-11 max-w-full items-center justify-center gap-icon rounded-control border text-button font-control tracking-label transition-[background-color,border-color,color,box-shadow] motion-reduce:transition-none disabled:cursor-not-allowed disabled:border-control-disabled-border disabled:bg-control-disabled-surface disabled:text-control-disabled-text disabled:shadow-none",
         variantClasses[variant],
         sizeClasses[size],
         className,
@@ -57,7 +57,7 @@ export function Button({
       <span
         aria-hidden={isLoading || undefined}
         className={classNames(
-          "inline-flex items-center justify-center gap-icon",
+          "inline-flex min-w-0 wrap-anywhere items-center justify-center gap-icon",
           isLoading && "invisible",
         )}
       >
