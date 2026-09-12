@@ -6,6 +6,7 @@ const basePath =
   process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
 const token = "A".repeat(43);
 const workId = "W".repeat(22);
+const sessionExpiresAt = "2099-08-30T00:00:00Z";
 const corsHeaders = {
   "access-control-allow-origin": appOrigin,
   "access-control-allow-headers": "authorization, content-type",
@@ -102,13 +103,17 @@ test("advanced preview, consent, legal, and trust stay keyboard-accessible", asy
   await page
     .getByRole("button", { name: "Continue to Pattern" })
     .press("Enter");
-  await page.getByRole("radio", { name: "Botanical sample" }).focus();
-  await page.keyboard.press("Space");
+  await expect(page.locator("#configuration-pattern-edit-target")).toBeFocused();
+  await page.getByRole("radio", { name: "Botanical sample" }).press("Space");
   await page
     .getByRole("button", { name: "Continue to Preview" })
     .press("Enter");
-  await page.getByRole("button", { name: "Load approximate 3D preview" }).focus();
-  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("slider", { name: "Pattern size" }),
+  ).toBeFocused();
+  await page
+    .getByRole("button", { name: "Load approximate 3D preview" })
+    .press("Enter");
 
   const canvas = page.getByLabel(/Interactive approximate cushion model/);
   await expect(canvas).toHaveAttribute("tabindex", "0");
@@ -158,6 +163,9 @@ test("advanced preview, consent, legal, and trust stay keyboard-accessible", asy
       .getByRole("button", { name: `Continue to ${nextStage}` })
       .press("Enter");
   }
+  await expect(
+    page.getByRole("slider", { name: "Pattern size" }),
+  ).toBeFocused();
   await page.getByRole("button", { name: "Load approximate 3D preview" }).press("Enter");
   await expect(page.getByText(/3D is unavailable.*complete 2D preview/)).toBeVisible();
 });
@@ -190,7 +198,7 @@ test("administrator production, analytics, packet, and readiness workflow is iso
     const path = new URL(request.url()).pathname;
     if (request.method() === "OPTIONS") return route.fulfill({ headers: corsHeaders, status: 204 });
     if (path === "/account") return json(route, { email: "operations@example.invalid", createdAt: "2026-08-29T00:00:00Z", role: "administrator" });
-    if (path === "/account/sessions") return json(route, [{ id: 1, createdAt: "2026-08-29T00:00:00Z", expiresAt: "2026-08-30T00:00:00Z", revokedAt: null, current: true }]);
+    if (path === "/account/sessions") return json(route, [{ id: 1, createdAt: "2026-08-29T00:00:00Z", expiresAt: sessionExpiresAt, revokedAt: null, current: true }]);
     if (path === "/admin/price-books" || path === "/admin/orders" || path === "/admin/audit") return json(route, []);
     if (path === "/admin/production-work") return json(route, { items: [work()], page: 1, pageSize: 20, total: 1 });
     if (path.includes("/checklist/")) { checklistStatus = "complete"; revision += 1; return json(route, work()); }

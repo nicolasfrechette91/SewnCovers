@@ -8,7 +8,9 @@ import {
 
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
-const configurePath = "/configure/";
+const basePath =
+  process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
+const configurePath = `${basePath}/configure/`;
 const publicId = "PatternDiscoveryDemo01";
 
 const patternRecords = [

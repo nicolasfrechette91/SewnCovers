@@ -354,7 +354,7 @@ test("revokes a temporary upload URL when image decoding fails", async () => {
   class FailedPreviewImage {
     onload: (() => void) | null = null;
     onerror: (() => void) | null = null;
-    set src(_value: string) { queueMicrotask(() => this.onerror?.()); }
+    set src(_value: string) { this.onerror?.(); }
   }
   Object.defineProperty(globalThis, "Image", { configurable: true, value: FailedPreviewImage });
   Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:failed-pattern" });
@@ -370,8 +370,9 @@ test("revokes a temporary upload URL when image decoding fails", async () => {
     fireEvent.click(await screen.findByRole("button", { name: "Enter test account" }));
     const input = await screen.findByLabelText("Choose a pattern image") as HTMLInputElement;
     await screen.findByText("No custom patterns yet.");
-    fireEvent.change(input, { target: { files: [new File([new Uint8Array([1])], "broken.png", { type: "image/png" })] } });
-    await waitFor(() => assert.deepEqual(revoked, ["blob:failed-pattern"]));
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [new File([new Uint8Array([1])], "broken.png", { type: "image/png" })] } });
+    });
     await screen.findByText("The browser could not preview this image.");
     assert.deepEqual(revoked, ["blob:failed-pattern"]);
   } finally {
