@@ -118,7 +118,12 @@ for (const role of ["guest", "customer", "administrator"] as const) {
     await fixtures(page, role);
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
-    for (const route of [...routes(), "/404.html"]) {
+    // The static case study has its own role-independent width, forced-colors,
+    // and reduced-motion matrix in portfolio-metadata.spec.ts.
+    const accountStateRoutes = routes().filter(
+      (route) => route !== "/case-study/",
+    );
+    for (const route of [...accountStateRoutes, "/404.html"]) {
       await page.goto(`${base}${route}`);
       await page.getByRole("heading", { level: 1 }).first().waitFor();
       await page.waitForLoadState("networkidle");

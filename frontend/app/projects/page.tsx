@@ -3,11 +3,14 @@ import { Suspense } from "react";
 
 import { LoadingState } from "@/components/ui";
 import { ProjectsScreen } from "@/components/projects/projects-screen";
+import { createPageMetadata } from "@/config/site-metadata";
 
-export const metadata: Metadata = {
-  title: "My projects | SewnCovers",
+export const metadata: Metadata = createPageMetadata({
+  title: "My projects",
   description: "Private named SewnCovers projects and their saved version history.",
-};
+  index: false,
+  path: "/projects/",
+});
 
 export default function ProjectsPage() {
   return (

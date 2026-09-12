@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+
+import { createPageMetadata } from "@/config/site-metadata";
 
 const rows = [
   ["Implemented locally", "Hashed bearer sessions and shares, private projects, immutable configuration and commerce records, private-asset authorization, verified webhooks, encrypted shipping, administrator roles and audit history, consent-gated analytics, production work, and readiness checks."],
@@ -8,11 +11,12 @@ const rows = [
   ["Professional or operational review required", "Legal content, contacts, retention operations, incident response, manual accessibility, threat modeling, and manufacturing rules."],
 ] as const;
 
-export const metadata: Metadata = {
-  title: "Trust and implementation boundaries | SewnCovers",
+export const metadata: Metadata = createPageMetadata({
+  title: "Trust and implementation boundaries",
   description:
     "Evidence-bounded architecture, privacy, security, accessibility, dependency, and deployment status for the SewnCovers portfolio.",
-};
+  path: "/trust/",
+});
 
 export default function TrustPage() {
   return (
@@ -30,6 +34,17 @@ export default function TrustPage() {
             configured-only providers, omissions, and review requirements. It
             is not a certification, security audit, legal approval, compliance
             statement, penetration test, uptime promise, or deployment approval.
+          </p>
+          <p className="mt-4 text-text-muted">
+            For a concise explanation of the product and engineering decisions,
+            read the{" "}
+            <Link
+              href="/case-study/"
+              className="inline-flex min-h-11 items-center font-emphasis text-brand underline underline-offset-4 hover:text-brand-hover active:text-brand-active"
+            >
+              SewnCovers case study
+            </Link>
+            .
           </p>
         </header>
         <dl className="mt-layout grid gap-4">

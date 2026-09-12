@@ -76,7 +76,7 @@ test("organizes desktop navigation and preserves secondary destinations", async 
   await expect(
     navigation.getByRole("list", { name: "Shopping and account" }).getByRole("link"),
   ).toHaveText(["Cart", "Account"]);
-  for (const removed of ["Orders", "Admin", "Legal", "Trust"]) {
+  for (const removed of ["Orders", "Admin", "Legal", "Trust", "Case study"]) {
     await expect(navigation.getByRole("link", { name: removed })).toHaveCount(0);
   }
   await expect(navigation.getByRole("link", { name: "Configure" })).toHaveAttribute(
@@ -90,6 +90,7 @@ test("organizes desktop navigation and preserves secondary destinations", async 
   );
 
   const footer = page.getByRole("navigation", { name: "Footer navigation" });
+  await expect(footer.getByRole("link", { name: "Case study" })).toBeVisible();
   await expect(footer.getByRole("link", { name: "Legal and privacy" })).toBeVisible();
   await expect(footer.getByRole("link", { name: "Trust" })).toBeVisible();
   await expect(footer.getByRole("link", { name: "security.txt" })).toBeVisible();
@@ -192,6 +193,7 @@ test("preserves every public route for direct navigation", async ({ page }) => {
     "projects/",
     "commerce/",
     "cart/",
+    "case-study/",
     "orders/",
     "account/",
     "admin/",

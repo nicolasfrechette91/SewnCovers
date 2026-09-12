@@ -1,6 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CushionExample } from "@/components/landing";
+import {
+  createPageMetadata,
+  DEFAULT_DESCRIPTION,
+} from "@/config/site-metadata";
+
+export const metadata: Metadata = createPageMetadata({
+  description: DEFAULT_DESCRIPTION,
+  isHome: true,
+  path: "/",
+  title: "SewnCovers",
+});
 
 const coverExamples = [
   {
@@ -109,6 +121,12 @@ export default function Home() {
                 className="mt-3 inline-flex min-h-11 items-center text-button font-control text-brand underline decoration-2 underline-offset-4 hover:text-brand-hover active:text-brand-active"
               >
                 View prototype details
+              </Link>
+              <Link
+                href="/case-study/"
+                className="ml-5 inline-flex min-h-11 items-center text-button font-control text-brand underline decoration-2 underline-offset-4 hover:text-brand-hover active:text-brand-active"
+              >
+                Read the case study
               </Link>
             </aside>
           </div>

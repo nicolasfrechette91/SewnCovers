@@ -73,6 +73,36 @@ export function WorkspaceConfigurationLoader() {
   const [state, setState] = useState<LoaderState>({ status: "idle" });
   const generation = useRef(0);
 
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const isPrivateContext = ["share", "project", "version"].some((key) =>
+      searchParams.has(key),
+    );
+    if (!isPrivateContext) return;
+
+    const previousContent = new Map<HTMLMetaElement, string>();
+    const applyPrivateDirective = () => {
+      document
+        .querySelectorAll<HTMLMetaElement>('meta[name="robots"]')
+        .forEach((robots) => {
+          if (!previousContent.has(robots)) {
+            previousContent.set(robots, robots.content);
+          }
+          robots.content = "noindex, nofollow, nocache";
+        });
+    };
+    applyPrivateDirective();
+    const observer = new MutationObserver(applyPrivateDirective);
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      for (const [robots, content] of previousContent) {
+        if (robots.isConnected) robots.content = content;
+      }
+    };
+  }, []);
+
   const load = useCallback(async () => {
     const url = new URL(window.location.href);
     if (url.searchParams.has("design")) { setState({ status: "idle" }); return; }

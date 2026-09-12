@@ -1,0 +1,16 @@
+{
+  "name": "SewnCovers",
+  "short_name": "SewnCovers",
+  "description": "A portfolio prototype for planning replacement cushion covers.",
+  "start_url": "https://nicolasfrechette91.github.io/SewnCovers/",
+  "display": "standalone",
+  "background_color": "#f8f3e8",
+  "theme_color": "#24513b",
+  "icons": [
+    {
+      "src": "https://nicolasfrechette91.github.io/SewnCovers/favicon.ico",
+      "sizes": "256x256",
+      "type": "image/x-icon"
+    }
+  ]
+}

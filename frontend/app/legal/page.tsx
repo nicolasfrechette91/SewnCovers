@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { createPageMetadata } from "@/config/site-metadata";
+
 const documents = [
   {
     type: "terms",
@@ -66,11 +68,12 @@ const documents = [
   },
 ] as const;
 
-export const metadata: Metadata = {
-  title: "Legal and consent information | SewnCovers",
+export const metadata: Metadata = createPageMetadata({
+  title: "Legal and consent information",
   description:
     "Versioned portfolio-demonstration terms, privacy, analytics, upload, commerce, accessibility, and security information.",
-};
+  path: "/legal/",
+});
 
 export default function LegalPage() {
   return (

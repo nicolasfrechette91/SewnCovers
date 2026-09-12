@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 
 import { Configurator } from "@/components/configurator/configurator";
+import { createPageMetadata } from "@/config/site-metadata";
 
-export const metadata: Metadata = {
-  title: "Configure a cushion | SewnCovers",
+export const metadata: Metadata = createPageMetadata({
+  title: "Configure a cushion",
   description:
     "Choose a cushion shape, measurements, cover details, and pattern, then review, save, and share a prototype design with SewnCovers.",
-};
+  path: "/configure/",
+});
 
 export default function ConfigurePage() {
   return (

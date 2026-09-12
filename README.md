@@ -7,16 +7,16 @@ previews the result, reviews it, and saves an immutable configuration behind a
 shareable link. Saving never places an order, requests a quote, or starts a
 purchase.
 
-The current local worktree also adds an optional account-backed workspace with
-private named projects, immutable version history, revocable read-only shares,
-and private processed custom patterns. Phase 10 has not been deployed to the
-public URLs below; the live guest journey remains the previously deployed
-behavior.
+The repository also includes an optional account-backed workspace with private
+named projects, immutable version history, revocable read-only shares, private
+processed custom patterns, and a fictional commerce sandbox. Repository changes
+are not deployed as part of this improvement.
 
 | Public resource | URL |
 | --- | --- |
-| Case study | [Problem, constraints, decisions, outcome, and lessons](docs/CASE_STUDY.md) |
-| Production boundaries | [Verified behavior, limitations, security boundaries, and commercial direction](docs/PRODUCTION_BOUNDARIES.md) |
+| Case study | [Product and engineering decisions](https://nicolasfrechette91.github.io/SewnCovers/case-study/) |
+| Technical evidence | [Trust, boundaries, and readiness](https://nicolasfrechette91.github.io/SewnCovers/trust/) |
+| Source repository | [github.com/nicolasfrechette91/SewnCovers](https://github.com/nicolasfrechette91/SewnCovers) |
 | Live frontend | [nicolasfrechette91.github.io/SewnCovers/](https://nicolasfrechette91.github.io/SewnCovers/) |
 | Configurator | [Open the configurator](https://nicolasfrechette91.github.io/SewnCovers/configure/) |
 | Demonstration share | [Restore the Box / bench design](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg) |

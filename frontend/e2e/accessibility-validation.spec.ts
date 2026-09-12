@@ -466,6 +466,25 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
 test("preserves semantic, contrast, forced-colors, and reduced-motion feedback", async ({
   page,
 }) => {
+  let releaseSave: (() => void) | undefined;
+  const saveGate = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  await page.route(`${apiOrigin}/designs`, async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
+    await saveGate;
+    await fulfillJson(
+      route,
+      {
+        ...(route.request().postDataJSON() as typeof savedDesign),
+        publicId,
+      },
+      201,
+    );
+  });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(`${configurePath}?design=${publicId}`);
   await expect(page.getByRole("status").filter({ hasText: "Shared design restored." })).toBeVisible();
@@ -577,6 +596,7 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
     await spinner.evaluate((element) => getComputedStyle(element).animationName),
   ).toBe("none");
   await expect(page.getByRole("status").filter({ hasText: "Connecting" })).toBeVisible();
+  releaseSave?.();
   await expect(page.getByRole("textbox", { name: "Share URL" })).toBeFocused();
 
   await page.emulateMedia({ forcedColors: "active", reducedMotion: "reduce" });

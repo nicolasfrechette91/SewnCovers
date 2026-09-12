@@ -7,6 +7,14 @@ import {
 } from "@/components/layout/route-aware-site-layout";
 import { ConsentPreferences } from "@/components/assurance/consent-preferences";
 import { parsePublicApiOrigin } from "@/config/environment";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  exportedAssetPath,
+  SITE_NAME,
+  SOCIAL_IMAGE,
+  siteUrl,
+} from "@/config/site-metadata";
 import { AuthProvider } from "@/context/auth";
 import { ConfigurationProvider } from "@/context/configuration";
 
@@ -28,9 +36,35 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SewnCovers | Plan a cushion-cover design",
-  description:
-    "Explore a prototype journey for planning a replacement cushion cover around an existing cushion's shape, measurements, and fabric direction.",
+  applicationName: SITE_NAME,
+  description: DEFAULT_DESCRIPTION,
+  manifest: exportedAssetPath("/site.webmanifest"),
+  metadataBase: new URL(siteUrl()),
+  openGraph: {
+    description: DEFAULT_DESCRIPTION,
+    images: [
+      {
+        alt: SOCIAL_IMAGE.alt,
+        height: SOCIAL_IMAGE.height,
+        type: SOCIAL_IMAGE.type,
+        url: siteUrl(SOCIAL_IMAGE.path),
+        width: SOCIAL_IMAGE.width,
+      },
+    ],
+    siteName: SITE_NAME,
+    title: DEFAULT_TITLE,
+    type: "website",
+  },
+  title: {
+    default: DEFAULT_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  twitter: {
+    card: "summary_large_image",
+    description: DEFAULT_DESCRIPTION,
+    images: [{ alt: SOCIAL_IMAGE.alt, url: siteUrl(SOCIAL_IMAGE.path) }],
+    title: DEFAULT_TITLE,
+  },
 };
 
 export default function RootLayout({
@@ -80,6 +114,7 @@ export default function RootLayout({
         </main>
         <RouteAwareSiteFooter
           navigationItems={[
+            { href: "/case-study/", label: "Case study" },
             { href: "/legal/", label: "Legal and privacy" },
             { href: "/trust/", label: "Trust" },
             { href: "/.well-known/security.txt", label: "security.txt" },

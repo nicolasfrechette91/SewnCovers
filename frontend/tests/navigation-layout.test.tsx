@@ -94,7 +94,7 @@ test("separates desktop primary and utility destinations", () => {
     Array.from(utilities.querySelectorAll("a"), (link) => link.textContent),
     ["Cart", "Account"],
   );
-  for (const removed of ["Orders", "Admin", "Legal", "Trust"]) {
+  for (const removed of ["Orders", "Admin", "Legal", "Trust", "Case study"]) {
     assert.equal(
       navigation.querySelector(`a[href$="/${removed.toLowerCase()}/"]`),
       null,
@@ -159,11 +159,12 @@ test("normalizes trailing slashes and the GitHub Pages base path", () => {
   assert.equal(currentLinks[0].textContent, "Configure");
 });
 
-test("keeps Legal and Trust discoverable and current in the footer", () => {
+test("keeps Case study, Legal, and Trust discoverable and current in the footer", () => {
   render(
     <SiteFooter
       currentHref="/legal/"
       navigationItems={[
+        { href: "/case-study/", label: "Case study" },
         { href: "/legal/", label: "Legal and privacy" },
         { href: "/trust/", label: "Trust" },
         { href: "/.well-known/security.txt", label: "security.txt" },
@@ -171,10 +172,11 @@ test("keeps Legal and Trust discoverable and current in the footer", () => {
     />,
   );
   const footer = screen.getByRole("navigation", { name: "Footer navigation" });
+  assert.ok(screen.getByRole("link", { name: "Case study" }));
   assert.ok(screen.getByRole("link", { name: "Legal and privacy" }));
   assert.ok(screen.getByRole("link", { name: "Trust" }));
   assert.ok(screen.getByRole("link", { name: "security.txt" }));
-  assert.equal(footer.querySelectorAll("a").length, 3);
+  assert.equal(footer.querySelectorAll("a").length, 4);
   assert.equal(
     screen.getByRole("link", { name: "Legal and privacy" }).getAttribute(
       "aria-current",
