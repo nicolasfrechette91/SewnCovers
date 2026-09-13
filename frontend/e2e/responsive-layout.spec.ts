@@ -65,10 +65,33 @@ async function geometry(page: Page) {
     const width = document.documentElement.clientWidth;
     const offenders = [...document.querySelectorAll<HTMLElement>("main *, header *, footer *")].filter(el => {
       const box = el.getBoundingClientRect();
-      return box.width > 0 && (box.right > width + 1 || box.left < -1) && !el.closest("table") && getComputedStyle(el).position !== "absolute";
-    }).slice(0, 8).map(el => `${el.tagName} ${el.textContent?.slice(0, 65)} (${Math.round(el.getBoundingClientRect().width)})`);
+      const clipsOwnOverflow = ["auto", "hidden", "scroll"].includes(getComputedStyle(el).overflowX);
+      const hasInternalOverflow = el.scrollWidth > el.clientWidth + 1 && !clipsOwnOverflow;
+      return box.width > 0 && (box.right > width + 1 || box.left < -1 || hasInternalOverflow) && !el.closest("table") && getComputedStyle(el).position !== "absolute";
+    }).slice(0, 8).map(el => `${el.tagName} ${el.textContent?.slice(0, 65)} (${Math.round(el.getBoundingClientRect().width)}; ${el.scrollWidth}/${el.clientWidth})`);
     return { overflow: document.documentElement.scrollWidth - width, offenders };
   });
+}
+
+async function checkDocumentStructure(page: Page, route: string) {
+  const structure = await page.evaluate(() => {
+    const ids = Array.from(document.querySelectorAll<HTMLElement>("[id]"), element => element.id);
+    const references = Array.from(document.querySelectorAll<HTMLElement>("[aria-labelledby],[aria-describedby],[aria-controls]")).flatMap(element => ["aria-labelledby", "aria-describedby", "aria-controls"].flatMap(attribute => (element.getAttribute(attribute) ?? "").split(/\s+/).filter(Boolean)));
+    const controls = Array.from(document.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input:not([type='hidden']):not([type='button']):not([type='submit']), select, textarea"));
+    return {
+      duplicateIds: ids.filter((id, index) => ids.indexOf(id) !== index),
+      htmlLanguage: document.documentElement.lang,
+      imageAlternativeFailures: Array.from(document.images).filter(image => !image.hasAttribute("alt")).map(image => image.currentSrc || image.src),
+      mainCount: document.querySelectorAll("main").length,
+      missingControlNames: controls.filter(control => !control.labels?.length && !control.getAttribute("aria-label") && !control.getAttribute("aria-labelledby") && !control.getAttribute("title")).map(control => control.outerHTML.slice(0, 160)),
+      missingReferences: references.filter(id => document.getElementById(id) === null),
+      title: document.title,
+    };
+  });
+  expect(structure, route).toEqual({ duplicateIds: [], htmlLanguage: "en", imageAlternativeFailures: [], mainCount: 1, missingControlNames: [], missingReferences: [], title: expect.stringContaining("SewnCovers") });
+  const accessibilityTree = await page.locator("body").ariaSnapshot();
+  expect(accessibilityTree, route).toContain('navigation "Primary navigation"');
+  expect(accessibilityTree, route).toContain("heading");
 }
 
 async function checkMatrix(page: Page, name: string, output: string) {
@@ -120,13 +143,14 @@ for (const role of ["guest", "customer", "administrator"] as const) {
     page.on("pageerror", error => errors.push(error.message));
     // The static case study has its own role-independent width, forced-colors,
     // and reduced-motion matrix in portfolio-metadata.spec.ts.
-    const accountStateRoutes = routes().filter(
-      (route) => route !== "/case-study/",
-    );
+    const accountStateRoutes = role === "guest"
+      ? routes()
+      : routes().filter((route) => route !== "/case-study/");
     for (const route of [...accountStateRoutes, "/404.html"]) {
       await page.goto(`${base}${route}`);
       await page.getByRole("heading", { level: 1 }).first().waitFor();
       await page.waitForLoadState("networkidle");
+      if (role === "guest") await checkDocumentStructure(page, route);
       if (role !== "guest") await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
       await expect(page.getByText(/response was malformed/)).toHaveCount(0);
       await checkMatrix(page, `${role}-${route.replaceAll("/", "_")}`, info.outputDir);
@@ -223,4 +247,22 @@ test("touch navigation, form errors, table scrolling and forced-colors reflow", 
   expect(await consent.evaluate(el => getComputedStyle(el).position)).toBe("static");
   await page.getByRole("button", { name: "Reject optional" }).tap();
   await expect(page.getByRole("button", { name: "Change analytics preferences" })).toBeVisible();
+});
+
+test("public content reflows with WCAG text-spacing overrides", async ({ page }) => {
+  await fixtures(page, "guest");
+  await page.setViewportSize({ width: 320, height: 568 });
+
+  for (const route of ["/", "/configure/", "/commerce/", "/case-study/", "/trust/", "/legal/"]) {
+    await page.goto(`${base}${route}`);
+    await page.addStyleTag({
+      content: `
+        body { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; }
+        p { margin-bottom: 2em !important; }
+      `,
+    });
+    const result = await geometry(page);
+    expect(result.overflow, `${route}: ${result.offenders.join("; ")}`).toBeLessThanOrEqual(1);
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  }
 });

@@ -251,7 +251,7 @@ npm test
 
 The existing Node runner remains responsible for environment, typed-client, catalogue, save/share, restoration, and Phase 6 integration tests. Exact-pinned `tsx`, `jsdom`, and React Testing Library development dependencies add client-component interaction coverage without changing the production dependency set. No coverage-report command is currently configured.
 
-The 93-test suite covers all five shapes, tapered and equal-face rules,
+The deterministic suite covers all five shapes, tapered and equal-face rules,
 associated guidance/errors, shape-change confirmation, cover-detail controls,
 preview and review output, legacy and expanded restoration, save payloads,
 decimal/unit behavior, catalogue states, retries, immutable-save recovery,
@@ -283,7 +283,7 @@ npm run test:e2e
 
 On macOS or Linux, use `SEWNCOVERS_GITHUB_PAGES=true npm run test:e2e`. The runner builds the real static export with a local test-only Google Fonts response, serves `out/` from a single-process loopback server, and blocks every browser origin except that server and `api.sewncovers.test`. Playwright intercepts the reserved `.test` origin before DNS and fulfills patterns, design creation, and design retrieval entirely in memory, so the journey cannot contact Neon, Render, Google Fonts, or another external service.
 
-The ten-scenario Chromium journey uses accessible roles, names, status regions,
+The Chromium journey suite uses accessible roles, names, status regions,
 visible values, and native controls. In addition to the guest save/restore and
 accessibility journeys, intercepted account coverage registers, restores and
 expires a session, lists/renames/deletes a project, opens history, appends a

@@ -161,8 +161,8 @@ test("discovers built-in patterns progressively without losing selection", async
   await expect(page.getByRole("radio", { name: "Terrace wave" })).toBeChecked();
   expect(mediaRequests).toEqual(initialMediaRequests);
   await expect(
-    page.getByText("1 of 15 patterns match. Showing all matches."),
-  ).toBeVisible();
+    page.locator('[id$="-result-count"]'),
+  ).toHaveText("1 of 15 patterns match. Showing all matches.");
 
   await search.fill("cool bands");
   await expect(page.getByRole("radio", { name: "Terrace wave" })).toBeVisible();

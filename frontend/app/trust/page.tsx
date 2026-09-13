@@ -47,11 +47,11 @@ export default function TrustPage() {
             .
           </p>
         </header>
-        <dl className="mt-layout grid gap-4">
+        <dl className="mt-layout grid min-w-0 gap-4">
           {rows.map(([label, value]) => (
-            <div className="rounded-panel border border-border bg-surface p-card" key={label}>
-              <dt className="font-display text-section-title font-heading">{label}</dt>
-              <dd className="mt-2 text-text-muted">{value}</dd>
+            <div className="min-w-0 rounded-panel border border-border bg-surface p-card" key={label}>
+              <dt className="wrap-anywhere font-display text-section-title font-heading">{label}</dt>
+              <dd className="mt-2 min-w-0 wrap-anywhere text-text-muted">{value}</dd>
             </div>
           ))}
         </dl>
@@ -101,7 +101,7 @@ export default function TrustPage() {
             The documented reporting audit currently contains unresolved high
             findings. Nothing on this page describes them as remediated.
           </p>
-          <p className="mt-3 text-text-muted">
+          <p className="mt-3 wrap-anywhere text-text-muted">
             Placeholder vulnerability path:
             security-contact@example.invalid. This non-routable address must be
             replaced and operated before production use.

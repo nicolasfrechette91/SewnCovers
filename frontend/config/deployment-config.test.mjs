@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { test } from "node:test";
 
 const productionApiUrl = "https://sewncovers-api.onrender.com";
 const productionFrontendOrigin = "https://nicolasfrechette91.github.io";
 const repositoryRoot = new URL("../../", import.meta.url);
 
-const [pagesWorkflow, ciWorkflow, renderBlueprint] = await Promise.all([
+const [pagesWorkflow, ciWorkflow, renderBlueprint, rootReadme] = await Promise.all([
   readFile(new URL(".github/workflows/deploy-pages.yml", repositoryRoot), "utf8"),
   readFile(new URL(".github/workflows/ci.yml", repositoryRoot), "utf8"),
   readFile(new URL("render.yaml", repositoryRoot), "utf8"),
+  readFile(new URL("README.md", repositoryRoot), "utf8"),
 ]);
 
 test("Pages and CI production builds declare the exact public Render API URL", () => {
@@ -53,4 +54,15 @@ test("public deployment configuration remains secret-free", () => {
     renderBlueprint,
     /DATABASE_URL\s+(?:value|fromDatabase):|postgres(?:ql)?(:|%3A)/i,
   );
+});
+
+test("root documentation keeps every repository-local Markdown target resolvable", async () => {
+  const targets = Array.from(
+    rootReadme.matchAll(/!?\[[^\]]*\]\((?!https?:\/\/|mailto:|#)([^)]+)\)/g),
+    (match) => decodeURIComponent(match[1].split("#", 1)[0]),
+  );
+
+  assert.ok(targets.length > 0, "Expected repository-local README links.");
+  assert.doesNotMatch(rootReadme, /\]\(docs\//, "The absent docs/ tree must not be referenced.");
+  await Promise.all(targets.map((target) => access(new URL(target, repositoryRoot))));
 });

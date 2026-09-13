@@ -34,10 +34,8 @@ Visit the [live frontend](https://nicolasfrechette91.github.io/SewnCovers/), the
 and choose Square cushion, Rectangle cushion, or Box / bench cushion. The shape
 sets the measurement terms used in the next step.
 
-![SewnCovers landing page introducing a measurement-led cushion-cover design prototype](docs/images/landing-page.jpg)
-
-*The landing page introduces the project, its portfolio-prototype boundary, and
-the measurement-first design idea.*
+The landing page introduces the project, its portfolio-prototype boundary, and
+the measurement-first design idea.
 
 ### 2. Configure and preview the cover
 
@@ -47,10 +45,8 @@ buttons. The demonstration below uses Box / bench, `73.25 × 49.75 × 13.5 cm`,
 Terrace wave, and `1.6×`; the proportional preview and visible text summary
 update together.
 
-![Configured Box or bench cushion preview with Terrace wave, measurements, and 1.6 times pattern scale](docs/images/configured-preview.jpg)
-
-*The preview is a planning aid; its text summary remains the authoritative
-description of the prototype configuration.*
+The preview is a planning aid; its text summary remains the authoritative
+description of the prototype configuration.
 
 ### 3. Review, save, share, and restore
 
@@ -62,10 +58,8 @@ separate record with another ID. Open the
 directly—or refresh it—to restore the same seven configuration fields before
 reviewing them again.
 
-| Restored share | Mobile review |
-| --- | --- |
-| ![Mobile configurator announcing that the shared design was restored](docs/images/shared-design-mobile.jpg) | ![Mobile review showing the restored Box or bench configuration summary](docs/images/review-mobile.jpg) |
-| The immutable link restores the saved design without creating a new copy. | The responsive review keeps the configuration readable on a narrow screen. |
+The immutable link restores the saved design without creating a new copy. The
+responsive review keeps the configuration readable on a narrow screen.
 
 The [public API](https://sewncovers-api.onrender.com),
 [interactive API documentation](https://sewncovers-api.onrender.com/docs), and
@@ -74,7 +68,7 @@ reviewers who want to inspect the deployed service behind the walkthrough.
 
 ## What the MVP does
 
-- Supports square, rectangle, and box / bench cushions.
+- Supports square, rectangle, box / bench, round, and tapered / trapezoid cushions.
 - Validates dimensions in centimetres or inches and converts with
   `1 in = 2.54 cm`.
 - Loads, filters, and orders the active pattern catalogue from the API while
@@ -136,8 +130,8 @@ validation, deterministic derivative processing, and fail-closed moderation.
 Private snapshots preserve the exact owned approved derivative and processing
 version. Deletion revokes access immediately while immutable history shows a
 deleted-asset state. The provider-neutral filesystem/S3 architecture, durable
-worker, limits, privacy boundary, and local setup are documented in
-[Private custom-pattern uploads](docs/CUSTOM_UPLOADS.md). No production bucket,
+worker, limits, privacy boundary, and local setup are summarized in
+[Local Task 10.3 private custom patterns](#local-task-103-private-custom-patterns-not-deployed). No production bucket,
 credential, upload, worker, moderation call, or migration was created.
 
 ### Local Task 10.4 demonstration commerce (not deployed)
@@ -150,7 +144,7 @@ administrators, and audit history. The static frontend supplies customer and
 administrator workflows under both root and `/SewnCovers/` base paths. Every
 commerce surface is labelled as a sandbox demonstration; no live provider,
 charge, refund, tax, shipment, order, or migration was created. See
-[demonstration commerce](docs/COMMERCE.md).
+[Local Task 10.4 demonstration commerce](#local-task-104-demonstration-commerce-not-deployed).
 
 ### Local Task 10.5 assurance and production operations (not deployed)
 
@@ -165,7 +159,7 @@ aggregates. Versioned legal pages and explicit account/upload/sandbox-checkout
 acknowledgements sit beside a public evidence-bounded Trust area and read-only
 readiness checks. No live provider, production migration, deployment, legal
 review, security certification, or manufacturing validation occurred. See
-[advanced visualization, assurance, and production operations](docs/ASSURANCE_AND_OPERATIONS.md).
+[Local Task 10.5 assurance and production operations](#local-task-105-assurance-and-production-operations-not-deployed).
 
 ## Technology and responsibilities
 
@@ -177,7 +171,7 @@ review, security certification, or manufacturing validation occurred. See
 | Persistence | SQLAlchemy 2.0.51, Psycopg 3.3.4, Alembic 1.18.5 | Lazy sessions, explicit transactions, PostgreSQL models, schema migrations, and the canonical seed. |
 | Database | Neon PostgreSQL | Catalogue and anonymous designs plus local account, session, private-project, version, and hashed share-grant models. |
 | Hosting | GitHub Pages and Render Free | Static frontend delivery and the migration-gated FastAPI service. |
-| Verification | Node test runner, React Testing Library, jsdom, Playwright 1.62.1, pytest 9.1.1, Ruff 0.15.22 | 93 frontend tests, ten browser scenarios in both base-path modes, and 274 backend tests plus lint, type, build, export, readiness, and dependency checks. |
+| Verification | Node test runner, React Testing Library, jsdom, Playwright 1.62.1, pytest 9.1.1, Ruff 0.15.22 | Deterministic frontend and backend tests plus browser journeys in both base-path modes, lint, type, build, export, readiness, and dependency checks. Current totals belong in the latest improvement report rather than this durable overview. |
 
 The frontend has a committed npm lockfile. Backend direct dependencies are
 exact-pinned in `backend/pyproject.toml`; standard pip is used without a
@@ -214,7 +208,7 @@ that receives `DATABASE_URL` or connects to Neon.
 | `backend/migrations/` | Linear Alembic schema/index/seed history. |
 | `backend/tests/` | Isolated API, model, migration, production, and failure tests. |
 | `.github/workflows/` | CI and GitHub Pages build/deployment workflows. |
-| `docs/PROJECT_PROGRESS.md` | The authoritative 58-task roadmap and decision log. |
+| `frontend/IMPROVEMENT-*.md` | Evidence and handoff reports for the completed improvement sequence. |
 | `render.yaml` | Non-secret Render Blueprint configuration. |
 
 Detailed component notes remain in the
@@ -410,14 +404,14 @@ order:
 | `frontend` | `npm run lint` | Run ESLint. |
 | `frontend` | `npm run typecheck` | Run strict TypeScript checking without emit. |
 | `frontend` | `npm run check:config` | Run focused build/environment tests. |
-| `frontend` | `npm test` | Run all 93 deterministic frontend tests. |
+| `frontend` | `npm test` | Run all deterministic frontend unit, component, service, and configuration tests. |
 | `frontend` | `npm run build` | Build the static export into ignored `frontend/out/`. |
 | `frontend` | `npm run verify:export` | Verify exported routes, links, assets, base path, and API embedding. |
-| `frontend` | `npm run test:e2e` | Build, serve, and run the ten-scenario isolated Chromium journey. |
+| `frontend` | `npm run test:e2e` | Build, serve, and run the isolated Chromium journey suite. |
 | `backend` | `python -m uvicorn app.main:app --reload` | Start the local API without automatic migrations. |
 | `backend` | `python -m ruff format --check .` | Check Python formatting. |
 | `backend` | `python -m ruff check .` | Run Ruff lint. |
-| `backend` | `python -m pytest` | Run all 274 isolated backend tests. |
+| `backend` | `python -m pytest` | Run all isolated backend tests. |
 | `backend` | `python -m pip check` | Check installed dependency consistency. |
 | `backend` | `python -m app.assurance.cli readiness` | Run read-only, secret-free production-configuration checks; incomplete local configuration intentionally returns non-zero. |
 
@@ -603,7 +597,7 @@ publishes only `frontend/out`. Render auto-deploys after checks pass.
 | Pages route, CSS, script, favicon, or refresh returns 404 | Build with `SEWNCOVERS_GITHUB_PAGES=true`, preserve uppercase `/SewnCovers`, use Next.js-aware links, and run `npm run verify:export`. Ordinary local exports intentionally use the domain root. |
 | First production request is slow or times out | Render Free may be waking. Wait and retry safe reads. The UI reports possible wake-up after two seconds and retries transient GETs within its bounded policy. Do not automatically replay a design POST; inspect the original outcome or use the explicit save retry knowing it may create another record. |
 | Static build tries to fetch fonts | Set `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` to the absolute `frontend/e2e/font-responses.cjs` path, matching CI. |
-| Local custom upload remains queued | Confirm Task 10.3 variables are enabled and run `python -m app.uploads.worker` from `backend`. See [private custom uploads](docs/CUSTOM_UPLOADS.md). |
+| Local custom upload remains queued | Confirm Task 10.3 variables are enabled and run `python -m app.uploads.worker` from `backend`. See [Local Task 10.3 private custom patterns](#local-task-103-private-custom-patterns-not-deployed). |
 
 ## Current boundaries and future production work
 
@@ -615,8 +609,9 @@ trust/readiness capabilities; none of Phase 10 is deployed. The live service has
 pricing, quote, cart, payment, order, fulfilment, refund, or administration
 capability. Local sandbox data must remain fictional. Neither environment has
 inventory, production scheduling, live analytics/provider operations, reviewed
-legal content, or production-operated trust workflow. See [demonstration
-commerce](docs/COMMERCE.md) and [Task 10.5 boundaries](docs/ASSURANCE_AND_OPERATIONS.md).
+legal content, or production-operated trust workflow. See [Local Task 10.4
+demonstration commerce](#local-task-104-demonstration-commerce-not-deployed) and
+[Local Task 10.5 assurance and production operations](#local-task-105-assurance-and-production-operations-not-deployed).
 
 Sensible future production improvements—not implemented today—include:
 
@@ -631,5 +626,6 @@ Sensible future production improvements—not implemented today—include:
 - Independent legal, privacy, security, accessibility, manufacturing, and
   operational review of the locally implemented workflows.
 
-See [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md) for the exact roadmap,
-current handoff, and historical engineering decisions.
+See the evidence reports in `frontend/IMPROVEMENT-9.md` through
+`frontend/IMPROVEMENT-13.md` for the completed improvement sequence, current
+handoff, and verified results.
