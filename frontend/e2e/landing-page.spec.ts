@@ -154,3 +154,73 @@ test("keeps hero actions distinct, focused, and overflow-free", async ({ page })
     .poll(() => start.evaluate((element) => getComputedStyle(element).outlineStyle))
     .not.toBe("none");
 });
+
+test("keeps example cards aligned and intentionally responsive", async ({ page }) => {
+  for (const expectation of [
+    { columns: 1, viewport: { width: 390, height: 844 } },
+    { columns: 2, viewport: { width: 768, height: 1024 } },
+    { columns: 3, viewport: { width: 1440, height: 900 } },
+  ]) {
+    await page.setViewportSize(expectation.viewport);
+    await page.goto(homePath);
+
+    const cards = page.locator(".landing-example-card");
+    const boxes = await cards.evaluateAll((figures) =>
+      figures.map((figure) => {
+        const media = figure.querySelector<HTMLElement>(
+          ".landing-example-media",
+        );
+        const illustration = figure.querySelector<HTMLElement>(
+          ".landing-example-illustration",
+        );
+        if (!media || !illustration) {
+          throw new Error("Example card structure is incomplete.");
+        }
+
+        const cardBox = figure.getBoundingClientRect();
+        const mediaBox = media.getBoundingClientRect();
+        const illustrationBox = illustration.getBoundingClientRect();
+        return {
+          cardBottom: cardBox.bottom,
+          cardHeight: cardBox.height,
+          cardTop: cardBox.top,
+          illustrationBottom: illustrationBox.bottom,
+          illustrationLeft: illustrationBox.left,
+          illustrationRight: illustrationBox.right,
+          illustrationTop: illustrationBox.top,
+          mediaBottom: mediaBox.bottom,
+          mediaLeft: mediaBox.left,
+          mediaRight: mediaBox.right,
+          mediaTop: mediaBox.top,
+        };
+      }),
+    );
+
+    expect(boxes).toHaveLength(3);
+    const rowTops = [...new Set(boxes.map((box) => Math.round(box.cardTop)))];
+    expect(rowTops).toHaveLength(
+      Math.ceil(boxes.length / expectation.columns),
+    );
+
+    for (const rowTop of rowTops) {
+      const row = boxes.filter(
+        (box) => Math.abs(Math.round(box.cardTop) - rowTop) <= 1,
+      );
+      expect(Math.max(...row.map((box) => box.cardHeight))).toBeCloseTo(
+        Math.min(...row.map((box) => box.cardHeight)),
+        0,
+      );
+      expect(Math.max(...row.map((box) => box.mediaBottom))).toBeCloseTo(
+        Math.min(...row.map((box) => box.mediaBottom)),
+        0,
+      );
+    }
+
+    for (const box of boxes) {
+      expect(box.illustrationTop).toBeGreaterThan(box.mediaTop);
+      expect(box.illustrationBottom).toBeLessThan(box.mediaBottom);
+      expect(box.illustrationLeft).toBeGreaterThan(box.mediaLeft);
+      expect(box.illustrationRight).toBeLessThan(box.mediaRight);
+    }
+  }
+});

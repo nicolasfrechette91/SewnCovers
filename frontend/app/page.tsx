@@ -57,26 +57,26 @@ const designSteps = [
 ] as const;
 
 const primaryLinkClasses =
-  "inline-flex min-h-12 max-w-full items-center justify-center rounded-control border border-brand bg-brand px-control-x py-control-y text-center text-button font-control tracking-label break-words text-on-brand shadow-raised transition-[background-color,border-color,box-shadow] hover:border-brand-hover hover:bg-brand-hover active:border-brand-active active:bg-brand-active motion-reduce:transition-none";
+  "inline-flex min-h-12 max-w-full items-center justify-center rounded-control border border-brand bg-brand px-5 py-control-y text-center text-button font-control tracking-label break-words text-on-brand shadow-raised transition-[background-color,border-color,box-shadow,transform] hover:border-brand-hover hover:bg-brand-hover hover:shadow-overlay active:translate-y-px active:border-brand-active active:bg-brand-active active:shadow-card motion-reduce:transform-none motion-reduce:transition-none";
 
 const secondaryLinkClasses =
-  "inline-flex min-h-12 max-w-full items-center justify-center rounded-control border border-border-strong bg-surface px-control-x py-control-y text-center text-button font-control tracking-label break-words text-text-primary shadow-card transition-[background-color,border-color,color,box-shadow] hover:bg-surface-subtle active:bg-surface-subtle active:text-brand-active active:shadow-none motion-reduce:transition-none";
+  "inline-flex min-h-12 max-w-full items-center justify-center rounded-control border border-border-strong bg-surface px-5 py-control-y text-center text-button font-control tracking-label break-words text-text-primary shadow-card transition-[background-color,border-color,color,box-shadow] hover:border-brand hover:bg-surface-subtle hover:text-brand active:bg-surface-subtle active:text-brand-active active:shadow-none motion-reduce:transition-none";
 
 export default function Home() {
   return (
     <>
       <section
         aria-labelledby="landing-title"
-        className="overflow-hidden border-b border-border bg-surface"
+        className="landing-hero overflow-hidden border-b border-border bg-surface"
       >
-        <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-layout px-gutter py-section lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:items-center">
+        <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-layout px-gutter py-section lg:grid-cols-[minmax(0,1.12fr)_minmax(20rem,0.88fr)] lg:items-center lg:py-[clamp(5rem,8vw,7rem)]">
           <div className="min-w-0">
-            <p className="text-label font-control tracking-label text-accent-strong">
+            <p className="landing-eyebrow text-label font-control tracking-label text-accent-strong">
               A cushion-cover design prototype
             </p>
             <h1
               id="landing-title"
-              className="mt-3 max-w-3xl font-display text-page-title font-heading tracking-heading text-text-primary"
+              className="mt-4 max-w-3xl font-display text-page-title font-heading tracking-heading text-text-primary"
             >
               Plan a replacement cover around your cushion&apos;s real
               measurements.
@@ -86,7 +86,7 @@ export default function Home() {
               shape, exact dimensions, and a fabric direction before saving a
               design.
             </p>
-            <div className="landing-hero-actions mt-8 flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="landing-hero-actions mt-8 flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Link href="/configure/" className={primaryLinkClasses}>
                 Start configuring
               </Link>
@@ -95,7 +95,7 @@ export default function Home() {
               </a>
               <a
                 href="#how-it-works"
-                className="inline-flex min-h-11 max-w-full items-center rounded-control px-1 text-button font-control break-words text-brand underline decoration-2 underline-offset-4 hover:text-brand-hover active:text-brand-active"
+                className="inline-flex min-h-11 max-w-full items-center rounded-control px-2 text-button font-control break-words text-brand underline decoration-2 underline-offset-4 transition-colors hover:text-brand-hover active:text-brand-active motion-reduce:transition-none"
               >
                 See how the idea works
               </a>
@@ -103,7 +103,7 @@ export default function Home() {
 
             <aside
               aria-labelledby="prototype-status-title"
-              className="mt-8 max-w-2xl rounded-card border border-border-strong bg-surface-subtle p-card"
+              className="landing-prototype-note mt-10 max-w-2xl rounded-card border border-border bg-surface-subtle p-card shadow-card"
             >
               <h2
                 id="prototype-status-title"
@@ -131,10 +131,10 @@ export default function Home() {
             </aside>
           </div>
 
-          <figure className="min-w-0 rounded-panel border border-border bg-page p-card shadow-raised">
+          <figure className="landing-hero-figure min-w-0 rounded-panel border border-border bg-page p-card shadow-raised">
             <div
               aria-hidden="true"
-              className="relative flex min-h-72 items-center justify-center overflow-hidden rounded-card border border-border bg-surface-subtle px-card py-layout sm:min-h-80"
+              className="landing-hero-media relative flex min-h-72 items-center justify-center overflow-hidden rounded-card border border-border bg-surface-subtle px-card py-layout sm:min-h-80"
             >
               <span className="absolute top-5 left-5 text-supporting font-control tracking-label text-brand">
                 Shape + size + fabric
@@ -158,27 +158,29 @@ export default function Home() {
       <section
         id="examples"
         aria-labelledby="examples-title"
-        className="scroll-mt-6 bg-page py-section"
+        className="landing-showcase scroll-mt-6 border-b border-border bg-page py-section"
       >
         <div className="mx-auto w-full max-w-6xl min-w-0 px-gutter">
-          <div className="max-w-2xl">
-            <p className="text-label font-control tracking-label text-accent-strong">
-              Illustrative examples
-            </p>
-            <h2
-              id="examples-title"
-              className="mt-2 font-display text-section-title font-heading tracking-heading text-text-primary"
-            >
-              Start with the cushion, then explore the finish.
-            </h2>
-            <p className="mt-4 text-body text-text-muted">
+          <div className="grid min-w-0 gap-4 border-b border-border pb-layout lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.62fr)] lg:items-end lg:gap-layout">
+            <div className="min-w-0 max-w-2xl">
+              <p className="landing-eyebrow text-label font-control tracking-label text-accent-strong">
+                Illustrative examples
+              </p>
+              <h2
+                id="examples-title"
+                className="mt-3 font-display text-section-title font-heading tracking-heading text-text-primary"
+              >
+                Start with the cushion, then explore the finish.
+              </h2>
+            </div>
+            <p className="max-w-2xl text-body text-text-muted lg:justify-self-end">
               These studies show how the three supported shapes could pair with
               different fabric directions. They are examples, not selectable
               products or accurate previews.
             </p>
           </div>
 
-          <ul className="mt-layout grid min-w-0 gap-component md:grid-cols-3">
+          <ul className="mt-layout grid min-w-0 auto-rows-fr gap-component sm:grid-cols-12 lg:grid-cols-3">
             {coverExamples.map((example) => (
               <CushionExample key={example.title} {...example} />
             ))}
@@ -189,26 +191,26 @@ export default function Home() {
       <section
         id="how-it-works"
         aria-labelledby="how-it-works-title"
-        className="scroll-mt-6 border-y border-border bg-surface-subtle py-section"
+        className="scroll-mt-6 bg-surface-subtle py-section"
       >
         <div className="mx-auto w-full max-w-6xl min-w-0 px-gutter">
-          <div className="max-w-2xl">
-            <p className="text-label font-control tracking-label text-accent-strong">
+          <div className="max-w-3xl">
+            <p className="landing-eyebrow text-label font-control tracking-label text-accent-strong">
               Three clear steps
             </p>
             <h2
               id="how-it-works-title"
-              className="mt-2 font-display text-section-title font-heading tracking-heading text-text-primary"
+              className="mt-3 font-display text-section-title font-heading tracking-heading text-text-primary"
             >
               From an existing cushion to a considered cover idea.
             </h2>
           </div>
 
-          <ol className="mt-layout grid min-w-0 gap-component lg:grid-cols-3">
+          <ol className="mt-layout grid min-w-0 auto-rows-fr gap-component lg:grid-cols-3">
             {designSteps.map((step, index) => (
               <li
                 key={step.title}
-                className="min-w-0 rounded-card border border-border bg-surface p-card shadow-card"
+                className="landing-step-card min-w-0 rounded-card border border-border bg-surface p-card shadow-card"
               >
                 <span className="flex size-10 items-center justify-center rounded-pill border border-brand bg-brand text-button font-control text-on-brand">
                   <span className="sr-only">Step </span>

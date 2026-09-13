@@ -157,6 +157,136 @@ body {
   content: "";
 }
 
+/* The landing page uses the shared palette with quieter, upholstery-inspired
+ * layering. These styles are intentionally structural: artwork proportions
+ * never control the example-card media track. */
+.landing-hero {
+  background-image:
+    radial-gradient(
+      circle at 84% 22%,
+      color-mix(in srgb, var(--color-accent) 8%, transparent) 0 10rem,
+      transparent 22rem
+    ),
+    linear-gradient(
+      180deg,
+      var(--color-surface) 0%,
+      color-mix(in srgb, var(--color-page) 46%, var(--color-surface)) 100%
+    );
+}
+
+.landing-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.landing-eyebrow::before {
+  width: 2rem;
+  height: 1px;
+  flex: 0 0 auto;
+  background: currentcolor;
+  content: "";
+}
+
+.landing-prototype-note {
+  border-left: 3px solid var(--color-accent-strong);
+}
+
+.landing-hero-figure {
+  transform: rotate(0.35deg);
+}
+
+.landing-hero-media {
+  background-image:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-surface) 36%, transparent),
+      transparent 48%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 2.95rem,
+      color-mix(in srgb, var(--color-border) 20%, transparent) 3rem
+    );
+}
+
+.landing-showcase {
+  background-image: linear-gradient(
+    180deg,
+    var(--color-page),
+    color-mix(in srgb, var(--color-surface-subtle) 32%, var(--color-page))
+  );
+}
+
+.landing-example-card {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.landing-example-media {
+  background-image:
+    radial-gradient(
+      circle at 50% 46%,
+      color-mix(in srgb, var(--color-surface) 80%, transparent) 0 32%,
+      transparent 66%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--color-surface) 34%, transparent),
+      transparent 54%
+    );
+}
+
+.landing-example-caption {
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-page));
+}
+
+.landing-example-illustration.landing-cushion-square {
+  width: min(58%, 10rem);
+}
+
+.landing-example-illustration.landing-cushion-rectangle {
+  width: min(76%, 13.5rem);
+}
+
+.landing-example-illustration.landing-cushion-box {
+  width: min(78%, 14rem);
+}
+
+.landing-step-card {
+  position: relative;
+}
+
+.landing-step-card::before {
+  position: absolute;
+  inset: 0.75rem 0.75rem auto;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--color-accent-strong),
+    color-mix(in srgb, var(--color-border) 45%, transparent)
+  );
+  content: "";
+}
+
+@media (hover: hover) {
+  .landing-example-card:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-raised);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-figure {
+    transform: none;
+  }
+
+  .landing-example-card {
+    transition: none;
+  }
+}
+
 .landing-pattern-botanical {
   background-color: var(--color-surface-subtle);
   background-image:
