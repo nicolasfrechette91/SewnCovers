@@ -16,7 +16,6 @@ import { AdvancedPreview } from "../components/configurator/advanced-preview";
 import { AuthProvider } from "../context/auth";
 import type { ConfigurationState } from "../context/configuration";
 import LegalPage from "../app/legal/page";
-import TrustPage from "../app/trust/page";
 
 const configuration: ConfigurationState = {
   shape: "rectangle",
@@ -235,7 +234,7 @@ test("honors Global Privacy Control without blocking core access", async () => {
   );
 });
 
-test("renders legal, trust, unauthorized, and review-required surfaces", async () => {
+test("renders legal, unauthorized, and review-required surfaces", async () => {
   const legal = render(<LegalPage />);
   assert.ok(
     legal.getByRole("heading", { name: "Legal and consent information" }),
@@ -252,20 +251,6 @@ test("renders legal, trust, unauthorized, and review-required surfaces", async (
     assert.ok(legal.getByRole("heading", { name: heading }));
   }
   assert.match(document.body.textContent ?? "", /has not been approved by a lawyer/);
-  cleanup();
-
-  render(<TrustPage />);
-  assert.ok(
-    screen.getByRole("heading", {
-      name: "Trust, boundaries, and readiness",
-    }),
-  );
-  assert.match(document.body.textContent ?? "", /Not implemented/);
-  assert.match(document.body.textContent ?? "", /not a certification/);
-  assert.match(document.body.textContent ?? "", /stored as hashes/);
-  assert.match(document.body.textContent ?? "", /Browser-supplied totals are not accepted/);
-  assert.match(document.body.textContent ?? "", /Verified raw-body webhook processing/);
-  assert.match(document.body.textContent ?? "", /Configured, not live-verified/);
   cleanup();
 
   render(

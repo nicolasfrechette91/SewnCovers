@@ -86,12 +86,6 @@ export default function LegalPage() {
           <h1 className="mt-2 font-display text-page-title font-heading">
             Legal and consent information
           </h1>
-          <p className="mt-component rounded-card border border-error-border bg-error-surface p-4">
-            Portfolio demonstration content, version 1, draft review date
-            August 29, 2026. It has not been approved by a lawyer and must
-            receive qualified legal, privacy, accessibility, security, and
-            operational review before production use.
-          </p>
         </header>
         <nav className="mt-layout" aria-label="Legal documents">
           <ul className="flex flex-wrap gap-2">
@@ -114,10 +108,6 @@ export default function LegalPage() {
               key={document.type}
               className="scroll-mt-layout rounded-panel border border-border bg-surface p-card shadow-card"
             >
-              <p className="text-label font-control text-accent-strong">
-                Document type: {document.type} · Version 1 · Draft review
-                date: August 29, 2026
-              </p>
               <h2 className="mt-2 font-display text-section-title font-heading">
                 {document.title}
               </h2>

@@ -114,10 +114,7 @@ export default function RootLayout({
         </main>
         <RouteAwareSiteFooter
           navigationItems={[
-            { href: "/case-study/", label: "Case study" },
             { href: "/legal/", label: "Legal and privacy" },
-            { href: "/trust/", label: "Trust" },
-            { href: "/.well-known/security.txt", label: "security.txt" },
           ]}
         />
       </body>

@@ -116,18 +116,6 @@ export default function Home() {
                 fictional CAD commerce sandbox. It cannot charge money, create
                 a real shipment, or produce finished covers.
               </p>
-              <Link
-                href="/trust/"
-                className="mt-3 inline-flex min-h-11 items-center text-button font-control text-brand underline decoration-2 underline-offset-4 hover:text-brand-hover active:text-brand-active"
-              >
-                View prototype details
-              </Link>
-              <Link
-                href="/case-study/"
-                className="ml-5 inline-flex min-h-11 items-center text-button font-control text-brand underline decoration-2 underline-offset-4 hover:text-brand-hover active:text-brand-active"
-              >
-                Read the case study
-              </Link>
             </aside>
           </div>
 

@@ -44,8 +44,4 @@ test("preserves the hero prototype disclosure", () => {
     status.textContent ?? "",
     /cannot charge money, create a real shipment, or produce finished covers/i,
   );
-  const details = within(status).getByRole("link", {
-    name: "View prototype details",
-  });
-  assert.equal(details.getAttribute("href"), "/trust");
 });

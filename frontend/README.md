@@ -309,7 +309,7 @@ Reusable server-compatible layout components live in `components/layout/` and ar
 - `SiteFooter` renders the documented SewnCovers portfolio-prototype identity and a build-time year. Optional typed footer navigation is omitted from the integrated frame until real destinations are defined.
 - Internal `next/link` destinations remain application-relative because Next.js applies the configured `/SewnCovers` base path automatically in GitHub Pages builds. Public image paths continue to use the existing build-time base-path strategy.
 
-Versioned demonstration legal information, Trust, and placeholder `security.txt`
+Versioned demonstration legal information
 are directly navigable under root and `/SewnCovers/`; qualified legal,
 operational, accessibility, and security review remain outstanding. The local
 `/account/`, `/projects/`, `/commerce/`, `/cart/`, `/orders/`, `/admin/`, legal,

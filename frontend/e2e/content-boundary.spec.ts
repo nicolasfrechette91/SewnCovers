@@ -56,13 +56,6 @@ test("keeps guest pages task-focused while preserving prototype and account disc
 test("keeps implementation evidence in Trust and legal disclosures in Legal", async ({
   page,
 }) => {
-  await page.goto(`${basePath}/trust/`);
-  await expect(page.getByRole("heading", { name: "Trust, boundaries, and readiness" })).toBeVisible();
-  await expect(page.getByText(/Account sessions and project-share tokens are stored as hashes/i)).toBeVisible();
-  await expect(page.getByText(/Browser-supplied totals are not accepted/i)).toBeVisible();
-  await expect(page.getByText(/Verified raw-body webhook processing/i)).toBeVisible();
-  await expect(page.getByText(/Configured, not live-verified/i)).toBeVisible();
-
   await page.goto(`${basePath}/legal/`);
   await expect(page.getByRole("heading", { name: "Legal and consent information" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Privacy notice" })).toBeVisible();

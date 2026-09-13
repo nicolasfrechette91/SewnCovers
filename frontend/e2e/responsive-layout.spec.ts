@@ -141,8 +141,7 @@ for (const role of ["guest", "customer", "administrator"] as const) {
     await fixtures(page, role);
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
-    // The static case study has its own role-independent width, forced-colors,
-    // and reduced-motion matrix in portfolio-metadata.spec.ts.
+
     const accountStateRoutes = role === "guest"
       ? routes()
       : routes().filter((route) => route !== "/case-study/");
@@ -253,7 +252,7 @@ test("public content reflows with WCAG text-spacing overrides", async ({ page })
   await fixtures(page, "guest");
   await page.setViewportSize({ width: 320, height: 568 });
 
-  for (const route of ["/", "/configure/", "/commerce/", "/case-study/", "/trust/", "/legal/"]) {
+  for (const route of ["/", "/configure/", "/commerce/", "/case-study/", "/legal/"]) {
     await page.goto(`${base}${route}`);
     await page.addStyleTag({
       content: `

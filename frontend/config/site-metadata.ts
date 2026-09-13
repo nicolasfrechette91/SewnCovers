@@ -22,7 +22,6 @@ export const PUBLIC_INDEXABLE_PATHS = Object.freeze([
   "/",
   "/configure/",
   "/commerce/",
-  "/trust/",
   "/legal/",
   "/case-study/",
 ] as const);

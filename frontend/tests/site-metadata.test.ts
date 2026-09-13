@@ -60,7 +60,6 @@ test("keeps the sitemap allowlist limited to durable public routes", () => {
     "/",
     "/configure/",
     "/commerce/",
-    "/trust/",
     "/legal/",
     "/case-study/",
   ]);

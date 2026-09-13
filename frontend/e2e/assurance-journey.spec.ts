@@ -135,8 +135,6 @@ test("advanced preview, consent, legal, and trust stay keyboard-accessible", asy
 
   await page.goto(`${basePath}/legal/`);
   await expect(page.getByRole("heading", { name: "Legal and consent information" })).toBeVisible();
-  await page.goto(`${basePath}/trust/`);
-  await expect(page.getByRole("heading", { name: "Trust, boundaries, and readiness" })).toBeVisible();
 
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
