@@ -5,7 +5,6 @@ import {
   RouteAwareSiteFooter,
   RouteAwareSiteHeader,
 } from "@/components/layout/route-aware-site-layout";
-import { ConsentPreferences } from "@/components/assurance/consent-preferences";
 import { parsePublicApiOrigin } from "@/config/environment";
 import {
   DEFAULT_DESCRIPTION,
@@ -109,7 +108,6 @@ export default function RootLayout({
         >
           <AuthProvider>
             <ConfigurationProvider>{children}</ConfigurationProvider>
-            <ConsentPreferences />
           </AuthProvider>
         </main>
         <RouteAwareSiteFooter

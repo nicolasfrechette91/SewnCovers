@@ -1,8 +1,8 @@
-"""Task 10.5 legal, analytics, production, trust, and security coverage."""
+"""Task 10.5 legal, production, trust, and security coverage."""
 
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Barrier
 
@@ -20,7 +20,6 @@ from app.errors import APIProblem
 from app.main import create_application
 from app.persistence.database import get_session
 from app.persistence.models import (
-    AnalyticsEvent,
     CustomerAccount,
     CustomerOrder,
     LegalDocument,
@@ -178,7 +177,7 @@ def test_versioned_legal_documents_and_account_acknowledgements_are_isolated(
     client, factory = assurance_client
     documents = client.get("/legal")
     assert documents.status_code == 200
-    assert len(documents.json()) == 7
+    assert len(documents.json()) == 6
     assert all(item["version"] == 1 for item in documents.json())
     assert all(item["reviewRequired"] is True for item in documents.json())
 
@@ -227,114 +226,6 @@ def test_versioned_legal_documents_and_account_acknowledgements_are_isolated(
         document.title = "Mutated"
         with pytest.raises(RuntimeError, match="immutable"):
             session.commit()
-
-
-def test_consent_gpc_withdrawal_allowlist_deduplication_and_suppression(
-    assurance_client: tuple[TestClient, sessionmaker[Session]],
-) -> None:
-    client, factory = assurance_client
-    guest = "GuestPseudonymTask10500001"
-    assert (
-        client.get("/analytics/consent", params={"guestId": guest}).json()["status"]
-        == "unset"
-    )
-    gpc = client.put(
-        "/analytics/consent",
-        json={
-            "status": "accepted",
-            "documentVersion": 1,
-            "guestId": guest,
-            "privacySignal": True,
-        },
-    )
-    assert gpc.json()["status"] == "gpc_restricted"
-    event = {
-        "eventType": "configurator_stage_viewed",
-        "clientEventId": "event_task105_0001",
-        "guestId": guest,
-        "dimension": "preview",
-        "occurredAt": datetime.now(UTC).isoformat(),
-    }
-    blocked = client.post("/analytics/events", json=event)
-    assert blocked.status_code == 403, blocked.text
-    accepted = client.put(
-        "/analytics/consent",
-        json={
-            "status": "accepted",
-            "documentVersion": 1,
-            "guestId": guest,
-            "privacySignal": False,
-        },
-    )
-    assert accepted.json()["status"] == "accepted"
-    first = client.post("/analytics/events", json=event)
-    assert first.status_code == 202
-    assert first.json() == {"accepted": True, "duplicate": False}
-    assert client.post("/analytics/events", json=event).json()["duplicate"] is True
-    assert (
-        client.post(
-            "/analytics/events",
-            json={**event, "clientEventId": "event_task105_0002", "dimension": "email"},
-        ).status_code
-        == 422
-    )
-    assert (
-        client.post(
-            "/analytics/events",
-            json={**event, "eventType": "arbitrary_log"},
-        ).status_code
-        == 422
-    )
-    assert (
-        client.post(
-            "/analytics/events",
-            json={
-                **event,
-                "clientEventId": "event_task105_old",
-                "occurredAt": (datetime.now(UTC) - timedelta(days=2)).isoformat(),
-            },
-        ).status_code
-        == 422
-    )
-    withdrawn = client.put(
-        "/analytics/consent",
-        json={
-            "status": "withdrawn",
-            "documentVersion": 1,
-            "guestId": guest,
-            "privacySignal": False,
-        },
-    )
-    assert withdrawn.json()["status"] == "withdrawn"
-    assert (
-        client.post(
-            "/analytics/events",
-            json={**event, "clientEventId": "event_task105_0003"},
-        ).status_code
-        == 403
-    )
-
-    administrator = make_admin(client, factory)
-    aggregate = client.get(
-        "/admin/analytics/aggregates",
-        headers=auth(administrator),
-        params={
-            "from": (datetime.now(UTC) - timedelta(days=1)).isoformat(),
-            "to": (datetime.now(UTC) + timedelta(minutes=1)).isoformat(),
-        },
-    )
-    assert aggregate.status_code == 200
-    assert aggregate.json()["items"][0]["suppressed"] is True
-    assert aggregate.json()["items"][0]["count"] is None
-    with factory() as session:
-        assert (
-            session.scalar(
-                select(AnalyticsEvent).where(
-                    AnalyticsEvent.client_event_id == "event_task105_0001"
-                )
-            )
-            is not None
-        )
 
 
 def test_paid_order_production_transitions_quality_packet_and_authorization(
@@ -504,9 +395,6 @@ def test_trust_readiness_headers_health_and_openapi_are_secret_free(
     schema = client.get("/openapi.json").json()
     for path in (
         "/legal",
-        "/analytics/consent",
-        "/analytics/events",
-        "/admin/analytics/aggregates",
         "/admin/production-work",
         "/admin/production-work/{work_id}/transition",
         "/admin/production-work/{work_id}/packet",
@@ -514,4 +402,3 @@ def test_trust_readiness_headers_health_and_openapi_are_secret_free(
         "/readiness",
     ):
         assert path in schema["paths"]
-    assert "arbitrary" in schema["paths"]["/analytics/events"]["post"]["description"]

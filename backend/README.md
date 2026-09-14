@@ -1,6 +1,6 @@
 # SewnCovers backend
 
-This directory contains the Python and FastAPI service for SewnCovers. It keeps the public catalogue and anonymous immutable-design API and adds a local optional account workspace, private custom-pattern processing, fictional commerce, durable production work, strict consent-gated analytics, immutable legal versions, and evidence-bounded trust/readiness APIs. The linear local head is `20260829_01`; Phase 10 has not been applied to production. Render alone owns the protected production connection.
+This directory contains the Python and FastAPI service for SewnCovers. It keeps the public catalogue and anonymous immutable-design API and adds a local optional account workspace, private custom-pattern processing, fictional commerce, durable production work, immutable legal versions, and evidence-bounded trust/readiness APIs. The linear local head is `20260829_01`; Phase 10 has not been applied to production. Render alone owns the protected production connection.
 
 ## Requirements
 
@@ -139,7 +139,7 @@ python -m alembic upgrade head --sql
 python -m alembic downgrade head:base --sql
 ```
 
-The linear deterministic history ends with `20260829_01_add_visualization_operations_analytics_legal_trust.py`. All Phase 10 revisions are additive, explicit transitions; their downgrades exist for isolated tests only and must not be run against shared databases.
+The linear deterministic history ends with `20260829_01_add_visualization_operations_legal_trust.py`. All Phase 10 revisions are additive, explicit transitions; their downgrades exist for isolated tests only and must not be run against shared databases.
 
 Task 10.3 stores no image bytes in PostgreSQL. It adds private quarantine and
 processed-object metadata, the durable processing/moderation state and lease,
@@ -580,4 +580,4 @@ python -m ruff format .
 
 `pydantic-settings` remains the Task 4.1 settings dependency. Task 4.2 adds pinned SQLAlchemy 2.0.51 plus Psycopg 3.3.4 with its binary distribution for PostgreSQL/Neon runtime support. FastAPI's existing Starlette middleware supplies CORS, so Task 4.3 adds no dependency. Tasks 4.4-4.8 reuse FastAPI, Uvicorn, Pydantic, SQLAlchemy, and Python's standard library and add no dependency. SQLite testing uses Python's standard-library driver, so no separate test database dependency is needed.
 
-Task 5.3 adds pinned Alembic 1.18.5 as the minimum migration runtime dependency for the Python 3.13 and SQLAlchemy 2.0.51 baseline. Task 5.4 reuses it for two portable pattern filter indexes without adding a dependency. Task 10.3 adds pinned Boto3 and Pillow for private S3-compatible operations and strict raster processing. Task 10.4 adds pinned Cryptography for AES-GCM shipping-data protection and the configured-only Stripe SDK; all tests use the deterministic sandbox and never call Stripe. Task 10.5 adds no dependency: legal, analytics, production work, packets, trust, and readiness reuse SQLAlchemy, FastAPI, and the standard library. Imports, startup, the root endpoint, and offline tests do not connect to Neon, object storage, moderation, payment, analytics, or manufacturing providers. All Phase 10 capabilities are local and undeployed. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md), [`../docs/CUSTOM_UPLOADS.md`](../docs/CUSTOM_UPLOADS.md), [`../docs/COMMERCE.md`](../docs/COMMERCE.md), and [`../docs/ASSURANCE_AND_OPERATIONS.md`](../docs/ASSURANCE_AND_OPERATIONS.md).
+Task 5.3 adds pinned Alembic 1.18.5 as the minimum migration runtime dependency for the Python 3.13 and SQLAlchemy 2.0.51 baseline. Task 5.4 reuses it for two portable pattern filter indexes without adding a dependency. Task 10.3 adds pinned Boto3 and Pillow for private S3-compatible operations and strict raster processing. Task 10.4 adds pinned Cryptography for AES-GCM shipping-data protection and the configured-only Stripe SDK; all tests use the deterministic sandbox and never call Stripe. Task 10.5 adds no dependency: legal, production work, packets, trust, and readiness reuse SQLAlchemy, FastAPI, and the standard library. Imports, startup, the root endpoint, and offline tests do not connect to Neon, object storage, moderation, payment, or manufacturing providers. All Phase 10 capabilities are local and undeployed. See [`../docs/PROJECT_PROGRESS.md`](../docs/PROJECT_PROGRESS.md), [`../docs/CUSTOM_UPLOADS.md`](../docs/CUSTOM_UPLOADS.md), [`../docs/COMMERCE.md`](../docs/COMMERCE.md), and [`../docs/ASSURANCE_AND_OPERATIONS.md`](../docs/ASSURANCE_AND_OPERATIONS.md).

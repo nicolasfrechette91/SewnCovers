@@ -214,21 +214,6 @@ class Settings(BaseSettings):
     commerce_admin_contact: str | None = Field(
         default=None, max_length=254, validation_alias="COMMERCE_ADMIN_CONTACT"
     )
-    analytics_notice_version: Literal[1] = Field(
-        default=1, validation_alias="ANALYTICS_NOTICE_VERSION"
-    )
-    analytics_retention_days: int = Field(
-        default=30,
-        ge=1,
-        le=365,
-        validation_alias="ANALYTICS_RETENTION_DAYS",
-    )
-    analytics_suppression_threshold: int = Field(
-        default=3,
-        ge=3,
-        le=100,
-        validation_alias="ANALYTICS_SUPPRESSION_THRESHOLD",
-    )
     vulnerability_report_contact: str = Field(
         default="security-contact@example.invalid",
         min_length=3,

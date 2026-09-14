@@ -56,8 +56,6 @@ REVISION = "20260829_01"
 HEAD_TABLES = {
     "alembic_version",
     "authenticated_sessions",
-    "analytics_consent_decisions",
-    "analytics_events",
     "audit_events",
     "cart_lines",
     "commerce_quotes",
@@ -234,7 +232,7 @@ def test_revisions_form_one_descriptive_linear_history_and_one_head() -> None:
     assert revisions[0].revision == REVISION
     assert revisions[0].down_revision == COMMERCE_REVISION
     assert revisions[0].is_head
-    assert "Task 10.5 operations" in revisions[0].doc
+    assert "Task 10.5 visualization, operations, legal, and trust" in revisions[0].doc
     assert revisions[1].revision == COMMERCE_REVISION
     assert revisions[1].down_revision == UPLOAD_REVISION
     assert revisions[1].is_head is False
@@ -1009,7 +1007,7 @@ def test_offline_postgresql_sql_has_schema_indexes_and_exact_seed_inserts() -> N
     assert category_ddl in ddl
     assert activity_ddl in ddl
     assert ddl.index(category_ddl) < ddl.index(activity_ddl)
-    assert ddl.count("CREATE INDEX") == 33
+    assert ddl.count("CREATE INDEX") == 30
     assert "CREATE INDEX ix_patterns_id" not in ddl
     assert "CREATE INDEX ix_cover_designs_public_id" not in ddl
     assert ddl.count("INSERT INTO patterns") == 15

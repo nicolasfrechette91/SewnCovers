@@ -22,7 +22,7 @@ async function json(route: Route, body: unknown, status = 200) {
   });
 }
 
-test("advanced preview, consent, legal, and trust stay keyboard-accessible", async ({
+test("advanced preview and legal content stay keyboard-accessible", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 568 });
@@ -31,15 +31,6 @@ test("advanced preview, consent, legal, and trust stay keyboard-accessible", asy
     const path = new URL(request.url()).pathname;
     if (request.method() === "OPTIONS") {
       return route.fulfill({ headers: corsHeaders, status: 204 });
-    }
-    if (path === "/analytics/consent") {
-      return json(route, {
-        status: "rejected",
-        documentVersion: 1,
-        privacySignal: false,
-        decidedAt: "2026-08-29T12:00:00Z",
-        behavior: "Optional collection remains off.",
-      });
     }
     if (path === "/patterns") {
       const records = [
@@ -86,10 +77,6 @@ test("advanced preview, consent, legal, and trust stay keyboard-accessible", asy
   });
 
   await page.goto(`${basePath}/configure/`);
-  await page.getByRole("button", { name: "Reject optional" }).focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByText(/Core features are unchanged/)).toBeVisible();
-
   await page.getByRole("radio", { name: "Square cushion" }).focus();
   await page.keyboard.press("Space");
   await page
@@ -134,7 +121,7 @@ test("advanced preview, consent, legal, and trust stay keyboard-accessible", asy
   ).toBe(true);
 
   await page.goto(`${basePath}/legal/`);
-  await expect(page.getByRole("heading", { name: "Legal and consent information" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Legal information" })).toBeVisible();
 
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
@@ -168,7 +155,7 @@ test("advanced preview, consent, legal, and trust stay keyboard-accessible", asy
   await expect(page.getByText(/3D is unavailable.*complete 2D preview/)).toBeVisible();
 });
 
-test("administrator production, analytics, packet, and readiness workflow is isolated", async ({
+test("administrator production, packet, and readiness workflow is isolated", async ({
   page,
 }) => {
   await page.addInitScript((value) => {
@@ -204,7 +191,6 @@ test("administrator production, analytics, packet, and readiness workflow is iso
     if (path.endsWith("/transition")) { state = request.postDataJSON().targetState; revision += 1; return json(route, work()); }
     if (path.includes("/quality/pass")) { qualityState = "passed"; revision += 1; return json(route, work()); }
     if (path.endsWith("/packet")) return json(route, { content: "safe demonstration packet", checksum: "a".repeat(64), generatedAt: "2026-08-29T12:00:00Z" });
-    if (path === "/admin/analytics/aggregates") return json(route, { demonstration: true, fixtureBacked: true, fromTime: "2026-07-29T00:00:00Z", toTime: "2026-08-29T00:00:00Z", timezone: "UTC", consentScope: "Affirmative optional consent only.", suppressionThreshold: 3, freshness: "Fixture generated at 2026-08-29T00:00:00Z", items: [{ eventType: "visualization_fallback", count: null, suppressed: true }], limitations: ["Fictional fixture only."] });
     if (path === "/readiness") return json(route, { ready: false, checks: [{ code: "contact", level: "error", message: "Production contact remains a placeholder." }], disclaimer: "Not an audit or deployment approval." });
     return json(route, { errors: [{ code: "resource_not_found", message: "Not found.", location: ["path"] }] }, 404);
   });
@@ -224,8 +210,6 @@ test("administrator production, analytics, packet, and readiness workflow is iso
   await page.getByRole("button", { name: "Download safe packet" }).press("Enter");
   await expect(page.getByText(/checksum .* verified and downloaded/i)).toBeVisible();
 
-  await page.getByRole("button", { name: "Load aggregates" }).press("Enter");
-  await expect(page.getByText("Suppressed", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Run readiness checks" }).press("Enter");
   await expect(page.getByText(/blocking configuration errors remain/)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);

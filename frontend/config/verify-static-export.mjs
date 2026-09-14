@@ -43,11 +43,9 @@ const expectedFiles = [
   path.join("projects", "index.html"),
   path.join("commerce", "index.html"),
   path.join("cart", "index.html"),
-  path.join("case-study", "index.html"),
   path.join("orders", "index.html"),
   path.join("admin", "index.html"),
   path.join("legal", "index.html"),
-  path.join("trust", "index.html"),
   path.join("checkout", "sandbox", "index.html"),
   path.join("checkout", "return", "index.html"),
   path.join("checkout", "cancel", "index.html"),
@@ -183,11 +181,9 @@ const projectsHtml = await readFile(
   "utf8",
 );
 const commerceHtml = await readFile(path.join(exportDirectory, "commerce", "index.html"), "utf8");
-const caseStudyHtml = await readFile(path.join(exportDirectory, "case-study", "index.html"), "utf8");
 const ordersHtml = await readFile(path.join(exportDirectory, "orders", "index.html"), "utf8");
 const adminHtml = await readFile(path.join(exportDirectory, "admin", "index.html"), "utf8");
 const legalHtml = await readFile(path.join(exportDirectory, "legal", "index.html"), "utf8");
-const trustHtml = await readFile(path.join(exportDirectory, "trust", "index.html"), "utf8");
 const cartHtml = await readFile(path.join(exportDirectory, "cart", "index.html"), "utf8");
 const checkoutSandboxHtml = await readFile(path.join(exportDirectory, "checkout", "sandbox", "index.html"), "utf8");
 const checkoutReturnHtml = await readFile(path.join(exportDirectory, "checkout", "return", "index.html"), "utf8");
@@ -198,7 +194,7 @@ const publicPages = new Map([
   [homeHtml, ["SewnCovers | Cushion-cover design prototype", productionSiteUrl]],
   [configureHtml, ["Configure a cushion | SewnCovers", `${productionSiteUrl}configure/`]],
   [commerceHtml, ["Prototype pricing | SewnCovers", `${productionSiteUrl}commerce/`]],
-  [legalHtml, ["Legal and consent information | SewnCovers", `${productionSiteUrl}legal/`]],
+  [legalHtml, ["Legal information | SewnCovers", `${productionSiteUrl}legal/`]],
 ]);
 
 for (const [html, [title, canonical]] of publicPages) {
@@ -254,36 +250,12 @@ assert.match(
 assert.match(commerceHtml, /returnTo=pricing/);
 assert.match(ordersHtml, /<title>Demonstration orders \| SewnCovers<\/title>/);
 assert.match(adminHtml, /<title>Demonstration administration \| SewnCovers<\/title>/);
-assert.match(legalHtml, /<title>Legal and consent information \| SewnCovers<\/title>/);
-assert.match(trustHtml, /<title>Trust and implementation boundaries \| SewnCovers<\/title>/);
-assert.match(caseStudyHtml, /<h1[^>]*>A measured path from cushion dimensions to a reviewable cover idea\.<\/h1>/);
-for (const heading of [
-  "Planning starts before a product exists.",
-  "Configure, preview, review, then choose whether to save.",
-  "Boundaries are part of the experience.",
-  "Static public delivery with API-owned authority.",
-  "Quality is checked at several boundaries.",
-  "Demonstrated behavior is not commercial readiness.",
-  "Explore the work",
-]) {
-  assert.equal(caseStudyHtml.includes(heading), true, `Missing case-study section: ${heading}`);
-}
-assert.match(caseStudyHtml, /href="https:\/\/github\.com\/nicolasfrechette91\/SewnCovers" target="_blank" rel="noopener noreferrer"/);
-assert.match(caseStudyHtml, /View source repository/);
-assert.match(caseStudyHtml, /"@type":"WebApplication"/);
-const jsonLd = caseStudyHtml.match(/<script type="application\/ld\+json">(.*?)<\/script>/)?.[1];
-assert.equal(JSON.parse(jsonLd).url, productionSiteUrl);
+assert.match(legalHtml, /<title>Legal information \| SewnCovers<\/title>/);
 assert.match(homeHtml, new RegExp(`href="${basePath || ""}\\/"`));
 assert.match(
   homeHtml,
   new RegExp(
     `href="${(basePath || "").replace(/\//g, "\\/")}\\/configure\\/"[^>]*>Start configuring<\\/a>`,
-  ),
-);
-assert.match(
-  homeHtml,
-  new RegExp(
-    `href="${(basePath || "").replace(/\//g, "\\/")}\\/trust\\/"[^>]*>View prototype details<\\/a>`,
   ),
 );
 assert.match(configureHtml, new RegExp(`href="${basePath || ""}\\/"`));

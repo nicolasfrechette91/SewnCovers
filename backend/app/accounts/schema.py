@@ -101,4 +101,3 @@ class AccountExportResponse(BaseModel):
     legal_acknowledgements: list[dict[str, object]] = Field(
         alias="legalAcknowledgements"
     )
-    analytics_consent: list[dict[str, object]] = Field(alias="analyticsConsent")

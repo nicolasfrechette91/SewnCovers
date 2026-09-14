@@ -15,7 +15,6 @@ test("keeps guest pages task-focused while preserving prototype and account disc
   await page.goto(`${basePath}/`);
   await expect(page.getByRole("link", { name: "Start configuring" })).toBeVisible();
   await expect(page.getByText(/cannot charge money, create a real shipment, or produce finished covers/i)).toBeVisible();
-  await expect(page.getByRole("link", { name: "View prototype details" })).toHaveAttribute("href", `${basePath}/trust/`);
   await expectCustomerLanguage(page);
 
   await page.goto(`${basePath}/configure/`);
@@ -53,11 +52,11 @@ test("keeps guest pages task-focused while preserving prototype and account disc
   await expectCustomerLanguage(page);
 });
 
-test("keeps implementation evidence in Trust and legal disclosures in Legal", async ({
+test("keeps legal disclosures in Legal", async ({
   page,
 }) => {
   await page.goto(`${basePath}/legal/`);
-  await expect(page.getByRole("heading", { name: "Legal and consent information" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Legal information" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Privacy notice" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Custom upload and moderation notice" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Demonstration commerce and fulfilment notice" })).toBeVisible();

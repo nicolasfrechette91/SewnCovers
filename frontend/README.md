@@ -295,8 +295,8 @@ overflow, and confirms referenced-asset deletion. Commerce coverage uses
 keyboard activation from server estimate through quote, cart, hosted fictional
 checkout, authoritative return status, customer-role admin denial, and
 administrator production review. Task 10.5 coverage exercises WebGL-supported
-and forced-unavailable fallbacks, consent, legal/trust, production checklist,
-issue/QC/packet, suppressed analytics, and readiness. It covers `320×568`,
+and forced-unavailable fallbacks, legal/trust, production checklist,
+issue/QC/packet, and readiness. It covers `320×568`,
 `768×1024`, and `1440×900` in both root and `/SewnCovers/` modes without
 production writes.
 

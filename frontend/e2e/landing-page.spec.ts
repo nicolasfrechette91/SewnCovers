@@ -48,9 +48,6 @@ test("renders the hero action hierarchy and preserves its content", async ({
   ).toContainText(
     "It cannot charge money, create a real shipment, or produce finished covers.",
   );
-  await expect(
-    hero.getByRole("link", { name: "View prototype details" }),
-  ).toHaveAttribute("href", `${basePath}/trust/`);
   await expect(hero.locator("figure")).toBeVisible();
 });
 

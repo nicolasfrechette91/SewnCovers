@@ -12,7 +12,6 @@ import {
 
 import { AccountNavigation } from "../components/account";
 import {
-  SiteFooter,
   SiteHeader,
   isCurrentNavigationPath,
   normalizeNavigationPath,

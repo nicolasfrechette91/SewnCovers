@@ -37,7 +37,6 @@ from app.accounts.throttle import (
 from app.commerce.encryption import ShippingCipher, ShippingEncryptionError
 from app.errors import APIProblem, authentication_failed, authentication_required
 from app.persistence.models import (
-    AnalyticsConsentDecision,
     AuthenticatedSession,
     CartLine,
     CommerceQuote,
@@ -345,22 +344,6 @@ class AccountService:
                     )
                     .where(LegalAcknowledgement.account_id == authenticated.account.id)
                     .order_by(LegalAcknowledgement.acknowledged_at)
-                ).all()
-            ],
-            analytics_consent=[
-                {
-                    "purpose": decision.purpose,
-                    "status": decision.status,
-                    "documentVersion": decision.document_version,
-                    "privacySignal": decision.privacy_signal,
-                    "decidedAt": decision.decided_at.isoformat(),
-                }
-                for decision in self._session.scalars(
-                    select(AnalyticsConsentDecision)
-                    .where(
-                        AnalyticsConsentDecision.account_id == authenticated.account.id
-                    )
-                    .order_by(AnalyticsConsentDecision.decided_at)
                 ).all()
             ],
         )

@@ -10,7 +10,6 @@ import {
   waitFor,
 } from "@testing-library/react";
 
-import { ConsentPreferences } from "../components/assurance/consent-preferences";
 import { ProductionOperationsScreen } from "../components/assurance/production-operations-screen";
 import { AdvancedPreview } from "../components/configurator/advanced-preview";
 import { AuthProvider } from "../context/auth";
@@ -100,12 +99,7 @@ afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;
   window.HTMLCanvasElement.prototype.getContext = originalGetContext;
-  window.localStorage.clear();
   window.sessionStorage.clear();
-  Object.defineProperty(navigator, "globalPrivacyControl", {
-    configurable: true,
-    value: undefined,
-  });
 });
 
 test("renders every supported approximate 3D shape with keyboard controls and summaries", async () => {
@@ -205,44 +199,14 @@ test("shows WebGL and private-texture authorization fallback states", async () =
   );
 });
 
-test("honors Global Privacy Control without blocking core access", async () => {
-  Object.defineProperty(navigator, "globalPrivacyControl", {
-    configurable: true,
-    value: true,
-  });
-  globalThis.fetch = async () =>
-    new Response(
-      JSON.stringify({
-        status: "gpc_restricted",
-        documentVersion: 1,
-        privacySignal: true,
-        decidedAt: new Date().toISOString(),
-        behavior: "Optional collection is off.",
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    );
-  render(
-    <AuthProvider>
-      <ConsentPreferences />
-    </AuthProvider>,
-  );
-  await waitFor(() => {
-    assert.match(document.body.textContent ?? "", /Global Privacy Control/);
-  });
-  assert.ok(
-    screen.getByRole("button", { name: "Change analytics preferences" }),
-  );
-});
-
 test("renders legal, unauthorized, and review-required surfaces", async () => {
   const legal = render(<LegalPage />);
   assert.ok(
-    legal.getByRole("heading", { name: "Legal and consent information" }),
+    legal.getByRole("heading", { name: "Legal information" }),
   );
   for (const heading of [
     "Terms of use",
     "Privacy notice",
-    "Cookie and analytics notice",
     "Custom upload and moderation notice",
     "Demonstration commerce and fulfilment notice",
     "Accessibility statement",
@@ -250,7 +214,6 @@ test("renders legal, unauthorized, and review-required surfaces", async () => {
   ]) {
     assert.ok(legal.getByRole("heading", { name: heading }));
   }
-  assert.match(document.body.textContent ?? "", /has not been approved by a lawyer/);
   cleanup();
 
   render(

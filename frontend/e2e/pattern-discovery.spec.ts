@@ -185,7 +185,9 @@ test("discovers built-in patterns progressively without losing selection", async
   await search.fill("nested");
   await expect(page.getByRole("radio", { name: "Diamond path" })).toBeVisible();
   await expect(
-    page.getByText("1 of 15 patterns match. Showing all matches."),
+    page.locator('p:not([role="status"])', {
+      hasText: "1 of 15 patterns match. Showing all matches.",
+    }),
   ).toBeVisible();
 
   await page

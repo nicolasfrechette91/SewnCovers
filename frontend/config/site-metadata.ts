@@ -23,7 +23,6 @@ export const PUBLIC_INDEXABLE_PATHS = Object.freeze([
   "/configure/",
   "/commerce/",
   "/legal/",
-  "/case-study/",
 ] as const);
 
 export function siteUrl(path = "/"): string {

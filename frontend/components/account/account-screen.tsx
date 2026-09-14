@@ -250,8 +250,7 @@ function AuthForm({
           />
           <span>
             I acknowledge account terms version 1 and understand this is a
-            portfolio demonstration without commercial availability. Optional
-            analytics consent remains separate.
+            portfolio demonstration without commercial availability.
           </span>
           </label>
           {fieldErrors.acceptedTerms ? (

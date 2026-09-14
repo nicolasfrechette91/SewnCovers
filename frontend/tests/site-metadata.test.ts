@@ -17,8 +17,8 @@ test("builds stable production URLs with the GitHub Pages base path", () => {
     "https://nicolasfrechette91.github.io/SewnCovers/",
   );
   assert.equal(
-    siteUrl("/case-study/"),
-    "https://nicolasfrechette91.github.io/SewnCovers/case-study/",
+    siteUrl("/legal/"),
+    "https://nicolasfrechette91.github.io/SewnCovers/legal/",
   );
   assert.equal(siteUrl("//configure/"), siteUrl("/configure/"));
   assert.doesNotMatch(siteUrl("/account/"), /localhost|\/\/SewnCovers/);
@@ -61,6 +61,5 @@ test("keeps the sitemap allowlist limited to durable public routes", () => {
     "/configure/",
     "/commerce/",
     "/legal/",
-    "/case-study/",
   ]);
 });

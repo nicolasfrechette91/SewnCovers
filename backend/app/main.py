@@ -130,15 +130,9 @@ OPENAPI_TAGS = [
         ),
     },
     {
-        "name": "Legal and consent",
+        "name": "Legal",
         "description": (
             "Versioned review-required information and account acknowledgements."
-        ),
-    },
-    {
-        "name": "Analytics",
-        "description": (
-            "Consent-gated first-party product events and suppressed aggregates."
         ),
     },
     {

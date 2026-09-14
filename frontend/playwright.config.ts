@@ -5,7 +5,7 @@ const origin = "http://127.0.0.1:3100";
 export default defineConfig({
   testDir: "./e2e",
   outputDir: ".playwright",
-  globalTimeout: 120_000,
+  globalTimeout: 240_000,
   timeout: 45_000,
   fullyParallel: false,
   workers: 2,

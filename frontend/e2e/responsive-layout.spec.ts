@@ -45,7 +45,6 @@ async function fixtures(page: Page, role: "guest" | "customer" | "administrator"
     if (p === "/admin/price-books") return json(empty ? [] : [{ id, version: 1, label: long, state: "draft", currency: "CAD", configuration: { model: "demonstration-price-v1" }, effectiveAt: null, publishedAt: null, createdAt: date }]);
     if (p === "/admin/audit") return json(empty ? [] : [{ id: 1, action: "order.transition", targetType: "order", targetId: orderId, actorAccountId: "A".repeat(22), data: {}, createdAt: date }]);
     if (p === "/admin/production-work") return json({ items: empty ? [] : [work], page: 1, pageSize: 20, total: empty ? 0 : 1 });
-    if (p === "/admin/analytics/aggregates") return json({ demonstration: true, fixtureBacked: true, timezone: "UTC", suppressionThreshold: 3, freshness: date, items: [{ eventType: "visualization_fallback", count: null, suppressed: true }], limitations: ["Fictional fixture only."], consentScope: "Affirmative optional consent only." });
     if (p === "/uploads") return json([]);
     if (p === "/readiness") return json({ ready: false, checks: [{ code: "contact", level: "error", message: "Production contact remains a placeholder." }], disclaimer: "Not an audit or deployment approval." });
     if (p === "/patterns") return json(["prototype-botanical", "fern-trail", "meadow-sprig", "prototype-geometric", "diamond-path", "arch-grid", "harbor-stripe", "orchard-stripe", "ribbon-stripe", "prototype-woven", "basket-check", "linen-crosshatch", "terrace-wave", "pebble-drift", "confetti-grid"].map((key, i) => ({ id: key, name: key.replaceAll("-", " "), description: `Mock ${key}`, categoryId: ["botanical", "geometric", "striped", "woven", "abstract"][Math.floor(i / 3)], colorIds: ["ivory"], previewClassName: `api-${key}` })));
@@ -142,9 +141,7 @@ for (const role of ["guest", "customer", "administrator"] as const) {
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
 
-    const accountStateRoutes = role === "guest"
-      ? routes()
-      : routes().filter((route) => route !== "/case-study/");
+    const accountStateRoutes = routes();
     for (const route of [...accountStateRoutes, "/404.html"]) {
       await page.goto(`${base}${route}`);
       await page.getByRole("heading", { level: 1 }).first().waitFor();
@@ -171,8 +168,6 @@ test("responsive populated details and operational controls", async ({ page }, i
       await page.getByRole("button", { name: "Review specification" }).click();
       await page.getByRole("button", { name: /SC-DEMO-WORK0001/ }).click();
       await page.getByText("Immutable production specification", { exact: true }).click();
-      await page.getByRole("button", { name: "Load aggregates" }).click();
-      await expect(page.getByText("Suppressed", { exact: true })).toBeVisible();
       await page.getByRole("button", { name: "Run readiness checks" }).click();
     }
     await checkMatrix(page, name, info.outputDir);
@@ -240,19 +235,14 @@ test("touch navigation, form errors, table scrolling and forced-colors reflow", 
   expect(await region.evaluate(el => getComputedStyle(el).outlineStyle)).not.toBe("none");
   expect((await geometry(page)).overflow).toBeLessThanOrEqual(1);
   await expect(page.locator('thead th[scope="col"]')).toHaveCount(3);
-  await expect(page.locator('tbody th[scope="row"]')).toHaveCount(4);
-  const consent = page.getByRole("complementary", { name: "Analytics preferences" });
-  await consent.scrollIntoViewIfNeeded();
-  expect(await consent.evaluate(el => getComputedStyle(el).position)).toBe("static");
-  await page.getByRole("button", { name: "Reject optional" }).tap();
-  await expect(page.getByRole("button", { name: "Change analytics preferences" })).toBeVisible();
+  await expect(page.locator('tbody th[scope="row"]')).toHaveCount(3);
 });
 
 test("public content reflows with WCAG text-spacing overrides", async ({ page }) => {
   await fixtures(page, "guest");
   await page.setViewportSize({ width: 320, height: 568 });
 
-  for (const route of ["/", "/configure/", "/commerce/", "/case-study/", "/legal/"]) {
+  for (const route of ["/", "/configure/", "/commerce/", "/legal/"]) {
     await page.goto(`${base}${route}`);
     await page.addStyleTag({
       content: `

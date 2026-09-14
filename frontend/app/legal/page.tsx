@@ -16,18 +16,9 @@ const documents = [
     type: "privacy",
     title: "Privacy notice",
     body: [
-      "The local API stores account credentials as password hashes, session tokens as hashes, private project versions, upload processing records, consent decisions, and immutable commerce records. Shipping fields are encrypted separately.",
-      "An authorized export includes account, project, custom-pattern metadata, retained order data, legal acknowledgements, and analytics-consent history. Account deletion removes private workspace data unless an active paid order must first be fulfilled or reviewed; retained completed-order records are detached and shipping fields are removed.",
+      "The local API stores account credentials as password hashes, session tokens as hashes, private project versions, upload processing records, and immutable commerce records. Shipping fields are encrypted separately.",
+      "An authorized export includes account, project, custom-pattern metadata, retained order data, and legal acknowledgements. Account deletion removes private workspace data unless an active paid order must first be fulfilled or reviewed; retained completed-order records are detached and shipping fields are removed.",
       "No guaranteed deletion timeline or jurisdictional legal basis is claimed. Operational retention enforcement and qualified privacy review remain required before production use.",
-    ],
-  },
-  {
-    type: "tracking",
-    title: "Cookie and analytics notice",
-    body: [
-      "Strictly necessary browser storage keeps the current bearer session, rotating guest analytics pseudonym, and analytics preference. The configurator remains fully usable when optional analytics are rejected.",
-      "Optional first-party analytics are disabled until affirmative consent and stop after rejection or withdrawal. Global Privacy Control keeps optional collection off. Allowlisted events exclude contact details, full measurements, filenames, private asset identities, share tokens, order references, URLs, and uploaded bytes.",
-      "Raw optional events have a documented 30-day local retention target; aggregates suppress cohorts below three. Withdrawal cannot retroactively alter aggregates that were already irreversibly anonymized. No third-party analytics request occurs by default.",
     ],
   },
   {
@@ -69,9 +60,9 @@ const documents = [
 ] as const;
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Legal and consent information",
+  title: "Legal information",
   description:
-    "Versioned portfolio-demonstration terms, privacy, analytics, upload, commerce, accessibility, and security information.",
+    "Versioned portfolio-demonstration terms, privacy, upload, commerce, accessibility, and security information.",
   path: "/legal/",
 });
 
@@ -84,7 +75,7 @@ export default function LegalPage() {
             Versioned demonstration documents
           </p>
           <h1 className="mt-2 font-display text-page-title font-heading">
-            Legal and consent information
+            Legal information
           </h1>
         </header>
         <nav className="mt-layout" aria-label="Legal documents">
@@ -130,7 +121,6 @@ export default function LegalPage() {
               <tbody>
                 <tr><th scope="row" className="border border-border p-2">Payments</th><td className="border border-border p-2">Stripe configured-only; sandbox local</td><td className="border border-border p-2">No raw payment payload; immutable order and verified-event digest retained</td></tr>
                 <tr><th scope="row" className="border border-border p-2">Uploads</th><td className="border border-border p-2">Private S3-compatible storage and external moderation configured-only</td><td className="border border-border p-2">Private objects deleted on account/upload deletion except protected paid-order derivatives</td></tr>
-                <tr><th scope="row" className="border border-border p-2">Analytics</th><td className="border border-border p-2">First-party local adapter only</td><td className="border border-border p-2">Raw optional events: documented 30-day target; suppressed aggregates may persist</td></tr>
                 <tr><th scope="row" className="border border-border p-2">Shipping</th><td className="border border-border p-2">Encrypted database fields; allowlisted fictional carriers</td><td className="border border-border p-2">Removed when a retained order is detached on account deletion</td></tr>
               </tbody>
             </table>

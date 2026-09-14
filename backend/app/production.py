@@ -17,8 +17,6 @@ EXPECTED_PATTERN_COUNT = 15
 EXPECTED_TABLES = {
     "alembic_version",
     "authenticated_sessions",
-    "analytics_consent_decisions",
-    "analytics_events",
     "audit_events",
     "cart_lines",
     "commerce_quotes",

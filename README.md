@@ -152,10 +152,8 @@ The local configurator now offers an on-demand, explicitly approximate WebGL
 preview for Square, Rectangle, and Box / bench while preserving the complete SVG
 fallback. Verified paid-order lines create durable, idempotent production work
 with structured checklists/issues, optimistic transitions, quality control,
-append-only history, and checksum-stable safe packets. Optional first-party
-analytics require independent affirmative versioned consent, honor Global
-Privacy Control, reject arbitrary payloads, and suppress small administrator
-aggregates. Versioned legal pages and explicit account/upload/sandbox-checkout
+append-only history, and checksum-stable safe packets. Versioned legal pages
+and explicit account/upload/sandbox-checkout
 acknowledgements sit beside a public evidence-bounded Trust area and read-only
 readiness checks. No live provider, production migration, deployment, legal
 review, security certification, or manufacturing validation occurred. See
@@ -299,9 +297,6 @@ must never contain secrets.
 | `FRONTEND_ORIGIN` | Backend; server-only, non-secret | Optional locally/test; required in production | One exact path-free HTTP(S) origin. Local default is `http://localhost:3000`; production accepts only `https://nicolasfrechette91.github.io`. |
 | `PORT` | Backend; server-only, non-secret | Optional; defaults to `8000` | Integer 1-65535. Render supplies it; the production process binds `0.0.0.0`. |
 | `DATABASE_URL` | Backend; **secret** | Required for database requests, online migrations, and production startup | Private SQLAlchemy URL. Locally use only `<NEON_DEVELOPMENT_DATABASE_URL>`; Render owns a separate protected production value. |
-| `ANALYTICS_NOTICE_VERSION` | Backend; non-secret | Optional; fixed at `1` | Version required by the independent optional-analytics consent contract. |
-| `ANALYTICS_RETENTION_DAYS` | Backend; non-secret | Optional; defaults to `30` | Bounded raw optional-event retention target; operational cleanup still requires review. |
-| `ANALYTICS_SUPPRESSION_THRESHOLD` | Backend; non-secret | Optional; defaults to `3`, minimum `3` | Hides small administrator aggregate cohorts. |
 | `VULNERABILITY_REPORT_CONTACT` | Backend; non-secret | Placeholder locally; replace before production | Use `security-contact@example.invalid` only as an unmistakably non-routable demonstration placeholder. |
 | `PYTHON_VERSION` | Render build; non-secret | Required by `render.yaml` | Pinned to `3.13.2`. |
 
@@ -351,7 +346,7 @@ development/test recovery.
 | `20260818_01` | Adds accounts, hashed/expiring sessions, private projects, immutable versions, and hashed revocable share grants without changing anonymous designs. |
 | `20260818_02` | Adds owned private custom uploads, derivative metadata, durable processing/moderation state, and exact project-version asset references. |
 | `20260828_01` | Adds server-owned demonstration price books, quotes, cart, payment events, immutable orders, protected production assets, fulfilment, and audit history. |
-| `20260829_01` **(head)** | Adds immutable legal versions/acknowledgements, consent and strict optional analytics, durable paid-line production work/checklists/issues/history, and packet metadata. |
+| `20260829_01` **(head)** | Adds immutable legal versions/acknowledgements, durable paid-line production work/checklists/issues/history, and packet metadata. |
 
 Production startup additionally verifies this exact head and every expected
 migration, catalogue, anonymous-design, private-workspace, upload, and commerce table, the reviewed
@@ -604,11 +599,11 @@ publishes only `frontend/out`. Render auto-deploys after checks pass.
 This remains a portfolio MVP, not a commercially available commerce or
 manufacturing system. The local worktree implements optional accounts, private
 projects, custom uploads, a fully fictional Task 10.4 commerce sandbox, and
-local Task 10.5 advanced-preview, production-work, analytics-consent, legal, and
+local Task 10.5 advanced-preview, production-work, legal, and
 trust/readiness capabilities; none of Phase 10 is deployed. The live service has no account, upload,
 pricing, quote, cart, payment, order, fulfilment, refund, or administration
 capability. Local sandbox data must remain fictional. Neither environment has
-inventory, production scheduling, live analytics/provider operations, reviewed
+inventory, production scheduling, reviewed
 legal content, or production-operated trust workflow. See [Local Task 10.4
 demonstration commerce](#local-task-104-demonstration-commerce-not-deployed) and
 [Local Task 10.5 assurance and production operations](#local-task-105-assurance-and-production-operations-not-deployed).

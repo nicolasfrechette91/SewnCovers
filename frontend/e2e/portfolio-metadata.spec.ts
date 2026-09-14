@@ -1,20 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-const appOrigin = "http://127.0.0.1:3100";
 const basePath =
   process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
 const productionSite = "https://nicolasfrechette91.github.io/SewnCovers";
 const socialImage = `${productionSite}/social-preview.jpg`;
-
-async function expectNoOverflow(page: Page) {
-  expect(
-    await page.evaluate(
-      () =>
-        document.documentElement.scrollWidth <=
-        document.documentElement.clientWidth,
-    ),
-  ).toBe(true);
-}
 
 test("exports canonical and social metadata for every indexable route", async ({
   page,
@@ -23,7 +12,7 @@ test("exports canonical and social metadata for every indexable route", async ({
     ["/", "SewnCovers | Cushion-cover design prototype"],
     ["/configure/", "Configure a cushion | SewnCovers"],
     ["/commerce/", "Prototype pricing | SewnCovers"],
-    ["/legal/", "Legal and consent information | SewnCovers"],
+    ["/legal/", "Legal information | SewnCovers"],
   ] as const;
 
   for (const [route, title] of routes) {

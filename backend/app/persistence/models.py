@@ -740,24 +740,9 @@ LEGAL_DOCUMENT_TYPES = (
     "privacy",
     "security",
     "terms",
-    "tracking",
     "uploads",
 )
 ACKNOWLEDGEMENT_PURPOSES = ("account_terms", "sandbox_checkout", "upload_rights")
-CONSENT_PURPOSES = ("optional_product_analytics",)
-CONSENT_STATUSES = ("accepted", "rejected", "withdrawn", "gpc_restricted")
-ANALYTICS_EVENT_TYPES = (
-    "checkout_started",
-    "configurator_stage_completed",
-    "configurator_stage_viewed",
-    "order_stage_changed",
-    "pattern_category_selected",
-    "payment_completed_sandbox",
-    "project_saved",
-    "quote_created",
-    "visualization_failed",
-    "visualization_fallback",
-)
 PRODUCTION_WORK_STATES = (
     "review",
     "approved",
@@ -1214,85 +1199,6 @@ class LegalAcknowledgement(Base):
     )
     purpose: Mapped[str] = mapped_column(String(32), nullable=False)
     acknowledged_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utc_now
-    )
-
-
-class AnalyticsConsentDecision(Base):
-    """Append-only versioned optional-analytics decision."""
-
-    __tablename__ = "analytics_consent_decisions"
-    __table_args__ = (
-        PrimaryKeyConstraint("id", name="pk_analytics_consent_decisions"),
-        CheckConstraint(
-            f"purpose IN ({_sql_values(CONSENT_PURPOSES)})",
-            name="ck_analytics_consent_purpose_supported",
-        ),
-        CheckConstraint(
-            f"status IN ({_sql_values(CONSENT_STATUSES)})",
-            name="ck_analytics_consent_status_supported",
-        ),
-        CheckConstraint(
-            "document_version >= 1", name="ck_analytics_consent_version_positive"
-        ),
-        CheckConstraint(
-            "(account_id IS NOT NULL AND guest_id_hash IS NULL) OR "
-            "(account_id IS NULL AND length(guest_id_hash) = 64)",
-            name="ck_analytics_consent_subject",
-        ),
-        Index("ix_analytics_consent_account", "account_id", "decided_at"),
-        Index("ix_analytics_consent_guest", "guest_id_hash", "decided_at"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, autoincrement=True, nullable=False)
-    account_id: Mapped[str | None] = mapped_column(
-        String(22), ForeignKey("customer_accounts.id", ondelete="CASCADE")
-    )
-    guest_id_hash: Mapped[str | None] = mapped_column(String(64))
-    purpose: Mapped[str] = mapped_column(String(40), nullable=False)
-    status: Mapped[str] = mapped_column(String(24), nullable=False)
-    document_version: Mapped[int] = mapped_column(Integer, nullable=False)
-    privacy_signal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    decided_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utc_now
-    )
-
-
-class AnalyticsEvent(Base):
-    """Allowlisted, bounded optional product event without arbitrary JSON."""
-
-    __tablename__ = "analytics_events"
-    __table_args__ = (
-        PrimaryKeyConstraint("id", name="pk_analytics_events"),
-        UniqueConstraint(
-            "subject_key", "client_event_id", name="uq_analytics_event_retry"
-        ),
-        CheckConstraint(
-            f"event_type IN ({_sql_values(ANALYTICS_EVENT_TYPES)})",
-            name="ck_analytics_events_type_supported",
-        ),
-        CheckConstraint(
-            "length(subject_key) = 64", name="ck_analytics_events_subject_hash"
-        ),
-        CheckConstraint(
-            "length(client_event_id) BETWEEN 8 AND 64",
-            name="ck_analytics_events_client_id",
-        ),
-        Index("ix_analytics_events_received", "received_at", "event_type"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, autoincrement=True, nullable=False)
-    account_id: Mapped[str | None] = mapped_column(
-        String(22), ForeignKey("customer_accounts.id", ondelete="SET NULL")
-    )
-    subject_key: Mapped[str] = mapped_column(String(64), nullable=False)
-    client_event_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    event_type: Mapped[str] = mapped_column(String(48), nullable=False)
-    dimension: Mapped[str | None] = mapped_column(String(40))
-    occurred_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    received_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utc_now
     )
 

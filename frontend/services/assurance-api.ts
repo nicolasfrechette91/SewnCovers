@@ -11,19 +11,6 @@ export interface LegalDocument {
   readonly reviewRequired: boolean;
 }
 
-export interface ConsentDecision {
-  readonly status:
-    | "accepted"
-    | "rejected"
-    | "withdrawn"
-    | "gpc_restricted"
-    | "unset";
-  readonly documentVersion: number | null;
-  readonly privacySignal: boolean;
-  readonly decidedAt: string | null;
-  readonly behavior: string;
-}
-
 export interface ProductionWork {
   readonly id: string;
   readonly orderReference: string;
@@ -43,23 +30,6 @@ export interface ProductionQueue {
   readonly page: number;
   readonly pageSize: number;
   readonly total: number;
-}
-
-export interface AnalyticsAggregate {
-  readonly demonstration: true;
-  readonly fixtureBacked: boolean;
-  readonly fromTime: string;
-  readonly toTime: string;
-  readonly timezone: "UTC";
-  readonly consentScope: string;
-  readonly suppressionThreshold: number;
-  readonly freshness: string;
-  readonly items: readonly {
-    readonly eventType: string;
-    readonly count: number | null;
-    readonly suppressed: boolean;
-  }[];
-  readonly limitations: readonly string[];
 }
 
 export interface ReadinessReport {
@@ -132,14 +102,6 @@ async function request<T>(
   return body;
 }
 
-const isConsent = (value: unknown): value is ConsentDecision =>
-  isRecord(value) &&
-  ["accepted", "rejected", "withdrawn", "gpc_restricted", "unset"].includes(
-    String(value.status),
-  ) &&
-  typeof value.privacySignal === "boolean" &&
-  typeof value.behavior === "string";
-
 const isWork = (value: unknown): value is ProductionWork =>
   isRecord(value) &&
   typeof value.id === "string" &&
@@ -176,33 +138,6 @@ export const assuranceApi = {
         typeof value.documentVersion === "number" &&
         typeof value.purpose === "string" &&
         typeof value.acknowledgedAt === "string",
-    });
-  },
-  consent(
-    guestId: string,
-    token?: string,
-  ) {
-    return request(
-      `analytics/consent?guestId=${encodeURIComponent(guestId)}`,
-      { token, validate: isConsent },
-    );
-  },
-  decideConsent(
-    guestId: string,
-    status: "accepted" | "rejected" | "withdrawn",
-    privacySignal: boolean,
-    token?: string,
-  ) {
-    return request("analytics/consent", {
-      method: "PUT",
-      token,
-      body: {
-        status,
-        documentVersion: 1,
-        guestId: token ? undefined : guestId,
-        privacySignal,
-      },
-      validate: isConsent,
     });
   },
   productionQueue(token: string, query = "") {
@@ -306,21 +241,6 @@ export const assuranceApi = {
         typeof value.content === "string" &&
         typeof value.checksum === "string" &&
         typeof value.generatedAt === "string",
-    });
-  },
-  aggregates(token: string, from: Date, to: Date) {
-    const query = new URLSearchParams({
-      from: from.toISOString(),
-      to: to.toISOString(),
-    });
-    return request(`admin/analytics/aggregates?${query}`, {
-      token,
-      validate: (value): value is AnalyticsAggregate =>
-        isRecord(value) &&
-        value.demonstration === true &&
-        Array.isArray(value.items) &&
-        Array.isArray(value.limitations) &&
-        typeof value.freshness === "string",
     });
   },
   readiness() {

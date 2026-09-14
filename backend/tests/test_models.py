@@ -123,8 +123,6 @@ def test_declarative_models_reuse_one_metadata_and_existing_table_contracts() ->
     assert cover_designs_table is CoverDesign.__table__
     assert set(Base.metadata.tables) == {
         "authenticated_sessions",
-        "analytics_consent_decisions",
-        "analytics_events",
         "audit_events",
         "cart_lines",
         "commerce_quotes",

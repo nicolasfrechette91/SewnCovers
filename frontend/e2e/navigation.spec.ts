@@ -190,7 +190,6 @@ test("preserves every public route for direct navigation", async ({ page }) => {
     "projects/",
     "commerce/",
     "cart/",
-    "case-study/",
     "orders/",
     "account/",
     "admin/",
@@ -199,4 +198,36 @@ test("preserves every public route for direct navigation", async ({ page }) => {
     const response = await page.goto(`${basePath}/${route}`);
     expect(response?.status()).toBe(200);
   }
+});
+
+test("loads and reloads without the removed product analytics feature", async ({
+  page,
+}) => {
+  const featureRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/analytics|telemetry/i.test(request.url())) {
+      featureRequests.push(request.url());
+    }
+  });
+
+  for (const route of ["", "legal/"]) {
+    await page.goto(`${basePath}/${route}`);
+    await page.reload();
+  }
+
+  await expect(
+    page.getByRole("complementary", { name: "Analytics preferences" }),
+  ).toHaveCount(0);
+  expect(featureRequests).toEqual([]);
+  expect(
+    await page.evaluate(() => ({
+      local: Object.keys(localStorage).filter((key) => /analytics|consent/i.test(key)),
+      session: Object.keys(sessionStorage).filter((key) => /analytics|consent/i.test(key)),
+    })),
+  ).toEqual({ local: [], session: [] });
+  expect(
+    (await page.context().cookies()).filter((cookie) =>
+      /analytics|consent/i.test(cookie.name),
+    ),
+  ).toEqual([]);
 });

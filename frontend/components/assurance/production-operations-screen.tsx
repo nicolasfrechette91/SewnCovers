@@ -86,7 +86,7 @@ export function ProductionOperationsScreen() {
         role="status"
       >
         Administrator authorization is required. Customers cannot view
-        production work, packets, analytics, or readiness details.
+        production work, packets, or readiness details.
       </p>
     );
   }
