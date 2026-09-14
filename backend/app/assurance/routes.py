@@ -5,9 +5,6 @@ from fastapi import FastAPI
 from app.assurance import api
 from app.assurance.schema import (
     AcknowledgementResponse,
-    AnalyticsAggregateResponse,
-    AnalyticsEventResponse,
-    ConsentResponse,
     LegalDocumentResponse,
     ProductionPacketResponse,
     ProductionQueueResponse,
@@ -38,7 +35,7 @@ def register_assurance_routes(application: FastAPI) -> None:
             ["GET"],
             list[LegalDocumentResponse],
             200,
-            "Legal and consent",
+            "Legal",
             "List current versioned demonstration legal documents",
             (
                 "Returns review-required portfolio content; no legal approval or "
@@ -51,7 +48,7 @@ def register_assurance_routes(application: FastAPI) -> None:
             ["GET"],
             LegalDocumentResponse,
             200,
-            "Legal and consent",
+            "Legal",
             "Read one legal document version",
             "Version is optional and defaults to the current immutable version.",
         ),
@@ -61,7 +58,7 @@ def register_assurance_routes(application: FastAPI) -> None:
             ["GET"],
             list[AcknowledgementResponse],
             200,
-            "Legal and consent",
+            "Legal",
             "List the caller's acknowledgements",
             "Account-scoped version references only; document text is not duplicated.",
         ),
@@ -71,64 +68,9 @@ def register_assurance_routes(application: FastAPI) -> None:
             ["POST"],
             AcknowledgementResponse,
             201,
-            "Legal and consent",
+            "Legal",
             "Acknowledge one required legal purpose",
-            (
-                "The account and timestamp are server-derived. Optional analytics "
-                "consent is independent."
-            ),
-        ),
-        (
-            "/analytics/consent",
-            api.read_consent,
-            ["GET"],
-            ConsentResponse,
-            200,
-            "Analytics",
-            "Read optional analytics consent",
-            (
-                "Supports an authenticated account or a rotating guest pseudonym; "
-                "no fingerprinting."
-            ),
-        ),
-        (
-            "/analytics/consent",
-            api.decide_consent,
-            ["PUT"],
-            ConsentResponse,
-            200,
-            "Analytics",
-            "Set or withdraw optional analytics consent",
-            (
-                "GPC overrides affirmative optional collection. Decisions are "
-                "append-only and versioned."
-            ),
-        ),
-        (
-            "/analytics/events",
-            api.collect_event,
-            ["POST"],
-            AnalyticsEventResponse,
-            202,
-            "Analytics",
-            "Accept one allowlisted optional event",
-            (
-                "Rejects arbitrary names/properties, inactive consent, invalid "
-                "timestamps, high cardinality, and excessive rate."
-            ),
-        ),
-        (
-            "/admin/analytics/aggregates",
-            api.aggregates,
-            ["GET"],
-            AnalyticsAggregateResponse,
-            200,
-            "Analytics",
-            "Read privacy-suppressed product aggregates",
-            (
-                "Administrator-only aggregate counts with UTC freshness and a "
-                "minimum cohort threshold."
-            ),
+            "The account and timestamp are server-derived.",
         ),
         (
             "/admin/production-work",

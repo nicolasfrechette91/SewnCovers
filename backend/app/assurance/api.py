@@ -1,21 +1,14 @@
 """FastAPI dependencies and handlers for Task 10.5."""
 
-from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import Depends, Header, Path, Query
+from fastapi import Depends, Path, Query
 
 from app.accounts.api import AuthenticatedDependency
-from app.accounts.service import AccountService, AuthenticatedAccount
 from app.assurance.schema import (
     AcknowledgementRequest,
     AcknowledgementResponse,
-    AnalyticsAggregateResponse,
-    AnalyticsEventRequest,
-    AnalyticsEventResponse,
     ChecklistUpdateRequest,
-    ConsentRequest,
-    ConsentResponse,
     IssueRequest,
     LegalDocumentResponse,
     ProductionPacketResponse,
@@ -27,7 +20,6 @@ from app.assurance.schema import (
     WorkTransitionRequest,
 )
 from app.assurance.service import AssuranceService
-from app.errors import authentication_required
 from app.persistence.database import DatabaseSession
 from app.settings import get_settings
 
@@ -37,27 +29,8 @@ def get_assurance_service(session: DatabaseSession) -> AssuranceService:
 
 
 AssuranceDependency = Annotated[AssuranceService, Depends(get_assurance_service)]
-OptionalAuthorization = Annotated[
-    str | None, Header(alias="Authorization", max_length=160)
-]
 ResourcePath = Annotated[
     str, Path(min_length=22, max_length=22, pattern=r"^[A-Za-z0-9_-]{22}$")
-]
-
-
-def optional_account(
-    session: DatabaseSession, authorization: OptionalAuthorization = None
-) -> AuthenticatedAccount | None:
-    if authorization is None:
-        return None
-    scheme, separator, token = authorization.partition(" ")
-    if separator != " " or scheme.casefold() != "bearer" or not token:
-        raise authentication_required()
-    return AccountService(session).authenticate(token)
-
-
-OptionalAccountDependency = Annotated[
-    AuthenticatedAccount | None, Depends(optional_account)
 ]
 
 
@@ -68,9 +41,7 @@ def list_legal(service: AssuranceDependency) -> list[LegalDocumentResponse]:
 def get_legal(
     document_type: Annotated[
         str,
-        Path(
-            pattern=r"^(accessibility|commerce|privacy|security|terms|tracking|uploads)$"
-        ),
+        Path(pattern=r"^(accessibility|commerce|privacy|security|terms|uploads)$"),
     ],
     service: AssuranceDependency,
     version: Annotated[int | None, Query(ge=1, le=1000)] = None,
@@ -90,44 +61,6 @@ def acknowledge(
     service: AssuranceDependency,
 ) -> AcknowledgementResponse:
     return service.acknowledge(actor, request)
-
-
-def read_consent(
-    actor: OptionalAccountDependency,
-    service: AssuranceDependency,
-    guest_id: Annotated[
-        str | None,
-        Query(
-            alias="guestId", min_length=22, max_length=64, pattern=r"^[A-Za-z0-9_-]+$"
-        ),
-    ] = None,
-) -> ConsentResponse:
-    return service.consent(actor, guest_id)
-
-
-def decide_consent(
-    request: ConsentRequest,
-    actor: OptionalAccountDependency,
-    service: AssuranceDependency,
-) -> ConsentResponse:
-    return service.decide_consent(actor, request)
-
-
-def collect_event(
-    request: AnalyticsEventRequest,
-    actor: OptionalAccountDependency,
-    service: AssuranceDependency,
-) -> AnalyticsEventResponse:
-    return service.collect_event(actor, request)
-
-
-def aggregates(
-    actor: AuthenticatedDependency,
-    service: AssuranceDependency,
-    from_time: Annotated[datetime, Query(alias="from")],
-    to_time: Annotated[datetime, Query(alias="to")],
-) -> AnalyticsAggregateResponse:
-    return service.aggregates(actor, from_time, to_time)
 
 
 def queue(

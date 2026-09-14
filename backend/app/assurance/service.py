@@ -1,13 +1,12 @@
-"""Deterministic local legal, analytics, trust, and production services."""
+"""Deterministic local legal, trust, and production services."""
 
 from __future__ import annotations
 
 import hashlib
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.accounts.security import generate_resource_id
@@ -15,13 +14,7 @@ from app.accounts.service import AuthenticatedAccount
 from app.assurance.schema import (
     AcknowledgementRequest,
     AcknowledgementResponse,
-    AggregateItem,
-    AnalyticsAggregateResponse,
-    AnalyticsEventRequest,
-    AnalyticsEventResponse,
     ChecklistUpdateRequest,
-    ConsentRequest,
-    ConsentResponse,
     IssueRequest,
     LegalDocumentResponse,
     ProductionPacketResponse,
@@ -35,8 +28,6 @@ from app.assurance.schema import (
 )
 from app.errors import APIProblem
 from app.persistence.models import (
-    AnalyticsConsentDecision,
-    AnalyticsEvent,
     CustomerOrder,
     LegalAcknowledgement,
     LegalDocument,
@@ -50,56 +41,9 @@ from app.persistence.models import (
 from app.persistence.transactions import service_transaction
 from app.settings import Settings
 
-ANALYTICS_RATE_LIMIT_PER_MINUTE = 60
 SPECIFICATION_VERSION = "production-spec-v1"
 PACKET_VERSION = "production-packet-v1"
 CHECKLIST_ITEMS = ("configuration", "asset", "materials", "construction", "final")
-EVENT_DIMENSIONS: dict[str, set[str] | None] = {
-    "configurator_stage_viewed": {
-        "shape",
-        "measurements",
-        "details",
-        "pattern",
-        "preview",
-        "review",
-    },
-    "configurator_stage_completed": {
-        "shape",
-        "measurements",
-        "details",
-        "pattern",
-        "preview",
-        "review",
-    },
-    "pattern_category_selected": {
-        "abstract",
-        "botanical",
-        "custom",
-        "geometric",
-        "striped",
-        "woven",
-    },
-    "project_saved": {"anonymous", "authenticated"},
-    "order_stage_changed": {
-        "paid",
-        "review",
-        "production",
-        "quality",
-        "fulfilment",
-        "complete",
-        "exception",
-    },
-    "visualization_failed": {"initialization", "rendering", "texture_authorization"},
-    "visualization_fallback": {
-        "webgl_unavailable",
-        "reduced_capability",
-        "reduced_motion",
-        "authorization_expired",
-    },
-    "checkout_started": None,
-    "payment_completed_sandbox": None,
-    "quote_created": None,
-}
 WORK_TRANSITIONS = {
     "review": {"approved", "on_hold", "cancelled"},
     "approved": {"in_production", "on_hold", "cancelled"},
@@ -235,181 +179,6 @@ class AssuranceService:
             self.session.add(row)
             self.session.flush()
         return self._ack(row, doc)
-
-    def consent(
-        self, actor: AuthenticatedAccount | None, guest_id: str | None
-    ) -> ConsentResponse:
-        subject = self._subject(actor, guest_id)
-        query = (
-            select(AnalyticsConsentDecision)
-            .order_by(
-                AnalyticsConsentDecision.decided_at.desc(),
-                AnalyticsConsentDecision.id.desc(),
-            )
-            .limit(1)
-        )
-        query = (
-            query.where(AnalyticsConsentDecision.account_id == actor.account.id)
-            if actor
-            else query.where(AnalyticsConsentDecision.guest_id_hash == subject)
-        )
-        row = self.session.scalar(query)
-        if row is None:
-            return ConsentResponse(
-                status="unset",
-                document_version=None,
-                privacy_signal=False,
-                decided_at=None,
-                behavior="Optional analytics are off until an affirmative decision.",
-            )
-        return ConsentResponse(
-            status=row.status,
-            document_version=row.document_version,
-            privacy_signal=row.privacy_signal,
-            decided_at=_aware(row.decided_at),
-            behavior=(
-                "Withdrawal or rejection stops future optional collection; "
-                "previously anonymized aggregates are not retroactively changed."
-            ),
-        )
-
-    def decide_consent(
-        self, actor: AuthenticatedAccount | None, request: ConsentRequest
-    ) -> ConsentResponse:
-        if request.document_version != self.settings.analytics_notice_version:
-            raise _problem(
-                409,
-                "The analytics notice version is no longer current.",
-                "documentVersion",
-            )
-        status = "gpc_restricted" if request.privacy_signal else request.status
-        if request.privacy_signal and request.status == "accepted":
-            status = "gpc_restricted"
-        subject = self._subject(actor, request.guest_id)
-        row = AnalyticsConsentDecision(
-            account_id=actor.account.id if actor else None,
-            guest_id_hash=None if actor else subject,
-            purpose="optional_product_analytics",
-            status=status,
-            document_version=self.settings.analytics_notice_version,
-            privacy_signal=request.privacy_signal,
-            decided_at=self.clock(),
-        )
-        with service_transaction(self.session):
-            self.session.add(row)
-            self.session.flush()
-        return self.consent(actor, request.guest_id)
-
-    def collect_event(
-        self, actor: AuthenticatedAccount | None, request: AnalyticsEventRequest
-    ) -> AnalyticsEventResponse:
-        subject = self._subject(actor, request.guest_id)
-        consent = self.consent(actor, request.guest_id)
-        if consent.status != "accepted":
-            raise _problem(403, "Optional analytics consent is not active.", "consent")
-        allowed = EVENT_DIMENSIONS[request.event_type]
-        if (allowed is None and request.dimension is not None) or (
-            allowed is not None and request.dimension not in allowed
-        ):
-            raise _problem(
-                422, "Event dimension is not allowlisted for this event.", "dimension"
-            )
-        now = self.clock()
-        occurred = _aware(request.occurred_at)
-        if occurred < now - timedelta(hours=24) or occurred > now + timedelta(
-            minutes=5
-        ):
-            raise _problem(
-                422, "Event timestamp is outside the accepted window.", "occurredAt"
-            )
-        recent = (
-            self.session.scalar(
-                select(func.count())
-                .select_from(AnalyticsEvent)
-                .where(
-                    AnalyticsEvent.subject_key == subject,
-                    AnalyticsEvent.received_at >= now - timedelta(minutes=1),
-                )
-            )
-            or 0
-        )
-        if recent >= ANALYTICS_RATE_LIMIT_PER_MINUTE:
-            raise APIProblem(
-                429,
-                "credential_throttled",
-                "Optional analytics rate limit reached.",
-                ("body", "event"),
-            )
-        row = AnalyticsEvent(
-            account_id=actor.account.id if actor else None,
-            subject_key=subject,
-            client_event_id=request.client_event_id,
-            event_type=request.event_type,
-            dimension=request.dimension,
-            occurred_at=occurred,
-            received_at=now,
-        )
-        try:
-            with service_transaction(self.session):
-                self.session.add(row)
-                self.session.flush()
-        except IntegrityError:
-            return AnalyticsEventResponse(accepted=True, duplicate=True)
-        return AnalyticsEventResponse(accepted=True, duplicate=False)
-
-    def aggregates(
-        self, actor: AuthenticatedAccount, from_time: datetime, to_time: datetime
-    ) -> AnalyticsAggregateResponse:
-        _require_admin(actor)
-        start, end = _aware(from_time), _aware(to_time)
-        if (
-            end <= start
-            or end - start > timedelta(days=366)
-            or end > self.clock() + timedelta(minutes=5)
-        ):
-            raise _problem(
-                422, "Analytics range is invalid or exceeds 366 days.", "range"
-            )
-        rows = self.session.execute(
-            select(AnalyticsEvent.event_type, func.count(AnalyticsEvent.id))
-            .where(
-                AnalyticsEvent.received_at >= start, AnalyticsEvent.received_at < end
-            )
-            .group_by(AnalyticsEvent.event_type)
-            .order_by(AnalyticsEvent.event_type)
-        ).all()
-        items = [
-            AggregateItem(
-                event_type=name,
-                count=count
-                if count >= self.settings.analytics_suppression_threshold
-                else None,
-                suppressed=count < self.settings.analytics_suppression_threshold,
-            )
-            for name, count in rows
-        ]
-        return AnalyticsAggregateResponse(
-            fixture_backed=self.settings.environment != "production",
-            from_time=start,
-            to_time=end,
-            consent_scope="Affirmatively consented optional product events only",
-            suppression_threshold=self.settings.analytics_suppression_threshold,
-            freshness="Server timestamps; local adapter queried on request.",
-            items=items,
-            limitations=[
-                "Small cohorts are suppressed.",
-                (
-                    "Deterministic demonstration data does not indicate "
-                    "business performance."
-                ),
-                (
-                    "Raw optional events are retained for at most "
-                    f"{self.settings.analytics_retention_days} days by documented "
-                    "operational "
-                    "cleanup."
-                ),
-            ],
-        )
 
     def queue(
         self,
@@ -737,14 +506,10 @@ class AssuranceService:
                 "Hashed bearer sessions and private account workspaces",
                 "Immutable quotes/orders and verified webhook authority",
                 "Encrypted shipping fields and administrator audit history",
-                "Consent-gated first-party analytics allowlist",
                 "Conflict-safe production work and checksum-stable packets",
             ],
             mocked_or_deterministic=[
-                (
-                    "Sandbox payment, tax, refund, shipment, analytics, and "
-                    "production workflows"
-                ),
+                ("Sandbox payment, tax, refund, shipment, and production workflows"),
                 (
                     "Authorization, migration, export, deletion, and responsive "
                     "keyboard tests"
@@ -868,15 +633,6 @@ class AssuranceService:
             ),
         )
         add(
-            "analytics",
-            "information",
-            (
-                "First-party analytics notice version, bounded retention target, "
-                "and minimum suppression threshold are configured; collection "
-                "still requires subject consent."
-            ),
-        )
-        add(
             "sessions",
             "information",
             (
@@ -953,15 +709,6 @@ class AssuranceService:
                 "legal review, deployment approval, or live-provider test."
             ),
         )
-
-    def _subject(self, actor: AuthenticatedAccount | None, guest_id: str | None) -> str:
-        if actor:
-            return hashlib.sha256(f"account:{actor.account.id}".encode()).hexdigest()
-        if not guest_id:
-            raise _problem(
-                422, "A rotating pseudonymous guest identifier is required.", "guestId"
-            )
-        return hashlib.sha256(f"guest:{guest_id}".encode()).hexdigest()
 
     def _legal(self, row: LegalDocument) -> LegalDocumentResponse:
         return LegalDocumentResponse(

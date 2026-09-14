@@ -1,1 +1,1 @@
-"""Task 10.5 legal, analytics, trust, and production operations."""
+"""Task 10.5 legal, trust, and production operations."""

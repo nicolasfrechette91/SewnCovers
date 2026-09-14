@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Contract(BaseModel):
@@ -13,22 +13,9 @@ class Contract(BaseModel):
 
 
 DocumentType = Literal[
-    "accessibility", "commerce", "privacy", "security", "terms", "tracking", "uploads"
+    "accessibility", "commerce", "privacy", "security", "terms", "uploads"
 ]
 AcknowledgementPurpose = Literal["account_terms", "sandbox_checkout", "upload_rights"]
-ConsentStatus = Literal["accepted", "rejected", "withdrawn", "gpc_restricted"]
-AnalyticsEventType = Literal[
-    "checkout_started",
-    "configurator_stage_completed",
-    "configurator_stage_viewed",
-    "order_stage_changed",
-    "pattern_category_selected",
-    "payment_completed_sandbox",
-    "project_saved",
-    "quote_created",
-    "visualization_failed",
-    "visualization_fallback",
-]
 WorkState = Literal[
     "review",
     "approved",
@@ -70,78 +57,6 @@ class AcknowledgementResponse(Contract):
     document_version: int = Field(alias="documentVersion")
     purpose: AcknowledgementPurpose
     acknowledged_at: datetime = Field(alias="acknowledgedAt")
-
-
-class ConsentRequest(Contract):
-    status: ConsentStatus
-    document_version: int = Field(alias="documentVersion", ge=1, le=1000)
-    guest_id: str | None = Field(
-        default=None,
-        alias="guestId",
-        min_length=22,
-        max_length=64,
-        pattern=r"^[A-Za-z0-9_-]+$",
-    )
-    privacy_signal: bool = Field(default=False, alias="privacySignal")
-
-
-class ConsentResponse(Contract):
-    status: ConsentStatus | Literal["unset"]
-    document_version: int | None = Field(alias="documentVersion")
-    privacy_signal: bool = Field(alias="privacySignal")
-    decided_at: datetime | None = Field(alias="decidedAt")
-    behavior: str
-
-
-class AnalyticsEventRequest(Contract):
-    event_type: AnalyticsEventType = Field(alias="eventType")
-    client_event_id: str = Field(
-        alias="clientEventId", min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$"
-    )
-    guest_id: str | None = Field(
-        default=None,
-        alias="guestId",
-        min_length=22,
-        max_length=64,
-        pattern=r"^[A-Za-z0-9_-]+$",
-    )
-    dimension: str | None = Field(default=None, max_length=40, pattern=r"^[a-z0-9_-]+$")
-    occurred_at: datetime = Field(alias="occurredAt")
-
-    @field_validator("occurred_at", mode="before")
-    @classmethod
-    def parse_iso_timestamp(cls, value: object) -> object:
-        if not isinstance(value, str):
-            return value
-        try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return value
-        return parsed if parsed.tzinfo is not None else value
-
-
-class AnalyticsEventResponse(Contract):
-    accepted: bool
-    duplicate: bool
-
-
-class AggregateItem(Contract):
-    event_type: AnalyticsEventType = Field(alias="eventType")
-    count: int | None
-    suppressed: bool
-
-
-class AnalyticsAggregateResponse(Contract):
-    demonstration: Literal[True] = True
-    fixture_backed: bool = Field(alias="fixtureBacked")
-    from_time: datetime = Field(alias="fromTime")
-    to_time: datetime = Field(alias="toTime")
-    timezone: Literal["UTC"] = "UTC"
-    consent_scope: str = Field(alias="consentScope")
-    suppression_threshold: int = Field(alias="suppressionThreshold")
-    freshness: str
-    items: list[AggregateItem]
-    limitations: list[str]
 
 
 class ChecklistUpdateRequest(Contract):
