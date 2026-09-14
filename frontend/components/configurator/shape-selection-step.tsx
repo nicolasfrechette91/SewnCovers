@@ -78,7 +78,7 @@ export function ShapeSelectionStep({
           const isSelected = state.shape === option.id;
 
           return (
-            <div key={option.id} className="relative min-w-0">
+            <div key={option.id} className="relative h-full min-w-0">
               <input
                 className="shape-option-input peer sr-only"
                 id={optionId}
@@ -93,20 +93,20 @@ export function ShapeSelectionStep({
               />
               <label
                 htmlFor={optionId}
-                className="shape-option-label flex min-h-44 min-w-0 cursor-pointer flex-col rounded-card border-2 border-border-strong bg-surface p-control-x shadow-card transition-[background-color,border-color,box-shadow] hover:bg-surface-subtle active:shadow-none peer-checked:border-brand peer-checked:bg-surface-subtle motion-reduce:transition-none"
+                className="shape-option-label flex h-full min-h-44 min-w-0 cursor-pointer flex-col rounded-card border-2 border-border-strong bg-surface p-control-x shadow-card transition-[background-color,border-color,box-shadow] hover:bg-surface-subtle active:shadow-none peer-checked:border-brand peer-checked:bg-surface-subtle motion-reduce:transition-none"
               >
                 <span className="flex min-h-32 items-center justify-center rounded-control border border-border bg-page p-3">
                   <ShapeIllustration shape={option.id} />
                 </span>
 
-                <span className="mt-component flex min-w-0 items-start gap-3">
+                <span className="mt-component flex min-w-0 flex-1 items-start gap-3">
                   <span
                     aria-hidden="true"
                     className="shape-option-control-indicator mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-pill border-2 border-border-strong bg-surface text-label font-control text-transparent"
                   >
                     {isSelected ? "✓" : ""}
                   </span>
-                  <span className="min-w-0 flex-1">
+                  <span className="flex min-w-0 flex-1 self-stretch flex-col">
                     <span
                       id={titleId}
                       className="block break-words text-body font-control text-text-primary"
@@ -119,11 +119,13 @@ export function ShapeSelectionStep({
                     >
                       {option.description}
                     </span>
-                    <span
-                      id={statusId}
-                      className="mt-3 inline-flex min-h-11 max-w-full items-center rounded-pill border border-current px-3 py-2 text-label font-control break-words text-brand"
-                    >
-                      {isSelected ? "Selected" : "Available"}
+                    <span className="mt-auto pt-3">
+                      <span
+                        id={statusId}
+                        className="inline-flex min-h-11 max-w-full items-center rounded-pill border border-current px-3 py-2 text-label font-control break-words text-brand"
+                      >
+                        {isSelected ? "Selected" : "Available"}
+                      </span>
                     </span>
                   </span>
                 </span>
