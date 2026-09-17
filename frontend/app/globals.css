@@ -746,42 +746,98 @@ body {
     calc(3rem * var(--pattern-scale));
 }
 
-.cushion-preview-face {
-  overflow: hidden;
-  border-radius: 10px;
+.cushion-preview-product-stage {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 12rem;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
 }
 
-.cushion-preview-face-outline {
+.cushion-preview-model {
+  display: block;
+  width: min(100%, 42rem);
+  height: 100%;
+  max-height: 31rem;
+  overflow: visible;
+}
+
+.cushion-preview-pattern {
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-repeat: repeat;
+}
+
+.cushion-preview-shading,
+.cushion-preview-highlight {
+  pointer-events: none;
+}
+
+.cushion-preview-fold {
   fill: none;
-  stroke: var(--color-brand);
-  stroke-width: 2;
-}
-
-.cushion-preview-side {
-  fill: color-mix(
-    in srgb,
-    var(--color-brand) 76%,
-    var(--color-surface)
-  );
-  stroke: var(--color-brand);
-  stroke-width: 2;
-}
-
-.cushion-preview-bottom {
-  fill: color-mix(
-    in srgb,
-    var(--color-accent-strong) 72%,
-    var(--color-surface)
-  );
-  stroke: var(--color-brand);
-  stroke-width: 2;
-}
-
-.cushion-preview-piping {
-  fill: none;
-  stroke: var(--color-accent-strong);
-  stroke-width: 2;
+  stroke: rgb(62 48 36 / 0.2);
+  stroke-width: 8;
+  stroke-linecap: round;
+  filter: blur(3px);
   vector-effect: non-scaling-stroke;
+}
+
+.cushion-preview-lower-fold {
+  fill: none;
+  stroke-width: 13;
+  stroke-linecap: round;
+  filter: blur(5px);
+  vector-effect: non-scaling-stroke;
+}
+
+.cushion-preview-seam,
+.cushion-preview-edge {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.cushion-preview-seam {
+  stroke: rgb(67 55 44 / 0.38);
+  stroke-width: 1.25;
+  stroke-dasharray: 2 3;
+}
+
+.cushion-preview-seam-piped {
+  stroke: rgb(54 45 37 / 0.68);
+  stroke-width: 2.75;
+  stroke-dasharray: none;
+}
+
+.cushion-preview-edge {
+  stroke: rgb(62 49 38 / 0.32);
+  stroke-width: 1.5;
+}
+
+.cushion-preview-label {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.35rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  padding: 0.25rem 0.55rem;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-control);
+  letter-spacing: var(--tracking-label);
+}
+
+@media (max-width: 40rem) {
+  .cushion-preview-product-stage {
+    min-height: 10rem;
+  }
+
+  .cushion-preview-model {
+    width: 100%;
+  }
 }
 
 .cover-option-label:has(.cover-option-input:checked) {
@@ -893,14 +949,17 @@ body {
     background: Canvas;
   }
 
-  .cushion-preview-face-outline,
-  .cushion-preview-side,
-  .cushion-preview-bottom {
+  .cushion-preview-base,
+  .cushion-preview-shading,
+  .cushion-preview-highlight {
     fill: Canvas;
-    stroke: CanvasText;
   }
 
-  .cushion-preview-piping {
+  .cushion-preview-edge,
+  .cushion-preview-seam,
+  .cushion-preview-fold,
+  .cushion-preview-lower-fold {
+    filter: none;
     fill: none;
     stroke: CanvasText;
   }

@@ -25,6 +25,7 @@ import {
   PatternStep,
 } from "../components/configurator/pattern-step";
 import { PreviewStep } from "../components/configurator/preview-step";
+import { CushionModel } from "../components/configurator/cushion-model";
 import { StepIndicator } from "../components/configurator/step-indicator";
 import { deriveReviewReadiness } from "../components/configurator/review-summary";
 import { SaveSharePanel } from "../components/configurator/save-share-panel";
@@ -754,14 +755,14 @@ test("preserves undisclosed selection and replaces it through native radio contr
   );
 });
 
-test("renders proportional dimensions, shape, pattern, and adjustable scale", () => {
+test("renders one clipped cushion model with pattern, measurements, and adjustable scale", () => {
   const { container } = renderWithConfiguration(
     <PreviewStep selectedPattern={fernPattern} />,
     completeConfiguration,
   );
 
   const preview = screen.getByRole("figure", { name: "Cushion preview" });
-  assert.match(preview.textContent ?? "", /Current proportional preview/);
+  assert.match(preview.textContent ?? "", /Selected fabric shown on the cushion/);
   assert.match(preview.textContent ?? "", /Rectangle/);
   assert.match(preview.textContent ?? "", /Fern Trail/);
   assert.match(preview.textContent ?? "", /80 cm/);
@@ -769,15 +770,13 @@ test("renders proportional dimensions, shape, pattern, and adjustable scale", ()
   assert.match(preview.textContent ?? "", /10 cm/);
   assert.match(preview.textContent ?? "", /1\.2×/);
 
-  const svg = container.querySelector(
-    'svg[data-preview-shape="rectangle"]',
-  );
+  const svg = container.querySelector('svg[data-preview-model="cushion"]');
   assert.ok(svg);
-  const face = svg.querySelector("foreignObject");
+  assert.equal(svg.getAttribute("viewBox"), "0 0 640 430");
+  assert.equal(svg.getAttribute("data-pattern-applied"), "true");
+  const face = svg.querySelector("foreignObject.cushion-preview-pattern-viewport");
   assert.ok(face);
-  const width = Number(face.getAttribute("width"));
-  const height = Number(face.getAttribute("height"));
-  assert.ok(Math.abs(width / height - 2) < 0.001);
+  assert.match(face.getAttribute("clip-path") ?? "", /^url\(#cushion-clip-/);
   assert.equal(
     (face.firstElementChild as HTMLElement).style.getPropertyValue(
       "--pattern-scale",
@@ -791,7 +790,19 @@ test("renders proportional dimensions, shape, pattern, and adjustable scale", ()
   assert.equal(scale.getAttribute("aria-valuetext"), "1.3× pattern size");
 });
 
-test("renders the correct preview visual for square and box cushions", () => {
+test("renders the neutral cushion before a pattern is selected", () => {
+  const { container } = render(<CushionModel patternScale={1} />);
+
+  const model = container.querySelector('svg[data-preview-model="cushion"]');
+  assert.ok(model);
+  assert.equal(model.getAttribute("data-pattern-applied"), "false");
+  assert.equal(model.querySelector(".cushion-preview-pattern"), null);
+  assert.ok(model.querySelector(".cushion-preview-base"));
+  assert.ok(model.querySelector(".cushion-preview-shading"));
+  assert.ok(model.querySelector(".cushion-preview-seam"));
+});
+
+test("keeps the same preview model for square and box configuration data", () => {
   for (const configuration of [
     {
       ...completeConfiguration,
@@ -820,9 +831,11 @@ test("renders the correct preview visual for square and box cushions", () => {
       }),
     );
     assert.ok(
-      container.querySelector(
-        `svg[data-preview-shape="${configuration.shape}"]`,
-      ),
+      container.querySelector('svg[data-preview-model="cushion"]'),
+    );
+    assert.equal(
+      container.querySelector(".cushion-preview-edge")?.getAttribute("d"),
+      "M91 91 C76 111 75 151 82 191 C74 241 77 305 103 337 C143 374 478 376 523 340 C550 309 555 244 548 190 C555 145 550 107 531 88 C493 56 132 58 91 91 Z",
     );
     unmount();
   }
@@ -852,11 +865,10 @@ test("renders tapered geometry, honest construction details, fit, and review out
   assert.match(preview.textContent ?? "", /More relaxed fit/);
   assert.match(preview.textContent ?? "", /Envelope opening/);
   assert.match(preview.textContent ?? "", /Piped edge/);
-  assert.match(preview.textContent ?? "", /does not alter the entered measurements/i);
-  const svg = container.querySelector('svg[data-preview-shape="tapered"]');
+  assert.match(preview.textContent ?? "", /does not reshape this reusable cushion model/i);
+  const svg = container.querySelector('svg[data-preview-model="cushion"]');
   assert.ok(svg);
-  assert.equal(svg.getAttribute("data-preview-fit"), "relaxed");
-  assert.ok(svg.querySelector(".cushion-preview-piping"));
+  assert.ok(svg.querySelector(".cushion-preview-seam-piped"));
 
   const readiness = deriveReviewReadiness(taperedConfiguration, {
     patterns: [fernPattern],
@@ -1028,20 +1040,22 @@ test("preview identifies sources, scale bounds, current output and contextual ed
   assert.ok(screen.getByText(/not a manufacturing specification/));
 });
 
-test("preview describes fit truthfully for every shape and unit without changing geometry", () => {
+test("preview keeps its silhouette stable for every shape, fit, and unit", () => {
   for (const shape of ["square", "rectangle", "round", "tapered", "box"] as const) {
     for (const unit of ["cm", "in"] as const) {
-      let geometry: string | null = null;
+      let silhouette: string | null = null;
       for (const fitPreference of ["close", "standard", "relaxed"] as const) {
         const configuration = { ...completeConfiguration, shape, unit, width: 40, height: 40, backWidth: shape === "tapered" ? 30 : null, thickness: 5, fitPreference };
         const { container } = renderWithConfiguration(<PreviewStep selectedPattern={fernPattern} />, configuration);
-        const face = container.querySelector("foreignObject");
-        assert.ok(face);
-        const current = ["x", "y", "width", "height"].map((key) => face.getAttribute(key)).join(",");
-        if (geometry) assert.equal(current, geometry);
-        geometry = current;
+        const model = container.querySelector('svg[data-preview-model="cushion"]');
+        const edge = model?.querySelector(".cushion-preview-edge");
+        assert.ok(model);
+        assert.ok(edge);
+        const current = `${model.getAttribute("viewBox")}|${edge.getAttribute("d")}`;
+        if (silhouette) assert.equal(current, silhouette);
+        silhouette = current;
         assert.ok(screen.getAllByText(`40 ${unit}`).length > 0);
-        assert.ok(screen.getByText(shape === "square" || shape === "rectangle" ? /face outline uses/ : /same outline for every fit preference/));
+        assert.ok(screen.getByText(/does not reshape this reusable cushion model/));
         assert.ok(screen.getByText(/Fabric feel and drape are not simulated/));
         assert.ok(screen.getByText(/not visible from this view/));
         cleanup();
@@ -1056,7 +1070,7 @@ test("custom preview exposes only its label and source, reuses its image, and cl
   const revokeMock = t.mock.method(URL, "revokeObjectURL", () => undefined);
   const configuration: ConfigurationState = { ...completeConfiguration, pattern: { kind: "custom", assetId: "A".repeat(22), derivativeId: "D".repeat(22), processingVersion: "tile-v1", label: "Garden drawing", previewUrl: "https://assets.example.test/private?grant=secret" } };
   const { container } = renderWithConfiguration(<PreviewStep selectedPattern={{ name: "Garden drawing", previewClassName: "", previewUrl: configuration.pattern?.kind === "custom" ? configuration.pattern.previewUrl! : undefined }} />, configuration);
-  assert.ok(screen.getByText("Loading your selected pattern…"));
+  assert.ok(screen.getByText(/Loading your selected pattern/));
   await waitFor(() => assert.ok(container.querySelector("img")));
   fireEvent.load(container.querySelector("img")!);
   assert.ok(screen.getByText("Custom pattern · Selected and shown"));
@@ -1065,14 +1079,15 @@ test("custom preview exposes only its label and source, reuses its image, and cl
   assert.equal(fetchMock.mock.callCount(), 1);
   assert.equal(container.querySelector("img")?.getAttribute("src"), "blob:preview-test");
   fireEvent.error(container.querySelector("img")!);
-  assert.equal(container.querySelector("svg[data-preview-shape]"), null);
+  assert.equal(container.querySelector('svg[data-preview-model="cushion"]')?.getAttribute("data-pattern-applied"), "false");
+  assert.equal(container.querySelector(".cushion-preview-pattern"), null);
   assert.ok(screen.getAllByRole("status").length > 0);
   assert.ok(screen.getByText(/selected pattern could not be displayed/));
   cleanup();
   assert.equal(revokeMock.mock.callCount(), 1);
   renderWithConfiguration(<PreviewStep selectedPattern={null} />, configuration);
   assert.ok(screen.getByText("Selected pattern unavailable"));
-  assert.ok(screen.getByText(/selected pattern is unavailable/));
+  assert.ok(screen.getByText("Neutral cushion shown"));
 });
 
 test("custom preview reports denied derivatives without substitution and ignores late responses", async (t) => {
@@ -1081,7 +1096,7 @@ test("custom preview reports denied derivatives without substitution and ignores
   const pattern = { name: "Private drawing", previewClassName: "", previewUrl: "https://assets.example.test/authorized-tile" };
   const { container } = renderWithConfiguration(<PreviewStep selectedPattern={pattern} />, completeConfiguration);
   await screen.findByText(/selected pattern could not be displayed/);
-  assert.equal(container.querySelector("svg[data-preview-shape]"), null);
+  assert.equal(container.querySelector('svg[data-preview-model="cushion"]')?.getAttribute("data-pattern-applied"), "false");
   assert.equal(createMock.mock.callCount(), 0);
   cleanup();
   let resolveResponse!: (response: Response) => void;

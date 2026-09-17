@@ -30,6 +30,13 @@ const patterns = patternRecords.map(
 );
 
 test("preview stays synchronized through contextual edits and accessible at all widths", async ({ page }, testInfo) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  page.on("console", message => {
+    if (message.type() === "error" && /hydration|hydrated|did not match/i.test(message.text())) {
+      pageErrors.push(message.text());
+    }
+  });
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;
     let webglContexts = 0;
@@ -41,10 +48,6 @@ test("preview stays synchronized through contextual edits and accessible at all 
       },
     });
     Object.defineProperty(window, "__sewncoversWebglContexts", { get: () => webglContexts });
-  });
-  const scriptRequests: string[] = [];
-  page.on("request", request => {
-    if (request.resourceType() === "script") scriptRequests.push(request.url());
   });
   let requests = 0;
   await page.route("http://api.sewncovers.test/**", async route => {
@@ -64,8 +67,13 @@ test("preview stays synchronized through contextual edits and accessible at all 
   await page.getByRole("radio", { name: "Fern trail", exact: true }).press("Space");
   await next("Preview");
   const figure = page.getByRole("figure", { name: "Cushion preview" });
+  const model = figure.locator('[data-preview-model="cushion"]');
   const slider = page.getByRole("slider", { name: "Pattern size" });
   await expect(slider).toHaveValue("1");
+  await expect(model).toHaveAttribute("data-pattern-applied", "true");
+  await expect(model.locator(".cushion-preview-pattern-viewport")).toHaveAttribute("clip-path", /cushion-clip/);
+  const initialModelBox = await model.boundingBox();
+  expect(initialModelBox).not.toBeNull();
   const before = requests;
   for (const [key, value] of [["End", "2"], ["Home", "0.5"], ["ArrowRight", "0.6"]]) { await slider.press(key); await expect(slider).toHaveValue(value); }
   await expect(figure.locator(".cushion-preview-face")).toHaveCSS("--pattern-scale", "0.6");
@@ -77,11 +85,16 @@ test("preview stays synchronized through contextual edits and accessible at all 
   await page.getByRole("radio", { name: "Diamond path", exact: true }).press("Space");
   await next("Preview");
   await expect(figure.locator(".pattern-diamond-path")).toBeVisible();
+  const changedPatternBox = await model.boundingBox();
+  expect(changedPatternBox).not.toBeNull();
+  expect(Math.abs(changedPatternBox!.width - initialModelBox!.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(changedPatternBox!.height - initialModelBox!.height)).toBeLessThanOrEqual(1);
   await button("Edit cover details").click();
   await expect(page.getByRole("heading", { name: "Choose cover details" })).toBeFocused();
   await page.getByRole("radio", { name: "More relaxed fit" }).press("Space");
   await next("Pattern"); await next("Preview");
-  await expect(figure).toContainText("rounder corners");
+  await expect(figure).toContainText("A softer, more relaxed profile");
+  await expect(figure).toContainText("does not reshape this reusable cushion model");
   await button("Edit measurements").click();
   await expect(page.getByText("Measure your rectangle cushion", { exact: true })).toBeFocused();
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("90");
@@ -94,6 +107,16 @@ test("preview stays synchronized through contextual edits and accessible at all 
     expect((await slider.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await figure.screenshot({ path: testInfo.outputPath(`preview-${width}.png`) });
   }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await model.locator(".cushion-preview-pattern-viewport").evaluate(element => {
+    (element as SVGForeignObjectElement).style.display = "none";
+  });
+  await model.evaluate(element => element.setAttribute("data-pattern-applied", "false"));
+  await figure.locator(".cushion-preview-product-stage").screenshot({ path: testInfo.outputPath("preview-neutral-1440.png") });
+  await model.locator(".cushion-preview-pattern-viewport").evaluate(element => {
+    (element as SVGForeignObjectElement).style.display = "";
+  });
+  await model.evaluate(element => element.setAttribute("data-pattern-applied", "true"));
   await page.emulateMedia({ reducedMotion: "reduce", forcedColors: "active" });
   await page.setViewportSize({ width: 320, height: 900 });
   await expect(slider).toBeVisible();
@@ -101,12 +124,8 @@ test("preview stays synchronized through contextual edits and accessible at all 
   await expect(slider).toHaveValue("0.7");
   await figure.screenshot({ path: testInfo.outputPath("preview-forced-colors.png") });
   expect(await page.evaluate(() => (window as unknown as { __sewncoversWebglContexts: number }).__sewncoversWebglContexts)).toBe(0);
-  const scriptsBefore3d = scriptRequests.length;
-  await button("Load approximate 3D preview").click();
-  await expect(page.getByText(/This 3D view uses a generic texture/)).toBeVisible();
-  expect(await page.evaluate(() => (window as unknown as { __sewncoversWebglContexts: number }).__sewncoversWebglContexts)).toBe(1);
-  expect(scriptRequests.length).toBe(scriptsBefore3d + 1);
   await expect(figure.getByText(/not a manufacturing specification/)).toBeVisible();
+  expect(pageErrors).toEqual([]);
 });
 
 

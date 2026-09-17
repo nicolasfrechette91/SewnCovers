@@ -4,7 +4,6 @@ import {
   useId,
   useEffect,
   useState,
-  type CSSProperties,
   type ChangeEvent,
 } from "react";
 
@@ -19,8 +18,6 @@ import {
   PATTERN_SCALE_STEP,
   useConfiguration,
   type CushionShape,
-  type FitPreference,
-  type SeamStyle,
 } from "@/context/configuration";
 import {
   closureOptions,
@@ -34,18 +31,9 @@ import {
 } from "@/data/shapes";
 
 import { CushionPreview } from "./cushion-preview";
+import { CushionModel } from "./cushion-model";
 import { Button } from "../ui";
 import { AdvancedPreviewLoader } from "./advanced-preview-loader";
-import {
-  calculatePreviewGeometry,
-  PREVIEW_VIEWBOX_HEIGHT,
-  PREVIEW_VIEWBOX_WIDTH,
-  type PreviewGeometry,
-} from "./preview-calculations";
-
-type PatternStyle = CSSProperties & {
-  "--pattern-scale": number;
-};
 
 export interface SelectedPatternPresentation {
   readonly name: string;
@@ -56,155 +44,6 @@ export interface SelectedPatternPresentation {
 interface PreviewDetail {
   readonly label: string;
   readonly value: string;
-}
-
-function pointsToString(
-  points: readonly (readonly [number, number])[],
-): string {
-  return points.map(([x, y]) => `${x},${y}`).join(" ");
-}
-
-function PreviewVisual({
-  geometry,
-  fitPreference,
-  patternClassName,
-  patternUrl,
-  patternScale,
-  shape,
-  seamStyle,
-}: Readonly<{
-  fitPreference: FitPreference;
-  geometry: PreviewGeometry;
-  patternClassName: string;
-  patternUrl?: string;
-  patternScale: number;
-  shape: CushionShape;
-  seamStyle: SeamStyle;
-}>) {
-  const {
-    backFaceWidth,
-    faceHeight,
-    faceWidth,
-    faceX,
-    faceY,
-    offsetX,
-    offsetY,
-  } = geometry;
-  const faceRight = faceX + faceWidth;
-  const faceBottom = faceY + faceHeight;
-  const sidePoints = pointsToString([
-    [faceRight, faceY],
-    [faceRight + offsetX, faceY + offsetY],
-    [faceRight + offsetX, faceBottom + offsetY],
-    [faceRight, faceBottom],
-  ]);
-  const bottomPoints = pointsToString([
-    [faceX, faceBottom],
-    [faceRight, faceBottom],
-    [faceRight + offsetX, faceBottom + offsetY],
-    [faceX + offsetX, faceBottom + offsetY],
-  ]);
-  const patternStyle: PatternStyle = {
-    "--pattern-scale": patternScale,
-    backgroundImage: patternUrl ? `url("${patternUrl}")` : undefined,
-    backgroundSize: patternUrl
-      ? `${Math.round(160 * patternScale)}px auto`
-      : undefined,
-  };
-  const taperedInset =
-    backFaceWidth === null ? 0 : (faceWidth - backFaceWidth) / 2;
-  const faceClipPath =
-    shape === "round"
-      ? "circle(50%)"
-      : shape === "tapered"
-        ? `polygon(${taperedInset}px 0, ${faceWidth - taperedInset}px 0, 100% 100%, 0 100%)`
-        : undefined;
-  const cornerRadius =
-    shape === "box"
-      ? 4
-      : fitPreference === "close"
-        ? 6
-        : fitPreference === "relaxed"
-          ? 18
-          : 10;
-  const taperedPoints = pointsToString([
-    [faceX + taperedInset, faceY],
-    [faceRight - taperedInset, faceY],
-    [faceRight, faceBottom],
-    [faceX, faceBottom],
-  ]);
-
-  return (
-    <svg
-      className="block size-full max-h-full max-w-full"
-      viewBox={`0 0 ${PREVIEW_VIEWBOX_WIDTH} ${PREVIEW_VIEWBOX_HEIGHT}`}
-      preserveAspectRatio="xMidYMid meet"
-      focusable="false"
-      data-preview-shape={shape}
-      data-preview-fit={fitPreference}
-    >
-      {shape === "round" ? (
-        <ellipse
-          className="cushion-preview-bottom"
-          cx={faceX + faceWidth / 2 + offsetX}
-          cy={faceY + faceHeight / 2 + offsetY}
-          rx={faceWidth / 2}
-          ry={faceHeight / 2}
-        />
-      ) : (
-        <>
-          <polygon className="cushion-preview-side" points={sidePoints} />
-          <polygon className="cushion-preview-bottom" points={bottomPoints} />
-        </>
-      )}
-      <foreignObject
-        x={faceX}
-        y={faceY}
-        width={faceWidth}
-        height={faceHeight}
-      >
-        <div
-          className={`prototype-pattern ${patternClassName} cushion-preview-face size-full`}
-          style={{ ...patternStyle, clipPath: faceClipPath }}
-        />
-      </foreignObject>
-      {shape === "round" ? (
-        <ellipse
-          className="cushion-preview-face-outline"
-          cx={faceX + faceWidth / 2}
-          cy={faceY + faceHeight / 2}
-          rx={faceWidth / 2}
-          ry={faceHeight / 2}
-          vectorEffect="non-scaling-stroke"
-        />
-      ) : shape === "tapered" ? (
-        <polygon
-          className="cushion-preview-face-outline"
-          points={taperedPoints}
-          vectorEffect="non-scaling-stroke"
-        />
-      ) : (
-        <rect
-          className="cushion-preview-face-outline"
-          x={faceX}
-          y={faceY}
-          width={faceWidth}
-          height={faceHeight}
-          rx={cornerRadius}
-          vectorEffect="non-scaling-stroke"
-        />
-      )}
-      {seamStyle === "piped" ? (
-        shape === "round" ? (
-          <ellipse className="cushion-preview-piping" cx={faceX + faceWidth / 2} cy={faceY + faceHeight / 2} rx={Math.max(0, faceWidth / 2 - 5)} ry={Math.max(0, faceHeight / 2 - 5)} />
-        ) : shape === "tapered" ? (
-          <polygon className="cushion-preview-piping" points={taperedPoints} />
-        ) : (
-          <rect className="cushion-preview-piping" x={faceX + 5} y={faceY + 5} width={Math.max(0, faceWidth - 10)} height={Math.max(0, faceHeight - 10)} rx={Math.max(0, cornerRadius - 2)} />
-        )
-      ) : null}
-    </svg>
-  );
 }
 
 function getEmptyMessage(
@@ -230,7 +69,7 @@ function getEmptyMessage(
           ? "width, height, and thickness"
           : "width, depth, and thickness";
 
-    return `Enter a valid ${requiredMeasurements} to build the proportional preview.`;
+    return `Enter a valid ${requiredMeasurements} to complete the preview details.`;
   }
 
   if (!patternIsSelected) {
@@ -321,21 +160,14 @@ function PreviewStepContent({
   const patternScaleIsValid = isPatternScaleWithinRange(
     state.patternScale,
   );
-  const geometry = calculatePreviewGeometry({
-    backWidth: state.backWidth,
-    width: state.width,
-    height: state.height,
-    shape: state.shape,
-    thickness: state.thickness,
-    unit: state.unit,
-  });
-  const previewIsComplete =
-    measurementsAreValid &&
+  const patternCanBeShown =
     selectedPattern !== null &&
     !patternIsLoading &&
     (!selectedPattern.previewUrl || selectedPattern.previewUrl !== failedPatternUrl) &&
-    patternScaleIsValid &&
-    geometry !== null;
+    patternScaleIsValid;
+  const previewIsComplete =
+    measurementsAreValid &&
+    patternCanBeShown;
   const formattedScale =
     formatPatternScale(state.patternScale) || "Invalid";
 
@@ -345,7 +177,6 @@ function PreviewStepContent({
 
   const shape = state.shape;
   const definition = getCushionShapeDefinition(shape);
-  const fitIsDrawn = shape === "square" || shape === "rectangle";
   const fitCharacter = state.fitPreference === "close"
     ? "A neater, crisper profile"
     : state.fitPreference === "relaxed"
@@ -408,25 +239,28 @@ function PreviewStepContent({
           patternScaleIsValid,
         )}
         visual={
-          previewIsComplete ? (
-            <PreviewVisual
-              fitPreference={state.fitPreference}
-              geometry={geometry}
-              patternClassName={selectedPattern.previewClassName}
-              patternUrl={patternObjectUrl}
+          <div className="cushion-preview-product-stage">
+            <CushionModel
+              patternClassName={patternCanBeShown ? selectedPattern?.previewClassName : undefined}
+              patternName={patternCanBeShown ? selectedPattern?.name : undefined}
+              patternUrl={patternCanBeShown ? patternObjectUrl : undefined}
               patternScale={state.patternScale}
-              shape={shape}
               seamStyle={state.seamStyle}
             />
-          ) : undefined
+            <span className="cushion-preview-label">Illustrative preview</span>
+          </div>
         }
         description={
           <div className="min-w-0">
             <h3 className="text-body font-control text-text-primary">Currently previewing</h3>
             <p role="status" className="mt-2 text-supporting text-text-muted">
-              {previewIsComplete
-                ? "Current proportional preview"
-                : "Preview incomplete"}
+              {failedPatternUrl && failedPatternUrl === selectedPattern?.previewUrl
+                ? "The selected pattern could not be displayed. Neutral cushion shown; your measurements remain saved."
+                : previewIsComplete
+                  ? "Selected fabric shown on the cushion"
+                  : patternIsLoading
+                    ? "Loading your selected pattern… Neutral cushion shown."
+                    : "Neutral cushion shown"}
             </p>
             {selectedPattern?.previewUrl && patternObjectUrl ? (
               // Observe failure of the same authorized derivative used by the face.
@@ -551,15 +385,13 @@ function PreviewStepContent({
             ) : null}
             <div className="mt-component space-y-3">
               <div><h3 className="font-control text-text-primary">How fit is represented</h3>
-                <p>{fitCharacter}. {fitIsDrawn
-                  ? `The face outline uses ${state.fitPreference === "close" ? "tighter" : state.fitPreference === "relaxed" ? "rounder" : "moderately rounded"} corners to suggest this preference.`
-                  : "This shape has the same outline for every fit preference; fit is recorded only."} Fit styling is indicative only and does not alter the entered measurements. No fit allowances are calculated. Fit can affect fictional demonstration pricing.</p>
+                <p>{fitCharacter}. Fit is recorded with your design but intentionally does not reshape this reusable cushion model or alter the entered measurements. No fit allowances are calculated. Fit can affect fictional demonstration pricing.</p>
               </div>
               <div><h3 className="font-control text-text-primary">Shown in this preview</h3>
-                <p>{previewIsComplete ? `Shape, face proportions, projected thickness, pattern and motif scale, and ${state.seamStyle === "piped" ? "a piped edge outline" : "a plain edge outline"}${fitIsDrawn ? ", with qualitative fit corners" : ""}.` : "The visual is unavailable until the preview is complete; current design values remain listed above."}</p>
+                <p>{patternCanBeShown ? `The selected pattern and motif scale on one consistent cushion model, with ${state.seamStyle === "piped" ? "a piped seam" : "a plain seam"}, permanent folds, highlights, and shadows.` : "A neutral cushion model. Choose an available pattern to apply it without changing the model’s size or silhouette."}</p>
               </div>
               <div><h3 className="font-control text-text-primary">Recorded in your design</h3>
-                <p>Material: {findCoverOption(materialOptions, state.materialId).name}. Fabric feel and drape are not simulated. Closure / access: {findCoverOption(closureOptions, state.closureType).name}; not visible from this view. Construction details are not drawn{fitIsDrawn ? "." : "; fit is also recorded without a visual change for this shape."}</p>
+                <p>Material: {findCoverOption(materialOptions, state.materialId).name}. Fabric feel and drape are not simulated. Closure / access: {findCoverOption(closureOptions, state.closureType).name}; not visible from this view. Construction details and fit are recorded without changing the reusable model.</p>
               </div>
             </div>
 

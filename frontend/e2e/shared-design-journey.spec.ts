@@ -186,7 +186,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     const preview = page.getByRole("region", {
       name: "Box / bench cushion preview",
     });
-    await expect(preview).toContainText("Current proportional preview");
+    await expect(preview).toContainText("Selected fabric shown on the cushion");
     await expect(preview).toContainText("Fern trail");
     await expect(preview).toContainText("72.25 cm");
     await expect(preview).toContainText("48.5 cm");
@@ -318,7 +318,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     const restoredPreview = restoredPage.getByRole("region", {
       name: "Box / bench cushion preview",
     });
-    await expect(restoredPreview).toContainText("Current proportional preview");
+    await expect(restoredPreview).toContainText("Selected fabric shown on the cushion");
     await expect(restoredPreview).toContainText("Fern trail");
     await expect(restoredPreview).toContainText("72.25 cm");
     await expect(restoredPreview).toContainText("48.5 cm");
