@@ -35,6 +35,7 @@ const configuration: CreateDesignRequest = {
   thickness: 13.5,
   unit: "cm",
   patternId: "terrace-wave",
+  solidColor: null,
   patternScale: 1.6,
   materialId: "linen-blend",
   fitPreference: "relaxed",
@@ -43,7 +44,7 @@ const configuration: CreateDesignRequest = {
 };
 const configurationState: ConfigurationState = {
   ...configuration,
-  pattern: { kind: "built-in", patternId: configuration.patternId },
+  pattern: { kind: "built-in", patternId: configuration.patternId! },
 };
 const {
   patternId: builtInPatternId,
@@ -51,7 +52,7 @@ const {
 } = configuration;
 const projectConfiguration: ProjectConfigurationRequest = {
   ...configurationWithoutPattern,
-  pattern: { kind: "built-in", patternId: builtInPatternId },
+  pattern: { kind: "built-in", patternId: builtInPatternId! },
 };
 
 afterEach(() => {
@@ -253,6 +254,21 @@ test("shows every Task 10.1 field in a read-only version summary", () => {
     "terrace-wave", "1.6×",
   ]) assert.ok(screen.getByText(value));
   assert.ok(screen.getByText(/Read-only preview/));
+});
+
+test("shows a saved solid fabric with a bordered swatch and hexadecimal text", () => {
+  render(
+    <AuthProvider>
+      <ConfigurationReadonly
+        configuration={{
+          ...projectConfiguration,
+          pattern: { kind: "solid", color: "#F5F2EB" },
+        }}
+      />
+    </AuthProvider>,
+  );
+  assert.ok(screen.getByText("Solid color · #F5F2EB"));
+  assert.ok(document.querySelector('[data-solid-color="#F5F2EB"]'));
 });
 
 test("builds root-safe bearer share routes without account identifiers", () => {

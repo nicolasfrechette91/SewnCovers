@@ -99,6 +99,19 @@ def test_public_pricing_examples_match_authoritative_price_book() -> None:
         )
         assert example["amountMinor"] == calculated["subtotal_amount"], example["id"]
 
+    patterned = ProjectConfiguration.model_validate(CONFIGURATION)
+    solid = ProjectConfiguration.model_validate(
+        {**CONFIGURATION, "pattern": {"kind": "solid", "color": "#243447"}}
+    )
+    patterned_price = calculate_demonstration_pricing(book, patterned, 1)
+    solid_price = calculate_demonstration_pricing(book, solid, 1)
+    assert solid_price["subtotal_amount"] == patterned_price["subtotal_amount"]
+    assert next(
+        item
+        for item in solid_price["snapshot"]["breakdown"]
+        if item["code"] == "pattern"
+    )["amountMinor"] == 0
+
 
 @pytest.fixture
 def commerce_client(
@@ -156,14 +169,58 @@ def auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def project_version(client: TestClient, token: str) -> str:
+def project_version(
+    client: TestClient,
+    token: str,
+    configuration: dict[str, object] | None = None,
+) -> str:
     response = client.post(
         "/projects",
         headers=auth(token),
-        json={"name": "Fictional patio sample", "configuration": CONFIGURATION},
+        json={
+            "name": "Fictional patio sample",
+            "configuration": configuration or CONFIGURATION,
+        },
     )
     assert response.status_code == 201, response.text
     return str(response.json()["currentVersion"]["id"])
+
+
+def test_solid_fabric_persists_through_quote_and_cart_without_a_surcharge(
+    commerce_client: tuple[TestClient, sessionmaker[Session], str],
+) -> None:
+    client, _factory, _database_url = commerce_client
+    customer = register(client, "solid-cart@example.invalid")
+    solid_configuration = {
+        **CONFIGURATION,
+        "pattern": {"kind": "solid", "color": "#F5F2EB"},
+    }
+    version_id = project_version(client, customer, solid_configuration)
+
+    quote = client.post(
+        "/commerce/quotes",
+        headers=auth(customer),
+        json={"projectVersionId": version_id, "quantity": 1},
+    )
+
+    assert quote.status_code == 201, quote.text
+    assert quote.json()["configuration"] == solid_configuration
+    pattern_charge = next(
+        item for item in quote.json()["breakdown"] if item["code"] == "pattern"
+    )
+    assert pattern_charge == {
+        "code": "pattern",
+        "label": "Pattern adjustment",
+        "amountMinor": 0,
+        "basis": "solid",
+    }
+    cart = client.post(
+        "/commerce/cart/lines",
+        headers=auth(customer),
+        json={"quoteId": quote.json()["id"]},
+    )
+    assert cart.status_code == 200, cart.text
+    assert cart.json()["lines"][0]["quote"]["configuration"] == solid_configuration
 
 
 def test_quote_cart_checkout_webhook_order_and_admin_workflow(

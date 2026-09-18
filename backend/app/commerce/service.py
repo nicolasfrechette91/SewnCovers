@@ -236,7 +236,12 @@ def calculate_demonstration_pricing(
         (
             "pattern",
             "Pattern adjustment",
-            Decimal(rules.pattern_adjustment_minor[configuration.pattern.kind]),
+            Decimal(
+                rules.pattern_adjustment_minor.get(
+                    configuration.pattern.kind,
+                    rules.pattern_adjustment_minor["built-in"],
+                )
+            ),
             configuration.pattern.kind,
         ),
     ]
@@ -1287,6 +1292,8 @@ class CommerceService:
                     "Selected pattern is unavailable for pricing.",
                     "pattern",
                 )
+            return version, configuration, None
+        if configuration.pattern.kind == "solid":
             return version, configuration, None
         row = self._session.execute(
             select(ProjectCustomPatternReference, CustomUpload, CustomDerivative)

@@ -10,6 +10,7 @@ from pydantic import (
     Field,
     StringConstraints,
     field_validator,
+    model_validator,
 )
 
 type CushionShape = Literal["box", "rectangle", "round", "square", "tapered"]
@@ -96,12 +97,21 @@ class DesignConfiguration(BaseModel):
         description="Cushion thickness in the selected unit, with at most two decimals."
     )
     unit: MeasurementUnit = Field(description="Measurement unit for all dimensions.")
-    pattern_id: str = Field(
+    pattern_id: str | None = Field(
+        default=None,
         alias="patternId",
         min_length=1,
         max_length=64,
         pattern=r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
         description="Normalized public ID of an active pattern.",
+    )
+    solid_color: str | None = Field(
+        default=None,
+        alias="solidColor",
+        min_length=7,
+        max_length=7,
+        pattern=r"^#[0-9A-F]{6}$",
+        description="Normalized opaque sRGB color for plain fabric.",
     )
     pattern_scale: PatternScale = Field(
         alias="patternScale",
@@ -130,10 +140,18 @@ class DesignConfiguration(BaseModel):
 
     @field_validator("pattern_id")
     @classmethod
-    def require_normalized_pattern_id(cls, value: str) -> str:
+    def require_normalized_pattern_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         if value != value.strip().lower():
             raise ValueError("patternId must be a normalized lowercase ID")
         return value
+
+    @model_validator(mode="after")
+    def require_one_fabric_selection(self) -> "DesignConfiguration":
+        if (self.pattern_id is None) == (self.solid_color is None):
+            raise ValueError("provide exactly one of patternId or solidColor")
+        return self
 
 
 class CreateDesignRequest(DesignConfiguration):

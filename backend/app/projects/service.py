@@ -415,6 +415,8 @@ class ProjectService:
             if not self._patterns.is_active(configuration.pattern.pattern_id):
                 raise PatternUnavailableError
             return None
+        if configuration.pattern.kind == "solid":
+            return None
         row = self._session.execute(
             select(CustomUpload, CustomDerivative).where(
                 CustomUpload.id == configuration.pattern.asset_id,

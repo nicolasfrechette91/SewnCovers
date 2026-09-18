@@ -203,6 +203,7 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
         thickness: 7.5,
         unit: "cm",
         patternId: "fern-trail",
+        solidColor: null,
         patternScale: 1.2,
         materialId: "cotton-canvas",
         fitPreference: "standard",
@@ -221,6 +222,7 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
         thickness: 3.5,
         unit: "in",
         patternId: "diamond-path",
+        solidColor: null,
         patternScale: 0.8,
         materialId: "linen-blend",
         fitPreference: "close",
@@ -239,6 +241,7 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
         thickness: 12.75,
         unit: "cm",
         patternId: "terrace-wave",
+        solidColor: null,
         patternScale: 2,
         materialId: "polyester-weave",
         fitPreference: "relaxed",
@@ -298,6 +301,7 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
     assert.equal(restoreController.getSnapshot().phase, "restored");
     const expectedRestored = { ...journey.configuration };
     delete expectedRestored.patternId;
+    delete expectedRestored.solidColor;
     expectedRestored.pattern = {
       kind: "built-in",
       patternId: journey.configuration.patternId,

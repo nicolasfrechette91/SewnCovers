@@ -388,8 +388,10 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByText("Choose a pattern", { exact: true }),
+    page.getByText("Choose fabric color or pattern", { exact: true }),
   ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("radio", { name: "Solid color" })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Sign in" })).toBeFocused();
   await page.keyboard.press("Tab");

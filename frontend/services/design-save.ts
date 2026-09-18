@@ -14,14 +14,13 @@ import type { ProjectConfigurationRequest } from "./account-api";
 
 const PATTERN_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const PUBLIC_DESIGN_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
-const RESPONSE_KEYS = [
+const RESPONSE_COMMON_KEYS = [
   "shape",
   "width",
   "height",
   "backWidth",
   "thickness",
   "unit",
-  "patternId",
   "patternScale",
   "materialId",
   "fitPreference",
@@ -107,10 +106,23 @@ function responseMatchesRequest(
     return false;
   }
 
+  const compatibilityKeys = [
+    ...RESPONSE_COMMON_KEYS,
+    request.patternId === null ? "solidColor" : "patternId",
+  ];
+  const currentKeys = [
+    ...RESPONSE_COMMON_KEYS,
+    "patternId",
+    "solidColor",
+  ];
   const actualKeys = Object.keys(value);
   if (
-    actualKeys.length !== RESPONSE_KEYS.length ||
-    !RESPONSE_KEYS.every((key) => Object.hasOwn(value, key))
+    !(
+      (actualKeys.length === compatibilityKeys.length &&
+        compatibilityKeys.every((key) => Object.hasOwn(value, key))) ||
+      (actualKeys.length === currentKeys.length &&
+        currentKeys.every((key) => Object.hasOwn(value, key)))
+    )
   ) {
     return false;
   }
@@ -122,7 +134,9 @@ function responseMatchesRequest(
     value.backWidth === request.backWidth &&
     value.thickness === request.thickness &&
     value.unit === request.unit &&
-    value.patternId === request.patternId &&
+    (request.patternId === null
+      ? value.solidColor === request.solidColor
+      : value.patternId === request.patternId) &&
     value.patternScale === request.patternScale &&
     value.materialId === request.materialId &&
     value.fitPreference === request.fitPreference &&
@@ -172,14 +186,16 @@ export function mapConfigurationToCreateDesign(
   const patternId = pattern?.kind === "built-in"
     ? pattern.patternId
     : legacyPatternId;
+  const solidColor = pattern?.kind === "solid" ? pattern.color : null;
 
   if (
     shape === null ||
     width === null ||
     height === null ||
     thickness === null ||
-    patternId === null ||
-    !PATTERN_ID_PATTERN.test(patternId) ||
+    ((patternId === null) === (solidColor === null)) ||
+    (patternId !== null && !PATTERN_ID_PATTERN.test(patternId)) ||
+    (solidColor !== null && !/^#[0-9A-F]{6}$/.test(solidColor)) ||
     !hasValidMeasurementsForShape(
       shape,
       width,
@@ -206,6 +222,7 @@ export function mapConfigurationToCreateDesign(
     thickness,
     unit,
     patternId,
+    solidColor,
     patternScale: normalizedScale,
     backWidth: shape === "tapered" ? backWidth : null,
     materialId,
@@ -219,7 +236,8 @@ export function mapConfigurationToProjectConfiguration(
   configuration: ConfigurationState,
 ): ProjectConfigurationRequest {
   const validationState: ConfigurationState =
-    configuration.pattern?.kind === "custom"
+    configuration.pattern?.kind === "custom" ||
+    configuration.pattern?.kind === "solid"
       ? {
           ...configuration,
           pattern: { kind: "built-in", patternId: "terrace-wave" },
@@ -229,7 +247,8 @@ export function mapConfigurationToProjectConfiguration(
   if (configuration.pattern === null) {
     throw new InvalidReviewedConfigurationError();
   }
-  const { patternId, ...common } = validated;
+  const { patternId, solidColor: _solidColor, ...common } = validated;
+  void _solidColor;
   if (
     configuration.pattern.kind === "built-in" &&
     patternId !== configuration.pattern.patternId
@@ -242,12 +261,17 @@ export function mapConfigurationToProjectConfiguration(
           kind: "built-in" as const,
           patternId: configuration.pattern.patternId,
         }
-      : {
+      : configuration.pattern.kind === "custom"
+        ? {
           kind: "custom" as const,
           assetId: configuration.pattern.assetId,
           derivativeId: configuration.pattern.derivativeId,
           processingVersion: configuration.pattern.processingVersion,
-        };
+        }
+        : {
+            kind: "solid" as const,
+            color: configuration.pattern.color,
+          };
   return Object.freeze({ ...common, pattern });
 }
 

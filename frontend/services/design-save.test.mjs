@@ -88,6 +88,7 @@ function configuration(overrides = {}) {
     thickness: 8.75,
     unit: "cm",
     patternId: "fern-trail",
+    solidColor: null,
     patternScale: 1.2,
     materialId: "cotton-canvas",
     fitPreference: "standard",
@@ -155,6 +156,7 @@ test("maps every reviewed cushion shape to only backend-owned public fields", as
       "thickness",
       "unit",
       "patternId",
+      "solidColor",
       "patternScale",
       "backWidth",
       "materialId",
@@ -164,6 +166,27 @@ test("maps every reviewed cushion shape to only backend-owned public fields", as
     ]);
     assert.equal(Object.isFrozen(mapped), true);
   }
+});
+
+test("maps solid fabric explicitly for public designs and saved projects", async () => {
+  const {
+    mapConfigurationToCreateDesign,
+    mapConfigurationToProjectConfiguration,
+  } = await loadDesignSave();
+  const value = configuration();
+  delete value.patternId;
+  delete value.solidColor;
+  value.pattern = { kind: "solid", color: "#1A2B3C" };
+
+  const publicDesign = mapConfigurationToCreateDesign(value);
+  assert.equal(publicDesign.patternId, null);
+  assert.equal(publicDesign.solidColor, "#1A2B3C");
+
+  const project = mapConfigurationToProjectConfiguration(value);
+  assert.deepEqual(project.pattern, {
+    kind: "solid",
+    color: "#1A2B3C",
+  });
 });
 
 test("refuses incomplete or contract-incompatible configurations before saving", async () => {

@@ -48,6 +48,7 @@ export interface ReviewIssue {
 export interface ReviewSummaryField {
   readonly id: string;
   readonly label: string;
+  readonly swatchColor?: string;
   readonly value: string;
 }
 
@@ -138,6 +139,7 @@ interface ReviewSummaryInput {
 }
 
 interface ReviewPatternSummary {
+  readonly kind: "pattern" | "solid";
   readonly name: string;
   readonly category: string;
   readonly colors: string;
@@ -217,27 +219,46 @@ function buildSummary(
       label: "Edge finish",
       value: findCoverOption(seamOptions, seamStyle).name,
     },
-    {
-      id: "pattern",
-      label: "Pattern",
-      value: pattern.name,
-    },
-    {
-      id: "pattern-category",
-      label: "Pattern category",
-      value: pattern.category,
-    },
-    {
-      id: "pattern-colors",
-      label: "Pattern colors",
-      value: pattern.colors,
-    },
-    {
-      id: "pattern-scale",
-      label: "Pattern scale",
-      value: formatPatternScale(patternScale),
-    },
   );
+
+  if (pattern.kind === "solid") {
+    fields.push(
+      {
+        id: "fabric",
+        label: "Fabric",
+        value: "Solid color",
+      },
+      {
+        id: "solid-color",
+        label: "Fabric color",
+        swatchColor: pattern.colors,
+        value: pattern.colors,
+      },
+    );
+  } else {
+    fields.push(
+      {
+        id: "pattern",
+        label: "Pattern",
+        value: pattern.name,
+      },
+      {
+        id: "pattern-category",
+        label: "Pattern category",
+        value: pattern.category,
+      },
+      {
+        id: "pattern-colors",
+        label: "Pattern colors",
+        value: pattern.colors,
+      },
+      {
+        id: "pattern-scale",
+        label: "Pattern scale",
+        value: formatPatternScale(patternScale),
+      },
+    );
+  }
 
   return {
     fields,
@@ -296,11 +317,19 @@ export function deriveReviewReadiness(
       });
     } else {
       selectedPattern = {
+        kind: "pattern",
         name: state.pattern.label,
         category: "Your uploaded pattern",
         colors: "Original uploaded colors",
       };
     }
+  } else if (state.pattern?.kind === "solid") {
+    selectedPattern = {
+      kind: "solid",
+      name: "Solid color",
+      category: "Plain fabric",
+      colors: state.pattern.color,
+    };
   } else if (catalogueResult.status === "loading") {
     issues.push({
       id: "catalogue-loading",
@@ -344,6 +373,7 @@ export function deriveReviewReadiness(
       });
     } else {
       selectedPattern = {
+        kind: "pattern",
         name: builtInPattern.name,
         category: getPatternCategoryLabel(builtInPattern.categoryId),
         colors: getPatternColorLabels(builtInPattern.colorIds).join(", "),
@@ -351,7 +381,10 @@ export function deriveReviewReadiness(
     }
   }
 
-  if (!isPatternScaleWithinRange(state.patternScale)) {
+  if (
+    state.pattern?.kind !== "solid" &&
+    !isPatternScaleWithinRange(state.patternScale)
+  ) {
     issues.push({
       id: "pattern-scale-invalid",
       message: "Choose a pattern scale from 0.5× to 2.0×.",

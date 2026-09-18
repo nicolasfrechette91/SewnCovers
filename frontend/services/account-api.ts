@@ -3,6 +3,7 @@ import type { CreateDesignRequest } from "./api-client";
 
 export type ProjectPatternChoice =
   | { readonly kind: "built-in"; readonly patternId: string }
+  | { readonly kind: "solid"; readonly color: string }
   | {
       readonly kind: "custom";
       readonly assetId: string;
@@ -12,7 +13,7 @@ export type ProjectPatternChoice =
 
 export type ProjectConfigurationRequest = Omit<
   CreateDesignRequest,
-  "patternId"
+  "patternId" | "solidColor"
 > & { readonly pattern: ProjectPatternChoice };
 
 const TOKEN_KEY = "sewncovers.session-token";
@@ -149,6 +150,13 @@ function isPatternChoice(value: unknown): value is ProjectPatternChoice {
     return (
       Object.keys(value).length === 2 &&
       typeof value.patternId === "string"
+    );
+  }
+  if (value.kind === "solid") {
+    return (
+      Object.keys(value).length === 2 &&
+      typeof value.color === "string" &&
+      /^#[0-9A-F]{6}$/.test(value.color)
     );
   }
   return (

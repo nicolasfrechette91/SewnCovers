@@ -16,7 +16,13 @@ const label = (value: string) => value.replaceAll("_", " ").replace(/^./, (lette
 
 function configurationSummary(line: Readonly<Record<string, unknown>>) {
   const configuration = typeof line.configuration === "object" && line.configuration !== null ? line.configuration as Record<string, unknown> : {};
-  return [configuration.shape, configuration.materialId, configuration.fitPreference, configuration.closureType, configuration.seamStyle].filter((value) => typeof value === "string").join(" · ");
+  const pattern = typeof configuration.pattern === "object" && configuration.pattern !== null ? configuration.pattern as Record<string, unknown> : {};
+  const fabric = pattern.kind === "solid" && typeof pattern.color === "string"
+    ? `Solid color ${pattern.color}`
+    : pattern.kind === "built-in" && typeof pattern.patternId === "string"
+      ? pattern.patternId
+      : pattern.kind === "custom" ? "Custom pattern" : null;
+  return [configuration.shape, configuration.materialId, configuration.fitPreference, configuration.closureType, configuration.seamStyle, fabric].filter((value) => typeof value === "string").join(" · ");
 }
 
 export function OrderCard({ order, detail = false }: Readonly<{ order: Order; detail?: boolean }>) {

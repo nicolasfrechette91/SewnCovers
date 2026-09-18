@@ -3,14 +3,18 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PatternCard } from "@/components/configurator/pattern-card";
+import { CushionModel } from "@/components/configurator/cushion-model";
 import {
   PatternFilter,
   type PatternFilterOption,
 } from "@/components/configurator/pattern-filter";
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import {
+  DEFAULT_SOLID_COLOR,
   getBuiltInPatternId,
+  getSolidColor,
   hasValidMeasurementsForShape,
+  normalizeHexColor,
   useConfiguration,
 } from "@/context/configuration";
 import {
@@ -99,6 +103,11 @@ export function PatternStep({
   const [showAllMatchingPatterns, setShowAllMatchingPatterns] =
     useState(false);
   const [resultAnnouncement, setResultAnnouncement] = useState("");
+  const solidColor = getSolidColor(state.pattern);
+  const [solidColorDraft, setSolidColorDraft] = useState(
+    solidColor ?? DEFAULT_SOLID_COLOR,
+  );
+  const [solidColorError, setSolidColorError] = useState<string | null>(null);
   const { categoryId, colorId } = catalogue.filters;
   const filtersAreActive =
     categoryId !== ALL_PATTERN_CATEGORIES ||
@@ -206,6 +215,39 @@ export function PatternStep({
     onFiltersChange(filters);
   };
 
+  const selectSolidColor = () => {
+    const color = solidColor ??
+      normalizeHexColor(solidColorDraft) ??
+      DEFAULT_SOLID_COLOR;
+    setSolidColorDraft(color);
+    setSolidColorError(null);
+    dispatch({ type: "setSolidColor", color });
+  };
+
+  const updateSolidColor = (value: string) => {
+    setSolidColorDraft(value);
+    const normalized = normalizeHexColor(value);
+    if (normalized === null) {
+      setSolidColorError(
+        "Enter a six-digit hexadecimal color, such as #B8AFA3.",
+      );
+      return;
+    }
+    setSolidColorError(null);
+    dispatch({ type: "setSolidColor", color: normalized });
+  };
+
+  const displayedSolidColorDraft = solidColorError === null
+    ? solidColor ?? solidColorDraft
+    : solidColorDraft;
+
+  const commitSolidColor = () => {
+    const normalized = normalizeHexColor(displayedSolidColorDraft);
+    if (normalized !== null) {
+      setSolidColorDraft(normalized);
+    }
+  };
+
   const errorState = (
     <ErrorMessage className="mt-component">
       <div>
@@ -241,16 +283,135 @@ export function PatternStep({
           tabIndex={focusTargetId ? -1 : undefined}
           className="configurator-edit-target max-w-full scroll-mt-layout px-1 font-display text-section-title font-heading tracking-heading text-text-primary"
         >
-          Choose a pattern
+          Choose fabric color or pattern
         </legend>
         <p
           id={supportingTextId}
           className="mt-2 max-w-3xl break-words text-body text-text-muted"
         >
-          This choice is required. Compare pattern directions loaded from
-          SewnCovers. Choose one pattern for this configuration, then adjust
-          its scale in the preview.
+          This choice is required. Choose a plain fabric color, one of your
+          private patterns, or a built-in pattern. Pattern scale can be
+          adjusted in the preview when a printed pattern is selected.
         </p>
+
+        <h3 className="mt-layout font-display text-section-title font-heading">
+          Plain fabric
+        </h3>
+        <p className="mt-2 max-w-3xl break-words text-supporting text-text-muted">
+          Solid color stays available independently of pattern search and
+          filters.
+        </p>
+        <div className="mt-component grid min-w-0 gap-component sm:grid-cols-2 lg:grid-cols-3">
+          <PatternCard
+            id={`${generatedId}-solid-color`}
+            name="solid-fabric-choice"
+            value="solid-color"
+            required
+            checked={solidColor !== null}
+            patternName="Solid color"
+            patternCategory="Plain fabric"
+            patternColors={solidColor ?? DEFAULT_SOLID_COLOR}
+            description="Use one continuous fabric color across the cushion."
+            preview={
+              <span
+                className="block h-3/5 w-4/5 rounded-panel border border-border-strong shadow-card"
+                style={{
+                  backgroundColor: solidColor ?? DEFAULT_SOLID_COLOR,
+                }}
+              />
+            }
+            onChange={selectSolidColor}
+          />
+        </div>
+        {solidColor !== null ? (
+          <div
+            className="mt-component max-w-2xl rounded-card border border-border-strong bg-surface-subtle p-control-x py-4"
+            role="group"
+            aria-labelledby={`${generatedId}-solid-color-heading`}
+          >
+            <h4
+              id={`${generatedId}-solid-color-heading`}
+              className="text-body font-control text-text-primary"
+            >
+              Choose your fabric color
+            </h4>
+            <div className="mt-3 grid min-w-0 gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-end">
+              <div>
+                <label
+                  htmlFor={`${generatedId}-native-color`}
+                  className="block text-label font-control text-text-primary"
+                >
+                  Fabric color picker
+                </label>
+                <input
+                  id={`${generatedId}-native-color`}
+                  type="color"
+                  value={solidColor}
+                  className="mt-2 h-12 w-20 cursor-pointer rounded-control border border-border-strong bg-surface p-1"
+                  onChange={(event) =>
+                    updateSolidColor(event.currentTarget.value)
+                  }
+                />
+              </div>
+              <div className="min-w-0">
+                <label
+                  htmlFor={`${generatedId}-hex-color`}
+                  className="block text-label font-control text-text-primary"
+                >
+                  Hexadecimal color
+                </label>
+                <input
+                  id={`${generatedId}-hex-color`}
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  spellCheck={false}
+                  maxLength={7}
+                  value={displayedSolidColorDraft}
+                  aria-invalid={solidColorError !== null}
+                  aria-describedby={`${generatedId}-hex-help${solidColorError ? ` ${generatedId}-hex-error` : ""}`}
+                  className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-control-x py-control-y font-mono text-body uppercase text-text-primary"
+                  onChange={(event) =>
+                    updateSolidColor(event.currentTarget.value)
+                  }
+                  onBlur={commitSolidColor}
+                />
+              </div>
+            </div>
+            <p
+              id={`${generatedId}-hex-help`}
+              className="mt-2 text-supporting text-text-muted"
+            >
+              Enter six hexadecimal digits. The saved value is normalized to
+              uppercase, including the leading #.
+            </p>
+            {solidColorError ? (
+              <p
+                id={`${generatedId}-hex-error`}
+                className="mt-2 text-supporting text-error-text"
+                role="alert"
+              >
+                {solidColorError}
+              </p>
+            ) : null}
+            <figure className="mt-4 rounded-card border border-border bg-surface p-3">
+              <div aria-hidden="true" className="mx-auto max-w-xl">
+                <CushionModel
+                  patternName="Solid color"
+                  patternScale={state.patternScale}
+                  seamStyle={state.seamStyle}
+                  solidColor={solidColor}
+                />
+              </div>
+              <figcaption className="text-center text-supporting text-text-muted">
+                Live cushion preview · Solid color {solidColor}
+              </figcaption>
+            </figure>
+            <p className="sr-only" role="status" aria-live="polite">
+              Solid fabric color {solidColor} selected.
+            </p>
+          </div>
+        ) : null}
 
         <YourPatterns />
 
@@ -258,8 +419,8 @@ export function PatternStep({
           Built-in patterns
         </h3>
         <p className="mt-2 max-w-3xl break-words text-supporting text-text-muted">
-          Search and filters apply only to built-in patterns. Your private
-          patterns remain separate above.
+          Search and filters apply only to built-in patterns. Solid color and
+          your private patterns remain available above.
         </p>
 
         {!hasCompleteCatalogue ? (
@@ -278,11 +439,11 @@ export function PatternStep({
                 id={`${generatedId}-empty-catalogue-title`}
                 className="text-body font-control text-text-primary"
               >
-                No patterns are available
+                No built-in patterns are available
               </h3>
               <p className="mt-1 break-words text-supporting text-text-muted">
-                The API returned an empty catalogue. Your current
-                configuration has been preserved.
+                The API returned an empty catalogue. Solid fabric remains
+                available, and your current configuration has been preserved.
               </p>
               <Button
                 className="mt-3"
@@ -446,8 +607,9 @@ export function PatternStep({
                   No patterns match your search and filters
                 </h3>
                 <p className="mt-1 break-words text-supporting text-text-muted">
-                  Your current pattern selection has not changed. Clear the
-                  current discovery criteria to show the complete catalogue.
+                  Your current fabric selection has not changed. Solid fabric
+                  remains available above. Clear the current discovery
+                  criteria to show the complete pattern catalogue.
                 </p>
                 <Button
                   className="mt-3"

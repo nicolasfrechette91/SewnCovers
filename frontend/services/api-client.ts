@@ -102,7 +102,8 @@ export type MeasurementUnit = "cm" | "in";
 export interface CreateDesignRequest {
   readonly height: number;
   readonly backWidth: number | null;
-  readonly patternId: string;
+  readonly patternId: string | null;
+  readonly solidColor: string | null;
   readonly patternScale: number;
   readonly materialId: "cotton-canvas" | "linen-blend" | "polyester-weave";
   readonly fitPreference: "close" | "relaxed" | "standard";
@@ -310,11 +311,44 @@ function parseDesignResponse(value: unknown): DesignResponse | undefined {
     "seamStyle",
     "publicId",
   ] as const;
+  const fabricKeys = [
+    "shape",
+    "width",
+    "height",
+    "backWidth",
+    "thickness",
+    "unit",
+    "patternId",
+    "solidColor",
+    "patternScale",
+    "materialId",
+    "fitPreference",
+    "closureType",
+    "seamStyle",
+    "publicId",
+  ] as const;
+  const solidKeys = [
+    "shape",
+    "width",
+    "height",
+    "backWidth",
+    "thickness",
+    "unit",
+    "solidColor",
+    "patternScale",
+    "materialId",
+    "fitPreference",
+    "closureType",
+    "seamStyle",
+    "publicId",
+  ] as const;
   const isLegacy = isRecord(value) && hasExactKeys(value, legacyKeys);
+  const hasFabricFields = isRecord(value) && hasExactKeys(value, fabricKeys);
+  const isSolid = isRecord(value) && hasExactKeys(value, solidKeys);
 
   if (
     !isRecord(value) ||
-    (!isLegacy && !hasExactKeys(value, expandedKeys)) ||
+    (!isLegacy && !hasExactKeys(value, expandedKeys) && !hasFabricFields && !isSolid) ||
     !["box", "rectangle", "round", "square", "tapered"].includes(
       String(value.shape),
     ) ||
@@ -328,8 +362,18 @@ function parseDesignResponse(value: unknown): DesignResponse | undefined {
     value.thickness <= 0 ||
     !hasAtMostDecimalPlaces(value.thickness, 2) ||
     !["cm", "in"].includes(String(value.unit)) ||
-    typeof value.patternId !== "string" ||
-    !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value.patternId) ||
+    !(
+      (typeof value.patternId === "string" &&
+        /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value.patternId) &&
+        (!hasFabricFields || value.solidColor === null)) ||
+      (hasFabricFields &&
+        value.patternId === null &&
+        typeof value.solidColor === "string" &&
+        /^#[0-9A-F]{6}$/.test(value.solidColor)) ||
+      (isSolid &&
+        typeof value.solidColor === "string" &&
+        /^#[0-9A-F]{6}$/.test(value.solidColor))
+    ) ||
     !isFiniteNumber(value.patternScale) ||
     value.patternScale < 0.5 ||
     value.patternScale > 2 ||
@@ -355,6 +399,7 @@ function parseDesignResponse(value: unknown): DesignResponse | undefined {
       fitPreference: DEFAULT_FIT_PREFERENCE,
       materialId: DEFAULT_MATERIAL_ID,
       seamStyle: DEFAULT_SEAM_STYLE,
+      solidColor: null,
     };
   }
 
@@ -377,7 +422,13 @@ function parseDesignResponse(value: unknown): DesignResponse | undefined {
     return undefined;
   }
 
-  return value as unknown as DesignResponse;
+  return {
+    ...(value as unknown as DesignResponse),
+    patternId: isSolid ? null : (value.patternId as string),
+    solidColor: hasFabricFields || isSolid
+      ? (value.solidColor as string | null)
+      : null,
+  };
 }
 
 function parseApiErrorResponse(

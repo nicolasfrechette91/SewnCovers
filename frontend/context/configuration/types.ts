@@ -28,6 +28,10 @@ export type PatternChoice =
       readonly label: string;
       readonly previewUrl: string | null;
       readonly unavailableReason?: "deleted" | "unavailable";
+    }
+  | {
+      readonly kind: "solid";
+      readonly color: string;
     };
 
 export interface ConfigurationState {
@@ -77,6 +81,7 @@ export type ConfigurationAction =
       readonly type: "setCustomPattern";
       readonly pattern: Extract<PatternChoice, { readonly kind: "custom" }>;
     }
+  | { readonly type: "setSolidColor"; readonly color: string }
   | { readonly type: "setPatternScale"; readonly patternScale: number }
   | { readonly type: "setMaterialId"; readonly materialId: MaterialId }
   | {
@@ -94,4 +99,10 @@ export function getBuiltInPatternId(
   pattern: PatternChoice | null,
 ): string | null {
   return pattern?.kind === "built-in" ? pattern.patternId : null;
+}
+
+export function getSolidColor(
+  pattern: PatternChoice | null,
+): string | null {
+  return pattern?.kind === "solid" ? pattern.color : null;
 }

@@ -69,13 +69,26 @@ class CustomPatternChoice(BaseModel):
     )
 
 
+class SolidPatternChoice(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
+
+    kind: Literal["solid"]
+    color: str = Field(
+        min_length=7,
+        max_length=7,
+        pattern=r"^#[0-9A-F]{6}$",
+        description="Normalized opaque sRGB fabric color.",
+    )
+
+
 PatternChoice = Annotated[
-    BuiltInPatternChoice | CustomPatternChoice, Field(discriminator="kind")
+    BuiltInPatternChoice | CustomPatternChoice | SolidPatternChoice,
+    Field(discriminator="kind"),
 ]
 
 
 class ProjectConfiguration(BaseModel):
-    """Complete private snapshot with an explicit built-in/custom pattern choice."""
+    """Complete private snapshot with an explicit patterned or solid fabric."""
 
     model_config = ConfigDict(
         extra="forbid", frozen=True, populate_by_name=True, strict=True

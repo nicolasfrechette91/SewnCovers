@@ -5,6 +5,7 @@ import { classNames } from "../ui/class-names";
 export interface ConfigurationSummaryItem {
   id: string;
   label: ReactNode;
+  swatchColor?: string;
   value?: ReactNode;
 }
 
@@ -57,7 +58,16 @@ export function ConfigurationSummary({
                 {item.label}
               </dt>
               <dd className="min-w-0 break-words text-body font-emphasis text-text-primary sm:text-right">
-                {item.value === undefined ||
+                {item.swatchColor ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="inline-block size-5 rounded-pill border border-border-strong shadow-card"
+                      style={{ backgroundColor: item.swatchColor }}
+                    />
+                    <span>{item.value}</span>
+                  </span>
+                ) : item.value === undefined ||
                 item.value === null ||
                 item.value === ""
                   ? missingValue

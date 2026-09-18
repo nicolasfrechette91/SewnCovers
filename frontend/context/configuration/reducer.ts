@@ -16,6 +16,10 @@ import {
   DEFAULT_SEAM_STYLE,
   hasSupportedCoverOptions,
 } from "../../data/cover-options";
+import {
+  isNormalizedHexColor,
+  normalizeHexColor,
+} from "./fabric-color";
 
 export const initialConfigurationState: ConfigurationState = {
   shape: null,
@@ -84,6 +88,8 @@ export function configurationReducer(
               restoredPattern.derivativeId,
             ) ||
             restoredPattern.processingVersion.length === 0)) ||
+        (restoredPattern.kind === "solid" &&
+          !isNormalizedHexColor(restoredPattern.color)) ||
         patternScale !== configuration.patternScale ||
         !isNullableCommittedMeasurement(configuration.backWidth) ||
         (configuration.backWidth !== null &&
@@ -182,6 +188,12 @@ export function configurationReducer(
       };
     case "setCustomPattern":
       return { ...state, pattern: action.pattern };
+    case "setSolidColor": {
+      const color = normalizeHexColor(action.color);
+      return color === null
+        ? state
+        : { ...state, pattern: { kind: "solid", color } };
+    }
     case "setPatternScale": {
       const patternScale = normalizePatternScale(action.patternScale);
 

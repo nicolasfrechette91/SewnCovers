@@ -9,6 +9,7 @@ export interface CushionModelProps {
   readonly patternName?: string;
   readonly patternScale: number;
   readonly patternUrl?: string;
+  readonly solidColor?: string;
   readonly seamStyle?: "piped" | "plain";
 }
 
@@ -22,6 +23,7 @@ export function CushionModel({
   patternName,
   patternScale,
   patternUrl,
+  solidColor,
   seamStyle = "plain",
 }: CushionModelProps) {
   const id = useId().replaceAll(":", "");
@@ -31,10 +33,11 @@ export function CushionModel({
   const highlightGradientId = `cushion-highlight-${id}`;
   const foldGradientId = `cushion-fold-${id}`;
   const shadowGradientId = `cushion-shadow-${id}`;
-  const hasPattern = Boolean(patternName);
+  const hasFabric = Boolean(patternName || solidColor);
   const patternStyle: CushionPatternStyle = {
     "--pattern-scale": patternScale,
     backgroundImage: patternUrl ? `url("${patternUrl}")` : undefined,
+    backgroundColor: solidColor,
     backgroundSize: patternUrl
       ? `${Math.round(145 * patternScale)}px auto`
       : undefined,
@@ -46,7 +49,8 @@ export function CushionModel({
       viewBox="0 0 640 430"
       preserveAspectRatio="xMidYMid meet"
       focusable="false"
-      data-pattern-applied={hasPattern ? "true" : "false"}
+      data-pattern-applied={hasFabric ? "true" : "false"}
+      data-fabric-kind={solidColor ? "solid" : patternName ? "pattern" : "neutral"}
       data-preview-model="cushion"
     >
       <defs>
@@ -94,7 +98,7 @@ export function CushionModel({
         d={cushionPath}
         fill={`url(#${bodyGradientId})`}
       />
-      {hasPattern ? (
+      {hasFabric ? (
         <foreignObject
           className="cushion-preview-pattern-viewport"
           x="72"
@@ -104,7 +108,7 @@ export function CushionModel({
           clipPath={`url(#${clipId})`}
         >
           <div
-            className={`prototype-pattern ${patternClassName} cushion-preview-face cushion-preview-pattern`}
+            className={`${solidColor ? "cushion-preview-solid" : `prototype-pattern ${patternClassName}`} cushion-preview-face cushion-preview-pattern`}
             style={patternStyle}
           />
         </foreignObject>

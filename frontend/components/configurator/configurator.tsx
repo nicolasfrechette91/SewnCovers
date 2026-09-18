@@ -133,7 +133,13 @@ export function Configurator() {
             previewUrl: state.pattern.previewUrl,
           }
         : null
-      : selectedBuiltInPattern;
+      : state.pattern?.kind === "solid"
+        ? {
+            name: "Solid color",
+            previewClassName: "",
+            solidColor: state.pattern.color,
+          }
+        : selectedBuiltInPattern;
   const reviewReadiness = deriveReviewReadiness(state, catalogueResult);
   const patternIssue =
     reviewReadiness.status === "incomplete"

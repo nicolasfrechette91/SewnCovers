@@ -44,6 +44,37 @@ const EXPANDED_DESIGN_RESPONSE_KEYS = [
   "seamStyle",
   "publicId",
 ] as const;
+const FABRIC_DESIGN_RESPONSE_KEYS = [
+  "shape",
+  "width",
+  "height",
+  "backWidth",
+  "thickness",
+  "unit",
+  "patternId",
+  "solidColor",
+  "patternScale",
+  "materialId",
+  "fitPreference",
+  "closureType",
+  "seamStyle",
+  "publicId",
+] as const;
+const SOLID_DESIGN_RESPONSE_KEYS = [
+  "shape",
+  "width",
+  "height",
+  "backWidth",
+  "thickness",
+  "unit",
+  "solidColor",
+  "patternScale",
+  "materialId",
+  "fitPreference",
+  "closureType",
+  "seamStyle",
+  "publicId",
+] as const;
 
 export type SharedDesignLoadState =
   | { readonly phase: "idle" }
@@ -117,6 +148,8 @@ function configurationFromResponse(
   requestedPublicId: string,
 ): Readonly<ConfigurationState> | null {
   const legacyResponse = hasExactKeys(response, LEGACY_DESIGN_RESPONSE_KEYS);
+  const fabricResponse = hasExactKeys(response, FABRIC_DESIGN_RESPONSE_KEYS);
+  const solidResponse = hasExactKeys(response, SOLID_DESIGN_RESPONSE_KEYS);
   const resolvedConfiguration = {
     backWidth: legacyResponse ? null : response.backWidth,
     closureType: legacyResponse
@@ -130,7 +163,9 @@ function configurationFromResponse(
   };
   if (
     (!legacyResponse &&
-      !hasExactKeys(response, EXPANDED_DESIGN_RESPONSE_KEYS)) ||
+      !hasExactKeys(response, EXPANDED_DESIGN_RESPONSE_KEYS) &&
+      !fabricResponse &&
+      !solidResponse) ||
     response.publicId !== requestedPublicId ||
     !["box", "rectangle", "round", "square", "tapered"].includes(
       response.shape,
@@ -147,7 +182,13 @@ function configurationFromResponse(
       response.unit,
       resolvedConfiguration.backWidth,
     ) ||
-    !PATTERN_ID_PATTERN.test(response.patternId) ||
+    !(
+      (response.patternId !== null &&
+        PATTERN_ID_PATTERN.test(response.patternId) &&
+        (!fabricResponse || response.solidColor === null)) ||
+      ((fabricResponse && response.patternId === null) || solidResponse) &&
+        /^#[0-9A-F]{6}$/.test(response.solidColor ?? "")
+    ) ||
     !hasAtMostDecimalPlaces(response.patternScale, 1) ||
     normalizePatternScale(response.patternScale) !==
       response.patternScale ||
@@ -163,10 +204,12 @@ function configurationFromResponse(
     backWidth: resolvedConfiguration.backWidth,
     thickness: response.thickness,
     unit: response.unit,
-    pattern: {
-      kind: "built-in" as const,
-      patternId: response.patternId,
-    },
+    pattern: response.solidColor
+      ? { kind: "solid" as const, color: response.solidColor }
+      : {
+          kind: "built-in" as const,
+          patternId: response.patternId as string,
+        },
     patternScale: response.patternScale,
     materialId: resolvedConfiguration.materialId,
     fitPreference: resolvedConfiguration.fitPreference,
@@ -449,6 +492,18 @@ export class SharedDesignController {
         message:
           "Shared-design loading stopped because you changed the configuration. Your changes have been kept.",
         phase: "superseded",
+      });
+      return;
+    }
+
+    if (this.#pendingConfiguration.pattern?.kind === "solid") {
+      const configuration = this.#pendingConfiguration;
+      this.#pendingConfiguration = null;
+      this.#restoreConfiguration(configuration);
+      this.#publish({
+        message:
+          "Shared design restored. You can keep configuring it without saving a new copy.",
+        phase: "restored",
       });
       return;
     }

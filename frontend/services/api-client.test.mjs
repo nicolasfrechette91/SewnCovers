@@ -98,6 +98,7 @@ function design(overrides = {}) {
     thickness: 8.75,
     unit: "cm",
     patternId: "fern-trail",
+    solidColor: null,
     patternScale: 1.2,
     materialId: "cotton-canvas",
     fitPreference: "standard",
@@ -322,6 +323,7 @@ test("returns exact typed health, pattern, create, and retrieval responses", asy
     thickness: 8.75,
     unit: "cm",
     patternId: "fern-trail",
+    solidColor: null,
     patternScale: 1.2,
     materialId: "cotton-canvas",
     fitPreference: "standard",
@@ -334,6 +336,7 @@ test("decodes legacy saved-design responses with backward-compatible defaults", 
   const { apiClient } = await loadClient();
   const legacy = design();
   delete legacy.backWidth;
+  delete legacy.solidColor;
   delete legacy.materialId;
   delete legacy.fitPreference;
   delete legacy.closureType;
@@ -347,6 +350,7 @@ test("decodes legacy saved-design responses with backward-compatible defaults", 
     fitPreference: "standard",
     closureType: "zipper",
     seamStyle: "plain",
+    solidColor: null,
   });
 });
 

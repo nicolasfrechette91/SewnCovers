@@ -39,6 +39,7 @@ export interface SelectedPatternPresentation {
   readonly name: string;
   readonly previewClassName: string;
   readonly previewUrl?: string;
+  readonly solidColor?: string;
 }
 
 interface PreviewDetail {
@@ -105,7 +106,7 @@ export interface PreviewStepProps {
 export function PreviewStep(props: PreviewStepProps) {
   // Image readiness belongs to this source, never to a previously revoked URL.
   // Configuration and scale remain in the existing provider.
-  return <PreviewStepContent key={props.selectedPattern?.previewUrl ?? "built-in"} {...props} />;
+  return <PreviewStepContent key={props.selectedPattern?.previewUrl ?? props.selectedPattern?.solidColor ?? "built-in"} {...props} />;
 }
 
 function PreviewStepContent({
@@ -244,6 +245,7 @@ function PreviewStepContent({
               patternClassName={patternCanBeShown ? selectedPattern?.previewClassName : undefined}
               patternName={patternCanBeShown ? selectedPattern?.name : undefined}
               patternUrl={patternCanBeShown ? patternObjectUrl : undefined}
+              solidColor={patternCanBeShown ? selectedPattern?.solidColor : undefined}
               patternScale={state.patternScale}
               seamStyle={state.seamStyle}
             />
@@ -287,14 +289,14 @@ function PreviewStepContent({
               </div>
               <div className="min-w-0">
                 <dt className="font-control text-text-primary">
-                  Pattern
+                  Fabric
                 </dt>
                 <dd className="break-words">
                   {selectedPattern?.name ??
                     (state.pattern === null
                       ? "Not selected"
                       : "Selected pattern unavailable")}
-                  {state.pattern ? <span className="block text-supporting">{state.pattern.kind === "custom" ? "Custom pattern" : "Built-in pattern"} · {previewIsComplete ? "Selected and shown" : patternIsLoading ? "Selected; loading preview" : "Selected; preview unavailable"}</span> : null}
+                  {state.pattern ? <span className="block text-supporting">{state.pattern.kind === "custom" ? "Custom pattern" : state.pattern.kind === "solid" ? `Solid color · ${state.pattern.color}` : "Built-in pattern"} · {previewIsComplete ? "Selected and shown" : patternIsLoading ? "Selected; loading preview" : "Selected; preview unavailable"}</span> : null}
                 </dd>
               </div>
               {dimensionDetails.map((detail) => (
@@ -313,7 +315,7 @@ function PreviewStepContent({
               </div>
             </dl>
             <p className="mt-3 hidden forced-colors:block">High-contrast settings may hide pattern colors and motifs. Use the selected pattern name and scale above as your text alternative.</p>
-            {selectedPattern && showScaleControls ? (
+            {selectedPattern && !selectedPattern.solidColor && showScaleControls ? (
               <div className="mt-component rounded-card border border-border bg-surface-subtle p-control-x py-4">
                 <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
                   <label
@@ -388,7 +390,7 @@ function PreviewStepContent({
                 <p>{fitCharacter}. Fit is recorded with your design but intentionally does not reshape this reusable cushion model or alter the entered measurements. No fit allowances are calculated. Fit can affect fictional demonstration pricing.</p>
               </div>
               <div><h3 className="font-control text-text-primary">Shown in this preview</h3>
-                <p>{patternCanBeShown ? `The selected pattern and motif scale on one consistent cushion model, with ${state.seamStyle === "piped" ? "a piped seam" : "a plain seam"}, permanent folds, highlights, and shadows.` : "A neutral cushion model. Choose an available pattern to apply it without changing the model’s size or silhouette."}</p>
+                <p>{patternCanBeShown ? `${selectedPattern?.solidColor ? "The selected solid fabric color" : "The selected pattern and motif scale"} on one consistent cushion model, with ${state.seamStyle === "piped" ? "a piped seam" : "a plain seam"}, permanent folds, highlights, and shadows.` : "A neutral cushion model. Choose an available fabric option to apply it without changing the model’s size or silhouette."}</p>
               </div>
               <div><h3 className="font-control text-text-primary">Recorded in your design</h3>
                 <p>Material: {findCoverOption(materialOptions, state.materialId).name}. Fabric feel and drape are not simulated. Closure / access: {findCoverOption(closureOptions, state.closureType).name}; not visible from this view. Construction details and fit are recorded without changing the reusable model.</p>
@@ -411,6 +413,7 @@ function PreviewStepContent({
           configuration={state}
           patternName={selectedPattern.name}
           textureUrl={patternObjectUrl}
+          solidColor={selectedPattern.solidColor}
         />
       ) : null}
     </section>

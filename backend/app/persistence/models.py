@@ -186,6 +186,12 @@ class CoverDesign(Base):
             name="ck_cover_designs_pattern_scale_range",
         ),
         CheckConstraint(
+            "(pattern_id IS NOT NULL AND solid_color IS NULL) OR "
+            "(pattern_id IS NULL AND length(solid_color) = 7 AND "
+            "substr(solid_color, 1, 1) = '#' AND solid_color = upper(solid_color))",
+            name="ck_cover_designs_fabric_selection",
+        ),
+        CheckConstraint(
             "(shape = 'tapered' AND back_width IS NOT NULL AND back_width < width "
             "AND ((unit = 'cm' AND back_width BETWEEN 10.00 AND 300.00) OR "
             "(unit = 'in' AND back_width * 2.54 BETWEEN 10.00 AND 300.00))) "
@@ -218,7 +224,7 @@ class CoverDesign(Base):
     back_width: Mapped[Decimal | None] = mapped_column(Numeric(7, 2), nullable=True)
     thickness: Mapped[Decimal] = mapped_column(Numeric(7, 2), nullable=False)
     unit: Mapped[str] = mapped_column(String(2), nullable=False)
-    pattern_id: Mapped[str] = mapped_column(
+    pattern_id: Mapped[str | None] = mapped_column(
         String(64),
         ForeignKey(
             "patterns.id",
@@ -226,8 +232,9 @@ class CoverDesign(Base):
             ondelete="RESTRICT",
             onupdate="RESTRICT",
         ),
-        nullable=False,
+        nullable=True,
     )
+    solid_color: Mapped[str | None] = mapped_column(String(7), nullable=True)
     pattern_scale: Mapped[Decimal] = mapped_column(
         Numeric(2, 1),
         nullable=False,
@@ -245,7 +252,7 @@ class CoverDesign(Base):
     seam_style: Mapped[str] = mapped_column(
         String(16), nullable=False, server_default=text("'plain'")
     )
-    pattern: Mapped[Pattern] = relationship(lazy="raise", viewonly=True)
+    pattern: Mapped[Pattern | None] = relationship(lazy="raise", viewonly=True)
 
 
 def _utc_now() -> datetime:

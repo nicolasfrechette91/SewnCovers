@@ -12,6 +12,19 @@ import { CommerceError, DemoBanner, SignInForCommerce } from "./demo-banner";
 
 const explain = (error: unknown) => error instanceof AccountApiError ? error.message : "The cart request failed. Try again.";
 
+function fabricSummary(configuration: Readonly<Record<string, unknown>>) {
+  const pattern = typeof configuration.pattern === "object" && configuration.pattern !== null
+    ? configuration.pattern as Record<string, unknown>
+    : {};
+  if (pattern.kind === "solid" && typeof pattern.color === "string") {
+    return { color: pattern.color, label: `Solid color · ${pattern.color}` };
+  }
+  if (pattern.kind === "built-in" && typeof pattern.patternId === "string") {
+    return { color: null, label: pattern.patternId };
+  }
+  return { color: null, label: "Custom pattern" };
+}
+
 export function CartScreen() {
   const { state } = useAuth();
   const [cart, setCart] = useState<Cart | null>(null);
@@ -55,7 +68,7 @@ export function CartScreen() {
     {cart?.notices.map((notice) => <p key={notice} className="rounded-card border border-accent-strong bg-error-surface p-3 text-error-text" role="status">{notice}</p>)}
     {!cart || cart.lines.length === 0 ? <section className="rounded-panel border border-border bg-surface p-card text-center"><h2 className="font-display text-section-title font-heading">Your demonstration cart is empty</h2><p className="mt-2 text-text-muted">Create a fictional quote before starting the sandbox checkout.</p><Link href="/commerce/" className="mt-4 inline-flex min-h-12 items-center rounded-control bg-brand px-control-x text-button font-control text-on-brand no-underline">View pricing and quotes</Link></section> : <>
       <ul className="space-y-component">{cart.lines.map((line) => <li key={line.id} className="rounded-panel border border-border bg-surface p-card">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"><div><p className="text-label font-control uppercase text-accent-strong">Fictional quote · CAD</p><h2 className="mt-1 font-display text-section-title font-heading">{line.quote.subtotalFormatted}</h2><p className="mt-1 text-supporting text-text-muted">Quote expires {new Date(line.quote.expiresAt).toLocaleString()}</p></div>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"><div><p className="text-label font-control uppercase text-accent-strong">Fictional quote · CAD</p><h2 className="mt-1 font-display text-section-title font-heading">{line.quote.subtotalFormatted}</h2><p className="mt-1 text-supporting text-text-muted">Quote expires {new Date(line.quote.expiresAt).toLocaleString()}</p><p className="mt-2 inline-flex items-center gap-2 text-supporting"><span className="font-control">Fabric:</span>{fabricSummary(line.quote.configuration).color ? <span aria-hidden="true" className="inline-block size-4 rounded-pill border border-border-strong" style={{ backgroundColor: fabricSummary(line.quote.configuration).color ?? undefined }} /> : null}<span>{fabricSummary(line.quote.configuration).label}</span></p></div>
         <form className="flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); const quantity = Number(new FormData(event.currentTarget).get("quantity")); void mutate(`quantity-${line.id}`, () => commerceApi.changeLine(token, line.id, quantity), "Quantity changed and a new quote was created."); }}><label className="grid gap-1 text-label font-control">Quantity<input name="quantity" type="number" min="1" max="20" step="1" defaultValue={line.quantity} className="min-h-11 w-24 rounded-control border border-border-strong px-3 text-body" /></label><Button type="submit" size="compact" variant="secondary" isLoading={busy === `quantity-${line.id}`}>Update</Button><Button size="compact" variant="secondary" onClick={() => void mutate(`remove-${line.id}`, () => commerceApi.removeLine(token, line.id), "Cart line removed.")}>Remove</Button></form></div>
       </li>)}</ul>
       <section className="rounded-panel border-2 border-brand bg-surface p-card"><p className="text-label font-control text-accent-strong">Estimated subtotal</p><p className="mt-1 font-display text-page-title font-heading">{cart.subtotalFormatted}</p><p className="mt-2 text-supporting text-text-muted">The sandbox adds fictional tax and shipping during checkout. Returning from checkout alone does not confirm a payment.</p><div className="mt-4 flex flex-wrap gap-3"><Button onClick={() => void checkout()} isLoading={busy === "checkout"} disabled={cart.state !== "active"}>Continue to hosted sandbox checkout</Button><Button variant="secondary" onClick={() => void mutate("empty", () => commerceApi.emptyCart(token), "Cart emptied.")}>Empty cart</Button></div></section>

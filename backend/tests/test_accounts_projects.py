@@ -228,6 +228,35 @@ def test_private_projects_versions_shares_and_cross_account_isolation(
     assert client.get(f"/shares/{share_token}").status_code == 404
 
 
+def test_solid_fabric_survives_project_versions_and_sharing(
+    workspace_client: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, _factory = workspace_client
+    token, _ = register(client, "solid-project@example.com")
+    solid_configuration = {
+        **CONFIGURATION,
+        "pattern": {"kind": "solid", "color": "#243447"},
+    }
+
+    created = client.post(
+        "/projects",
+        headers=auth(token),
+        json={"name": "Solid fabric sample", "configuration": solid_configuration},
+    )
+
+    assert created.status_code == 201, created.text
+    version = created.json()["currentVersion"]
+    assert version["configuration"] == solid_configuration
+    shared = client.post(
+        f"/projects/{created.json()['id']}/versions/{version['id']}/shares",
+        headers=auth(token),
+    )
+    assert shared.status_code == 201, shared.text
+    restored = client.get(f"/shares/{shared.json()['shareToken']}")
+    assert restored.status_code == 200
+    assert restored.json()["configuration"] == solid_configuration
+
+
 def test_logout_expiry_logout_all_export_and_account_deletion_are_isolated(
     workspace_client: tuple[TestClient, sessionmaker[Session]],
 ) -> None:

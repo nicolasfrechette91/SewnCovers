@@ -81,7 +81,9 @@ test("preview stays synchronized through contextual edits and accessible at all 
   await button("Back to Pattern").click(); await next("Preview");
   await expect(slider).toHaveValue("0.6");
   await button("Change pattern").click();
-  await expect(page.getByText("Choose a pattern", { exact: true })).toBeFocused();
+  await expect(
+    page.getByText("Choose fabric color or pattern", { exact: true }),
+  ).toBeFocused();
   await page.getByRole("radio", { name: "Diamond path", exact: true }).press("Space");
   await next("Preview");
   await expect(figure.locator(".pattern-diamond-path")).toBeVisible();

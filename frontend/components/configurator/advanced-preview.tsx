@@ -18,6 +18,7 @@ interface AdvancedPreviewProps {
   readonly configuration: Readonly<ConfigurationState>;
   readonly patternName: string;
   readonly textureUrl?: string;
+  readonly solidColor?: string;
 }
 
 type PreviewState =
@@ -45,6 +46,15 @@ function colorForMaterial(material: ConfigurationState["materialId"]) {
   return [0.43, 0.3, 0.2] as const;
 }
 
+function colorFromHex(color: string | undefined): readonly [number, number, number] | null {
+  if (!color || !/^#[0-9A-F]{6}$/.test(color)) return null;
+  return [
+    Number.parseInt(color.slice(1, 3), 16) / 255,
+    Number.parseInt(color.slice(3, 5), 16) / 255,
+    Number.parseInt(color.slice(5, 7), 16) / 255,
+  ];
+}
+
 function compileShader(
   gl: WebGLRenderingContext,
   type: number,
@@ -70,7 +80,7 @@ function createProgram(gl: WebGLRenderingContext) {
   const fragment = compileShader(
     gl,
     gl.FRAGMENT_SHADER,
-    "precision mediump float;varying vec2 vuv;varying float vs;uniform vec3 base;uniform float scale;uniform float useTexture;uniform sampler2D texture0;void main(){vec3 procedural=base*(0.78+0.22*step(0.5,fract((vuv.x+vuv.y)*8.0/scale)));vec3 tex=texture2D(texture0,vuv/scale).rgb;vec3 colour=mix(procedural,tex,useTexture);gl_FragColor=vec4(colour*vs,1.0);}",
+    "precision mediump float;varying vec2 vuv;varying float vs;uniform vec3 base;uniform float scale;uniform float useTexture;uniform float useSolid;uniform sampler2D texture0;void main(){vec3 procedural=base*(0.78+0.22*step(0.5,fract((vuv.x+vuv.y)*8.0/scale)));vec3 untextured=mix(procedural,base,useSolid);vec3 tex=texture2D(texture0,vuv/scale).rgb;vec3 colour=mix(untextured,tex,useTexture);gl_FragColor=vec4(colour*vs,1.0);}",
   );
   const program = gl.createProgram();
   if (!program) throw new Error("program unavailable");
@@ -136,6 +146,7 @@ export function AdvancedPreview({
   configuration,
   patternName,
   textureUrl,
+  solidColor,
 }: AdvancedPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -299,7 +310,7 @@ export function AdvancedPreview({
       gl.vertexAttribPointer(shade, 1, gl.FLOAT, false, stride, 20);
       gl.uniform3fv(
         gl.getUniformLocation(program, "base"),
-        colorForMaterial(configuration.materialId),
+        colorFromHex(solidColor) ?? colorForMaterial(configuration.materialId),
       );
       gl.uniform1f(
         gl.getUniformLocation(program, "scale"),
@@ -309,6 +320,10 @@ export function AdvancedPreview({
         gl.getUniformLocation(program, "useTexture"),
         textureUrl && resources.objectUrl ? 1 : 0,
       );
+      gl.uniform1f(
+        gl.getUniformLocation(program, "useSolid"),
+        solidColor ? 1 : 0,
+      );
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.uniform1i(gl.getUniformLocation(program, "texture0"), 0);
@@ -317,7 +332,7 @@ export function AdvancedPreview({
     return () => {
       if (resources.frame) cancelAnimationFrame(resources.frame);
     };
-  }, [configuration, state, textureUrl, view]);
+  }, [configuration, solidColor, state, textureUrl, view]);
 
   const adjust = useCallback((changes: Partial<ViewState>) => {
     setView((current) => ({

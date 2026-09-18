@@ -12,6 +12,10 @@ const patternScaleSource = readFileSync(
   new URL("../context/configuration/pattern-scale.ts", import.meta.url),
   "utf8",
 );
+const fabricColorSource = readFileSync(
+  new URL("../context/configuration/fabric-color.ts", import.meta.url),
+  "utf8",
+);
 const sharedDesignSource = readFileSync(
   new URL("./shared-design.ts", import.meta.url),
   "utf8",
@@ -97,9 +101,14 @@ async function loadReducer() {
     transpile(coverOptionsSource),
     "cover-options",
   );
+  const fabricColorUrl = dataModule(
+    transpile(fabricColorSource),
+    "fabric-color",
+  );
   const compiled = transpile(reducerSource)
     .replace('"./measurements"', JSON.stringify(measurementUrl))
     .replace('"./pattern-scale"', JSON.stringify(patternScaleUrl))
+    .replace('"./fabric-color"', JSON.stringify(fabricColorUrl))
     .replace(
       '"../../data/cover-options"',
       JSON.stringify(coverOptionsUrl),
@@ -119,6 +128,7 @@ function design(overrides = {}) {
     thickness: 8.75,
     unit: "cm",
     patternId: "fern-trail",
+    solidColor: null,
     patternScale: 1.2,
     materialId: "cotton-canvas",
     fitPreference: "standard",
@@ -313,6 +323,7 @@ test("exactly restores every shape and both units with decimal values", async ()
     const expected = { ...response };
     delete expected.publicId;
     delete expected.patternId;
+    delete expected.solidColor;
     expected.pattern = { kind: "built-in", patternId: response.patternId };
     assert.deepEqual(harness.restored, [expected]);
     assert.deepEqual(Object.keys(harness.restored[0]), [
@@ -345,6 +356,7 @@ test("restores legacy responses with safe cover-detail defaults", async () => {
   delete legacy.fitPreference;
   delete legacy.closureType;
   delete legacy.seamStyle;
+  delete legacy.solidColor;
   const harness = createHarness(
     SharedDesignController,
     async () => legacy,
@@ -367,6 +379,30 @@ test("restores legacy responses with safe cover-detail defaults", async () => {
     closureType: "zipper",
     seamStyle: "plain",
   }]);
+});
+
+test("restores a solid fabric without requiring a catalogue pattern", async () => {
+  const { SharedDesignController } = await loadSharedDesign();
+  const response = design({
+    patternId: null,
+    solidColor: "#0B1320",
+  });
+  const harness = createHarness(
+    SharedDesignController,
+    async () => response,
+  );
+
+  harness.controller.start(`?design=${publicId}`, {
+    patterns: [],
+    status: "ready",
+  });
+  await settle();
+
+  assert.equal(harness.controller.getSnapshot().phase, "restored");
+  assert.deepEqual(harness.restored[0].pattern, {
+    kind: "solid",
+    color: "#0B1320",
+  });
 });
 
 test("waits for the API catalogue before restoring a valid pattern", async () => {

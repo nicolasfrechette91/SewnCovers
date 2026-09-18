@@ -43,6 +43,7 @@ const savedDesign = Object.freeze({
   thickness: 12.75,
   unit: "cm",
   patternId: "fern-trail",
+  solidColor: null,
   patternScale: 1.3,
   materialId: "linen-blend",
   fitPreference: "relaxed",

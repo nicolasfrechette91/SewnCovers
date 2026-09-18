@@ -140,7 +140,7 @@ test("discovers built-in patterns progressively without losing selection", async
   ).toBeVisible();
   await reachPatternStage(page);
 
-  await expect(page.locator(".pattern-card-input")).toHaveCount(6);
+  await expect(page.locator(".pattern-card-input")).toHaveCount(7);
   await expect(page.getByText("Showing 6 of 15 patterns.")).toBeVisible();
   await expect(
     page.getByRole("heading", {
@@ -157,7 +157,7 @@ test("discovers built-in patterns progressively without losing selection", async
     name: "Search built-in patterns",
   });
   await search.fill("  TERRACE  ");
-  await expect(page.locator(".pattern-card-input")).toHaveCount(1);
+  await expect(page.locator(".pattern-card-input")).toHaveCount(2);
   await expect(page.getByRole("radio", { name: "Terrace wave" })).toBeChecked();
   expect(mediaRequests).toEqual(initialMediaRequests);
   await expect(
@@ -167,21 +167,21 @@ test("discovers built-in patterns progressively without losing selection", async
   await search.fill("cool bands");
   await expect(page.getByRole("radio", { name: "Terrace wave" })).toBeVisible();
   await search.fill("woven");
-  await expect(page.locator(".pattern-card-input")).toHaveCount(3);
+  await expect(page.locator(".pattern-card-input")).toHaveCount(4);
   await search.fill("rose");
-  await expect(page.locator(".pattern-card-input")).toHaveCount(2);
+  await expect(page.locator(".pattern-card-input")).toHaveCount(3);
   await search.fill("");
 
   await page
     .getByRole("group", { name: "Filter by category" })
     .getByText("Geometric", { exact: true })
     .click();
-  await expect(page.locator(".pattern-card-input")).toHaveCount(3);
+  await expect(page.locator(".pattern-card-input")).toHaveCount(4);
   await page
     .getByRole("group", { name: "Filter by color" })
     .getByText("Blue", { exact: true })
     .click();
-  await expect(page.locator(".pattern-card-input")).toHaveCount(1);
+  await expect(page.locator(".pattern-card-input")).toHaveCount(2);
   await search.fill("nested");
   await expect(page.getByRole("radio", { name: "Diamond path" })).toBeVisible();
   await expect(
@@ -197,14 +197,14 @@ test("discovers built-in patterns progressively without losing selection", async
   await expect(search).toHaveValue("");
   await expect(page.getByRole("radio", { name: "All categories" })).toBeChecked();
   await expect(page.getByRole("radio", { name: "All colors" })).toBeChecked();
-  await expect(page.locator(".pattern-card-input")).toHaveCount(6);
+  await expect(page.locator(".pattern-card-input")).toHaveCount(7);
 
   const showAll = page.getByRole("button", {
     name: "Show all 15 patterns (9 more)",
   });
   await showAll.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator(".pattern-card-input")).toHaveCount(15);
+  await expect(page.locator(".pattern-card-input")).toHaveCount(16);
   await expect(page.getByRole("button", { name: "Show fewer patterns" })).toBeFocused();
   await expect(page.getByRole("radio", { name: "Terrace wave" })).toBeChecked();
 
@@ -279,4 +279,76 @@ test("keeps Continue validation and native selection semantics", async ({
   await page.getByText("Diamond path", { exact: true }).click();
   await expect(page.getByRole("radio", { name: "Diamond path" })).toBeChecked();
   await expect(page.getByRole("radio", { name: "Fern trail" })).not.toBeChecked();
+});
+
+test("selects, edits, previews, and preserves a solid fabric color", async ({
+  context,
+  page,
+}) => {
+  await mockApi(context, []);
+  await page.goto(configurePath);
+  expect(new URL(page.url()).pathname).toBe(configurePath);
+  await page.getByText("Square cushion", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "Continue to Measurements" })
+    .click();
+  await page.getByRole("textbox", { name: "Width (cm)" }).fill("50");
+  await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("10");
+  await page
+    .getByRole("button", { name: "Continue to Cover details" })
+    .click();
+  await page.getByRole("button", { name: "Continue to Pattern" }).click();
+
+  const solid = page.getByRole("radio", { name: "Solid color" });
+  await expect(solid).toBeVisible();
+  await expect(page.locator(".pattern-card-input").first()).toHaveAttribute(
+    "value",
+    "solid-color",
+  );
+  const search = page.getByRole("searchbox", {
+    name: "Search built-in patterns",
+  });
+  await search.fill("no printed pattern matches this");
+  await expect(solid).toBeVisible();
+  await solid.focus();
+  await page.keyboard.press("Space");
+  await expect(solid).toBeChecked();
+  await expect(
+    page.getByRole("heading", { name: "Choose your fabric color" }),
+  ).toBeVisible();
+
+  const hex = page.getByRole("textbox", { name: "Hexadecimal color" });
+  await expect(hex).toHaveValue("#B8AFA3");
+  await hex.fill("#12");
+  await expect(
+    page.getByRole("alert").filter({
+      hasText: "six-digit hexadecimal color",
+    }),
+  ).toBeVisible();
+  await hex.fill("f5f2eb");
+  await expect(hex).toHaveValue("#F5F2EB");
+  await expect(page.getByText("Live cushion preview · Solid color #F5F2EB"))
+    .toBeVisible();
+  await expect(page.locator('svg[data-fabric-kind="solid"]')).toBeVisible();
+
+  const nativePicker = page.getByLabel("Fabric color picker");
+  await nativePicker.fill("#111827");
+  await expect(hex).toHaveValue("#111827");
+  await expect(page.getByText("Live cushion preview · Solid color #111827"))
+    .toBeVisible();
+
+  await page.getByRole("button", { name: "Continue to Preview" }).click();
+  await expect(page.locator('svg[data-fabric-kind="solid"]')).toBeVisible();
+  await expect(page.getByText(/Solid color · #111827/)).toBeVisible();
+  await page.getByRole("button", { name: "Back to Pattern" }).click();
+  await expect(solid).toBeChecked();
+  await expect(hex).toHaveValue("#111827");
+
+  await search.fill("");
+  await page.getByRole("radio", { name: "Fern trail" }).focus();
+  await page.keyboard.press("Space");
+  await expect(solid).not.toBeChecked();
+  await solid.focus();
+  await page.keyboard.press("Space");
+  await expect(hex).toHaveValue("#111827");
 });

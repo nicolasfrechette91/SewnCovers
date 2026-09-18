@@ -76,6 +76,44 @@ test("labels the cart as a sandbox and changes quantity through a replacement qu
   assert.equal(screen.getAllByText(/new quote was created/).length, 2);
 });
 
+test("shows solid fabric and its hexadecimal value in cart and order summaries", async () => {
+  const solidConfiguration = {
+    shape: "box",
+    materialId: "linen-blend",
+    fitPreference: "relaxed",
+    closureType: "zipper",
+    seamStyle: "piped",
+    pattern: { kind: "solid", color: "#F5F2EB" },
+  };
+  const solidQuote = { ...quote, configuration: solidConfiguration };
+  const solidCart = {
+    ...cart,
+    lines: [{ ...cart.lines[0], quote: solidQuote }],
+  };
+  mockAccount("customer", (url) =>
+    url.endsWith("/commerce/cart") ? json(solidCart) : json({}, 404),
+  );
+  render(<AuthProvider><CartScreen /></AuthProvider>);
+  await screen.findByText("Solid color · #F5F2EB");
+
+  cleanup();
+  const productionSpecification = order.lines[0]
+    .productionSpecification as Readonly<Record<string, unknown>>;
+  const solidOrder: Order = {
+    ...order,
+    lines: [{
+      ...order.lines[0],
+      configuration: solidConfiguration,
+      productionSpecification: {
+        ...productionSpecification,
+        pattern: { kind: "solid", color: "#F5F2EB" },
+      },
+    }],
+  };
+  render(<OrderCard order={solidOrder} detail />);
+  assert.ok(screen.getByText(/Solid color #F5F2EB/));
+});
+
 test("keeps the fictional-commerce warning visible when sign-in is required", () => {
   render(<SignInForCommerce />);
   assert.ok(screen.getByText(/Fictional CAD prices and payment events only/));

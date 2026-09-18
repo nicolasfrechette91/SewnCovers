@@ -27,6 +27,7 @@ export type AuthState =
 
 const SESSION_ENDED_NOTICE =
   "Your previous sign-in expired or is no longer valid. Sign in again to continue.";
+const MAX_BROWSER_TIMEOUT_MS = 2_147_483_647;
 
 interface AuthContextValue {
   readonly state: AuthState;
@@ -82,13 +83,22 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   useEffect(() => {
     if (state.status !== "authenticated") return;
-    const remaining = new Date(state.expiresAt).getTime() - Date.now();
-    if (remaining <= 0) {
-      const timer = globalThis.setTimeout(clearStoredSession, 0);
-      return () => globalThis.clearTimeout(timer);
-    }
-    const timer = globalThis.setTimeout(clearStoredSession, remaining);
+    const expiresAt = state.expiresAt;
+    let timer: ReturnType<typeof globalThis.setTimeout>;
+    scheduleExpiryCheck();
     return () => globalThis.clearTimeout(timer);
+
+    function scheduleExpiryCheck() {
+      const remaining = new Date(expiresAt).getTime() - Date.now();
+      if (remaining <= 0) {
+        timer = globalThis.setTimeout(clearStoredSession, 0);
+        return;
+      }
+      timer = globalThis.setTimeout(
+        scheduleExpiryCheck,
+        Math.min(remaining, MAX_BROWSER_TIMEOUT_MS),
+      );
+    }
 
     function clearStoredSession() {
       removeSessionToken();

@@ -209,7 +209,7 @@ function StateProbe() {
       <span data-testid="current-shape">{state.shape ?? "none"}</span>
       <span data-testid="current-width">{state.width ?? "none"}</span>
       <span data-testid="current-height">{state.height ?? "none"}</span>
-      <span data-testid="current-pattern">{state.pattern?.kind === "built-in" ? state.pattern.patternId : state.pattern?.label ?? "none"}</span>
+      <span data-testid="current-pattern">{state.pattern?.kind === "built-in" ? state.pattern.patternId : state.pattern?.kind === "custom" ? state.pattern.label : state.pattern?.kind === "solid" ? state.pattern.color : "none"}</span>
       <span data-testid="current-material">{state.materialId}</span>
       <span data-testid="current-fit">{state.fitPreference}</span>
       <span data-testid="current-closure">{state.closureType}</span>
@@ -555,7 +555,7 @@ test("limits built-in results initially and reveals them without moving focus", 
 
   assert.equal(
     container.querySelectorAll(".pattern-card-input").length,
-    INITIAL_PATTERN_RESULT_LIMIT,
+    INITIAL_PATTERN_RESULT_LIMIT + 1,
   );
   assert.ok(screen.getByText("Showing 6 of 15 patterns."));
   assert.equal(screen.queryByRole("radio", { name: "Orchard Stripe" }), null);
@@ -566,7 +566,7 @@ test("limits built-in results initially and reveals them without moving focus", 
   showAll.focus();
   fireEvent.click(showAll);
 
-  assert.equal(container.querySelectorAll(".pattern-card-input").length, 15);
+  assert.equal(container.querySelectorAll(".pattern-card-input").length, 16);
   assert.equal(document.activeElement, showAll);
   assert.ok(screen.getByRole("radio", { name: "Confetti Grid" }));
   assert.ok(screen.getByRole("button", { name: "Show fewer patterns" }));
@@ -574,7 +574,7 @@ test("limits built-in results initially and reveals them without moving focus", 
   fireEvent.click(showAll);
   assert.equal(
     container.querySelectorAll(".pattern-card-input").length,
-    INITIAL_PATTERN_RESULT_LIMIT,
+    INITIAL_PATTERN_RESULT_LIMIT + 1,
   );
 });
 
@@ -671,14 +671,14 @@ test("clears all discovery criteria and disclosure without clearing selection", 
     screen.getByRole("button", { name: "Show all 15 patterns (9 more)" }),
   );
   fireEvent.change(search, { target: { value: "ivory" } });
-  assert.equal(container.querySelectorAll(".pattern-card-input").length, 6);
+  assert.equal(container.querySelectorAll(".pattern-card-input").length, 7);
   fireEvent.click(
     screen.getByRole("button", { name: "Clear search and filters" }),
   );
 
   assert.equal(search.value, "");
   assert.equal(document.activeElement, search);
-  assert.equal(container.querySelectorAll(".pattern-card-input").length, 6);
+  assert.equal(container.querySelectorAll(".pattern-card-input").length, 7);
   assert.equal(screen.getByTestId("current-pattern").textContent, "fern-trail");
   assert.deepEqual(filterChanges, []);
 });
@@ -753,6 +753,100 @@ test("preserves undisclosed selection and replaces it through native radio contr
       .checked,
     true,
   );
+});
+
+test("selects solid fabric, validates hex input, and keeps it outside discovery results", () => {
+  const { container } = renderWithConfiguration(
+    <PatternStep
+      catalogue={catalogueState({
+        allPatterns: discoveryPatterns,
+        visiblePatterns: discoveryPatterns,
+      })}
+      onFiltersChange={() => undefined}
+      onRetry={() => undefined}
+    />,
+    completeConfiguration,
+  );
+
+  const solid = screen.getByRole("radio", { name: "Solid color" });
+  assert.equal(solid.getAttribute("aria-checked"), null);
+  fireEvent.click(solid);
+
+  assert.equal((solid as HTMLInputElement).checked, true);
+  assert.equal(screen.getByTestId("current-pattern").textContent, "#B8AFA3");
+  assert.ok(screen.getByRole("group", { name: "Choose your fabric color" }));
+  const nativePicker = screen.getByLabelText("Fabric color picker") as HTMLInputElement;
+  const hex = screen.getByLabelText("Hexadecimal color") as HTMLInputElement;
+  assert.equal(nativePicker.value.toUpperCase(), "#B8AFA3");
+  assert.equal(hex.value, "#B8AFA3");
+
+  fireEvent.change(hex, { target: { value: "#12" } });
+  assert.equal(hex.getAttribute("aria-invalid"), "true");
+  assert.ok(screen.getByRole("alert").textContent?.includes("six-digit"));
+  assert.equal(screen.getByTestId("current-pattern").textContent, "#B8AFA3");
+
+  fireEvent.change(hex, { target: { value: "1a2b3c" } });
+  assert.equal(screen.getByTestId("current-pattern").textContent, "#1A2B3C");
+  fireEvent.blur(hex);
+  assert.equal(hex.value, "#1A2B3C");
+
+  fireEvent.change(nativePicker, { target: { value: "#f5f2eb" } });
+  assert.equal(screen.getByTestId("current-pattern").textContent, "#F5F2EB");
+
+  fireEvent.change(
+    screen.getByRole("searchbox", { name: "Search built-in patterns" }),
+    { target: { value: "does not exist" } },
+  );
+  assert.ok(screen.getByRole("radio", { name: "Solid color" }));
+  assert.ok(screen.getByText(/Solid fabric remains available above/));
+  assert.equal(
+    container.querySelector('[data-testid="current-pattern"]')?.textContent,
+    "#F5F2EB",
+  );
+});
+
+test("renders solid fabric inside the reusable mask with detail layers and review output", () => {
+  const solidConfiguration: ConfigurationState = {
+    ...completeConfiguration,
+    pattern: { kind: "solid", color: "#111827" },
+  };
+  const { container } = renderWithConfiguration(
+    <PreviewStep
+      selectedPattern={{
+        name: "Solid color",
+        previewClassName: "",
+        solidColor: "#111827",
+      }}
+    />,
+    solidConfiguration,
+  );
+
+  const model = container.querySelector('[data-preview-model="cushion"]');
+  assert.equal(model?.getAttribute("data-fabric-kind"), "solid");
+  const face = container.querySelector(".cushion-preview-solid") as HTMLElement;
+  assert.ok(face);
+  assert.equal(face.style.backgroundColor, "rgb(17, 24, 39)");
+  assert.ok(container.querySelector(".cushion-preview-pattern-viewport[clip-path]"));
+  assert.ok(container.querySelector(".cushion-preview-shading"));
+  assert.ok(container.querySelector(".cushion-preview-highlight"));
+  assert.ok(container.querySelector(".cushion-preview-fold"));
+  assert.ok(container.querySelector(".cushion-preview-seam"));
+  assert.equal(screen.queryByRole("slider", { name: "Pattern size" }), null);
+  assert.ok(container.textContent?.includes("Solid color · #111827"));
+
+  const readiness = deriveReviewReadiness(solidConfiguration, {
+    status: "error",
+    issues: ["catalogue offline"],
+  });
+  assert.equal(readiness.status, "ready");
+  if (readiness.status === "ready") {
+    assert.deepEqual(
+      readiness.summary.fields
+        .filter((field) => ["fabric", "solid-color"].includes(field.id))
+        .map(({ label, value }) => [label, value]),
+      [["Fabric", "Solid color"], ["Fabric color", "#111827"]],
+    );
+  }
 });
 
 test("renders one clipped cushion model with pattern, measurements, and adjustable scale", () => {

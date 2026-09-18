@@ -23,8 +23,9 @@ class SavedDesign:
     height: Decimal
     thickness: Decimal
     unit: str
-    pattern_id: str
+    pattern_id: str | None
     pattern_scale: Decimal
+    solid_color: str | None = None
     back_width: Decimal | None = None
     material_id: str = "cotton-canvas"
     fit_preference: str = "standard"
@@ -48,6 +49,7 @@ class DesignRepository:
             cover_designs_table.c.thickness,
             cover_designs_table.c.unit,
             cover_designs_table.c.pattern_id,
+            cover_designs_table.c.solid_color,
             cover_designs_table.c.pattern_scale,
             cover_designs_table.c.material_id,
             cover_designs_table.c.fit_preference,
@@ -67,6 +69,7 @@ class DesignRepository:
             thickness=design.thickness,
             unit=design.unit,
             pattern_id=design.pattern_id,
+            solid_color=design.solid_color,
             pattern_scale=design.pattern_scale,
             material_id=design.material_id,
             fit_preference=design.fit_preference,
@@ -88,6 +91,7 @@ class DesignRepository:
             thickness=row["thickness"],
             unit=row["unit"],
             pattern_id=row["pattern_id"],
+            solid_color=row["solid_color"],
             pattern_scale=row["pattern_scale"],
             material_id=row["material_id"],
             fit_preference=row["fit_preference"],

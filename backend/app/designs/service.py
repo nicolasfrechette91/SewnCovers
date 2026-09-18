@@ -64,7 +64,10 @@ class DesignService:
 
             try:
                 with service_transaction(self._session):
-                    if not self._patterns.is_active(request.pattern_id):
+                    if (
+                        request.pattern_id is not None
+                        and not self._patterns.is_active(request.pattern_id)
+                    ):
                         raise PatternUnavailableError
                     if self._designs.find_by_public_id(public_id) is not None:
                         raise PublicIdCollisionError
@@ -83,6 +86,7 @@ class DesignService:
                             thickness=Decimal(str(request.thickness)),
                             unit=request.unit,
                             pattern_id=request.pattern_id,
+                            solid_color=request.solid_color,
                             pattern_scale=Decimal(str(request.pattern_scale)),
                             material_id=request.material_id,
                             fit_preference=request.fit_preference,
@@ -200,6 +204,7 @@ class DesignService:
             thickness=float(saved.thickness),
             unit=saved.unit,
             pattern_id=saved.pattern_id,
+            solid_color=saved.solid_color,
             pattern_scale=float(saved.pattern_scale),
             material_id=saved.material_id,
             fit_preference=saved.fit_preference,

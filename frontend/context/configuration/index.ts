@@ -6,7 +6,12 @@ export {
   configurationReducer,
   initialConfigurationState,
 } from "./reducer";
-export { getBuiltInPatternId } from "./types";
+export { getBuiltInPatternId, getSolidColor } from "./types";
+export {
+  DEFAULT_SOLID_COLOR,
+  isNormalizedHexColor,
+  normalizeHexColor,
+} from "./fabric-color";
 export {
   CENTIMETRES_PER_INCH,
   convertMeasurement,

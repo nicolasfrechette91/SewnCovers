@@ -12,7 +12,7 @@ from app.persistence.migrations import create_migration_engine
 from app.settings import Settings, get_settings
 
 ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[1] / "alembic.ini"
-EXPECTED_REVISION = "20260829_01"
+EXPECTED_REVISION = "20260917_01"
 EXPECTED_PATTERN_COUNT = 15
 EXPECTED_TABLES = {
     "alembic_version",
@@ -69,6 +69,7 @@ EXPECTED_CONSTRAINTS = {
             "ck_cover_designs_back_width_shape",
             "ck_cover_designs_closure_supported",
             "ck_cover_designs_equal_face_dimensions",
+            "ck_cover_designs_fabric_selection",
             "ck_cover_designs_fit_supported",
             "ck_cover_designs_material_supported",
             "ck_cover_designs_pattern_scale_range",

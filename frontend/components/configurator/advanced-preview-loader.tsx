@@ -14,10 +14,12 @@ export function AdvancedPreviewLoader({
   configuration,
   patternName,
   textureUrl,
+  solidColor,
 }: Readonly<{
   configuration: Readonly<ConfigurationState>;
   patternName: string;
   textureUrl?: string;
+  solidColor?: string;
 }>) {
   const [enabled, setEnabled] = useState(false);
   return enabled ? (
@@ -32,12 +34,13 @@ export function AdvancedPreviewLoader({
         configuration={configuration}
         patternName={patternName}
         textureUrl={textureUrl}
+        solidColor={solidColor}
       />
     </Suspense>
   ) : (
     <div className="mt-component rounded-card border border-border bg-surface p-4">
       <p className="text-supporting text-text-muted">
-        The main preview above shows your selected pattern and edge styling.
+        The main preview above shows your selected fabric and edge styling.
         The optional 3D view shows approximate proportions; built-in patterns use
         a generic texture there. Fit, closure, and edge finish are recorded only in 3D.
       </p>

@@ -52,7 +52,8 @@ CONFIG_REVISION = "20260812_01"
 PRIVATE_REVISION = "20260818_01"
 UPLOAD_REVISION = "20260818_02"
 COMMERCE_REVISION = "20260828_01"
-REVISION = "20260829_01"
+OPERATIONS_REVISION = "20260829_01"
+REVISION = "20260917_01"
 HEAD_TABLES = {
     "alembic_version",
     "authenticated_sessions",
@@ -228,39 +229,43 @@ def test_revisions_form_one_descriptive_linear_history_and_one_head() -> None:
     script = ScriptDirectory.from_config(alembic_config())
     revisions = list(script.walk_revisions())
 
-    assert len(revisions) == 8
+    assert len(revisions) == 9
     assert revisions[0].revision == REVISION
-    assert revisions[0].down_revision == COMMERCE_REVISION
+    assert revisions[0].down_revision == OPERATIONS_REVISION
     assert revisions[0].is_head
-    assert "Task 10.5 visualization, operations, legal, and trust" in revisions[0].doc
-    assert revisions[1].revision == COMMERCE_REVISION
-    assert revisions[1].down_revision == UPLOAD_REVISION
+    assert "solid fabric selections" in revisions[0].doc
+    assert revisions[1].revision == OPERATIONS_REVISION
+    assert revisions[1].down_revision == COMMERCE_REVISION
     assert revisions[1].is_head is False
-    assert "demonstration commerce" in revisions[1].doc
-    assert revisions[2].revision == UPLOAD_REVISION
-    assert revisions[2].down_revision == PRIVATE_REVISION
+    assert "Task 10.5 visualization, operations, legal, and trust" in revisions[1].doc
+    assert revisions[2].revision == COMMERCE_REVISION
+    assert revisions[2].down_revision == UPLOAD_REVISION
     assert revisions[2].is_head is False
-    assert "private custom-upload processing" in revisions[2].doc
-    assert revisions[3].revision == PRIVATE_REVISION
-    assert revisions[3].down_revision == CONFIG_REVISION
+    assert "demonstration commerce" in revisions[2].doc
+    assert revisions[3].revision == UPLOAD_REVISION
+    assert revisions[3].down_revision == PRIVATE_REVISION
     assert revisions[3].is_head is False
-    assert "private account workspaces" in revisions[3].doc
-    assert revisions[4].revision == CONFIG_REVISION
-    assert revisions[4].down_revision == SEED_REVISION
+    assert "private custom-upload processing" in revisions[3].doc
+    assert revisions[4].revision == PRIVATE_REVISION
+    assert revisions[4].down_revision == CONFIG_REVISION
     assert revisions[4].is_head is False
-    assert "richer specification choices" in revisions[4].doc
-    assert revisions[5].revision == SEED_REVISION
-    assert revisions[5].down_revision == INDEX_REVISION
+    assert "private account workspaces" in revisions[4].doc
+    assert revisions[5].revision == CONFIG_REVISION
+    assert revisions[5].down_revision == SEED_REVISION
     assert revisions[5].is_head is False
-    assert "canonical public pattern catalogue" in revisions[5].doc
-    assert revisions[6].revision == INDEX_REVISION
-    assert revisions[6].down_revision == BASE_REVISION
+    assert "richer specification choices" in revisions[5].doc
+    assert revisions[6].revision == SEED_REVISION
+    assert revisions[6].down_revision == INDEX_REVISION
     assert revisions[6].is_head is False
-    assert "pattern category and activity filter indexes" in revisions[6].doc
-    assert revisions[7].revision == BASE_REVISION
-    assert revisions[7].down_revision is None
+    assert "canonical public pattern catalogue" in revisions[6].doc
+    assert revisions[7].revision == INDEX_REVISION
+    assert revisions[7].down_revision == BASE_REVISION
     assert revisions[7].is_head is False
-    assert "patterns and immutable cover designs" in revisions[7].doc
+    assert "pattern category and activity filter indexes" in revisions[7].doc
+    assert revisions[8].revision == BASE_REVISION
+    assert revisions[8].down_revision is None
+    assert revisions[8].is_head is False
+    assert "patterns and immutable cover designs" in revisions[8].doc
     assert script.get_heads() == [REVISION]
 
 
@@ -426,6 +431,7 @@ def test_upgrade_from_empty_database_creates_exact_schema(
         "thickness",
         "unit",
         "pattern_id",
+        "solid_color",
         "pattern_scale",
         "material_id",
         "fit_preference",
@@ -433,10 +439,12 @@ def test_upgrade_from_empty_database_creates_exact_schema(
         "seam_style",
     }
     assert design_columns["back_width"]["nullable"] is True
+    assert design_columns["pattern_id"]["nullable"] is True
+    assert design_columns["solid_color"]["nullable"] is True
     assert all(
         column["nullable"] is False
         for name, column in design_columns.items()
-        if name != "back_width"
+        if name not in {"back_width", "pattern_id", "solid_color"}
     )
     assert isinstance(design_columns["id"]["type"], Integer)
     assert isinstance(design_columns["public_id"]["type"], String)
@@ -451,6 +459,8 @@ def test_upgrade_from_empty_database_creates_exact_schema(
     assert design_columns["unit"]["type"].length == 2
     assert isinstance(design_columns["pattern_id"]["type"], String)
     assert design_columns["pattern_id"]["type"].length == 64
+    assert isinstance(design_columns["solid_color"]["type"], String)
+    assert design_columns["solid_color"]["type"].length == 7
     assert isinstance(design_columns["pattern_scale"]["type"], Numeric)
     assert design_columns["pattern_scale"]["type"].precision == 2
     assert design_columns["pattern_scale"]["type"].scale == 1
@@ -503,6 +513,7 @@ def test_upgrade_from_empty_database_creates_exact_schema(
         "ck_cover_designs_back_width_shape",
         "ck_cover_designs_material_supported",
         "ck_cover_designs_fit_supported",
+        "ck_cover_designs_fabric_selection",
         "ck_cover_designs_closure_supported",
         "ck_cover_designs_seam_supported",
         "ck_cover_designs_thickness_range",

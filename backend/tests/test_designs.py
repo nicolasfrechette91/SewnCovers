@@ -122,6 +122,7 @@ def valid_payload(**overrides: Any) -> dict[str, Any]:
         "thickness": 8.75,
         "unit": "cm",
         "patternId": ACTIVE_PATTERN_ID,
+        "solidColor": None,
         "patternScale": 1.2,
         "materialId": "cotton-canvas",
         "fitPreference": "standard",
@@ -196,6 +197,7 @@ def test_create_returns_201_location_and_public_fields_then_retrieves(
         "thickness",
         "unit",
         "patternId",
+        "solidColor",
         "patternScale",
         "materialId",
         "fitPreference",
@@ -208,6 +210,25 @@ def test_create_returns_201_location_and_public_fields_then_retrieves(
 
     assert retrieved.status_code == 200
     assert retrieved.json() == created
+
+
+def test_solid_fabric_creation_persists_without_a_pattern(
+    client: TestClient,
+    design_database: Database,
+) -> None:
+    payload = valid_payload(patternId=None, solidColor="#F5F2EB")
+
+    created = client.post("/designs", json=payload)
+
+    assert created.status_code == 201
+    assert created.json() == {
+        "publicId": created.json()["publicId"],
+        **payload,
+    }
+    assert count_designs(design_database) == 1
+    retrieved = client.get(created.headers["location"])
+    assert retrieved.status_code == 200
+    assert retrieved.json() == created.json()
 
 
 @pytest.mark.parametrize(
@@ -323,6 +344,10 @@ def test_malformed_public_id_is_rejected(public_id: str, client: TestClient) -> 
         valid_payload(seamStyle="serged"),
         valid_payload(patternId="Prototype-Botanical"),
         valid_payload(patternId="prototype_botanical"),
+        valid_payload(patternId=None, solidColor=None),
+        valid_payload(solidColor="#112233"),
+        valid_payload(patternId=None, solidColor="#abc123"),
+        valid_payload(patternId=None, solidColor="112233"),
         valid_payload(width=45.251),
         valid_payload(patternScale=1.25),
     ],
@@ -490,6 +515,7 @@ def test_legacy_create_payload_receives_safe_defaults(client: TestClient) -> Non
         "fitPreference",
         "closureType",
         "seamStyle",
+        "solidColor",
     ):
         del payload[field]
 
@@ -504,6 +530,7 @@ def test_legacy_create_payload_receives_safe_defaults(client: TestClient) -> Non
         "fitPreference": "standard",
         "closureType": "zipper",
         "seamStyle": "plain",
+        "solidColor": None,
     }
 
 
@@ -619,7 +646,6 @@ def test_openapi_documents_create_retrieve_schemas_and_statuses(
         "height",
         "thickness",
         "unit",
-        "patternId",
         "patternScale",
     ]
     assert schemas["DesignResponse"]["required"] == [
@@ -629,7 +655,6 @@ def test_openapi_documents_create_retrieve_schemas_and_statuses(
         "backWidth",
         "thickness",
         "unit",
-        "patternId",
         "patternScale",
         "materialId",
         "fitPreference",

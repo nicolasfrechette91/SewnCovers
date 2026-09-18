@@ -37,6 +37,8 @@ async function restoreState(
   let pattern: ConfigurationState["pattern"];
   if (configuration.pattern.kind === "built-in") {
     pattern = configuration.pattern;
+  } else if (configuration.pattern.kind === "solid") {
+    pattern = configuration.pattern;
   } else {
     let previewUrl: string | null = null;
     let unavailableReason: "deleted" | "unavailable" | undefined;
