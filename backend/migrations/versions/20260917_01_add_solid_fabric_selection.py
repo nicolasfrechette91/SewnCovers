@@ -25,7 +25,9 @@ def _cover_design_batch() -> AbstractContextManager[Any]:
 
 def upgrade() -> None:
     with _cover_design_batch() as batch_op:
-        batch_op.add_column(sa.Column("solid_color", sa.String(length=7), nullable=True))
+        batch_op.add_column(
+            sa.Column("solid_color", sa.String(length=7), nullable=True)
+        )
         batch_op.alter_column(
             "pattern_id",
             existing_type=sa.String(length=64),
@@ -45,9 +47,7 @@ def downgrade() -> None:
         sa.text("SELECT count(*) FROM cover_designs WHERE solid_color IS NOT NULL")
     )
     if solid_count:
-        raise RuntimeError(
-            "Cannot downgrade while public solid-fabric designs exist."
-        )
+        raise RuntimeError("Cannot downgrade while public solid-fabric designs exist.")
     with _cover_design_batch() as batch_op:
         batch_op.drop_constraint("ck_cover_designs_fabric_selection", type_="check")
         batch_op.alter_column(

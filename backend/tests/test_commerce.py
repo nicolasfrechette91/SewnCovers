@@ -106,11 +106,14 @@ def test_public_pricing_examples_match_authoritative_price_book() -> None:
     patterned_price = calculate_demonstration_pricing(book, patterned, 1)
     solid_price = calculate_demonstration_pricing(book, solid, 1)
     assert solid_price["subtotal_amount"] == patterned_price["subtotal_amount"]
-    assert next(
-        item
-        for item in solid_price["snapshot"]["breakdown"]
-        if item["code"] == "pattern"
-    )["amountMinor"] == 0
+    assert (
+        next(
+            item
+            for item in solid_price["snapshot"]["breakdown"]
+            if item["code"] == "pattern"
+        )["amountMinor"]
+        == 0
+    )
 
 
 @pytest.fixture

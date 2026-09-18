@@ -64,9 +64,8 @@ class DesignService:
 
             try:
                 with service_transaction(self._session):
-                    if (
-                        request.pattern_id is not None
-                        and not self._patterns.is_active(request.pattern_id)
+                    if request.pattern_id is not None and not self._patterns.is_active(
+                        request.pattern_id
                     ):
                         raise PatternUnavailableError
                     if self._designs.find_by_public_id(public_id) is not None:
