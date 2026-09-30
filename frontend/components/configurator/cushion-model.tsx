@@ -1,5 +1,13 @@
 import { useId, type CSSProperties } from "react";
 
+import type { CushionShape } from "@/context/configuration";
+
+import {
+  buildCushionGeometry,
+  CUSHION_VIEWBOX_HEIGHT,
+  CUSHION_VIEWBOX_WIDTH,
+} from "./cushion-geometry";
+
 type CushionPatternStyle = CSSProperties & {
   "--pattern-scale": number;
 };
@@ -11,12 +19,14 @@ export interface CushionModelProps {
   readonly patternUrl?: string;
   readonly solidColor?: string;
   readonly seamStyle?: "piped" | "plain";
+  /** The silhouette to draw; a rectangle when omitted. */
+  readonly shape?: CushionShape | null;
+  /** Entered measurements, in any single unit; only their ratios are used. */
+  readonly width?: number | null;
+  readonly height?: number | null;
+  readonly backWidth?: number | null;
+  readonly thickness?: number | null;
 }
-
-const cushionPath =
-  "M91 91 C76 111 75 151 82 191 C74 241 77 305 103 337 C143 374 478 376 523 340 C550 309 555 244 548 190 C555 145 550 107 531 88 C493 56 132 58 91 91 Z";
-const seamPath =
-  "M105 101 C91 121 91 155 97 192 C90 240 94 294 116 323 C158 353 466 355 510 326 C533 298 538 242 532 191 C538 151 533 118 518 101 C475 75 148 76 105 101 Z";
 
 export function CushionModel({
   patternClassName = "",
@@ -25,6 +35,11 @@ export function CushionModel({
   patternUrl,
   solidColor,
   seamStyle = "plain",
+  shape,
+  width,
+  height,
+  backWidth,
+  thickness,
 }: CushionModelProps) {
   const id = useId().replaceAll(":", "");
   const clipId = `cushion-clip-${id}`;
@@ -33,6 +48,13 @@ export function CushionModel({
   const highlightGradientId = `cushion-highlight-${id}`;
   const foldGradientId = `cushion-fold-${id}`;
   const shadowGradientId = `cushion-shadow-${id}`;
+  const geometry = buildCushionGeometry({
+    shape,
+    width,
+    height,
+    backWidth,
+    thickness,
+  });
   const hasFabric = Boolean(patternName || solidColor);
   const patternStyle: CushionPatternStyle = {
     "--pattern-scale": patternScale,
@@ -42,20 +64,27 @@ export function CushionModel({
       ? `${Math.round(145 * patternScale)}px auto`
       : undefined,
   };
+  const seamClassName =
+    seamStyle === "piped"
+      ? "cushion-preview-seam cushion-preview-seam-piped"
+      : "cushion-preview-seam";
+  const { shadow } = geometry;
 
   return (
     <svg
       className="cushion-preview-model"
-      viewBox="0 0 640 430"
+      viewBox={`0 0 ${CUSHION_VIEWBOX_WIDTH} ${CUSHION_VIEWBOX_HEIGHT}`}
       preserveAspectRatio="xMidYMid meet"
       focusable="false"
       data-pattern-applied={hasFabric ? "true" : "false"}
       data-fabric-kind={solidColor ? "solid" : patternName ? "pattern" : "neutral"}
       data-preview-model="cushion"
+      data-preview-shape={geometry.shape}
+      data-preview-band={geometry.bands.length > 0 ? "true" : "false"}
     >
       <defs>
         <clipPath id={clipId}>
-          <path d={cushionPath} />
+          <path d={geometry.outline} />
         </clipPath>
         <linearGradient id={bodyGradientId} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor="#e8dfd0" />
@@ -87,24 +116,29 @@ export function CushionModel({
 
       <ellipse
         className="cushion-preview-shadow"
-        cx="320"
-        cy="360"
-        rx="238"
-        ry="35"
+        cx={shadow.cx}
+        cy={shadow.cy}
+        rx={shadow.rx}
+        ry={shadow.ry}
+        transform={
+          shadow.angle
+            ? `rotate(${shadow.angle} ${shadow.cx} ${shadow.cy})`
+            : undefined
+        }
         fill={`url(#${shadowGradientId})`}
       />
       <path
         className="cushion-preview-base"
-        d={cushionPath}
+        d={geometry.outline}
         fill={`url(#${bodyGradientId})`}
       />
       {hasFabric ? (
         <foreignObject
           className="cushion-preview-pattern-viewport"
-          x="72"
-          y="52"
-          width="490"
-          height="326"
+          x={geometry.fabricBox.x}
+          y={geometry.fabricBox.y}
+          width={geometry.fabricBox.width}
+          height={geometry.fabricBox.height}
           clipPath={`url(#${clipId})`}
         >
           <div
@@ -113,31 +147,42 @@ export function CushionModel({
           />
         </foreignObject>
       ) : null}
+      {geometry.bands.map((band) => (
+        <path
+          key={band.tone}
+          className={`cushion-preview-band cushion-preview-band-${band.tone}`}
+          d={band.d}
+          clipPath={`url(#${clipId})`}
+        />
+      ))}
       <path
         className="cushion-preview-shading"
-        d={cushionPath}
+        d={geometry.outline}
         fill={`url(#${shadeGradientId})`}
       />
       <path
         className="cushion-preview-highlight"
-        d={cushionPath}
+        d={geometry.face}
         fill={`url(#${highlightGradientId})`}
       />
 
-      <path className="cushion-preview-fold" d="M93 93 C121 105 135 131 143 167" />
-      <path className="cushion-preview-fold" d="M530 89 C502 106 491 132 484 164" />
-      <path className="cushion-preview-fold" d="M103 338 C132 321 146 298 151 270" />
-      <path className="cushion-preview-fold" d="M523 339 C497 320 483 298 478 272" />
-      <path
-        className="cushion-preview-lower-fold"
-        d="M135 326 C230 346 407 348 504 327"
-        stroke={`url(#${foldGradientId})`}
-      />
-      <path
-        className={`cushion-preview-seam ${seamStyle === "piped" ? "cushion-preview-seam-piped" : ""}`}
-        d={seamPath}
-      />
-      <path className="cushion-preview-edge" d={cushionPath} />
+      {geometry.folds.map((fold) => (
+        <path key={fold} className="cushion-preview-fold" d={fold} />
+      ))}
+      {geometry.lowerFold ? (
+        <path
+          className="cushion-preview-lower-fold"
+          d={geometry.lowerFold}
+          stroke={`url(#${foldGradientId})`}
+        />
+      ) : null}
+      {geometry.creases.map((crease) => (
+        <path key={crease} className="cushion-preview-crease" d={crease} />
+      ))}
+      {geometry.seams.map((seam) => (
+        <path key={seam} className={seamClassName} d={seam} />
+      ))}
+      <path className="cushion-preview-edge" d={geometry.outline} />
     </svg>
   );
 }

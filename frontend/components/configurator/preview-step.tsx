@@ -247,6 +247,11 @@ function PreviewStepContent({
               solidColor={patternCanBeShown ? selectedPattern?.solidColor : undefined}
               patternScale={state.patternScale}
               seamStyle={state.seamStyle}
+              shape={shape}
+              width={state.width}
+              height={state.height}
+              backWidth={state.backWidth}
+              thickness={state.thickness}
             />
             <span className="cushion-preview-label">Illustrative preview</span>
           </div>
@@ -401,7 +406,7 @@ function PreviewStepContent({
                 <p>{fitCharacter}. Fit is recorded with your design but intentionally does not reshape this reusable cushion model or alter the entered measurements. No fit allowances are calculated. Fit can affect fictional demonstration pricing.</p>
               </div>
               <div><h3 className="text-label font-control text-text-primary">Shown in this preview</h3>
-                <p>{patternCanBeShown ? `${selectedPattern?.solidColor ? "The selected solid fabric color" : "The selected pattern and motif scale"} on one consistent cushion model, with ${state.seamStyle === "piped" ? "a piped seam" : "a plain seam"}, permanent folds, highlights, and shadows.` : "A neutral cushion model. Choose an available fabric option to apply it without changing the model’s size or silhouette."}</p>
+                <p>{patternCanBeShown ? `${selectedPattern?.solidColor ? "The selected solid fabric color" : "The selected pattern and motif scale"} on a ${definition.name.toLowerCase()} cushion outline proportioned from your measurements, with ${state.seamStyle === "piped" ? "a piped seam" : "a plain seam"}, highlights, and shadows.` : "A neutral cushion model. Choose an available fabric option to apply it without changing the model’s size or silhouette."}</p>
               </div>
               <div><h3 className="text-label font-control text-text-primary">Recorded in your design</h3>
                 <p>Material: {findCoverOption(materialOptions, state.materialId).name}. Fabric feel and drape are not simulated. Closure / access: {findCoverOption(closureOptions, state.closureType).name}; not visible from this view. Construction details and fit are recorded without changing the reusable model.</p>

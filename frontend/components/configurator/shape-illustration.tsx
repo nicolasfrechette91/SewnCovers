@@ -96,13 +96,13 @@ export function ShapeIllustration({
         <>
           <polygon
             className="shape-illustration-face"
-            points="30,24 162,24 140,92 52,92"
+            points="52,24 140,24 162,92 30,92"
           />
           <line
             className="shape-illustration-detail"
-            x1="52"
+            x1="40"
             y1="78"
-            x2="140"
+            x2="152"
             y2="78"
           />
         </>

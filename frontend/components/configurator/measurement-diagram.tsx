@@ -230,10 +230,10 @@ function TaperedDiagram() {
     <>
       <polygon
         className="measurement-diagram-face"
-        points="40,42 202,42 174,138 68,138"
+        points="68,42 174,42 202,138 40,138"
       />
-      <DimensionLine label="Front width" x1={68} x2={174} y1={160} y2={160} />
-      <DimensionLine label="Back width" x1={40} x2={202} y1={24} y2={24} />
+      <DimensionLine label="Front width" x1={40} x2={202} y1={160} y2={160} />
+      <DimensionLine label="Back width" x1={68} x2={174} y1={24} y2={24} />
       <DimensionLine
         label="Depth"
         labelX={34}

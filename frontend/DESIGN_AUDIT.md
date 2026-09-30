@@ -194,3 +194,8 @@ Dark mode is token-ready but not shipped. The layered tokens mean a future `pref
   - The "Illustrative preview only" care label is now the figure caption, spanning the full width below both columns.
   - DOM order, and so tab order, is unchanged.
 - The Legal accessibility statement no longer describes a WebGL canvas or GPU testing.
+
+### A silhouette for each cushion shape
+- The live preview drew one rectangular pillow for every shape. Each of the five shapes now has its own outline, based on its shape-card icon and drawn in the same soft style: highlight, edge shading, contact shadow, dotted inset seam, and piping when Piped edge is selected.
+- Proportions follow the entered measurements within clamps that keep extreme values legible. Box / bench cushions and thick round cushions show a side band, darkened with the new `--shade-band-front` and `--shade-band-side` tokens. The crease where the face meets the band uses `--shade-crease`. All three have forced-colours equivalents.
+- The Tapered / trapezoid icon and measurement diagram were flipped, so the icon, diagram and preview all put the wider front edge at the bottom.

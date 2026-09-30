@@ -410,6 +410,11 @@ export function PatternStep({
                   patternScale={state.patternScale}
                   seamStyle={state.seamStyle}
                   solidColor={solidColor}
+                  shape={state.shape}
+                  width={state.width}
+                  height={state.height}
+                  backWidth={state.backWidth}
+                  thickness={state.thickness}
                 />
               </div>
               <figcaption className="text-center font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">

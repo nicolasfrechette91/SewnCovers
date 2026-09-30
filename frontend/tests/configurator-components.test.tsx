@@ -896,8 +896,10 @@ test("renders the neutral cushion before a pattern is selected", () => {
   assert.ok(model.querySelector(".cushion-preview-seam"));
 });
 
-test("keeps the same preview model for square and box configuration data", () => {
+test("gives square and box cushions their own silhouettes", () => {
+  const outlines = new Map<string, string>();
   for (const configuration of [
+    completeConfiguration,
     {
       ...completeConfiguration,
       shape: "square" as const,
@@ -921,18 +923,26 @@ test("keeps the same preview model for square and box configuration data", () =>
         name:
           configuration.shape === "square"
             ? "Square cushion preview"
-            : "Box / bench cushion preview",
+            : configuration.shape === "box"
+              ? "Box / bench cushion preview"
+              : "Rectangle cushion preview",
       }),
     );
-    assert.ok(
-      container.querySelector('svg[data-preview-model="cushion"]'),
+    const svg = container.querySelector(
+      `svg[data-preview-model="cushion"][data-preview-shape="${configuration.shape}"]`,
     );
+    assert.ok(svg);
     assert.equal(
-      container.querySelector(".cushion-preview-edge")?.getAttribute("d"),
-      "M91 91 C76 111 75 151 82 191 C74 241 77 305 103 337 C143 374 478 376 523 340 C550 309 555 244 548 190 C555 145 550 107 531 88 C493 56 132 58 91 91 Z",
+      svg.getAttribute("data-preview-band"),
+      configuration.shape === "box" ? "true" : "false",
+    );
+    outlines.set(
+      configuration.shape ?? "",
+      svg.querySelector(".cushion-preview-edge")?.getAttribute("d") ?? "",
     );
     unmount();
   }
+  assert.equal(new Set(outlines.values()).size, 3);
 });
 
 test("renders tapered geometry, honest construction details, fit, and review output", () => {
