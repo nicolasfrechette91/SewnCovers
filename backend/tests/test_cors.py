@@ -156,7 +156,16 @@ def test_valid_design_creation_preflight_returns_only_the_explicit_policy(
     assert "Authorization" in response.headers["access-control-allow-headers"]
     assert "Content-Type" in response.headers["access-control-allow-headers"]
     assert response.headers["access-control-max-age"] == "600"
-    assert response.headers["vary"] == "Origin"
+    # Starlette 1.7 also varies preflights on the request headers the answer
+    # depends on; earlier releases send only Origin. Nothing else may appear.
+    vary = {token.strip() for token in response.headers["vary"].split(",")}
+    assert "Origin" in vary
+    assert vary <= {
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+        "Access-Control-Request-Private-Network",
+    }
     assert "access-control-allow-credentials" not in response.headers
     assert "access-control-expose-headers" not in response.headers
     assert "*" not in " ".join(cors_headers(response.headers).values())
