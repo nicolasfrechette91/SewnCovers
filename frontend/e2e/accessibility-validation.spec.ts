@@ -426,16 +426,20 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await expect(
     page.getByRole("slider", { name: "Pattern size" }),
   ).toBeFocused();
-  // The Preview now offers three contextual edit actions in the tab order.
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Continue to Review" })).toBeFocused();
+  // After the slider: Smaller, Larger, the three contextual edit actions,
+  // Back to Pattern, then Continue to Review.
+  for (const name of [
+    "Smaller",
+    "Larger",
+    "Edit measurements",
+    "Edit cover details",
+    "Change pattern",
+    "Back to Pattern",
+    "Continue to Review",
+  ]) {
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name, exact: true })).toBeFocused();
+  }
   await page.keyboard.press("Enter");
 
   await expect(
@@ -444,7 +448,8 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
       name: "SewnCovers configuration summary",
     }),
   ).toBeFocused();
-  for (let index = 0; index < 9; index += 1) {
+  // Five edit actions and two output actions precede the save button.
+  for (let index = 0; index < 8; index += 1) {
     await page.keyboard.press("Tab");
   }
   await expect(

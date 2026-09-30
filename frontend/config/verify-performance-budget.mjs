@@ -27,11 +27,6 @@ const initialSource = configure.firstLoadChunkPaths
   .join("\n");
 assert.doesNotMatch(
   initialSource,
-  /Approximate interactive 3D preview/,
-  "The optional WebGL renderer entered the initial configurator chunks.",
-);
-assert.doesNotMatch(
-  initialSource,
   /Search built-in patterns/,
   "The Pattern stage entered the initial configurator chunks.",
 );

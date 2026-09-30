@@ -211,17 +211,15 @@ The selected API record is resolved through its stable ID to a frontend-owned ty
 
 Pattern size uses a labeled native range input plus visible Smaller and Larger native buttons. All three dispatch the existing typed `setPatternScale` action, use the shared `0.5`–`2.0` bounds and `0.1` step, and have no local scale state. The output and textual summary update from Context immediately, and the endpoint button disables at its bound.
 
-The preview shell is a semantic figure. Its caption includes Shape, Material, Fit preference, Closure / access, Edge finish, Pattern, every shape-specific dimension, Thickness, and Pattern scale, so the decorative SVG and gradient are hidden from assistive technology without losing information. Before completion, the figure stays visible with an honest shape-specific message and `Invalid or incomplete` or `Not selected` values; it never invents measurements or silently chooses a pattern. Forced-colors CSS replaces decorative geometry with system-color outlines and surfaces. The control transitions retain reduced-motion suppression.
+The preview shell is a semantic figure. Its text includes Shape, Material, Fit preference, Closure / access, Edge finish, Pattern, every shape-specific dimension, Thickness, and Pattern scale, so the decorative SVG and gradient are hidden from assistive technology without losing information. The spec list sits directly under the visual; from a 48rem container up, that column is sticky beside the pattern-size control, notes, and edit actions. The illustrative-only notice is the figure caption. Before completion, the figure stays visible with an honest shape-specific message and `Invalid or incomplete` or `Not selected` values; it never invents measurements or silently chooses a pattern. Forced-colors CSS replaces decorative geometry with system-color outlines and surfaces. The control transitions retain reduced-motion suppression.
 
-Task 10.5 adds an optional isolated WebGL renderer for Square, Rectangle, and
-Box / bench. It is loaded only on request, keeps entered values separate from
-normalized display geometry, supports pointer/touch/keyboard views and zoom,
-and labels versioned `approximate-cover-v1` output as non-manufacturing. The
-complete SVG remains the fallback for WebGL absence/failure, reduced-capability
-selection, and expired or unauthorized private textures. Private derivatives
-use short-lived authorization, `no-store` fetches, temporary object URLs, and
-explicit GPU/object-URL cleanup; originals and expiring URLs never enter saved
-snapshots. Photorealism and manufacturing output remain unimplemented.
+The 2D preview is the configurator's only preview; the optional WebGL view
+from Task 10.5 has been removed, and a photo-based mockup is a separate
+follow-up. Private custom-pattern derivatives use short-lived authorization,
+`no-store` fetches, and temporary object URLs that are revoked on change or
+unmount. Expired or unauthorized textures fall back to the neutral cushion with
+a visible message; originals and expiring URLs never enter saved snapshots.
+Photorealism and manufacturing output remain unimplemented.
 
 ## Configuration review and summary output
 
@@ -286,8 +284,7 @@ decimal/unit behavior, catalogue states, retries, immutable-save recovery,
 session-only token storage, guest account states, private/share distinctions,
 complete version summaries, the custom-upload lifecycle, server-owned cart
 changes, role denial/allowance, production specifications, financial summaries,
-tracking-link allowlisting, all three advanced-preview shapes,
-WebGL/private-texture fallbacks, Global Privacy Control, and
+tracking-link allowlisting, private-texture fallbacks, Global Privacy Control, and
 legal/trust/authorization surfaces. Component assertions prefer accessible
 names, roles, controls, and visible recovery text; mocked clients, controlled
 promises, mocked fetch, and deterministic timers keep all request and failure
@@ -322,8 +319,7 @@ approved texture with the keyboard, checks the repeat preview and mobile
 overflow, and confirms referenced-asset deletion. Commerce coverage uses
 keyboard activation from server estimate through quote, cart, hosted fictional
 checkout, authoritative return status, customer-role admin denial, and
-administrator production review. Task 10.5 coverage exercises WebGL-supported
-and forced-unavailable fallbacks, legal/trust, production checklist,
+administrator production review. Task 10.5 coverage exercises legal/trust, production checklist,
 issue/QC/packet, and readiness. It covers `320×568`,
 `768×1024`, and `1440×900` in both root and `/SewnCovers/` modes without
 production writes.

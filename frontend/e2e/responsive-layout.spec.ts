@@ -196,12 +196,6 @@ test("responsive configurator stages and touch controls", async ({ page }, info)
   for (const stage of ["Measurements", "Cover details", "Pattern", "Preview", "Review"]) {
     await page.getByRole("button", { name: `Continue to ${stage}` }).tap();
     await checkMatrix(page, stage, info.outputDir);
-    if (stage === "Preview") {
-      await page.getByRole("button", { name: "Load approximate 3D preview" }).tap();
-      await page.getByRole("button", { name: "Expanded controls" }).tap();
-      await checkMatrix(page, "dialog", info.outputDir);
-      await page.getByRole("button", { name: "Close expanded controls" }).tap();
-    }
   }
 });
 

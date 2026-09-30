@@ -180,3 +180,17 @@ Dark mode is token-ready but not shipped. The layered tokens mean a future `pref
 - The cushion preview SVG internals are frozen by tests and are not restyled.
 - Targets are at least 44 px, input text at least 16 px, and adjacent buttons at least 8 px apart. There is no horizontal overflow from 320 px up. Every new visual state has a forced-colours equivalent.
 - Fonts are self-hosted and served under the `/SewnCovers` base path. There are no new runtime dependencies.
+
+## 4. Changes after the redesign
+
+### Interactive 3D preview removed
+- The optional WebGL "Approximate interactive 3D preview" is gone: `components/configurator/advanced-preview.tsx`, its lazy loader, the "Load approximate 3D preview" and "Expanded controls" entry points, and their unit and e2e tests. The 2D cushion preview is now the only preview on the Preview and Review stages. A photo-based mockup is planned as a separate follow-up; no placeholder ships for it.
+- The design-token guard (`tests/design-tokens.test.ts`) never needed an allowlist entry for `advanced-preview.tsx`, because its colours were WebGL float triples rather than hex literals. The allowlist is unchanged: `cushion-model.tsx` and `pattern-step.tsx`.
+- The Preview stage layout was rebalanced for the single preview:
+  - The visual and its spec list share one column. From a 48rem container up it sits beside the pattern-size control, the notes and the edit actions, and it is sticky.
+  - From a 64rem container the split is 7:5, which gives the cushion more room.
+  - The spec list shows two columns on phones, and three once its column is 36rem wide.
+  - The edit actions stack at full width on phones.
+  - The "Illustrative preview only" care label is now the figure caption, spanning the full width below both columns.
+  - DOM order, and so tab order, is unchanged.
+- The Legal accessibility statement no longer describes a WebGL canvas or GPU testing.

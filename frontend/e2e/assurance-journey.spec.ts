@@ -22,7 +22,7 @@ async function json(route: Route, body: unknown, status = 200) {
   });
 }
 
-test("advanced preview and legal content stay keyboard-accessible", async ({
+test("preview and legal content stay keyboard-accessible", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 568 });
@@ -56,23 +56,6 @@ test("advanced preview and legal content stay keyboard-accessible", async ({
           colorIds: ["ivory"],
         })));
     }
-    if (path === "/designs/AbCdEfGhIjKlMnOpQrStUv") {
-      return json(route, {
-        publicId: "AbCdEfGhIjKlMnOpQrStUv",
-        shape: "rectangle",
-        width: 80,
-        height: 45,
-        backWidth: null,
-        thickness: 12,
-        unit: "cm",
-        patternId: "prototype-botanical",
-        patternScale: 1,
-        materialId: "cotton-canvas",
-        fitPreference: "standard",
-        closureType: "zipper",
-        seamStyle: "plain",
-      });
-    }
     return json(route, { errors: [{ code: "resource_not_found", message: "Not found.", location: ["path"] }] }, 404);
   });
 
@@ -98,22 +81,6 @@ test("advanced preview and legal content stay keyboard-accessible", async ({
   await expect(
     page.getByRole("slider", { name: "Pattern size" }),
   ).toBeFocused();
-  await page
-    .getByRole("button", { name: "Load approximate 3D preview" })
-    .press("Enter");
-
-  const canvas = page.getByLabel(/Interactive approximate cushion model/);
-  await expect(canvas).toHaveAttribute("tabindex", "0");
-  await canvas.focus();
-  await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("+");
-  await expect(page.getByText(/zoom 1\.10/)).toBeVisible();
-  await page.getByRole("button", { name: "Top" }).press("Enter");
-  await page.getByRole("button", { name: "Reset view" }).press("Enter");
-  const expanded = page.getByRole("button", { name: "Expanded controls" });
-  await expanded.press("Enter");
-  await page.getByRole("button", { name: "Close expanded controls" }).press("Enter");
-  await expect(expanded).toBeFocused();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
@@ -122,37 +89,6 @@ test("advanced preview and legal content stay keyboard-accessible", async ({
 
   await page.goto(`${basePath}/legal/`);
   await expect(page.getByRole("heading", { name: "Legal information" })).toBeVisible();
-
-  await page.addInitScript(() => {
-    const original = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (
-      this: HTMLCanvasElement,
-      kind,
-      ...args
-    ) {
-      if (kind === "webgl" || kind === "webgl2") return null;
-      return original.call(this, kind, ...args);
-    } as typeof HTMLCanvasElement.prototype.getContext;
-  });
-  await page.goto(
-    `${basePath}/configure/?design=AbCdEfGhIjKlMnOpQrStUv`,
-  );
-  await expect(page.getByText("Shared design restored.")).toBeVisible();
-  for (const nextStage of [
-    "Measurements",
-    "Cover details",
-    "Pattern",
-    "Preview",
-  ]) {
-    await page
-      .getByRole("button", { name: `Continue to ${nextStage}` })
-      .press("Enter");
-  }
-  await expect(
-    page.getByRole("slider", { name: "Pattern size" }),
-  ).toBeFocused();
-  await page.getByRole("button", { name: "Load approximate 3D preview" }).press("Enter");
-  await expect(page.getByText(/3D is unavailable.*complete 2D preview/)).toBeVisible();
 });
 
 test("administrator production, packet, and readiness workflow is isolated", async ({

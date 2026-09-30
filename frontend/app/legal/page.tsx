@@ -48,9 +48,9 @@ const documents = [
     type: "accessibility",
     title: "Accessibility statement",
     body: [
-      "The repository includes semantic form controls, visible focus, keyboard workflows, status announcements, reduced-motion handling, forced-colors treatment for HTML controls, responsive checks, and a complete non-canvas 2D fallback.",
-      "The WebGL canvas has an equivalent textual configuration summary but cannot fully reproduce forced-colors output. Automated checks do not establish WCAG conformance.",
-      "Manual screen-reader, browser, touch-device, GPU, zoom, and assistive-technology verification remains required before production use.",
+      "The repository includes semantic form controls, visible focus, keyboard workflows, status announcements, reduced-motion handling, forced-colors treatment for HTML controls, and responsive checks.",
+      "The illustrative 2D cushion preview has an equivalent textual configuration summary, but forced-colors mode may hide pattern colors and motifs. Automated checks do not establish WCAG conformance.",
+      "Manual screen-reader, browser, touch-device, zoom, and assistive-technology verification remains required before production use.",
     ],
   },
   {

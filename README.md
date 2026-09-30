@@ -148,9 +148,7 @@ charge, refund, tax, shipment, order, or migration was created. See
 
 ### Local Task 10.5 assurance and production operations (not deployed)
 
-The local configurator now offers an on-demand, explicitly approximate WebGL
-preview for Square, Rectangle, and Box / bench while preserving the complete SVG
-fallback. Verified paid-order lines create durable, idempotent production work
+Verified paid-order lines create durable, idempotent production work
 with structured checklists/issues, optimistic transitions, quality control,
 append-only history, and checksum-stable safe packets. Versioned legal pages
 and explicit account/upload/sandbox-checkout
@@ -599,7 +597,7 @@ publishes only `frontend/out`. Render auto-deploys after checks pass.
 This remains a portfolio MVP, not a commercially available commerce or
 manufacturing system. The local worktree implements optional accounts, private
 projects, custom uploads, a fully fictional Task 10.4 commerce sandbox, and
-local Task 10.5 advanced-preview, production-work, legal, and
+local Task 10.5 production-work, legal, and
 trust/readiness capabilities; none of Phase 10 is deployed. The live service has no account, upload,
 pricing, quote, cart, payment, order, fulfilment, refund, or administration
 capability. Local sandbox data must remain fictional. Neither environment has
