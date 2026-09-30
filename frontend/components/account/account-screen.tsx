@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
+import { buttonClasses } from "@/components/ui/button-styles";
 import { useAuth } from "@/context/auth";
 import {
   accountApi,
@@ -166,12 +167,12 @@ function AuthForm({
       noValidate
       aria-busy={pending}
       onSubmit={(event) => void submit(event)}
-      className="min-w-0 rounded-card border border-border bg-surface p-card shadow-card"
+      className="min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline"
     >
       <h2
         ref={headingRef}
         tabIndex={-1}
-        className="font-display text-section-title font-heading text-text-primary"
+        className="font-display text-section-title font-heading tracking-heading text-text-primary"
       >
         {isRegister ? "Create account" : "Sign in"}
       </h2>
@@ -198,7 +199,7 @@ function AuthForm({
         aria-invalid={fieldErrors.email ? true : undefined}
         aria-describedby={fieldErrors.email ? emailErrorId : undefined}
         onChange={() => clearFieldError("email")}
-        className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x aria-invalid:border-error-border aria-invalid:bg-error-surface"
+        className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x py-control-y text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none aria-invalid:border-error-border aria-invalid:bg-error-surface"
       />
       {fieldErrors.email ? (
         <p id={emailErrorId} className="mt-2 text-supporting text-error-text">
@@ -223,7 +224,7 @@ function AuthForm({
         aria-invalid={fieldErrors.password ? true : undefined}
         aria-describedby={`${passwordHelpId}${fieldErrors.password ? ` ${passwordErrorId}` : ""}`}
         onChange={() => clearFieldError("password")}
-        className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x aria-invalid:border-error-border aria-invalid:bg-error-surface"
+        className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x py-control-y text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none aria-invalid:border-error-border aria-invalid:bg-error-surface"
       />
       <p id={passwordHelpId} className="mt-2 text-supporting text-text-muted">
         {isRegister
@@ -240,7 +241,7 @@ function AuthForm({
           <label className="flex items-start gap-2 text-supporting">
           <input
             ref={termsRef}
-            className="mt-1 size-5 shrink-0"
+            className="mt-0.5 size-5 shrink-0 cursor-pointer accent-brand"
             type="checkbox"
             name="acceptedTerms"
             required
@@ -347,19 +348,19 @@ function AuthenticatedAccount() {
   return (
     <div className="space-y-layout">
       <AccountNavigation currentHref="/account/" />
-      <section className="rounded-panel border border-border bg-surface p-card shadow-card">
-        <p className="text-label font-control text-accent-strong">Signed in</p>
-        <h2 className="mt-2 break-all font-display text-section-title font-heading">{account.email}</h2>
+      <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+        <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">Signed in</p>
+        <h2 className="mt-3 break-all font-display text-section-title font-heading tracking-heading text-text-primary">{account.email}</h2>
         <p className="mt-3 text-supporting text-text-muted">You are signed in for this browser tab. Closing the tab ends the locally stored sign-in.</p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link href="/projects/" className="inline-flex min-h-12 items-center rounded-control bg-brand px-control-x py-control-y text-button font-control text-on-brand no-underline">Open My projects</Link>
+          <Link href="/projects/" className={buttonClasses({ element: "link" })}>Open My projects</Link>
           <Button variant="secondary" onClick={() => void logout()}>Sign out</Button>
           <Button variant="secondary" onClick={() => void logoutAll()}>Sign out everywhere</Button>
         </div>
       </section>
 
-      <section className="rounded-panel border border-border bg-surface p-card">
-        <h2 className="font-display text-section-title font-heading">Active sessions</h2>
+      <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+        <h2 className="font-display text-section-title font-heading tracking-heading text-text-primary">Active sessions</h2>
         {sessions === null ? <LoadingState className="mt-3" label="Loading sessions…" /> : (
           <ul className="mt-3 space-y-3">
             {sessions.map((session) => (
@@ -375,21 +376,21 @@ function AuthenticatedAccount() {
         {sessions === null || error ? <Button className="mt-3" variant="secondary" onClick={() => void loadSessions()}>Retry sessions</Button> : null}
       </section>
 
-      <section className="rounded-panel border border-border bg-surface p-card">
-        <h2 className="font-display text-section-title font-heading">Your data</h2>
+      <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+        <h2 className="font-display text-section-title font-heading tracking-heading text-text-primary">Your data</h2>
         <p className="mt-2 text-body text-text-muted">Export downloads a JSON file containing your account information, projects, and saved versions. It does not include your password or sign-in credentials.</p>
         <Button className="mt-3" variant="secondary" disabled={pending} onClick={() => void exportData()}>Export my data</Button>
       </section>
 
-      <section className="rounded-panel border-2 border-accent-strong bg-surface p-card">
-        <h2 className="font-display text-section-title font-heading">Delete account</h2>
+      <section className="rounded-panel border border-error-border bg-surface p-card">
+        <h2 className="font-display text-section-title font-heading tracking-heading text-text-primary">Delete account</h2>
         <p className="mt-2 text-body text-text-primary">This permanently deletes this account, every signed-in session, private project, saved project version, and project share link. Public designs created without an account are unaffected.</p>
         {!confirmDelete ? (
           <Button ref={deleteButtonRef} className="mt-3" variant="secondary" onClick={() => { setConfirmDelete(true); requestAnimationFrame(() => passwordRef.current?.focus()); }}>Review account deletion</Button>
         ) : (
           <form className="mt-4" onSubmit={(event) => void deleteAccount(event)}>
             <label htmlFor="delete-password" className="block text-label font-control">Re-enter your passphrase to confirm</label>
-            <input ref={passwordRef} id="delete-password" name="password" type="password" autoComplete="current-password" required minLength={12} maxLength={128} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-control-x" />
+            <input ref={passwordRef} id="delete-password" name="password" type="password" autoComplete="current-password" required minLength={12} maxLength={128} className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x py-control-y text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none aria-invalid:border-error-border aria-invalid:bg-error-surface" />
             <div className="mt-3 flex flex-wrap gap-3">
               <Button type="submit" isLoading={pending} loadingLabel="Deleting account…">Permanently delete account</Button>
               <Button type="button" variant="secondary" onClick={() => { setConfirmDelete(false); requestAnimationFrame(() => deleteButtonRef.current?.focus()); }}>Cancel</Button>
@@ -426,12 +427,12 @@ export function AccountScreen() {
         </ErrorMessage>
       ) : null}
       {returnTo ? (
-        <p className="rounded-card border border-border bg-surface-subtle p-3 text-supporting text-text-muted">
+        <p className="rounded-card border border-border bg-surface-subtle px-5 py-3 text-supporting text-text-muted">
           After successful authentication, you will return to {RETURN_LABELS[returnTo]}.
         </p>
       ) : null}
       <nav aria-label="Authentication options" className="rounded-card border border-border bg-surface p-2">
-        <ul className="grid grid-cols-2 gap-2">
+        <ul className="grid grid-cols-2 gap-1 rounded-control border border-border-strong bg-surface-subtle p-1">
           {(["login", "register"] as const).map((item) => {
             const active = mode === item;
             return (
@@ -439,7 +440,7 @@ export function AccountScreen() {
                 <Link
                   href={buildAccountHref(item, returnTo)}
                   aria-current={active ? "page" : undefined}
-                  className={`inline-flex min-h-11 w-full items-center justify-center rounded-control px-3 py-2 text-center text-button font-control break-words no-underline ${active ? "bg-brand text-on-brand" : "bg-surface-subtle text-text-primary hover:text-brand"}`}
+                  className={`inline-flex min-h-11 w-full items-center justify-center rounded-control px-3 py-2 text-center text-button font-control break-words no-underline ${active ? "bg-brand text-on-brand shadow-card" : "text-text-primary hover:bg-surface hover:text-brand"}`}
                 >
                   {item === "login" ? "Sign in" : "Create account"}
                 </Link>

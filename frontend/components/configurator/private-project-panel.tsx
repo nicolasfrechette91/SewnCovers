@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { AccountRequired } from "@/components/account";
-import { Button, ErrorMessage } from "@/components/ui";
+import {
+  Button,
+  controlClasses,
+  ErrorMessage,
+  fieldLabelClasses,
+  textLinkClasses,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import type { ConfigurationState } from "@/context/configuration";
 import { accountApi, AccountApiError } from "@/services/account-api";
@@ -49,14 +55,14 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
   };
 
   return (
-    <section aria-labelledby="private-project-heading" className="print-hidden mt-layout rounded-panel border border-border-strong bg-surface p-card shadow-raised">
-      <p className="text-label font-control text-accent-strong">Private account workspace</p>
-      <h3 id="private-project-heading" className="mt-2 font-display text-section-title font-heading">{projectId ? "Save a new version" : "Save to a private project"}</h3>
+    <section aria-labelledby="private-project-heading" className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline">
+      <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">Private account workspace</p>
+      <h3 id="private-project-heading" className="mt-3 font-display text-section-title font-heading tracking-heading text-text-primary">{projectId ? "Save a new version" : "Save to a private project"}</h3>
       <p className="mt-3 max-w-3xl text-body text-text-muted">{projectId ? "This design was opened from project history. Saving adds the next version and leaves earlier versions unchanged." : "A named project is private in your account. It is separate from the public design link above; other people can view a project version only if you create a read-only share link."}</p>
       {auth.status === "initializing" ? <p className="mt-3" role="status">Restoring your session…</p> : null}
       {auth.status === "guest" ? (
         <AccountRequired
-          className="mt-4 bg-surface-subtle shadow-none"
+          className="mt-4 bg-surface-subtle"
           headingLevel="h4"
           title="Sign in to save this design privately"
           description="A private project requires an account so its name, saved versions, and revocable project shares remain owner-only."
@@ -72,9 +78,9 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
       ) : null}
       {auth.status === "authenticated" ? (
         <form className="mt-4" onSubmit={(event) => void save(event)}>
-          {!projectId ? <><label htmlFor="private-project-name" className="block text-label font-control">Project name</label><input ref={nameRef} id="private-project-name" name="name" required maxLength={120} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-control-x" /></> : null}
+          {!projectId ? <><label htmlFor="private-project-name" className={`block ${fieldLabelClasses}`}>Project name</label><input ref={nameRef} id="private-project-name" name="name" required maxLength={120} className={`mt-2 ${controlClasses}`} /></> : null}
           {error ? <ErrorMessage className="mt-3">{error}</ErrorMessage> : null}
-          {success ? <div className="mt-3"><p ref={statusRef} tabIndex={-1} role="status" aria-live="polite" className="text-body font-emphasis">{success.message}</p><Link href={{ pathname: "/projects/", query: { project: success.projectId } }} className="mt-2 inline-flex min-h-11 items-center text-button font-control text-brand underline">Open saved project</Link></div> : null}
+          {success ? <div className="mt-3"><p ref={statusRef} tabIndex={-1} role="status" aria-live="polite" className="text-body font-emphasis">{success.message}</p><Link href={{ pathname: "/projects/", query: { project: success.projectId } }} className={`mt-2 ${textLinkClasses}`}>Open saved project</Link></div> : null}
           {!success ? <Button className="mt-4" type="submit" isLoading={pending} loadingLabel="Saving private version…">{projectId ? "Save as new version" : "Create private project"}</Button> : null}
         </form>
       ) : null}

@@ -26,15 +26,20 @@ export function CushionPreview({
       {...sectionProps}
       aria-label={ariaLabel}
       className={classNames(
-        "min-w-0 rounded-panel border border-border bg-surface p-card shadow-raised",
-        balanced && "grid gap-x-component lg:grid-cols-2 lg:items-start",
+        "min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline",
+        balanced && "grid gap-x-component @3xl:grid-cols-2 @3xl:items-start",
         className,
       )}
     >
-      <h2 className={classNames("break-words font-display text-section-title font-heading tracking-heading text-text-primary", balanced && "lg:col-span-2")}>
+      <h2 className={classNames("break-words font-display text-section-title font-heading tracking-heading text-text-primary", balanced && "@3xl:col-span-2")}>
         {title}
       </h2>
-      <div className="mt-component flex aspect-[4/3] min-h-48 w-full min-w-0 items-center justify-center overflow-hidden rounded-card border border-border bg-surface-subtle p-card">
+      <div
+        className={classNames(
+          "cutting-mat mt-component flex aspect-[4/3] min-h-48 w-full min-w-0 items-center justify-center overflow-hidden rounded-card border border-border p-card",
+          balanced && "@3xl:sticky @3xl:top-6",
+        )}
+      >
         {visual ? (
           <div
             aria-hidden="true"
@@ -46,7 +51,7 @@ export function CushionPreview({
           <div className="flex max-w-sm flex-col items-center gap-3 text-center">
             <span
               aria-hidden="true"
-              className="block h-20 w-28 rounded-panel border border-border-strong bg-surface shadow-card sm:h-28 sm:w-40"
+              className="block h-20 w-28 rounded-panel border border-dashed border-border-strong bg-surface sm:h-28 sm:w-40"
             />
             <p role="status" className="break-words text-supporting text-text-muted">
               {emptyMessage}

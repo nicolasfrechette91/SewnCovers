@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 
 import {
   RouteAwareSiteFooter,
@@ -13,6 +13,7 @@ import {
   SITE_NAME,
   SOCIAL_IMAGE,
   siteUrl,
+  THEME_COLOR,
 } from "@/config/site-metadata";
 import { AuthProvider } from "@/context/auth";
 import { ConfigurationProvider } from "@/context/configuration";
@@ -24,15 +25,40 @@ const publicApiOrigin = parsePublicApiOrigin(
 );
 const publicApiConnectSource = publicApiOrigin ? ` ${publicApiOrigin}` : "";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Self-hosted OFL fonts (see app/fonts/README.md). Local files keep builds
+// offline-safe and serve fonts from /_next/static/media under the base path.
+const fraunces = localFont({
+  adjustFontFallback: "Times New Roman",
+  display: "swap",
+  fallback: ["Iowan Old Style", "Georgia", "serif"],
+  src: "./fonts/fraunces-latin-opsz-wght.woff2",
+  variable: "--font-fraunces",
+  weight: "100 900",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const geist = localFont({
+  adjustFontFallback: "Arial",
+  display: "swap",
+  fallback: ["ui-sans-serif", "system-ui", "sans-serif"],
+  src: "./fonts/geist-latin-wght.woff2",
+  variable: "--font-geist",
+  weight: "100 900",
 });
+
+const geistMono = localFont({
+  adjustFontFallback: false,
+  display: "swap",
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+  preload: false,
+  src: "./fonts/geist-mono-latin-wght.woff2",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+});
+
+export const viewport: Viewport = {
+  colorScheme: "light",
+  themeColor: THEME_COLOR,
+};
 
 export const metadata: Metadata = {
   applicationName: SITE_NAME,
@@ -74,7 +100,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${fraunces.variable} ${geist.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         <meta

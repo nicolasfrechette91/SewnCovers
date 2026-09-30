@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { LoadingState } from "@/components/ui";
+import { LoadingState, PageHeader, PageShell } from "@/components/ui";
 import { ProjectsScreen } from "@/components/projects/projects-screen";
 import { createPageMetadata } from "@/config/site-metadata";
 
@@ -14,15 +14,13 @@ export const metadata: Metadata = createPageMetadata({
 
 export default function ProjectsPage() {
   return (
-    <div className="bg-page py-section">
-      <div className="mx-auto w-full max-w-6xl min-w-0 px-gutter">
-        <header className="mb-layout max-w-3xl">
-          <p className="text-label font-control text-accent-strong">Account workspace</p>
-          <h1 className="mt-2 font-display text-page-title font-heading">My projects</h1>
-          <p className="mt-3 text-body text-text-muted">Projects keep named designs and their saved versions private in your account. A version becomes viewable to others only when you create a read-only share link, which you can revoke later.</p>
-        </header>
-        <Suspense fallback={<LoadingState label="Loading project workspace…" />}><ProjectsScreen /></Suspense>
-      </div>
-    </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="Account workspace"
+        title="My projects"
+        lede="Projects keep named designs and their saved versions private in your account. A version becomes viewable to others only when you create a read-only share link, which you can revoke later."
+      />
+      <Suspense fallback={<LoadingState label="Loading project workspace…" />}><ProjectsScreen /></Suspense>
+    </PageShell>
   );
 }

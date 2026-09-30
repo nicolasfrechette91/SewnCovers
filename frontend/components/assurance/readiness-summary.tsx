@@ -45,7 +45,7 @@ export function ReadinessSummary() {
     <section className="mt-layout" aria-labelledby="readiness-heading">
       <h2
         id="readiness-heading"
-        className="font-display text-section-title font-heading"
+        className="font-display text-section-title font-heading tracking-heading text-text-primary"
       >
         Read-only readiness summary
       </h2>
@@ -63,7 +63,7 @@ export function ReadinessSummary() {
         <ErrorMessage title="Readiness unavailable">{error}</ErrorMessage>
       ) : null}
       {report ? (
-        <div className="mt-4 rounded-panel border border-border bg-surface p-card">
+        <div className="mt-4 rounded-panel border border-border bg-surface p-card shadow-hairline">
           <p className="font-control" role="status">
             {report.ready
               ? "No blocking configuration errors were found."

@@ -1,11 +1,12 @@
 import { AccountRequired } from "@/components/account";
+import { noticeClasses, noticeTitleClasses } from "@/components/ui";
 import type { AuthenticationReturnTarget } from "@/services/auth-navigation";
 
 export function DemoBanner() {
   return (
-    <aside className="rounded-card border-2 border-accent-strong bg-error-surface p-4" aria-label="Demonstration commerce notice">
-      <p className="text-label font-control uppercase tracking-label text-error-text">Sandbox demonstration</p>
-      <p className="mt-1 text-supporting text-error-text">Fictional CAD prices and payment events only. No live charge, tax, shipment, or production service is available.</p>
+    <aside className={noticeClasses("sandbox")} aria-label="Demonstration commerce notice">
+      <p className={noticeTitleClasses("sandbox")}>Sandbox demonstration</p>
+      <p className="mt-1 text-supporting text-notice-text">Fictional CAD prices and payment events only. No live charge, tax, shipment, or production service is available.</p>
     </aside>
   );
 }
@@ -87,5 +88,5 @@ export function SignInForCommerce({
 }
 
 export function CommerceError({ message }: Readonly<{ message: string }>) {
-  return <p className="wrap-anywhere rounded-card border border-error-border bg-error-surface p-3 text-error-text" role="alert">{message}</p>;
+  return <p className="wrap-anywhere rounded-card border border-error-border bg-error-surface px-5 py-3 text-supporting text-error-text" role="alert">{message}</p>;
 }

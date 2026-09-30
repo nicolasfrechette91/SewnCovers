@@ -222,6 +222,15 @@ export function resolvePatternResponses(
     : { status: "ready", patterns: resolvedPatterns };
 }
 
+/** The CSS artwork class for a built-in pattern id, or null when unknown. */
+export function getPatternArtworkClassName(
+  patternId: string,
+): PatternPreviewClassName | null {
+  return Object.hasOwn(patternArtworkById, patternId)
+    ? patternArtworkById[patternId as keyof typeof patternArtworkById]
+    : null;
+}
+
 export function getPatternCategoryLabel(
   categoryId: PatternCategoryId,
 ): string {

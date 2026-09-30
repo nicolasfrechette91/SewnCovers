@@ -86,26 +86,54 @@ Callers may supply `onStatus` to receive `connecting`, `cold-start`, `retrying`,
 
 ## Design tokens
 
-The visual foundation uses a warm ivory page, warm-neutral surfaces, forest-green brand actions, and restrained terracotta accents. Semantic CSS-first Tailwind v4 theme variables in `app/globals.css` are the single source of truth; they generate utilities such as `bg-page`, `text-text-muted`, `border-border-strong`, `rounded-card`, and `shadow-raised` while remaining available as CSS custom properties.
+The visual direction is "The Cutting Table": a tailor's workroom laid out like a clean editorial spread. `DESIGN_AUDIT.md` records the audit, the principles, every token and the WCAG contrast ratios.
 
-- Color roles distinguish the page, elevated and subtle surfaces, primary and muted text, brand interaction states, decorative and text-safe accent variants, borders, and focus colors. Standard borders are for visual separation; controls that require a 3:1 boundary use `border-strong`. The regular terracotta accent is not approved for normal-sized text, so `accent-strong` is used when accent-colored text is needed.
-- Geist remains the body and display family, with Geist Mono retained for technical content. The compact semantic scale covers supporting text, labels, buttons, body copy, section headings, and page titles without coupling visual size to HTML heading level. This preserves the verified static-export setup, but clean builds still need outbound access while `next/font/google` downloads and self-hosts Geist.
-- Spacing keeps Tailwind's 4px base and adds a few named steps for icons, controls, components, cards, gutters, layouts, and sections. Radius tokens cover small and standard controls, cards, panels, and intentional pills. Three warm shadow levels cover cards, raised controls, and future overlay surfaces.
-- The global `:focus-visible` fallback applies only to standard interactive or explicitly focusable elements. Its two-color 2px/3px ring remains visible on light surfaces and forest-green actions, with a system-color outline fallback in forced-colors mode; later components may compose the same `shadow-focus` token with their own shadows.
+`app/globals.css` is the single source of truth. It is organised in three layers:
 
-WCAG 2.2 contrast checks: primary text on the page is 12.28:1; muted text is 5.22:1 on the page and 5.64:1 on cards; light text on the brand is 8.92:1; brand on the page is 8.20:1; text-safe terracotta on the page is 5.64:1; and the focus color is 4.31:1 on the page and 4.65:1 on cards. The strong border is 3.08:1 on the page and 3.32:1 on cards. The inner light focus ring is 8.92:1 against the brand, while the outer terracotta ring is 4.65:1 against the inner ring. Values were checked with the WCAG relative-luminance formula.
+1. **Primitive palette.** Raw values on `:root` (linen, ink, loden, terracotta, brass and madder), which generate no utilities.
+2. **Semantic theme tokens.** CSS-first Tailwind v4 `@theme` variables that generate utilities such as `bg-page`, `text-text-muted`, `border-border-strong`, `rounded-card`, `shadow-raised` and `max-w-page`.
+3. **Fabric dye tokens** (`--dye-*`). These colour the pattern artwork independently of the UI theme.
 
-Task 2.2 adds semantic disabled-control aliases and an error surface/border/text palette because those concrete component states now require them. Dark mode and a broader status or motion-token system remain deferred.
+Tailwind's default colour, type, radius and shadow scales are reset to `initial`, so every utility resolves to a SewnCovers token. `tests/design-tokens.test.ts` fails if components use default scale utilities, arbitrary colours or raw colour literals.
+
+- **Colour.** Roles cover:
+  - page and surfaces, primary and muted text;
+  - brand states and a brand tint;
+  - decorative and text-safe accents, tape-measure brass, borders and stitch lines, focus;
+  - three feedback palettes: a brass "care label" `notice` palette for prototype and sandbox disclaimers, `success`, and a madder-red `error`.
+
+  Disclaimers never reuse the error palette. Semantic colours stay 6-digit hex after substitution because the e2e contrast check parses them. Primary text is 13.49:1 on the page. Muted text is 5.97:1 on the page and 6.56:1 on surfaces. On-brand text is 8.86:1. Notice text is 6.23:1. The strong border is 3.56:1 on the page. Focus is 4.81:1 on the page.
+- **Type.** Three self-hosted OFL families live in `app/fonts/`, loaded with `next/font/local`:
+  - Fraunces for display type;
+  - Geist for UI and body copy;
+  - Geist Mono for measurements, eyebrows and numerals.
+
+  Builds need no network access for fonts, and the files are served from `/_next/static/media` behind the GitHub Pages base path. The CI `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` variable is now a harmless no-op. The scale runs from `display` through `page-title`, `section-title`, `card-title`, `subhead`, `lede`, `body`, `supporting`, `label`, `button`, `eyebrow` and `readout`, without coupling visual size to heading level.
+- **Spacing and containers.** Spacing keeps Tailwind's 4px base plus the named steps `icon`, `control-x`/`control-y`, `component`, `card`, `gutter`, `layout` and `section`. Containers are `page` for workspaces, `content` for forms and `reading` for long copy.
+- **Radius and elevation.** Radii are tight (4, 6, 8 and 12px, plus `pill`). Elevation is flat: `hairline`, `card`, `raised`, `overlay`, `focus`, `selected` (an inset brand ring) and `current`.
+- **Motion.** Durations are 120, 180 and 280ms with a single `ease-standard` curve. Only colour, opacity, transform, border and shadow are animated; buttons press by darkening and flattening rather than moving. A global `prefers-reduced-motion` guard removes every transition and animation.
+- **Textile details.** A few reusable classes are used sparingly:
+  - `stitch-rule` (a running-stitch divider);
+  - `choice-card` (a radio-backed option with a dashed "basting stitch" when selected);
+  - `care-label`, `cutting-mat`, `ruler`;
+  - `pinked-edge` (a responsive utility);
+  - `progress-track`.
+
+  Every selected state has a forced-colours equivalent.
+- **Dark mode is token-ready but deferred.** `:root` declares `color-scheme: light`. The planned "After hours" palette and its checked ratios are in `DESIGN_AUDIT.md`.
+
+The global `:focus-visible` fallback draws a two-colour ring (2px surface gap plus 3px terracotta) on standard interactive or explicitly focusable elements, with a system-colour outline in forced-colours mode.
 
 ## UI primitives
 
-Reusable typed primitives live in `components/ui/` and are available from the `@/components/ui` barrel. Their static Tailwind class mappings consume the semantic theme utilities above; optional `className` props are intended for layout integration rather than replacing required state or focus treatment.
+Reusable typed primitives live in `components/ui/` and are available from the `@/components/ui` barrel. Components use them, or the exported class helpers, instead of hand-written class strings.
 
-- `Button` renders a native button with primary or secondary variants, default or compact sizing, `type="button"` by default, and native disabled behavior. Loading disables interaction, sets `aria-busy`, preserves the original width where practical, and exposes a visible loading label.
-- `NumberInput` renders a labeled native number input by default and can opt into a text input when a caller must preserve an incomplete decimal display draft. It retains standard controlled or uncontrolled value handling, decimal-friendly input mode, supporting text, native input attributes, and optional invalid styling. Caller-provided error IDs compose with generated supporting-text IDs through `aria-describedby`; the component does not coerce, clamp, round, validate, or convert values.
-- `UnitSelector` is a controlled native radio group for centimetres (`cm`) and inches (`in`). Its fieldset and legend provide group semantics, selected state includes a visible checkmark, and unit changes do not convert numeric values.
-- `LoadingState` exposes a visible, polite status label and an assistive-technology-hidden CSS spinner. Rotation is limited to users without a reduced-motion preference, while the static indicator remains visible for reduced motion.
-- `ErrorMessage` remains in document flow, defaults to assertive alert semantics, accepts normal React content and an `id` for form association, and uses the semantic error surface, border, and text tokens.
+- **`Button` and `ButtonLink`** share `buttonClasses()`. They have primary, secondary and ghost variants and default or compact sizes. Disabled buttons use a dashed "unavailable" frame. `ButtonLink` wraps `next/link` and renders its children directly, which keeps the exported `>Start configuring</a>` markup stable. `TextLink` and `textLinkClasses` cover underlined text links with 44px targets.
+- **`Surface` and `surfaceClasses()`** provide the panel and card frames: default, subtle, page, emphasis and danger tones with flat to raised elevation. `EmptyState` draws a dashed "pattern piece" outline.
+- **`PageShell`, `PageHeader` and `SectionHeader`** replace the page wrapper and the eyebrow + heading + lede markup that was repeated inside each page. They are exported alongside the `eyebrowClasses`, `pageTitleClasses`, `sectionTitleClasses`, `cardTitleClasses`, `subheadClasses` and `ledeClasses` helpers.
+- **Form fields.** `Field`, `TextInput`, `Select`, `Textarea` and `Checkbox` share one control frame (`controlClasses`) and wire up label, help and error IDs. `NumberInput` accepts an optional `unit` suffix, rendered in mono and hidden from assistive technology because the label already names the unit. `UnitSelector` is a segmented control for `cm` and `in`.
+- **Status.** `Badge` is a small non-interactive status tag. `Notice` covers prototype, sandbox, info and success tones; prototype and sandbox render as care labels. `ErrorMessage` keeps assertive alert semantics and accepts an optional visible `heading`. `LoadingState` is unchanged.
+- **Content helpers.** `StitchDivider` draws a decorative divider. `SpecList` renders label and value pairs as a spec sheet.
 
 Business validation, measurement conversion, screen-level persistence integration, overlays, skeletons, toasts, and global error handling remain deferred to their roadmap tasks.
 
@@ -281,7 +309,7 @@ $env:SEWNCOVERS_GITHUB_PAGES = "true"
 npm run test:e2e
 ```
 
-On macOS or Linux, use `SEWNCOVERS_GITHUB_PAGES=true npm run test:e2e`. The runner builds the real static export with a local test-only Google Fonts response, serves `out/` from a single-process loopback server, and blocks every browser origin except that server and `api.sewncovers.test`. Playwright intercepts the reserved `.test` origin before DNS and fulfills patterns, design creation, and design retrieval entirely in memory, so the journey cannot contact Neon, Render, Google Fonts, or another external service.
+On macOS or Linux, use `SEWNCOVERS_GITHUB_PAGES=true npm run test:e2e`. The runner builds the real static export with the self-hosted fonts in `app/fonts/` (the test-only Google Fonts mapping is kept for CI parity but no longer used), serves `out/` from a single-process loopback server, and blocks every browser origin except that server and `api.sewncovers.test`. Playwright intercepts the reserved `.test` origin before DNS and fulfills patterns, design creation, and design retrieval entirely in memory, so the journey cannot contact Neon, Render, Google Fonts, or another external service.
 
 The Chromium journey suite uses accessible roles, names, status regions,
 visible values, and native controls. In addition to the guest save/restore and

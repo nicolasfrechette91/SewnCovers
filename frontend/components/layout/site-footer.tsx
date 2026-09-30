@@ -30,11 +30,12 @@ export function SiteFooter({
     <footer
       {...footerProps}
       className={classNames(
-        "min-w-0 border-t border-border bg-surface-subtle text-text-primary",
+        "min-w-0 bg-surface-subtle text-text-primary",
         className,
       )}
     >
-      <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-component px-gutter py-layout sm:flex-row sm:items-end sm:justify-between">
+      <span aria-hidden="true" className="stitch-rule stitch-rule-accent" />
+      <div className="mx-auto flex w-full max-w-page min-w-0 flex-col gap-component px-gutter py-layout sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <p className="break-words font-display text-section-title font-heading tracking-heading text-brand">
             SewnCovers
@@ -59,7 +60,7 @@ export function SiteFooter({
                       href={item.href}
                       aria-current={isCurrent ? "page" : undefined}
                       className={classNames(
-                        "inline-flex min-h-11 min-w-11 max-w-full items-center rounded-control text-supporting font-emphasis break-words text-text-primary underline underline-offset-4 hover:text-brand active:text-brand-active",
+                        "inline-flex min-h-11 min-w-11 max-w-full items-center rounded-control text-supporting font-emphasis break-words text-text-primary underline underline-offset-4 transition-colors duration-(--duration-fast) hover:text-brand hover:decoration-dashed active:text-brand-active motion-reduce:transition-none",
                         isCurrent ? "decoration-2" : "decoration-1",
                       )}
                     >
@@ -72,7 +73,7 @@ export function SiteFooter({
           </nav>
         ) : null}
 
-        <p className="break-words text-supporting text-text-muted">
+        <p className="break-words font-mono text-eyebrow tracking-eyebrow text-text-muted uppercase">
           © {year} SewnCovers. Portfolio prototype.
         </p>
       </div>

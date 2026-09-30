@@ -45,7 +45,7 @@ export function UnitSelector({
       <legend className="mb-2 text-label font-control tracking-label text-text-primary">
         {legend}
       </legend>
-      <div className="grid grid-cols-2 rounded-control border border-border-strong bg-surface p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-control border border-border-strong bg-surface-subtle p-1">
         {unitOptions.map((option) => {
           const optionId = `unit-selector-${generatedId}-${option.value}`;
 
@@ -63,7 +63,7 @@ export function UnitSelector({
               />
               <label
                 htmlFor={optionId}
-                className="unit-selector-label flex min-h-11 cursor-pointer items-center justify-center gap-icon rounded-control-small px-3 py-2 text-center text-button font-control text-text-primary transition-[background-color,color,box-shadow] hover:bg-surface-subtle active:bg-surface-subtle active:text-brand-active peer-checked:bg-brand peer-checked:text-on-brand peer-checked:hover:bg-brand-hover peer-checked:active:bg-brand-active peer-checked:active:text-on-brand peer-disabled:cursor-not-allowed peer-disabled:bg-control-disabled-surface peer-disabled:text-control-disabled-text motion-reduce:transition-none"
+                className="unit-selector-label flex min-h-11 cursor-pointer items-center justify-center gap-icon rounded-control-small px-3 py-2 text-center text-button font-control text-text-primary transition-[background-color,color,box-shadow] hover:bg-surface active:bg-surface active:text-brand-active peer-checked:bg-brand peer-checked:shadow-card peer-checked:text-on-brand peer-checked:hover:bg-brand-hover peer-checked:active:bg-brand-active peer-checked:active:text-on-brand peer-disabled:cursor-not-allowed peer-disabled:bg-control-disabled-surface peer-disabled:text-control-disabled-text motion-reduce:transition-none"
               >
                 <span
                   aria-hidden="true"

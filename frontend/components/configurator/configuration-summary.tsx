@@ -36,7 +36,7 @@ export function ConfigurationSummary({
       {...sectionProps}
       aria-label={ariaLabel}
       className={classNames(
-        "min-w-0 rounded-panel border border-border bg-surface p-card shadow-card",
+        "min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline",
         className,
       )}
     >
@@ -48,13 +48,13 @@ export function ConfigurationSummary({
           {emptyMessage}
         </p>
       ) : (
-        <dl className="mt-component divide-y divide-border">
+        <dl className="mt-component divide-y divide-dashed divide-border-strong border-t border-dashed border-border-strong">
           {items.map((item) => (
             <div
               key={item.id}
-              className="grid min-w-0 gap-1 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:gap-component"
+              className="grid min-w-0 gap-1 py-3 last:pb-0 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:items-baseline sm:gap-component"
             >
-              <dt className="min-w-0 break-words text-label font-control tracking-label text-text-muted">
+              <dt className="min-w-0 break-words font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
                 {item.label}
               </dt>
               <dd className="min-w-0 break-words text-body font-emphasis text-text-primary sm:text-right">

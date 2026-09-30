@@ -117,14 +117,14 @@ export function SandboxCheckoutScreen() {
       <DemoBanner />
       {error ? <CommerceError message={error} /> : null}
       {checkout ? (
-        <section className="rounded-panel border-2 border-brand bg-surface p-card shadow-raised">
-          <p className="text-label font-control uppercase text-accent-strong">
+        <section className="rounded-panel border border-brand bg-surface p-card shadow-card">
+          <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
             Fictional hosted checkout
           </p>
-          <h2 className="mt-2 font-display text-page-title font-heading">
+          <h2 className="mt-3 break-words font-display text-section-title font-heading tracking-heading text-text-primary">
             {checkout.orderReference}
           </h2>
-          <p className="mt-2 text-section-title font-heading">
+          <p className="mt-2 font-display text-section-title font-heading tabular-nums text-text-primary">
             {"$"}{(checkout.amountMinor / 100).toFixed(2)} CAD estimated
             subtotal
           </p>
@@ -153,14 +153,14 @@ export function SandboxCheckoutScreen() {
                   <input
                     readOnly
                     value={value}
-                    className="min-h-11 rounded-control border border-border-strong bg-surface px-3 text-body"
+                    className="min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
                   />
                 </label>
               ))}
             </fieldset>
             <label className="mt-4 flex items-start gap-2 text-supporting">
               <input
-                className="mt-1 size-5 shrink-0"
+                className="mt-0.5 size-5 shrink-0 cursor-pointer accent-brand"
                 type="checkbox"
                 checked={termsAcknowledged}
                 onChange={(event) =>

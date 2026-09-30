@@ -8,7 +8,17 @@ import {
   PatternFilter,
   type PatternFilterOption,
 } from "@/components/configurator/pattern-filter";
-import { Button, ErrorMessage, LoadingState } from "@/components/ui";
+import {
+  Button,
+  cardTitleClasses,
+  controlClasses,
+  ErrorMessage,
+  fieldErrorClasses,
+  fieldLabelClasses,
+  LoadingState,
+  noticeClasses,
+  StitchDivider,
+} from "@/components/ui";
 import {
   DEFAULT_SOLID_COLOR,
   getBuiltInPatternId,
@@ -272,16 +282,16 @@ export function PatternStep({
   return (
     <section
       aria-label="Pattern selection"
-      className="mt-layout scroll-mt-layout"
+      className="scroll-mt-layout"
     >
       <fieldset
         aria-describedby={supportingTextId}
-        className="min-w-0 rounded-panel border border-border bg-surface p-card shadow-raised"
+        className="fieldset-panel min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline"
       >
         <legend
           id={focusTargetId}
           tabIndex={focusTargetId ? -1 : undefined}
-          className="configurator-edit-target max-w-full scroll-mt-layout px-1 font-display text-section-title font-heading tracking-heading text-text-primary"
+          className="configurator-edit-target max-w-full scroll-mt-layout pb-2 font-display text-section-title font-heading tracking-heading text-text-primary"
         >
           Choose fabric color or pattern
         </legend>
@@ -294,14 +304,13 @@ export function PatternStep({
           adjusted in the preview when a printed pattern is selected.
         </p>
 
-        <h3 className="mt-layout font-display text-section-title font-heading">
-          Plain fabric
-        </h3>
+        <StitchDivider className="mt-component" />
+        <h3 className={`mt-component ${cardTitleClasses}`}>Plain fabric</h3>
         <p className="mt-2 max-w-3xl break-words text-supporting text-text-muted">
           Solid color stays available independently of pattern search and
           filters.
         </p>
-        <div className="mt-component grid min-w-0 gap-component sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <PatternCard
             id={`${generatedId}-solid-color`}
             name="solid-fabric-choice"
@@ -314,7 +323,7 @@ export function PatternStep({
             description="Use one continuous fabric color across the cushion."
             preview={
               <span
-                className="block h-3/5 w-4/5 rounded-panel border border-border-strong shadow-card"
+                className="cushion-preview-solid block h-3/5 w-4/5 rounded-panel border border-border-strong shadow-card"
                 style={{
                   backgroundColor: solidColor ?? DEFAULT_SOLID_COLOR,
                 }}
@@ -325,13 +334,13 @@ export function PatternStep({
         </div>
         {solidColor !== null ? (
           <div
-            className="mt-component max-w-2xl rounded-card border border-border-strong bg-surface-subtle p-control-x py-4"
+            className="mt-4 max-w-2xl rounded-card border border-border bg-surface-subtle p-4 sm:p-5"
             role="group"
             aria-labelledby={`${generatedId}-solid-color-heading`}
           >
             <h4
               id={`${generatedId}-solid-color-heading`}
-              className="text-body font-control text-text-primary"
+              className="text-subhead font-control text-text-primary"
             >
               Choose your fabric color
             </h4>
@@ -339,7 +348,7 @@ export function PatternStep({
               <div>
                 <label
                   htmlFor={`${generatedId}-native-color`}
-                  className="block text-label font-control text-text-primary"
+                  className={`block ${fieldLabelClasses}`}
                 >
                   Fabric color picker
                 </label>
@@ -347,7 +356,7 @@ export function PatternStep({
                   id={`${generatedId}-native-color`}
                   type="color"
                   value={solidColor}
-                  className="mt-2 h-12 w-20 cursor-pointer rounded-control border border-border-strong bg-surface p-1"
+                  className="mt-2 h-12 w-20 cursor-pointer rounded-control border border-border-strong bg-surface p-1 transition-colors duration-(--duration-fast) hover:border-brand motion-reduce:transition-none"
                   onChange={(event) =>
                     updateSolidColor(event.currentTarget.value)
                   }
@@ -356,7 +365,7 @@ export function PatternStep({
               <div className="min-w-0">
                 <label
                   htmlFor={`${generatedId}-hex-color`}
-                  className="block text-label font-control text-text-primary"
+                  className={`block ${fieldLabelClasses}`}
                 >
                   Hexadecimal color
                 </label>
@@ -370,7 +379,7 @@ export function PatternStep({
                   value={displayedSolidColorDraft}
                   aria-invalid={solidColorError !== null}
                   aria-describedby={`${generatedId}-hex-help${solidColorError ? ` ${generatedId}-hex-error` : ""}`}
-                  className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface px-control-x py-control-y font-mono text-body uppercase text-text-primary"
+                  className={`mt-2 ${controlClasses} font-mono uppercase tabular-nums`}
                   onChange={(event) =>
                     updateSolidColor(event.currentTarget.value)
                   }
@@ -388,13 +397,13 @@ export function PatternStep({
             {solidColorError ? (
               <p
                 id={`${generatedId}-hex-error`}
-                className="mt-2 text-supporting text-error-text"
+                className={`mt-2 ${fieldErrorClasses}`}
                 role="alert"
               >
                 {solidColorError}
               </p>
             ) : null}
-            <figure className="mt-4 rounded-card border border-border bg-surface p-3">
+            <figure className="cutting-mat mt-4 rounded-card border border-border p-3">
               <div aria-hidden="true" className="mx-auto max-w-xl">
                 <CushionModel
                   patternName="Solid color"
@@ -403,7 +412,7 @@ export function PatternStep({
                   solidColor={solidColor}
                 />
               </div>
-              <figcaption className="text-center text-supporting text-text-muted">
+              <figcaption className="text-center font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
                 Live cushion preview · Solid color {solidColor}
               </figcaption>
             </figure>
@@ -415,7 +424,8 @@ export function PatternStep({
 
         <YourPatterns />
 
-        <h3 className="mt-layout font-display text-section-title font-heading">
+        <StitchDivider className="mt-layout" />
+        <h3 className={`mt-component ${cardTitleClasses}`}>
           Built-in patterns
         </h3>
         <p className="mt-2 max-w-3xl break-words text-supporting text-text-muted">
@@ -425,14 +435,14 @@ export function PatternStep({
 
         {!hasCompleteCatalogue ? (
           catalogue.phase === "loading" ? (
-            <div className="mt-component rounded-card border border-border bg-surface-subtle p-card">
+            <div className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card">
               <LoadingState label={catalogue.message} />
             </div>
           ) : catalogue.phase === "error" ? (
             errorState
           ) : (
             <div
-              className="mt-component rounded-card border border-border-strong bg-surface-subtle p-card"
+              className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card"
               aria-labelledby={`${generatedId}-empty-catalogue-title`}
             >
               <h3
@@ -456,11 +466,11 @@ export function PatternStep({
           )
         ) : (
           <>
-            <div className="mt-component rounded-card border border-border bg-surface-subtle p-control-x py-4">
+            <div className="mt-4 rounded-card border border-border bg-surface-subtle p-4 sm:p-5">
               <div className="max-w-2xl">
                 <label
                   htmlFor={`${generatedId}-pattern-search`}
-                  className="block text-label font-control tracking-label text-text-primary"
+                  className={`block ${fieldLabelClasses}`}
                 >
                   Search built-in patterns
                 </label>
@@ -470,7 +480,7 @@ export function PatternStep({
                   type="search"
                   value={searchQuery}
                   aria-describedby={resultCountId}
-                  className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x py-control-y text-body text-text-primary transition-[background-color,border-color,box-shadow] placeholder:text-text-muted motion-reduce:transition-none"
+                  className={`mt-2 ${controlClasses}`}
                   placeholder="Name, description, category, or color"
                   onChange={(event) =>
                     updateSearchQuery(event.currentTarget.value)
@@ -505,10 +515,10 @@ export function PatternStep({
                   }
                 />
               </div>
-              <div className="mt-component flex min-w-0 flex-wrap items-center justify-between gap-3">
+              <div className="mt-component flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-dashed border-border-strong pt-4">
                 <p
                   id={resultCountId}
-                  className="min-w-0 break-words text-supporting text-text-muted"
+                  className="min-w-0 break-words font-mono text-supporting text-text-muted"
                 >
                   {resultCountMessage}
                 </p>
@@ -534,7 +544,7 @@ export function PatternStep({
 
             {selectedPatternIsHiddenByCriteria ? (
               <div
-                className="mt-component rounded-card border border-border-strong bg-surface-subtle p-control-x py-4"
+                className={noticeClasses("info", "mt-component")}
                 role="status"
                 aria-live="polite"
                 aria-atomic="true"
@@ -557,7 +567,7 @@ export function PatternStep({
             ) : null}
 
             {selectedPatternIsUndisclosed ? (
-              <div className="mt-component rounded-card border border-border-strong bg-surface-subtle p-control-x py-4">
+              <div className={noticeClasses("info", "mt-component")}>
                 <h3 className="text-body font-control text-text-primary">
                   Selected pattern outside the initial results
                 </h3>
@@ -590,14 +600,14 @@ export function PatternStep({
             ) : null}
 
             {catalogue.phase === "loading" ? (
-              <div className="mt-component rounded-card border border-border bg-surface-subtle p-card">
+              <div className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card">
                 <LoadingState label={catalogue.message} />
               </div>
             ) : catalogue.phase === "error" ? (
               errorState
             ) : matchingPatterns.length === 0 ? (
               <div
-                className="mt-component rounded-card border border-border-strong bg-surface-subtle p-card"
+                className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card"
                 aria-labelledby={`${generatedId}-no-matches-title`}
               >
                 <h3
@@ -623,7 +633,7 @@ export function PatternStep({
               <div
                 id={`${generatedId}-pattern-results`}
                 aria-describedby={resultCountId}
-                className="mt-layout grid min-w-0 gap-component sm:grid-cols-2 lg:grid-cols-3"
+                className="mt-component grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3"
               >
                 {displayedPatterns.map((pattern) => {
                   const optionId = `${generatedId}-${pattern.id}`;

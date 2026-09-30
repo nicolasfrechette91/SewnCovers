@@ -1,12 +1,13 @@
 import type { CushionShape } from "@/context/configuration";
 
 export function ShapeIllustration({
+  className = "h-28 w-full max-w-48",
   shape,
-}: Readonly<{ shape: CushionShape }>) {
+}: Readonly<{ className?: string; shape: CushionShape }>) {
   return (
     <svg
       aria-hidden="true"
-      className="shape-illustration block h-28 w-full max-w-48"
+      className={`shape-illustration block ${className}`}
       viewBox="0 0 192 112"
       preserveAspectRatio="xMidYMid meet"
       focusable="false"

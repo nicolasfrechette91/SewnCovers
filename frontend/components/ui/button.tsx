@@ -1,10 +1,10 @@
 import type { ComponentPropsWithRef, ReactNode } from "react";
 
+import { buttonClasses, type ButtonSize, type ButtonVariant } from "./button-styles";
 import { classNames } from "./class-names";
 import { LoadingSpinner } from "./loading-spinner";
 
-export type ButtonVariant = "primary" | "secondary";
-export type ButtonSize = "default" | "compact";
+export type { ButtonSize, ButtonVariant } from "./button-styles";
 
 export interface ButtonProps extends ComponentPropsWithRef<"button"> {
   isLoading?: boolean;
@@ -12,18 +12,6 @@ export interface ButtonProps extends ComponentPropsWithRef<"button"> {
   size?: ButtonSize;
   variant?: ButtonVariant;
 }
-
-const variantClasses: Record<ButtonVariant, string> = {
-  primary:
-    "border-brand bg-brand text-on-brand shadow-raised enabled:hover:border-brand-hover enabled:hover:bg-brand-hover enabled:active:border-brand-active enabled:active:bg-brand-active",
-  secondary:
-    "border-border-strong bg-surface text-text-primary shadow-card enabled:hover:bg-surface-subtle enabled:active:bg-surface-subtle enabled:active:text-brand-active enabled:active:shadow-none",
-};
-
-const sizeClasses: Record<ButtonSize, string> = {
-  default: "min-h-12 px-control-x py-control-y",
-  compact: "min-h-11 px-3 py-2",
-};
 
 export function Button({
   "aria-busy": ariaBusy,
@@ -47,12 +35,7 @@ export function Button({
       type={type}
       disabled={isDisabled}
       aria-busy={isLoading ? true : ariaBusy}
-      className={classNames(
-        "relative inline-flex min-h-11 min-w-11 max-w-full items-center justify-center gap-icon rounded-control border text-button font-control tracking-label transition-[background-color,border-color,color,box-shadow] motion-reduce:transition-none disabled:cursor-not-allowed disabled:border-control-disabled-border disabled:bg-control-disabled-surface disabled:text-control-disabled-text disabled:shadow-none",
-        variantClasses[variant],
-        sizeClasses[size],
-        className,
-      )}
+      className={buttonClasses({ className, size, variant })}
     >
       <span
         aria-hidden={isLoading || undefined}

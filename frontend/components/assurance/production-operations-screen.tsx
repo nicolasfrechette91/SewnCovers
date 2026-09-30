@@ -142,7 +142,7 @@ export function ProductionOperationsScreen() {
           <div>
             <h2
               id="production-queue-heading"
-              className="font-display text-section-title font-heading"
+              className="font-display text-section-title font-heading tracking-heading text-text-primary"
             >
               Production operations
             </h2>
@@ -165,7 +165,7 @@ export function ProductionOperationsScreen() {
           <label className="font-control">
             Search order or work reference
             <input
-              className="mt-1 min-h-11 w-full rounded-control border border-border-strong bg-surface px-3"
+              className="mt-1 w-full min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
               value={search}
               onChange={(event) => setSearch(event.currentTarget.value)}
             />
@@ -173,7 +173,7 @@ export function ProductionOperationsScreen() {
           <label className="font-control">
             Work state
             <select
-              className="mt-1 min-h-11 w-full rounded-control border border-border-strong bg-surface px-3"
+              className="mt-1 w-full min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
               value={stateFilter}
               onChange={(event) => setStateFilter(event.currentTarget.value)}
             >
@@ -187,7 +187,7 @@ export function ProductionOperationsScreen() {
           <label className="font-control">
             Issue state
             <select
-              className="mt-1 min-h-11 w-full rounded-control border border-border-strong bg-surface px-3"
+              className="mt-1 w-full min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
               value={issueFilter}
               onChange={(event) => setIssueFilter(event.currentTarget.value)}
             >
@@ -219,7 +219,7 @@ export function ProductionOperationsScreen() {
             <li key={work.id}>
               <button
                 type="button"
-                className="min-h-24 w-full rounded-card border border-border-strong bg-surface p-4 text-left hover:bg-surface-subtle"
+                className="min-h-24 w-full rounded-card border border-border-strong bg-surface p-4 text-left transition-[border-color,box-shadow] hover:border-brand hover:shadow-card motion-reduce:transition-none"
                 onClick={() => {
                   setSelected(work);
                   globalThis.setTimeout(
@@ -248,14 +248,14 @@ export function ProductionOperationsScreen() {
 
       {selected ? (
         <section
-          className="rounded-panel border border-border bg-surface p-card"
+          className="rounded-panel border border-border bg-surface p-card shadow-hairline"
           aria-labelledby="work-detail-heading"
         >
           <h2
             id="work-detail-heading"
             ref={detailHeading}
             tabIndex={-1}
-            className="font-display text-section-title font-heading"
+            className="font-display text-section-title font-heading tracking-heading text-text-primary"
           >
             Work {selected.id}
           </h2>
@@ -272,7 +272,7 @@ export function ProductionOperationsScreen() {
               {JSON.stringify(selected.specification, null, 2)}
             </pre>
           </details>
-          <h3 className="mt-component font-display text-body font-heading">
+          <h3 className="mt-component text-subhead font-control text-text-primary">
             Checklist
           </h3>
           <ul className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -311,7 +311,7 @@ export function ProductionOperationsScreen() {
             <label className="font-control">
               Structured reason
               <input
-                className="mt-1 min-h-11 w-full rounded-control border border-border-strong px-3"
+                className="mt-1 w-full min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
                 minLength={3}
                 maxLength={500}
                 value={reason}
@@ -458,7 +458,7 @@ export function ProductionOperationsScreen() {
               Download safe packet
             </Button>
           </div>
-          <h3 className="mt-component font-display text-body font-heading">
+          <h3 className="mt-component text-subhead font-control text-text-primary">
             Append-only history
           </h3>
           <ol className="mt-2 space-y-2">

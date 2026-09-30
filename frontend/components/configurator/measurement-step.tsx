@@ -206,6 +206,7 @@ function ShapeMeasurementForm({
           spellCheck={false}
           value={drafts[field]}
           label={`${label} (${unit})`}
+          unit={unit}
           supportingText={getSupportingText(shape, field, unit)}
           invalid={visibleError !== null}
           aria-describedby={visibleError ? errorId : undefined}
@@ -229,11 +230,11 @@ function ShapeMeasurementForm({
   };
 
   return (
-    <fieldset className="min-w-0 rounded-panel border border-border bg-surface p-card shadow-raised">
+    <fieldset className="fieldset-panel min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline">
       <legend
         id={focusTargetId}
         tabIndex={focusTargetId ? -1 : undefined}
-        className="configurator-edit-target max-w-full scroll-mt-layout px-1 font-display text-section-title font-heading tracking-heading text-text-primary"
+        className="configurator-edit-target max-w-full scroll-mt-layout pb-2 font-display text-section-title font-heading tracking-heading text-text-primary"
       >
         Measure your {definition.name.toLowerCase()} cushion
       </legend>
@@ -243,7 +244,7 @@ function ShapeMeasurementForm({
         decimal places.
       </p>
 
-      <div className="mt-layout grid min-w-0 gap-layout lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.85fr)]">
+      <div className="mt-component grid min-w-0 gap-layout xl:grid-cols-[minmax(0,1fr)_minmax(16rem,0.8fr)] xl:items-start">
         <div className="min-w-0">
           <UnitSelector
             name="measurement-unit"
@@ -265,8 +266,8 @@ function ShapeMeasurementForm({
             )}
           </div>
 
-          <details className="mt-component rounded-card border border-border bg-surface-subtle p-control-x py-3">
-            <summary className="min-h-11 cursor-pointer py-2 text-button font-control text-brand">
+          <details className="mt-component rounded-card border border-dashed border-border-strong bg-page px-4 py-2">
+            <summary className="flex min-h-11 cursor-pointer items-center text-button font-control text-brand underline decoration-1 underline-offset-4 hover:decoration-2">
               More measuring tips
             </summary>
             <ul className="mt-2 list-disc space-y-2 pl-5 text-supporting text-text-muted">
@@ -302,7 +303,7 @@ export function MeasurementStep({
   return (
     <section
       aria-label={`${getCushionShapeDefinition(state.shape).name} cushion measurements`}
-      className="mt-layout scroll-mt-layout"
+      className="scroll-mt-layout"
     >
       <ShapeMeasurementForm
         key={`${state.shape}-${state.unit}`}

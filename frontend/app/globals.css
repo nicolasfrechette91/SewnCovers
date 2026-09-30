@@ -1,58 +1,182 @@
 @import "tailwindcss";
 
 /*
- * SewnCovers design tokens are defined once in Tailwind's CSS-first theme.
- * Components can use the generated semantic utilities or these variables.
+ * SewnCovers design system: "The Cutting Table".
+ * A tailor's workroom laid out like a clean editorial spread. See
+ * DESIGN_AUDIT.md for the rationale, contrast ratios and principles.
+ *
+ * 1. Primitive palette: raw values; not exposed as utilities
+ * 2. Semantic theme tokens: Tailwind @theme, generates utilities
+ * 3. Base
+ * 4. Components layer: textile details, selection states, shared chrome
+ * 5. Landing illustrations
+ * 6. Fabric pattern artwork (theme-independent dye tokens)
+ * 7. Configurator illustrations and cushion preview
+ * 8. Accessibility: focus, reduced motion, forced colours
+ * 9. Print
+ */
+
+/* 1. Primitive palette ---------------------------------------------------- */
+
+:root {
+  color-scheme: light;
+
+  /* Linen: paper, cloth and seams */
+  --linen-50: #fffcf6;
+  --linen-100: #f6f1e7;
+  --linen-200: #ede4d3;
+  --linen-300: #dccfba;
+  --linen-400: #c4b59d;
+  --linen-600: #8c7d67;
+
+  /* Ink */
+  --ink-900: #1e2823;
+  --ink-600: #555e57;
+
+  /* Loden forest */
+  --loden-50: #e7efe8;
+  --loden-700: #24513b;
+  --loden-800: #1d432f;
+  --loden-900: #173626;
+
+  /* Terracotta thread */
+  --terracotta-500: #b4583a;
+  --terracotta-600: #b4472a;
+  --terracotta-700: #94432d;
+
+  /* Tape-measure brass */
+  --brass-100: #f3e6c8;
+  --brass-500: #b8872b;
+  --brass-600: #a87b22;
+  --brass-800: #6b4e12;
+
+  /* Madder red, reserved for errors */
+  --madder-50: #fae8e4;
+  --madder-600: #a63a32;
+  --madder-800: #86261f;
+
+  /* Warm elevation colour */
+  --umber-shadow: 78 60 42;
+
+  /*
+   * Fabric dyes. Pattern artwork and cushion illustrations use these instead
+   * of UI tokens, so fabric previews never change colour with a UI theme.
+   */
+  --dye-forest: #24513b;
+  --dye-terracotta: #984a34;
+  --dye-cream: #fffcf5;
+  --dye-linen: #f0e8d9;
+  --dye-oat: #d7cbb8;
+  --dye-taupe: #988974;
+  --dye-blue: #3e6c7e;
+  --dye-gold: #b98235;
+  --dye-charcoal: #3d4540;
+  --dye-rose: #aa5b70;
+
+  /* Cushion preview shading (light falling on cloth, not UI colour) */
+  --shade-weave-light: rgb(255 255 255 / 0.025);
+  --shade-weave-dark: rgb(0 0 0 / 0.022);
+  --shade-fold: rgb(62 48 36 / 0.2);
+  --shade-seam: rgb(67 55 44 / 0.38);
+  --shade-seam-piped: rgb(54 45 37 / 0.68);
+  --shade-edge: rgb(62 49 38 / 0.32);
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+}
+
+/* 2. Semantic theme tokens ------------------------------------------------ */
+
+/*
+ * Default Tailwind colours, type sizes, radii and shadows are reset so every
+ * utility resolves to a SewnCovers token. Semantic colours stay 6-digit hex
+ * after substitution; e2e/accessibility-validation.spec.ts parses them.
  */
 @theme static {
-  /* Color */
-  --color-page: #f8f3e8;
-  --color-surface: #fffcf5;
-  --color-surface-subtle: #f0e8d9;
-  --color-text-primary: #243128;
-  --color-text-muted: #5f685f;
-  --color-brand: #24513b;
-  --color-brand-hover: #1d432f;
-  --color-brand-active: #173626;
-  --color-on-brand: #fffdf8;
-  --color-accent: #b75f43;
-  --color-accent-strong: #984a34;
-  --color-border: #d7cbb8;
-  --color-border-strong: #988974;
-  --color-focus: #c04f32;
-  --color-focus-contrast: #fffdf8;
-  --color-control-disabled-surface: var(--color-surface-subtle);
-  --color-control-disabled-text: var(--color-text-muted);
-  --color-control-disabled-border: var(--color-border-strong);
-  --color-error-surface: #f8e9e3;
-  --color-error-border: #a6462f;
-  --color-error-text: #783523;
+  --color-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
 
-  /* Compatibility aliases for the starter while later UI work is deferred. */
-  --color-background: var(--color-page);
-  --color-foreground: var(--color-text-primary);
+  /* Colour: surfaces and text */
+  --color-page: var(--linen-100);
+  --color-surface: var(--linen-50);
+  --color-surface-subtle: var(--linen-200);
+  --color-text-primary: var(--ink-900);
+  --color-text-muted: var(--ink-600);
+
+  /* Colour: brand and accents */
+  --color-brand: var(--loden-700);
+  --color-brand-hover: var(--loden-800);
+  --color-brand-active: var(--loden-900);
+  --color-brand-tint: var(--loden-50);
+  --color-on-brand: var(--linen-50);
+  --color-accent: var(--terracotta-500);
+  --color-accent-strong: var(--terracotta-700);
+  --color-measure: var(--brass-500);
+
+  /* Colour: lines */
+  --color-border: var(--linen-300);
+  --color-border-strong: var(--linen-600);
+  --color-stitch: var(--terracotta-500);
+  --color-stitch-muted: var(--linen-400);
+
+  /* Colour: focus and disabled controls */
+  --color-focus: var(--terracotta-600);
+  --color-focus-contrast: var(--linen-50);
+  --color-control-disabled-surface: var(--linen-200);
+  --color-control-disabled-text: var(--ink-600);
+  --color-control-disabled-border: var(--linen-600);
+
+  /* Colour: feedback */
+  --color-notice-surface: var(--brass-100);
+  --color-notice-border: var(--brass-600);
+  --color-notice-text: var(--brass-800);
+  --color-error-surface: var(--madder-50);
+  --color-error-border: var(--madder-600);
+  --color-error-text: var(--madder-800);
+  --color-success-surface: var(--loden-50);
+  --color-success-border: var(--loden-700);
+  --color-success-text: var(--loden-800);
 
   /* Type scale */
+  --text-display: clamp(2.375rem, 1.6rem + 2.4vw, 3.75rem);
+  --text-display--line-height: 1.04;
+  --text-page-title: clamp(2.125rem, 1.6rem + 2vw, 3.25rem);
+  --text-page-title--line-height: 1.05;
+  --text-section-title: clamp(1.5rem, 1.25rem + 0.9vw, 2.125rem);
+  --text-section-title--line-height: 1.15;
+  --text-card-title: 1.25rem;
+  --text-card-title--line-height: 1.3;
+  --text-subhead: 1.0625rem;
+  --text-subhead--line-height: 1.4;
+  --text-lede: 1.125rem;
+  --text-lede--line-height: 1.6;
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
   --text-supporting: 0.875rem;
   --text-supporting--line-height: 1.5;
   --text-label: 0.875rem;
   --text-label--line-height: 1.25;
   --text-button: 0.9375rem;
   --text-button--line-height: 1.25;
-  --text-body: 1rem;
-  --text-body--line-height: 1.625;
-  --text-section-title: clamp(1.5rem, 1.25rem + 0.8vw, 2rem);
-  --text-section-title--line-height: 1.2;
-  --text-page-title: clamp(2rem, 1.5rem + 1.8vw, 3rem);
-  --text-page-title--line-height: 1.08;
+  --text-eyebrow: 0.75rem;
+  --text-eyebrow--line-height: 1.2;
+  --text-readout: 1.0625rem;
+  --text-readout--line-height: 1.3;
+
   --font-weight-body: 400;
   --font-weight-emphasis: 500;
   --font-weight-control: 600;
-  --font-weight-heading: 650;
-  --tracking-label: 0.025em;
-  --tracking-heading: -0.025em;
+  --font-weight-heading: 580;
 
-  /* Spacing: a 4px base with semantic responsive steps for layout. */
+  --tracking-label: 0.01em;
+  --tracking-heading: -0.015em;
+  --tracking-eyebrow: 0.08em;
+
+  /* Spacing: a 4px "tape" with semantic, responsive steps for layout */
   --spacing: 0.25rem;
   --spacing-icon: 0.5rem;
   --spacing-control-y: 0.75rem;
@@ -63,29 +187,63 @@
   --spacing-layout: clamp(2rem, 5vw, 4rem);
   --spacing-section: clamp(3rem, 8vw, 6rem);
 
-  /* Shape */
-  --radius-control-small: 0.375rem;
-  --radius-control: 0.5rem;
-  --radius-card: 0.75rem;
-  --radius-panel: 1rem;
+  /* Containers: page for workspaces, content for forms, reading for long copy */
+  --container-page: 72rem;
+  --container-content: 56rem;
+  --container-reading: 48rem;
+
+  /* Shape: soft objects, precise frames */
+  --radius-control-small: 0.25rem;
+  --radius-control: 0.375rem;
+  --radius-card: 0.5rem;
+  --radius-panel: 0.75rem;
   --radius-pill: 9999px;
 
-  /* Restrained, warm elevation */
+  /* Elevation: flat, pressed paper */
+  --shadow-hairline: 0 1px 0 rgb(var(--umber-shadow) / 0.08);
   --shadow-card:
-    0 1px 2px rgb(78 60 42 / 0.06), 0 6px 18px rgb(78 60 42 / 0.05);
+    0 1px 1px rgb(var(--umber-shadow) / 0.05),
+    0 4px 12px rgb(var(--umber-shadow) / 0.05);
   --shadow-raised:
-    0 2px 4px rgb(78 60 42 / 0.08), 0 12px 28px rgb(78 60 42 / 0.08);
+    0 1px 2px rgb(var(--umber-shadow) / 0.08),
+    0 10px 24px rgb(var(--umber-shadow) / 0.09);
   --shadow-overlay:
-    0 8px 18px rgb(78 60 42 / 0.1), 0 24px 60px rgb(78 60 42 / 0.14);
+    0 8px 18px rgb(var(--umber-shadow) / 0.1),
+    0 24px 60px rgb(var(--umber-shadow) / 0.14);
   --shadow-focus:
     0 0 0 2px var(--color-focus-contrast), 0 0 0 5px var(--color-focus);
+  --shadow-selected: inset 0 0 0 2px var(--color-brand);
+  --shadow-current: 0 0 0 4px var(--color-brand-tint);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --default-transition-duration: var(--duration-base);
+  --default-transition-timing-function: var(--ease-standard);
+  --animate-rise: rise var(--duration-slow) var(--ease-standard) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
 }
 
 @theme static inline {
-  --font-sans: var(--font-geist-sans);
-  --font-display: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    var(--font-geist-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
+
+/*
+ * Dark mode is deliberately deferred. A future "After hours" theme only needs
+ * to redefine the semantic --color-* tokens above inside
+ * @media (prefers-color-scheme: dark) and switch color-scheme; the palette and
+ * contrast ratios are recorded in DESIGN_AUDIT.md. Fabric dyes stay as-is.
+ */
+
+/* 3. Base ----------------------------------------------------------------- */
 
 html {
   background: var(--color-page);
@@ -97,35 +255,343 @@ body {
   font-family: var(--font-sans);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
+  text-rendering: optimizeLegibility;
 }
 
-/* Shared by the verified dense commerce/operations forms. Native controls
- * must shrink with their grid track, including date/time and long options. */
+:where(h1, h2, h3) {
+  text-wrap: balance;
+}
+
+:where(p, li, dd, figcaption) {
+  text-wrap: pretty;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-brand) 22%, transparent);
+}
+
+/* Shared by dense commerce/operations forms. Native controls must shrink with
+ * their grid track, including date/time and long options. */
 .responsive-form :where(label, fieldset) {
   min-width: 0;
 }
 
-.responsive-form :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+.responsive-form
+  :where(
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea
+  ) {
   min-width: 0;
   max-width: 100%;
   width: 100%;
   font-size: var(--text-body);
 }
 
+/* 4. Components layer ----------------------------------------------------- */
+
+@layer components {
+  /* Eyebrow: a short measuring rule before a mono label. */
+  .eyebrow,
+  .landing-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .eyebrow::before,
+  .landing-eyebrow::before {
+    width: 1.5rem;
+    height: 1px;
+    flex: 0 0 auto;
+    background: currentcolor;
+    content: "";
+  }
+
+  /* Ruler ticks: minor every 8px, major every 40px. Decorative only. */
+  .ruler {
+    display: block;
+    height: 0.625rem;
+    background-image:
+      repeating-linear-gradient(
+        90deg,
+        var(--color-measure) 0 1px,
+        transparent 1px 40px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-measure) 70%, transparent) 0 1px,
+        transparent 1px 8px
+      );
+    background-position: left bottom;
+    background-repeat: repeat-x;
+    background-size:
+      100% 100%,
+      100% 45%;
+  }
+
+  /* Stitch line: a 6/4 dashed running stitch. */
+  .stitch-rule {
+    display: block;
+    height: 1.5px;
+    border: 0;
+    background-image: linear-gradient(
+      90deg,
+      var(--stitch-color, var(--color-stitch-muted)) 0 6px,
+      transparent 6px 10px
+    );
+    background-repeat: repeat-x;
+    background-size: 10px 100%;
+  }
+
+  .stitch-rule-accent {
+    --stitch-color: var(--color-stitch);
+  }
+
+  /*
+   * Choice cards: radio-backed option cards (shape, cover option, pattern).
+   * Selection shows an inset brand ring plus a dashed "basting stitch".
+   */
+  .choice-card {
+    position: relative;
+    isolation: isolate;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition-duration: var(--duration-base);
+    transition-property: background-color, border-color, box-shadow, transform;
+    transition-timing-function: var(--ease-standard);
+  }
+
+  .choice-card::after {
+    position: absolute;
+    z-index: -1;
+    inset: 5px;
+    border: 1.5px dashed var(--color-stitch);
+    border-radius: calc(var(--radius-card) - 3px);
+    opacity: 0;
+    pointer-events: none;
+    content: "";
+    transition: opacity var(--duration-slow) var(--ease-standard);
+  }
+
+  @media (hover: hover) {
+    .choice-card:hover {
+      border-color: var(--color-brand);
+      box-shadow: var(--shadow-card);
+    }
+  }
+
+  .choice-card:active {
+    transform: translateY(1px);
+  }
+
+  :checked + .choice-card,
+  .choice-card:has(:checked) {
+    border-color: var(--color-brand);
+    background: var(--color-brand-tint);
+    box-shadow: var(--shadow-selected), var(--shadow-raised);
+  }
+
+  :checked + .choice-card::after,
+  .choice-card:has(:checked)::after {
+    opacity: 1;
+  }
+
+  :disabled + .choice-card,
+  .choice-card:has(:disabled) {
+    border-color: var(--color-control-disabled-border);
+    background: var(--color-control-disabled-surface);
+    color: var(--color-control-disabled-text);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* Radio indicator used inside choice cards. */
+  .choice-indicator {
+    display: inline-flex;
+    width: 1.375rem;
+    height: 1.375rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--color-border-strong);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: transparent;
+    font-size: 0.75rem;
+    line-height: 1;
+    transition-duration: var(--duration-base);
+    transition-property: background-color, border-color, color, transform;
+    transition-timing-function: var(--ease-standard);
+  }
+
+  :checked + .choice-card .choice-indicator,
+  .choice-card:has(:checked) .choice-indicator {
+    border-color: var(--color-brand);
+    background: var(--color-brand);
+    color: var(--color-on-brand);
+    transform: scale(1.06);
+  }
+
+  /*
+   * Care label: prototype and sandbox notices. A woven tag with an inner
+   * stitch, clearly distinct from error messages.
+   */
+  .care-label {
+    position: relative;
+    border: 1px solid var(--color-notice-border);
+    border-radius: var(--radius-control);
+    background: var(--color-notice-surface);
+    color: var(--color-notice-text);
+  }
+
+  .care-label::before {
+    position: absolute;
+    inset: 4px;
+    border: 1px dashed
+      color-mix(in srgb, var(--color-notice-border) 55%, transparent);
+    border-radius: var(--radius-control-small);
+    pointer-events: none;
+    content: "";
+  }
+
+  /* Cutting mat: fine and major grid lines behind measurement artwork. */
+  .cutting-mat {
+    background-color: var(--color-page);
+    background-image:
+      linear-gradient(
+        color-mix(in srgb, var(--color-brand) 16%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-brand) 16%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        color-mix(in srgb, var(--color-brand) 7%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-brand) 7%, transparent) 1px,
+        transparent 1px
+      );
+    background-position: -1px -1px;
+    background-size:
+      3rem 3rem,
+      3rem 3rem,
+      0.75rem 0.75rem,
+      0.75rem 0.75rem;
+  }
+
+  /* Linen weave: a barely-there crosshatch for large editorial surfaces. */
+  .linen-weave {
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        color-mix(in srgb, var(--color-text-primary) 3.5%, transparent) 0 1px,
+        transparent 1px 3px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-text-primary) 3%, transparent) 0 1px,
+        transparent 1px 4px
+      );
+  }
+
+  /* Mono measurement readout. */
+  .measure-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+
+  /*
+   * Stage progress: a dashed tape line between the first and last markers,
+   * filled with brand colour up to the current stage (--progress is 0-1).
+   */
+  .progress-track {
+    position: relative;
+  }
+
+  .progress-track::before,
+  .progress-track::after {
+    position: absolute;
+    top: calc(1.375rem - 1px);
+    left: var(--track-inset);
+    height: 2px;
+    content: "";
+  }
+
+  .progress-track::before {
+    right: var(--track-inset);
+    background-image: linear-gradient(
+      90deg,
+      var(--color-border-strong) 0 6px,
+      transparent 6px 10px
+    );
+    background-size: 10px 100%;
+  }
+
+  .progress-track::after {
+    width: calc((100% - 2 * var(--track-inset)) * var(--progress));
+    background: var(--color-brand);
+    transition: width var(--duration-slow) var(--ease-standard);
+  }
+
+  /*
+   * Fieldset panels: a floated legend sits inside the panel as its heading
+   * instead of notching the border.
+   */
+  .fieldset-panel > legend {
+    float: left;
+    width: 100%;
+  }
+
+  .fieldset-panel > legend + * {
+    clear: both;
+  }
+
+  /* A configurator stage fading up into place. */
+  .stage-enter {
+    animation: var(--animate-rise);
+  }
+}
+
+/* Pinked edge: the zig-zag of pinking shears along the bottom edge. A
+ * utility, so it accepts responsive variants (sm:pinked-edge). */
+@utility pinked-edge {
+  --pinked-tooth: 0.75rem;
+
+  mask: conic-gradient(
+      from -45deg at bottom,
+      transparent,
+      black 1deg 89deg,
+      transparent 90deg
+    )
+    50% / var(--pinked-tooth) 100%;
+}
+
+/* 5. Landing illustrations ------------------------------------------------ */
+
 .landing-cushion {
   position: relative;
   aspect-ratio: 1;
-  border: 2px solid var(--color-brand);
+  border: 2px solid var(--dye-forest);
   border-radius: var(--radius-panel);
   box-shadow:
-    inset 0 0 0 5px color-mix(in srgb, var(--color-surface) 70%, transparent),
+    inset 0 0 0 5px color-mix(in srgb, var(--dye-cream) 70%, transparent),
     var(--shadow-raised);
 }
 
 .landing-cushion::after {
   position: absolute;
   inset: 0.45rem;
-  border: 1px solid color-mix(in srgb, var(--color-on-brand) 78%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--dye-cream) 82%, transparent);
   border-radius: calc(var(--radius-panel) - 0.35rem);
   content: "";
 }
@@ -150,78 +616,107 @@ body {
   bottom: -0.65rem;
   left: 0.5rem;
   height: 0.75rem;
-  border: 2px solid var(--color-brand);
+  border: 2px solid var(--dye-forest);
   border-top: 0;
   border-radius: 0 0 var(--radius-card) var(--radius-card);
-  background: var(--color-accent-strong);
+  background: var(--dye-terracotta);
   content: "";
 }
 
-/* The landing page uses the shared palette with quieter, upholstery-inspired
- * layering. These styles are intentionally structural: artwork proportions
- * never control the example-card media track. */
 .landing-hero {
+  background-color: var(--color-surface);
   background-image:
     radial-gradient(
-      circle at 84% 22%,
-      color-mix(in srgb, var(--color-accent) 8%, transparent) 0 10rem,
-      transparent 22rem
+      circle at 84% 18%,
+      color-mix(in srgb, var(--color-accent) 7%, transparent) 0 10rem,
+      transparent 24rem
     ),
-    linear-gradient(
-      180deg,
-      var(--color-surface) 0%,
-      color-mix(in srgb, var(--color-page) 46%, var(--color-surface)) 100%
-    );
-}
-
-.landing-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.landing-eyebrow::before {
-  width: 2rem;
-  height: 1px;
-  flex: 0 0 auto;
-  background: currentcolor;
-  content: "";
-}
-
-.landing-prototype-note {
-  border-left: 3px solid var(--color-accent-strong);
-}
-
-.landing-hero-figure {
-  transform: rotate(0.35deg);
-}
-
-.landing-hero-media {
-  background-image:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--color-surface) 36%, transparent),
-      transparent 48%
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--color-text-primary) 3%, transparent) 0 1px,
+      transparent 1px 3px
     ),
     repeating-linear-gradient(
       90deg,
-      transparent 0 2.95rem,
-      color-mix(in srgb, var(--color-border) 20%, transparent) 3rem
+      color-mix(in srgb, var(--color-text-primary) 2.5%, transparent) 0 1px,
+      transparent 1px 4px
     );
 }
 
-.landing-showcase {
-  background-image: linear-gradient(
-    180deg,
-    var(--color-page),
-    color-mix(in srgb, var(--color-surface-subtle) 32%, var(--color-page))
-  );
+/* The measured study: a cushion with dimension lines, as on the social card. */
+.landing-measured {
+  position: relative;
+  display: block;
+  width: min(60%, 15rem);
+  margin-block: 0.5rem 2.25rem;
+  margin-inline-end: 2rem;
+}
+
+.dimension {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent-strong);
+}
+
+.dimension::before {
+  position: absolute;
+  content: "";
+}
+
+.dimension-x {
+  right: 0;
+  bottom: -1.75rem;
+  left: 0;
+  height: 0.75rem;
+  border-inline: 1.5px solid currentcolor;
+}
+
+.dimension-x::before {
+  top: 50%;
+  right: 0;
+  left: 0;
+  border-top: 1.5px dashed currentcolor;
+}
+
+.dimension-y {
+  top: 0;
+  right: -1.75rem;
+  bottom: 0;
+  width: 0.75rem;
+  border-block: 1.5px solid currentcolor;
+}
+
+.dimension-y::before {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 1.5px dashed currentcolor;
+}
+
+.dimension-label {
+  position: relative;
+  padding-inline: 0.375rem;
+  background: var(--color-page);
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dimension-y .dimension-label {
+  padding-block: 0.375rem;
+  padding-inline: 0;
+  transform: rotate(180deg);
+  writing-mode: vertical-rl;
 }
 
 .landing-example-card {
-  transition:
-    border-color 180ms ease,
-    box-shadow 180ms ease;
+  transition-duration: var(--duration-base);
+  transition-property: border-color, box-shadow, transform;
+  transition-timing-function: var(--ease-standard);
 }
 
 .landing-example-media {
@@ -231,15 +726,11 @@ body {
       color-mix(in srgb, var(--color-surface) 80%, transparent) 0 32%,
       transparent 66%
     ),
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--color-surface) 34%, transparent),
-      transparent 54%
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--color-text-primary) 3%, transparent) 0 1px,
+      transparent 1px 3px
     );
-}
-
-.landing-example-caption {
-  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-page));
 }
 
 .landing-example-illustration.landing-cushion-square {
@@ -254,19 +745,56 @@ body {
   width: min(78%, 14rem);
 }
 
-.landing-step-card {
+/* How it works: numbered stations joined by a running stitch. */
+.landing-steps {
   position: relative;
 }
 
-.landing-step-card::before {
+.landing-step-marker {
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 64rem) {
+  .landing-steps::before {
+    position: absolute;
+    top: 1.5rem;
+    right: 16.66%;
+    left: 16.66%;
+    height: 1.5px;
+    background-image: linear-gradient(
+      90deg,
+      var(--color-stitch) 0 6px,
+      transparent 6px 10px
+    );
+    background-size: 10px 100%;
+    content: "";
+  }
+}
+
+.landing-cta {
+  position: relative;
+  background-color: var(--color-brand);
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--color-on-brand) 4%, transparent) 0 1px,
+      transparent 1px 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-on-brand) 3%, transparent) 0 1px,
+      transparent 1px 5px
+    );
+}
+
+.landing-cta::before {
   position: absolute;
-  inset: 0.75rem 0.75rem auto;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    var(--color-accent-strong),
-    color-mix(in srgb, var(--color-border) 45%, transparent)
-  );
+  inset: 0.625rem;
+  border: 1.5px dashed
+    color-mix(in srgb, var(--color-on-brand) 38%, transparent);
+  border-radius: var(--radius-card);
+  pointer-events: none;
   content: "";
 }
 
@@ -274,59 +802,44 @@ body {
   .landing-example-card:hover {
     border-color: var(--color-border-strong);
     box-shadow: var(--shadow-raised);
+    transform: translateY(-2px);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .landing-hero-figure {
-    transform: none;
-  }
-
-  .landing-example-card {
-    transition: none;
-  }
-}
+/* 6. Fabric pattern artwork ------------------------------------------------ */
 
 .landing-pattern-botanical {
-  background-color: var(--color-surface-subtle);
+  background-color: var(--dye-linen);
   background-image:
-    radial-gradient(
-      ellipse at 18% 22%,
-      var(--color-brand) 0 8%,
-      transparent 9%
-    ),
+    radial-gradient(ellipse at 18% 22%, var(--dye-forest) 0 8%, transparent 9%),
     radial-gradient(
       ellipse at 42% 58%,
-      var(--color-accent-strong) 0 9%,
+      var(--dye-terracotta) 0 9%,
       transparent 10%
     ),
-    radial-gradient(
-      ellipse at 76% 30%,
-      var(--color-brand) 0 10%,
-      transparent 11%
-    ),
+    radial-gradient(ellipse at 76% 30%, var(--dye-forest) 0 10%, transparent 11%),
     radial-gradient(
       ellipse at 82% 78%,
-      var(--color-accent-strong) 0 7%,
+      var(--dye-terracotta) 0 7%,
       transparent 8%
     );
   background-size: 5rem 5rem;
 }
 
 .landing-pattern-geometric {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image:
     linear-gradient(
       135deg,
-      var(--color-accent-strong) 25%,
+      var(--dye-terracotta) 25%,
       transparent 25% 75%,
-      var(--color-accent-strong) 75%
+      var(--dye-terracotta) 75%
     ),
     linear-gradient(
       45deg,
-      var(--color-brand) 25%,
+      var(--dye-forest) 25%,
       transparent 25% 75%,
-      var(--color-brand) 75%
+      var(--dye-forest) 75%
     );
   background-position:
     0 0,
@@ -335,106 +848,43 @@ body {
 }
 
 .landing-pattern-woven {
-  background-color: var(--color-surface-subtle);
+  background-color: var(--dye-linen);
   background-image:
     repeating-linear-gradient(
       0deg,
       transparent 0 0.4rem,
-      var(--color-border-strong) 0.45rem 0.5rem
+      var(--dye-taupe) 0.45rem 0.5rem
     ),
     repeating-linear-gradient(
       90deg,
       transparent 0 0.4rem,
-      var(--color-border) 0.45rem 0.5rem
+      var(--dye-oat) 0.45rem 0.5rem
     );
 }
 
 .prototype-pattern {
   --pattern-scale: 1;
-  --pattern-blue: #3e6c7e;
-  --pattern-gold: #b98235;
-  --pattern-charcoal: #3d4540;
-  --pattern-rose: #aa5b70;
+  --pattern-blue: var(--dye-blue);
+  --pattern-gold: var(--dye-gold);
+  --pattern-charcoal: var(--dye-charcoal);
+  --pattern-rose: var(--dye-rose);
 
-  background-color: var(--color-surface-subtle);
+  background-color: var(--dye-linen);
   background-repeat: repeat;
-}
-
-.shape-illustration-face,
-.shape-illustration-side,
-.shape-illustration-detail {
-  vector-effect: non-scaling-stroke;
-}
-
-.shape-illustration-face {
-  fill: var(--color-surface);
-  stroke: var(--color-brand);
-  stroke-width: 3;
-}
-
-.shape-illustration-side {
-  fill: var(--color-surface-subtle);
-  stroke: var(--color-brand);
-  stroke-width: 3;
-}
-
-.shape-illustration-detail {
-  stroke: var(--color-accent-strong);
-  stroke-linecap: round;
-  stroke-width: 3;
-}
-
-.measurement-diagram-face,
-.measurement-diagram-side,
-.measurement-diagram-line {
-  vector-effect: non-scaling-stroke;
-}
-
-.measurement-diagram-face {
-  fill: var(--color-page);
-  stroke: var(--color-brand);
-  stroke-width: 2;
-}
-
-.measurement-diagram-side {
-  fill: var(--color-surface-subtle);
-  stroke: var(--color-brand);
-  stroke-width: 2;
-}
-
-.measurement-diagram-line {
-  stroke: var(--color-accent-strong);
-  stroke-linecap: round;
-  stroke-width: 2;
-}
-
-.measurement-diagram-label {
-  fill: var(--color-text-primary);
-  font-family: var(--font-sans);
-  font-size: 16px;
-  font-weight: var(--font-weight-control);
 }
 
 .prototype-pattern-botanical {
   background-image:
-    radial-gradient(
-      ellipse at 20% 24%,
-      var(--color-brand) 0 9%,
-      transparent 10%
-    ),
+    radial-gradient(ellipse at 20% 24%, var(--dye-forest) 0 9%, transparent 10%),
     radial-gradient(
       ellipse at 48% 62%,
-      var(--color-accent-strong) 0 8%,
+      var(--dye-terracotta) 0 8%,
       transparent 9%
     ),
-    radial-gradient(
-      ellipse at 78% 28%,
-      var(--color-brand) 0 10%,
-      transparent 11%
-    ),
+    radial-gradient(ellipse at 78% 28%, var(--dye-forest) 0 10%, transparent 11%),
     radial-gradient(
       ellipse at 82% 80%,
-      var(--color-accent-strong) 0 7%,
+      var(--dye-terracotta) 0 7%,
       transparent 8%
     );
   background-size:
@@ -443,19 +893,19 @@ body {
 }
 
 .prototype-pattern-geometric {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image:
     linear-gradient(
       135deg,
-      var(--color-accent-strong) 25%,
+      var(--dye-terracotta) 25%,
       transparent 25% 75%,
-      var(--color-accent-strong) 75%
+      var(--dye-terracotta) 75%
     ),
     linear-gradient(
       45deg,
-      var(--color-brand) 25%,
+      var(--dye-forest) 25%,
       transparent 25% 75%,
-      var(--color-brand) 75%
+      var(--dye-forest) 75%
     );
   background-position:
     0 0,
@@ -471,14 +921,14 @@ body {
     repeating-linear-gradient(
       0deg,
       transparent 0 calc(0.4rem * var(--pattern-scale)),
-      var(--color-border-strong)
+      var(--dye-taupe)
         calc(0.45rem * var(--pattern-scale))
         calc(0.5rem * var(--pattern-scale))
     ),
     repeating-linear-gradient(
       90deg,
       transparent 0 calc(0.4rem * var(--pattern-scale)),
-      var(--color-border)
+      var(--dye-oat)
         calc(0.45rem * var(--pattern-scale))
         calc(0.5rem * var(--pattern-scale))
     );
@@ -486,27 +936,15 @@ body {
 }
 
 .pattern-fern-trail {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image:
-    radial-gradient(
-      ellipse at 24% 25%,
-      var(--color-brand) 0 10%,
-      transparent 11%
-    ),
-    radial-gradient(
-      ellipse at 55% 58%,
-      var(--color-brand) 0 12%,
-      transparent 13%
-    ),
-    radial-gradient(
-      ellipse at 82% 84%,
-      var(--color-brand) 0 9%,
-      transparent 10%
-    ),
+    radial-gradient(ellipse at 24% 25%, var(--dye-forest) 0 10%, transparent 11%),
+    radial-gradient(ellipse at 55% 58%, var(--dye-forest) 0 12%, transparent 13%),
+    radial-gradient(ellipse at 82% 84%, var(--dye-forest) 0 9%, transparent 10%),
     linear-gradient(
       42deg,
       transparent 46%,
-      var(--color-brand) 47% 50%,
+      var(--dye-forest) 47% 50%,
       transparent 51%
     );
   background-size:
@@ -515,18 +953,10 @@ body {
 }
 
 .pattern-meadow-sprig {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image:
-    radial-gradient(
-      circle at 30% 30%,
-      var(--pattern-gold) 0 5%,
-      transparent 6%
-    ),
-    radial-gradient(
-      circle at 65% 62%,
-      var(--pattern-blue) 0 6%,
-      transparent 7%
-    ),
+    radial-gradient(circle at 30% 30%, var(--pattern-gold) 0 5%, transparent 6%),
+    radial-gradient(circle at 65% 62%, var(--pattern-blue) 0 6%, transparent 7%),
     linear-gradient(
       62deg,
       transparent 45%,
@@ -545,7 +975,7 @@ body {
 }
 
 .pattern-diamond-path {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image:
     linear-gradient(
       45deg,
@@ -568,7 +998,7 @@ body {
 }
 
 .pattern-arch-grid {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image:
     radial-gradient(
       circle at 50% 100%,
@@ -579,7 +1009,7 @@ body {
     radial-gradient(
       circle at 50% 0,
       transparent 0 34%,
-      var(--color-accent-strong) 35% 43%,
+      var(--dye-terracotta) 35% 43%,
       transparent 44%
     );
   background-position:
@@ -592,24 +1022,24 @@ body {
 }
 
 .pattern-harbor-stripe {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image: repeating-linear-gradient(
     90deg,
     var(--pattern-blue) 0 calc(1rem * var(--pattern-scale)),
-    var(--color-surface) calc(1rem * var(--pattern-scale))
+    var(--dye-cream) calc(1rem * var(--pattern-scale))
       calc(1.35rem * var(--pattern-scale)),
     var(--pattern-blue) calc(1.35rem * var(--pattern-scale))
       calc(1.48rem * var(--pattern-scale)),
-    var(--color-surface) calc(1.48rem * var(--pattern-scale))
+    var(--dye-cream) calc(1.48rem * var(--pattern-scale))
       calc(2rem * var(--pattern-scale))
   );
 }
 
 .pattern-orchard-stripe {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image: repeating-linear-gradient(
     118deg,
-    var(--color-brand) 0 calc(0.28rem * var(--pattern-scale)),
+    var(--dye-forest) 0 calc(0.28rem * var(--pattern-scale)),
     transparent calc(0.28rem * var(--pattern-scale))
       calc(0.7rem * var(--pattern-scale)),
     var(--pattern-gold) calc(0.7rem * var(--pattern-scale))
@@ -620,19 +1050,19 @@ body {
 }
 
 .pattern-ribbon-stripe {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image: repeating-linear-gradient(
     0deg,
-    var(--color-accent-strong) 0 calc(0.65rem * var(--pattern-scale)),
+    var(--dye-terracotta) 0 calc(0.65rem * var(--pattern-scale)),
     var(--pattern-rose) calc(0.65rem * var(--pattern-scale))
       calc(0.82rem * var(--pattern-scale)),
-    var(--color-surface) calc(0.82rem * var(--pattern-scale))
+    var(--dye-cream) calc(0.82rem * var(--pattern-scale))
       calc(1.4rem * var(--pattern-scale))
   );
 }
 
 .pattern-basket-check {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image:
     linear-gradient(
       90deg,
@@ -653,7 +1083,7 @@ body {
 }
 
 .pattern-linen-crosshatch {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image:
     repeating-linear-gradient(
       12deg,
@@ -665,13 +1095,13 @@ body {
     repeating-linear-gradient(
       102deg,
       transparent 0 calc(0.48rem * var(--pattern-scale)),
-      var(--color-border-strong) calc(0.5rem * var(--pattern-scale))
+      var(--dye-taupe) calc(0.5rem * var(--pattern-scale))
         calc(0.54rem * var(--pattern-scale))
     );
 }
 
 .pattern-terrace-wave {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image:
     radial-gradient(
       circle at 0 50%,
@@ -682,7 +1112,7 @@ body {
     radial-gradient(
       circle at 100% 50%,
       transparent 0 28%,
-      var(--color-brand) 29% 42%,
+      var(--dye-forest) 29% 42%,
       transparent 43%
     );
   background-position:
@@ -695,11 +1125,11 @@ body {
 }
 
 .pattern-pebble-drift {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image:
     radial-gradient(
       ellipse at 22% 30%,
-      var(--color-accent-strong) 0 14%,
+      var(--dye-terracotta) 0 14%,
       transparent 15%
     ),
     radial-gradient(
@@ -709,7 +1139,7 @@ body {
     ),
     radial-gradient(
       ellipse at 88% 18%,
-      var(--color-accent-strong) 0 7%,
+      var(--dye-terracotta) 0 7%,
       transparent 8%
     );
   background-size:
@@ -718,22 +1148,14 @@ body {
 }
 
 .pattern-confetti-grid {
-  background-color: var(--color-surface);
+  background-color: var(--dye-cream);
   background-image:
-    radial-gradient(
-      circle at 22% 24%,
-      var(--pattern-rose) 0 5%,
-      transparent 6%
-    ),
-    radial-gradient(
-      circle at 74% 72%,
-      var(--pattern-gold) 0 6%,
-      transparent 7%
-    ),
+    radial-gradient(circle at 22% 24%, var(--pattern-rose) 0 5%, transparent 6%),
+    radial-gradient(circle at 74% 72%, var(--pattern-gold) 0 6%, transparent 7%),
     linear-gradient(
       35deg,
       transparent 46%,
-      var(--color-brand) 47% 53%,
+      var(--dye-forest) 47% 53%,
       transparent 54%
     );
   background-position:
@@ -744,6 +1166,69 @@ body {
   background-size:
     calc(3rem * var(--pattern-scale))
     calc(3rem * var(--pattern-scale));
+}
+
+/* 7. Configurator illustrations and cushion preview ----------------------- */
+
+.shape-illustration-face,
+.shape-illustration-side,
+.shape-illustration-detail {
+  vector-effect: non-scaling-stroke;
+}
+
+.shape-illustration-face {
+  fill: var(--color-surface);
+  stroke: var(--color-brand);
+  stroke-width: 3;
+  transition: fill var(--duration-base) var(--ease-standard);
+}
+
+.shape-illustration-side {
+  fill: var(--color-surface-subtle);
+  stroke: var(--color-brand);
+  stroke-width: 3;
+}
+
+.shape-illustration-detail {
+  stroke: var(--color-accent-strong);
+  stroke-dasharray: 5 4;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+:checked + .choice-card .shape-illustration-face {
+  fill: var(--color-brand-tint);
+}
+
+.measurement-diagram-face,
+.measurement-diagram-side,
+.measurement-diagram-line {
+  vector-effect: non-scaling-stroke;
+}
+
+.measurement-diagram-face {
+  fill: var(--color-surface);
+  stroke: var(--color-brand);
+  stroke-width: 2;
+}
+
+.measurement-diagram-side {
+  fill: var(--color-surface-subtle);
+  stroke: var(--color-brand);
+  stroke-width: 2;
+}
+
+.measurement-diagram-line {
+  stroke: var(--color-accent-strong);
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.measurement-diagram-label {
+  fill: var(--color-accent-strong);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: var(--font-weight-control);
 }
 
 .cushion-preview-product-stage {
@@ -776,12 +1261,12 @@ body {
   background-image:
     repeating-linear-gradient(
       0deg,
-      rgb(255 255 255 / 0.025) 0 1px,
+      var(--shade-weave-light) 0 1px,
       transparent 1px 4px
     ),
     repeating-linear-gradient(
       90deg,
-      rgb(0 0 0 / 0.022) 0 1px,
+      var(--shade-weave-dark) 0 1px,
       transparent 1px 5px
     );
   background-blend-mode: soft-light;
@@ -794,7 +1279,7 @@ body {
 
 .cushion-preview-fold {
   fill: none;
-  stroke: rgb(62 48 36 / 0.2);
+  stroke: var(--shade-fold);
   stroke-width: 8;
   stroke-linecap: round;
   filter: blur(3px);
@@ -816,19 +1301,19 @@ body {
 }
 
 .cushion-preview-seam {
-  stroke: rgb(67 55 44 / 0.38);
+  stroke: var(--shade-seam);
   stroke-width: 1.25;
   stroke-dasharray: 2 3;
 }
 
 .cushion-preview-seam-piped {
-  stroke: rgb(54 45 37 / 0.68);
+  stroke: var(--shade-seam-piped);
   stroke-width: 2.75;
   stroke-dasharray: none;
 }
 
 .cushion-preview-edge {
-  stroke: rgb(62 49 38 / 0.32);
+  stroke: var(--shade-edge);
   stroke-width: 1.5;
 }
 
@@ -836,13 +1321,15 @@ body {
   position: absolute;
   right: 0.5rem;
   bottom: 0.35rem;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
-  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control-small);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  padding: 0.25rem 0.5rem;
   color: var(--color-text-muted);
-  font-size: 0.7rem;
-  font-weight: var(--font-weight-control);
-  letter-spacing: var(--tracking-label);
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
 }
 
 @media (max-width: 40rem) {
@@ -857,7 +1344,7 @@ body {
 
 .cover-option-label:has(.cover-option-input:checked) {
   border-color: var(--color-brand);
-  background: var(--color-surface-subtle);
+  background: var(--color-brand-tint);
 }
 
 .configurator-edit-target:focus-visible {
@@ -870,6 +1357,8 @@ body {
 .review-preview > section {
   margin-top: 0;
 }
+
+/* 8. Accessibility --------------------------------------------------------- */
 
 :where(
   a[href],
@@ -887,6 +1376,52 @@ body {
   outline-offset: 2px;
 }
 
+.unit-selector-input:focus-visible + .unit-selector-label,
+.pattern-card-input:focus-visible + .pattern-card-label,
+.pattern-filter-input:focus-visible + .pattern-filter-label,
+.shape-option-input:focus-visible + .shape-option-label {
+  box-shadow: var(--shadow-focus);
+  outline: 3px solid transparent;
+  outline-offset: 2px;
+}
+
+.shape-option-input:checked
+  + .shape-option-label
+  .shape-option-control-indicator {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.pattern-card-input:checked + .pattern-card-label .pattern-card-selected-marker {
+  display: flex;
+}
+
+.pattern-card-input:checked
+  + .pattern-card-label
+  .pattern-card-control-indicator {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+/* Respect reduced motion everywhere: no transitions, animations or smooth
+ * scrolling. e2e/accessibility-validation.spec.ts asserts this. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition-property: none !important;
+  }
+
+  .choice-card:active,
+  .landing-example-card:hover {
+    transform: none;
+  }
+}
+
 @media (forced-colors: active) {
   .landing-cushion,
   .landing-cushion-box::before {
@@ -895,7 +1430,15 @@ body {
     box-shadow: none;
   }
 
-  .landing-cushion::after {
+  .landing-cushion::after,
+  .dimension,
+  .care-label,
+  .care-label::before,
+  .choice-card::after {
+    border-color: CanvasText;
+  }
+
+  .landing-cta::before {
     border-color: CanvasText;
   }
 
@@ -929,6 +1472,10 @@ body {
   .cover-option-label:has(.cover-option-input:checked) {
     outline: 2px solid CanvasText;
     outline-offset: -2px;
+  }
+
+  .choice-indicator {
+    border-color: CanvasText;
   }
 
   .shape-option-input:disabled + .shape-option-label {
@@ -988,45 +1535,7 @@ body {
     box-shadow: none;
     outline-color: Highlight;
   }
-}
 
-.unit-selector-input:focus-visible + .unit-selector-label {
-  box-shadow: var(--shadow-focus);
-  outline: 3px solid transparent;
-  outline-offset: 2px;
-}
-
-.pattern-card-input:focus-visible + .pattern-card-label,
-.pattern-filter-input:focus-visible + .pattern-filter-label,
-.shape-option-input:focus-visible + .shape-option-label {
-  box-shadow: var(--shadow-focus);
-  outline: 3px solid transparent;
-  outline-offset: 2px;
-}
-
-.shape-option-input:checked
-  + .shape-option-label
-  .shape-option-control-indicator {
-  border-color: var(--color-brand);
-  background: var(--color-brand);
-  color: var(--color-on-brand);
-}
-
-.pattern-card-input:checked
-  + .pattern-card-label
-  .pattern-card-selected-marker {
-  display: flex;
-}
-
-.pattern-card-input:checked
-  + .pattern-card-label
-  .pattern-card-control-indicator {
-  border-color: var(--color-brand);
-  background: var(--color-brand);
-  color: var(--color-on-brand);
-}
-
-@media (forced-colors: active) {
   .unit-selector-input:focus-visible + .unit-selector-label,
   .pattern-card-input:focus-visible + .pattern-card-label,
   .pattern-filter-input:focus-visible + .pattern-filter-label,
@@ -1035,6 +1544,8 @@ body {
     outline-color: Highlight;
   }
 }
+
+/* 9. Print ----------------------------------------------------------------- */
 
 @media print {
   @page {
@@ -1089,6 +1600,10 @@ body {
     border: 1px solid #000 !important;
     background: #fff !important;
     box-shadow: none !important;
+  }
+
+  .prototype-notice::before {
+    display: none;
   }
 
   .configuration-review-details {

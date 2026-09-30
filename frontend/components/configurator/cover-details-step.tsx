@@ -41,14 +41,17 @@ function OptionGroup<Id extends string>({
   const descriptionId = `${generatedId}-description`;
 
   return (
-    <fieldset aria-describedby={descriptionId} className="min-w-0">
-      <legend className="text-body font-control text-text-primary">
+    <fieldset
+      aria-describedby={descriptionId}
+      className="min-w-0 py-component first:pt-0 last:pb-0"
+    >
+      <legend className="text-subhead font-control text-text-primary">
         {legend}
       </legend>
       <p id={descriptionId} className="mt-1 text-supporting text-text-muted">
         {description}
       </p>
-      <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 grid min-w-0 gap-3 sm:grid-cols-2 md:grid-cols-3">
         {options.map((option) => {
           const optionId = `${generatedId}-${option.id}`;
           const optionTitleId = `${optionId}-title`;
@@ -58,11 +61,11 @@ function OptionGroup<Id extends string>({
             <label
               key={option.id}
               htmlFor={optionId}
-              className="cover-option-label flex min-h-28 min-w-0 cursor-pointer gap-3 rounded-card border-2 border-border-strong bg-surface p-control-x py-3 shadow-card transition-[background-color,border-color,box-shadow] hover:bg-surface-subtle motion-reduce:transition-none"
+              className="cover-option-label choice-card flex min-h-28 min-w-0 gap-3 p-4"
             >
               <input
                 id={optionId}
-                className="cover-option-input mt-1 size-5 shrink-0 accent-brand"
+                className="cover-option-input mt-0.5 size-5 shrink-0 cursor-pointer accent-brand"
                 type="radio"
                 name={name}
                 value={option.id}
@@ -74,7 +77,7 @@ function OptionGroup<Id extends string>({
               <span className="min-w-0">
                 <span
                   id={optionTitleId}
-                  className="block text-body font-control text-text-primary"
+                  className="block break-words text-body font-control text-text-primary"
                 >
                   {option.name}
                 </span>
@@ -105,7 +108,7 @@ export function CoverDetailsStep({
   return (
     <section
       aria-labelledby={focusTargetId}
-      className="mt-layout min-w-0 rounded-panel border border-border bg-surface p-card shadow-raised"
+      className="min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline"
     >
       <h2
         id={focusTargetId}
@@ -120,7 +123,7 @@ export function CoverDetailsStep({
         manufacturing performance.
       </p>
 
-      <div className="mt-layout grid min-w-0 gap-layout">
+      <div className="mt-component flex min-w-0 flex-col divide-y divide-dashed divide-border-strong">
         <OptionGroup<MaterialId>
           legend="Material direction"
           description="Choose the base fabric character; pattern and motif size come later."
@@ -141,28 +144,26 @@ export function CoverDetailsStep({
             dispatch({ type: "setFitPreference", fitPreference })
           }
         />
-        <div className="grid min-w-0 gap-layout xl:grid-cols-2">
-          <OptionGroup<ClosureType>
-            legend="Closure and access"
-            description="Choose how you would prefer to access the cushion inside."
-            name="cover-closure"
-            options={closureOptions}
-            value={state.closureType}
-            onChange={(closureType) =>
-              dispatch({ type: "setClosureType", closureType })
-            }
-          />
-          <OptionGroup<SeamStyle>
-            legend="Edge finish"
-            description="Choose the visible seam treatment around the main face."
-            name="cover-seam"
-            options={seamOptions}
-            value={state.seamStyle}
-            onChange={(seamStyle) =>
-              dispatch({ type: "setSeamStyle", seamStyle })
-            }
-          />
-        </div>
+        <OptionGroup<ClosureType>
+          legend="Closure and access"
+          description="Choose how you would prefer to access the cushion inside."
+          name="cover-closure"
+          options={closureOptions}
+          value={state.closureType}
+          onChange={(closureType) =>
+            dispatch({ type: "setClosureType", closureType })
+          }
+        />
+        <OptionGroup<SeamStyle>
+          legend="Edge finish"
+          description="Choose the visible seam treatment around the main face."
+          name="cover-seam"
+          options={seamOptions}
+          value={state.seamStyle}
+          onChange={(seamStyle) =>
+            dispatch({ type: "setSeamStyle", seamStyle })
+          }
+        />
       </div>
     </section>
   );

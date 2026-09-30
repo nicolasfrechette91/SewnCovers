@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Button } from "@/components/ui";
+import { Button, noticeClasses, noticeTitleClasses } from "@/components/ui";
 import type { ConfigurationState } from "@/context/configuration";
 import type { SelectedPatternPresentation } from "./preview-step";
 
@@ -160,13 +160,13 @@ export function ReviewScreen({
       className="configuration-review-screen mt-layout min-w-0"
     >
       <header className="configuration-review-title">
-        <p className="text-label font-control tracking-label text-accent-strong">
+        <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
           Review
         </p>
         <h2
           id="configuration-review-heading"
           tabIndex={-1}
-          className="configurator-edit-target mt-2 scroll-mt-layout break-words font-display text-page-title font-heading tracking-heading text-text-primary"
+          className="configurator-edit-target mt-3 scroll-mt-layout break-words font-display text-page-title font-heading tracking-heading text-text-primary"
         >
           SewnCovers configuration summary
         </h2>
@@ -178,20 +178,20 @@ export function ReviewScreen({
 
       <aside
         aria-labelledby="configuration-prototype-notice-heading"
-        className="prototype-notice mt-component min-w-0 rounded-card border-2 border-accent-strong bg-surface p-card"
+        className={noticeClasses("prototype", "prototype-notice mt-component")}
       >
         <h3
           id="configuration-prototype-notice-heading"
-          className="text-body font-control text-text-primary"
+          className={noticeTitleClasses("prototype")}
         >
           Prototype notice
         </h3>
-        <p className="mt-2 break-words text-body text-text-primary">
+        <p className="mt-2 break-words text-body text-notice-text">
           {summary.prototypeNotice}
         </p>
       </aside>
 
-      <div className="review-summary-layout mt-layout grid min-w-0 gap-layout lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <div className="review-summary-layout mt-layout grid min-w-0 gap-layout lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start">
         <ConfigurationSummary
           className="configuration-review-details"
           title="Configuration details"
@@ -205,8 +205,8 @@ export function ReviewScreen({
         </div>
       </div>
 
-      <div className="review-edit-actions print-hidden mt-layout min-w-0 rounded-card border border-border bg-surface-subtle p-card">
-        <h3 className="text-body font-control text-text-primary">
+      <div className="review-edit-actions print-hidden mt-layout min-w-0 rounded-card border border-dashed border-border-strong bg-surface p-card">
+        <h3 className="text-subhead font-control text-text-primary">
           Edit this configuration
         </h3>
         <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-5">

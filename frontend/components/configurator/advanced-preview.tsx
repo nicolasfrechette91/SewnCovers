@@ -383,7 +383,7 @@ export function AdvancedPreview({
   return (
     <section
       aria-labelledby={`${summaryId}-heading`}
-      className="mt-component rounded-panel border border-border bg-surface p-card"
+      className="mt-component rounded-panel border border-border bg-surface p-card shadow-hairline"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -407,7 +407,7 @@ export function AdvancedPreview({
           Expanded controls
         </Button>
       </div>
-      <div className="mt-component min-w-0 overflow-hidden rounded-card border border-border bg-surface-subtle">
+      <div className="cutting-mat mt-component min-w-0 overflow-hidden rounded-card border border-border">
         <canvas
           ref={canvasRef}
           className={`aspect-[4/3] min-h-56 w-full touch-none ${state === "ready" ? "block" : "hidden"}`}

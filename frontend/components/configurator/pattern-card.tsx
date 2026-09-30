@@ -84,9 +84,9 @@ export function PatternCard({
       />
       <label
         htmlFor={id}
-        className="pattern-card-label flex min-h-44 min-w-0 cursor-pointer flex-col overflow-hidden rounded-card border border-border-strong bg-surface shadow-card transition-[background-color,border-color,box-shadow,opacity] hover:bg-surface-subtle active:shadow-none peer-checked:border-brand peer-disabled:cursor-not-allowed peer-disabled:border-control-disabled-border peer-disabled:bg-control-disabled-surface peer-disabled:text-control-disabled-text peer-disabled:opacity-75 motion-reduce:transition-none"
+        className="pattern-card-label choice-card flex min-h-32 min-w-0 flex-row overflow-hidden peer-disabled:opacity-75 sm:min-h-44 sm:flex-col"
       >
-        <span className="relative flex aspect-[4/3] min-h-24 items-center justify-center overflow-hidden border-b border-border bg-surface-subtle p-control-x">
+        <span className="relative flex w-2/5 shrink-0 items-center justify-center overflow-hidden bg-surface-subtle p-3 sm:aspect-[4/3] sm:min-h-24 sm:w-auto sm:p-control-x sm:pb-5 sm:pinked-edge">
           <span
             aria-hidden={previewDecorative || undefined}
             className="flex size-full min-w-0 items-center justify-center overflow-hidden"
@@ -100,16 +100,16 @@ export function PatternCard({
           </span>
           <span
             aria-hidden="true"
-            className="pattern-card-selected-marker absolute top-3 right-3 hidden items-center gap-1 rounded-pill bg-brand px-2 py-1 text-supporting font-control text-on-brand shadow-card"
+            className="pattern-card-selected-marker absolute top-2 left-2 hidden items-center gap-1 rounded-control-small bg-brand px-2 py-1 font-mono text-eyebrow uppercase tracking-eyebrow text-on-brand shadow-card sm:top-3 sm:right-3 sm:left-auto"
           >
             <span>✓</span>
             <span>Selected</span>
           </span>
         </span>
-        <span className="flex min-w-0 flex-1 items-start gap-3 p-control-x">
+        <span className="flex min-w-0 flex-1 items-start gap-3 p-3 sm:px-4 sm:pt-3 sm:pb-4">
           <span
             aria-hidden="true"
-            className="pattern-card-control-indicator mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-pill border border-border-strong bg-surface text-supporting text-transparent"
+            className="pattern-card-control-indicator choice-indicator mt-0.5"
           >
             ✓
           </span>
@@ -123,7 +123,7 @@ export function PatternCard({
             {patternCategory ? (
               <span
                 id={categoryId}
-                className="mt-1 block break-words text-label font-emphasis text-accent-strong"
+                className="mt-1 block break-words font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong"
               >
                 {patternCategory}
               </span>

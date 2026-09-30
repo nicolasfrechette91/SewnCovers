@@ -102,14 +102,14 @@ export function SaveSharePanel({
   return (
     <section
       aria-labelledby="configuration-save-share-heading"
-      className="print-hidden mt-layout min-w-0 rounded-panel border border-brand bg-surface p-card shadow-raised"
+      className="print-hidden mt-layout min-w-0 rounded-panel border border-brand bg-surface p-card shadow-card"
     >
-      <p className="text-label font-control tracking-label text-accent-strong">
+      <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
         Save and share
       </p>
       <h3
         id="configuration-save-share-heading"
-        className="mt-2 break-words font-display text-section-title font-heading tracking-heading text-text-primary"
+        className="mt-3 break-words font-display text-section-title font-heading tracking-heading text-text-primary"
       >
         Create a public link
       </h3>
@@ -120,7 +120,7 @@ export function SaveSharePanel({
       </p>
 
       {customPatternSelected ? (
-        <p className="mt-component rounded-card border border-border-strong bg-surface-subtle p-control-x py-4 text-supporting text-text-muted">
+        <p className="mt-component rounded-card border border-border bg-surface-subtle px-5 py-4 text-supporting text-text-primary">
           Public guest links support built-in patterns only. To share a custom
           pattern, save this design to a private project and create a read-only
           project link that you can revoke later.
@@ -181,7 +181,7 @@ export function SaveSharePanel({
           </p>
           <label
             htmlFor="configuration-share-url"
-            className="mt-4 block text-label font-control tracking-label text-text-muted"
+            className="mt-4 block text-label font-control tracking-label text-text-primary"
           >
             Share URL
           </label>
@@ -193,7 +193,7 @@ export function SaveSharePanel({
             readOnly
             aria-describedby="configuration-share-url-help"
             onFocus={(event) => event.currentTarget.select()}
-            className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface-subtle px-control-x py-control-y text-body text-text-primary"
+            className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface-subtle px-control-x py-control-y font-mono text-body text-text-primary"
           />
           <p
             id="configuration-share-url-help"

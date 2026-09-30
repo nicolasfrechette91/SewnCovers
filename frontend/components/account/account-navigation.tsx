@@ -28,7 +28,7 @@ export function AccountNavigation({
   return (
     <nav
       aria-label="Account navigation"
-      className="mb-layout rounded-panel border border-border bg-surface p-2 shadow-card"
+      className="mb-layout rounded-control border border-border-strong bg-surface-subtle p-1"
     >
       <ul className="flex min-w-0 flex-wrap gap-1">
         {destinations.map((item) => {
@@ -40,10 +40,10 @@ export function AccountNavigation({
                 href={item.href}
                 aria-current={isCurrent ? "page" : undefined}
                 className={classNames(
-                  "inline-flex min-h-11 max-w-full items-center rounded-control px-3 py-2 text-button font-emphasis break-words text-text-primary underline-offset-4 hover:text-brand hover:underline active:text-brand-active",
+                  "inline-flex min-h-11 max-w-full items-center rounded-control-small px-3 py-2 text-button font-emphasis break-words text-text-primary transition-colors duration-(--duration-fast) hover:bg-surface hover:text-brand active:text-brand-active motion-reduce:transition-none",
                   isCurrent
-                    ? "font-control text-brand underline decoration-2"
-                    : "no-underline",
+                    ? "bg-surface font-control text-brand shadow-card"
+                    : "",
                 )}
               >
                 {item.label}

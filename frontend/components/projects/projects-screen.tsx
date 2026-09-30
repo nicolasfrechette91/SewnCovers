@@ -5,7 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { AccountRequired } from "@/components/account";
-import { Button, ErrorMessage, LoadingState } from "@/components/ui";
+import {
+  Button,
+  buttonClasses,
+  ButtonLink,
+  EmptyState,
+  ErrorMessage,
+  LoadingState,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
   accountApi,
@@ -38,20 +45,20 @@ function ProjectList({ token }: Readonly<{ token: string }>) {
   if (state.status === "loading") return <LoadingState label="Loading your private projects…" />;
   if (state.status === "error") return <div><ErrorMessage>{state.message}</ErrorMessage><Button className="mt-3" variant="secondary" onClick={() => void load()}>Retry projects</Button></div>;
   if (state.value.length === 0) return (
-    <section className="rounded-panel border border-border bg-surface p-card text-center">
-      <h2 className="font-display text-section-title font-heading">No private projects yet</h2>
-      <p className="mt-2 text-body text-text-muted">Complete a configuration, open its review, and choose Save to a private project.</p>
-      <Link href="/configure/" className="mt-4 inline-flex min-h-12 items-center rounded-control bg-brand px-control-x py-control-y text-button font-control text-on-brand no-underline">Start configuring</Link>
-    </section>
+    <EmptyState
+      title="No private projects yet"
+      description={<p>Complete a configuration, open its review, and choose Save to a private project.</p>}
+      action={<ButtonLink href="/configure/">Start configuring</ButtonLink>}
+    />
   );
   return (
     <ul className="grid min-w-0 wrap-anywhere gap-component sm:grid-cols-2 lg:grid-cols-3">
       {state.value.map((project) => (
-        <li key={project.id} className="min-w-0 rounded-card border border-border bg-surface p-card shadow-card">
-          <p className="text-label font-control text-accent-strong">{project.privacy === "shared" ? "Shared by revocable link" : "Private"}</p>
-          <h2 className="mt-2 break-words font-display text-section-title font-heading">{project.name}</h2>
-          <p className="mt-2 text-supporting text-text-muted">{project.versionCount} {project.versionCount === 1 ? "version" : "versions"} · Updated {new Date(project.updatedAt).toLocaleString()}</p>
-          <Link href={{ pathname: "/projects/", query: { project: project.id } }} className="mt-4 inline-flex min-h-11 items-center rounded-control text-button font-control text-brand underline">Open project</Link>
+        <li key={project.id} className="flex min-w-0 flex-col rounded-panel border border-border bg-surface p-card shadow-hairline transition-[border-color,box-shadow] duration-(--duration-base) hover:border-border-strong hover:shadow-card motion-reduce:transition-none">
+          <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">{project.privacy === "shared" ? "Shared by revocable link" : "Private"}</p>
+          <h2 className="mt-3 break-words font-display text-card-title font-heading tracking-heading text-text-primary">{project.name}</h2>
+          <p className="mt-2 font-mono text-supporting text-text-muted">{project.versionCount} {project.versionCount === 1 ? "version" : "versions"} · Updated {new Date(project.updatedAt).toLocaleString()}</p>
+          <Link href={{ pathname: "/projects/", query: { project: project.id } }} className="mt-auto pt-4 inline-flex min-h-11 max-w-full items-center rounded-control text-button font-control break-words text-brand underline decoration-1 underline-offset-4 hover:text-brand-hover hover:decoration-2">Open project</Link>
         </li>
       ))}
     </ul>
@@ -117,60 +124,60 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
 
   return (
     <div className="min-w-0 wrap-anywhere space-y-layout">
-      <Link href="/projects/" className="inline-flex min-h-11 items-center text-button font-control text-brand underline">← All projects</Link>
-      <section className="rounded-panel border border-border bg-surface p-card shadow-raised">
-        <p className="text-label font-control text-accent-strong">{detail.privacy === "shared" ? "Shared — one or more revocable links are active" : "Private — no active project share links"}</p>
-        <h2 className="mt-2 font-display text-page-title font-heading">{detail.name}</h2>
-        <p className="mt-2 text-supporting text-text-muted">{detail.versionCount} saved {detail.versionCount === 1 ? "version" : "versions"} · Updated {new Date(detail.updatedAt).toLocaleString()}</p>
+      <Link href="/projects/" className="inline-flex min-h-11 max-w-full items-center rounded-control text-button font-control break-words text-brand underline decoration-1 underline-offset-4 hover:text-brand-hover hover:decoration-2">← All projects</Link>
+      <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+        <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">{detail.privacy === "shared" ? "Shared — one or more revocable links are active" : "Private — no active project share links"}</p>
+        <h2 className="mt-3 break-words font-display text-section-title font-heading tracking-heading text-text-primary">{detail.name}</h2>
+        <p className="mt-2 font-mono text-supporting text-text-muted">{detail.versionCount} saved {detail.versionCount === 1 ? "version" : "versions"} · Updated {new Date(detail.updatedAt).toLocaleString()}</p>
         <form className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row" onSubmit={(event) => void rename(event)}>
           <label htmlFor="project-name" className="sr-only">New project name</label>
-          <input ref={renameRef} id="project-name" name="name" required maxLength={120} defaultValue={detail.name} className="min-h-12 min-w-0 flex-1 rounded-control border border-border-strong bg-surface px-control-x" />
+          <input ref={renameRef} id="project-name" name="name" required maxLength={120} defaultValue={detail.name} className="min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x py-control-y text-body text-text-primary hover:border-brand flex-1" />
           <Button type="submit" variant="secondary">Rename project</Button>
         </form>
       </section>
 
       {shareUrl ? (
-        <section className="rounded-card border border-brand bg-surface p-card" aria-live="polite">
-          <h2 className="font-display text-section-title font-heading">Read-only share created</h2>
+        <section className="rounded-panel border border-brand bg-surface p-card shadow-card" aria-live="polite">
+          <h2 className="font-display text-card-title font-heading tracking-heading text-text-primary">Read-only share created</h2>
           <p className="mt-2 text-body text-text-muted">Anyone with this link can view this version until you revoke the share. Copy it now; the complete link is shown only once.</p>
-          <label htmlFor="project-share-url" className="mt-3 block text-label font-control">Share URL</label>
-          <input ref={shareRef} id="project-share-url" type="url" readOnly value={shareUrl} onFocus={(event) => event.currentTarget.select()} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface-subtle px-control-x" />
+          <label htmlFor="project-share-url" className="mt-4 block text-label font-control text-text-primary">Share URL</label>
+          <input ref={shareRef} id="project-share-url" type="url" readOnly value={shareUrl} onFocus={(event) => event.currentTarget.select()} className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface-subtle px-control-x font-mono text-body" />
           <Button className="mt-3" variant="secondary" onClick={async () => { try { await navigator.clipboard.writeText(shareUrl); shareRef.current?.focus(); } catch { setActionError("Copying is unavailable. The share URL is selected for manual copying."); shareRef.current?.focus(); shareRef.current?.select(); } }}>Copy share link</Button>
         </section>
       ) : null}
       {actionError ? <ErrorMessage>{actionError}</ErrorMessage> : null}
-      {actionStatus ? <p ref={actionStatusRef} tabIndex={-1} className="text-supporting text-accent-strong" aria-live="polite">{actionStatus}</p> : null}
+      {actionStatus ? <p ref={actionStatusRef} tabIndex={-1} className="rounded-card border border-success-border bg-success-surface px-5 py-3 text-supporting font-emphasis text-success-text" aria-live="polite">{actionStatus}</p> : null}
 
       <section aria-labelledby="version-history-heading">
-        <h2 id="version-history-heading" className="font-display text-section-title font-heading">Version history</h2>
+        <h2 id="version-history-heading" className="font-display text-section-title font-heading tracking-heading text-text-primary">Version history</h2>
         <p className="mt-2 text-body text-text-muted">Earlier snapshots stay unchanged. Opening one and saving creates the next sequential version.</p>
         <ol className="mt-component space-y-component">
           {versions.map((version) => (
-            <li key={version.id} className="rounded-panel border border-border bg-surface p-card">
+            <li key={version.id} className="rounded-panel border border-border bg-surface p-card shadow-hairline">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div><h3 className="font-display text-section-title font-heading">Version {version.versionNumber} {version.isCurrent ? "— Current" : "— Historical"}</h3><p className="text-supporting text-text-muted">Created {new Date(version.createdAt).toLocaleString()}</p></div>
+                <div><h3 className="font-display text-card-title font-heading tracking-heading text-text-primary">Version {version.versionNumber} {version.isCurrent ? "— Current" : "— Historical"}</h3><p className="mt-1 font-mono text-supporting text-text-muted">Created {new Date(version.createdAt).toLocaleString()}</p></div>
                 <div className="flex flex-wrap gap-2">
-                  <Link href={{ pathname: "/configure/", query: { project: projectId, version: version.id } }} className="inline-flex min-h-11 items-center rounded-control border border-border-strong bg-surface px-3 text-button font-control text-text-primary no-underline">Open as editing basis</Link>
-                  <Link href={{ pathname: "/commerce/", query: { version: version.id } }} className="inline-flex min-h-11 items-center rounded-control border border-brand bg-surface px-3 text-button font-control text-brand no-underline">Estimate demo price</Link>
+                  <Link href={{ pathname: "/configure/", query: { project: projectId, version: version.id } }} className={buttonClasses({ element: "link", size: "compact", variant: "secondary" })}>Open as editing basis</Link>
+                  <Link href={{ pathname: "/commerce/", query: { version: version.id } }} className={buttonClasses({ className: "border-brand text-brand", element: "link", size: "compact", variant: "secondary" })}>Estimate demo price</Link>
                   <Button size="compact" variant="secondary" onClick={() => void createShare(version)}>Create read-only share</Button>
                 </div>
               </div>
-              <div className="mt-component"><ConfigurationReadonly configuration={version.configuration} /></div>
+              <div className="mt-component border-t border-dashed border-border-strong pt-component"><ConfigurationReadonly configuration={version.configuration} /></div>
             </li>
           ))}
         </ol>
       </section>
 
       {detail.activeShares.length ? (
-        <section className="rounded-panel border border-border bg-surface p-card">
-          <h2 className="font-display text-section-title font-heading">Active read-only shares</h2>
-          <ul className="mt-3 space-y-3">{detail.activeShares.map((grant) => <li key={grant.id} className="flex flex-col gap-2 rounded-card border border-border p-3 sm:flex-row sm:items-center sm:justify-between"><span>Version {grant.versionNumber} · Created {new Date(grant.createdAt).toLocaleString()}</span><Button variant="secondary" size="compact" onClick={async () => { try { setActionError(null); setActionStatus(null); await accountApi.revokeShare(token, projectId, grant.id); setShareUrl(null); await load(); setActionStatus(`Share for version ${grant.versionNumber} revoked.`); requestAnimationFrame(() => actionStatusRef.current?.focus()); } catch (error) { setActionError(errorMessage(error)); } }}>Revoke share</Button></li>)}</ul>
+        <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+          <h2 className="font-display text-card-title font-heading tracking-heading text-text-primary">Active read-only shares</h2>
+          <ul className="mt-3 divide-y divide-dashed divide-border-strong">{detail.activeShares.map((grant) => <li key={grant.id} className="flex flex-col gap-2 py-3 last:pb-0 sm:flex-row sm:items-center sm:justify-between"><span className="font-mono text-supporting">Version {grant.versionNumber} · Created {new Date(grant.createdAt).toLocaleString()}</span><Button variant="secondary" size="compact" onClick={async () => { try { setActionError(null); setActionStatus(null); await accountApi.revokeShare(token, projectId, grant.id); setShareUrl(null); await load(); setActionStatus(`Share for version ${grant.versionNumber} revoked.`); requestAnimationFrame(() => actionStatusRef.current?.focus()); } catch (error) { setActionError(errorMessage(error)); } }}>Revoke share</Button></li>)}</ul>
         </section>
       ) : null}
 
-      <section className="rounded-panel border-2 border-accent-strong bg-surface p-card">
-        <h2 className="font-display text-section-title font-heading">Delete project</h2>
-        <p className="mt-2 text-body">This permanently deletes the project, every saved version, and every project share. It does not delete your account or public designs created without an account.</p>
+      <section className="rounded-panel border border-error-border bg-surface p-card">
+        <h2 className="font-display text-card-title font-heading tracking-heading text-text-primary">Delete project</h2>
+        <p className="mt-2 text-body text-text-muted">This permanently deletes the project, every saved version, and every project share. It does not delete your account or public designs created without an account.</p>
         {!confirmDelete ? <Button ref={deleteButtonRef} className="mt-3" variant="secondary" onClick={() => { setConfirmDelete(true); requestAnimationFrame(() => confirmDeleteButtonRef.current?.focus()); }}>Review project deletion</Button> : <div className="mt-3 flex flex-wrap gap-3" role="group" aria-label="Confirm project deletion"><Button ref={confirmDeleteButtonRef} onClick={() => void removeProject()}>Permanently delete project</Button><Button variant="secondary" onClick={() => { setConfirmDelete(false); requestAnimationFrame(() => deleteButtonRef.current?.focus()); }}>Cancel</Button></div>}
       </section>
     </div>

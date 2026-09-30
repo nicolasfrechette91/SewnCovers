@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-import { Button } from "@/components/ui";
+import { Badge, Button } from "@/components/ui";
 import {
   useConfiguration,
   type CushionShape,
@@ -51,12 +51,12 @@ export function ShapeSelectionStep({
   return (
     <fieldset
       aria-describedby={supportingTextId}
-      className="min-w-0 rounded-panel border border-border bg-surface p-card shadow-raised"
+      className="fieldset-panel min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline"
     >
       <legend
         id={focusTargetId}
         tabIndex={focusTargetId ? -1 : undefined}
-        className="configurator-edit-target max-w-full scroll-mt-layout px-1 font-display text-section-title font-heading tracking-heading text-text-primary"
+        className="configurator-edit-target max-w-full scroll-mt-layout pb-2 font-display text-section-title font-heading tracking-heading text-text-primary"
       >
         Choose your cushion shape
       </legend>
@@ -69,7 +69,7 @@ export function ShapeSelectionStep({
         terms in the next step.
       </p>
 
-      <div className="mt-layout grid min-w-0 gap-component sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-component grid min-w-0 gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-5">
         {cushionShapeDefinitions.map((option) => {
           const optionId = `${generatedId}-${option.id}`;
           const titleId = `${optionId}-title`;
@@ -93,40 +93,44 @@ export function ShapeSelectionStep({
               />
               <label
                 htmlFor={optionId}
-                className="shape-option-label flex h-full min-h-44 min-w-0 cursor-pointer flex-col rounded-card border-2 border-border-strong bg-surface p-control-x shadow-card transition-[background-color,border-color,box-shadow] hover:bg-surface-subtle active:shadow-none peer-checked:border-brand peer-checked:bg-surface-subtle motion-reduce:transition-none"
+                className="shape-option-label choice-card flex h-full min-h-44 min-w-0 flex-col p-3 sm:p-4"
               >
-                <span className="flex min-h-32 items-center justify-center rounded-control border border-border bg-page p-3">
-                  <ShapeIllustration shape={option.id} />
+                <span className="flex min-h-24 items-center justify-center rounded-control bg-page p-2 sm:min-h-32 sm:p-3">
+                  <ShapeIllustration
+                    shape={option.id}
+                    className="h-20 w-full max-w-48 sm:h-28"
+                  />
                 </span>
 
-                <span className="mt-component flex min-w-0 flex-1 items-start gap-3">
-                  <span
-                    aria-hidden="true"
-                    className="shape-option-control-indicator mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-pill border-2 border-border-strong bg-surface text-label font-control text-transparent"
-                  >
-                    {isSelected ? "✓" : ""}
-                  </span>
-                  <span className="flex min-w-0 flex-1 self-stretch flex-col">
+                <span className="mt-4 flex min-w-0 flex-1 flex-col">
+                  <span className="flex min-w-0 items-start gap-2 sm:gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="shape-option-control-indicator choice-indicator mt-0.5"
+                    >
+                      {isSelected ? "✓" : ""}
+                    </span>
                     <span
                       id={titleId}
-                      className="block break-words text-body font-control text-text-primary"
+                      className="block min-w-0 break-words text-subhead font-control text-text-primary"
                     >
                       {option.label}
                     </span>
-                    <span
-                      id={descriptionId}
-                      className="mt-1 block break-words text-supporting text-text-muted"
+                  </span>
+                  <span
+                    id={descriptionId}
+                    className="mt-2 block break-words text-supporting text-text-muted hyphens-auto"
+                  >
+                    {option.description}
+                  </span>
+                  <span className="mt-auto pt-3">
+                    <Badge
+                      id={statusId}
+                      tone={isSelected ? "brand" : "neutral"}
+                      variant={isSelected ? "solid" : "outline"}
                     >
-                      {option.description}
-                    </span>
-                    <span className="mt-auto pt-3">
-                      <span
-                        id={statusId}
-                        className="inline-flex min-h-11 max-w-full items-center rounded-pill border border-current px-3 py-2 text-label font-control break-words text-brand"
-                      >
-                        {isSelected ? "Selected" : "Available"}
-                      </span>
-                    </span>
+                      {isSelected ? "Selected" : "Available"}
+                    </Badge>
                   </span>
                 </span>
               </label>
@@ -138,7 +142,7 @@ export function ShapeSelectionStep({
       {pendingShape !== null ? (
         <section
           aria-labelledby={`${generatedId}-shape-change-heading`}
-          className="mt-component rounded-card border-2 border-accent-strong bg-surface-subtle p-control-x py-4"
+          className="mt-component rounded-card border border-accent bg-surface p-4 shadow-raised sm:p-5"
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.preventDefault();
@@ -148,7 +152,7 @@ export function ShapeSelectionStep({
         >
           <h3
             id={`${generatedId}-shape-change-heading`}
-            className="text-body font-control text-text-primary"
+            className="text-subhead font-control text-text-primary"
           >
             Confirm equal dimensions
           </h3>

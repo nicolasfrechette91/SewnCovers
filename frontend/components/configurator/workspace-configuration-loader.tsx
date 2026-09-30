@@ -151,7 +151,7 @@ export function WorkspaceConfigurationLoader() {
   }, [load]);
   if (state.status === "idle") return null;
   return (
-    <section aria-labelledby="workspace-load-heading" className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-raised">
+    <section aria-labelledby="workspace-load-heading" className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline">
       <h2 id="workspace-load-heading" className="font-display text-section-title font-heading">{state.status === "signin" ? "Private project version" : "Saved configuration"}</h2>
       {state.status === "loading" ? <LoadingState className="mt-3" label={state.label} /> : null}
       {state.status === "restored" ? <p className="mt-3 text-supporting text-text-muted" role="status" aria-live="polite">{state.label}</p> : null}

@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 
+import {
+  PageHeader,
+  PageShell,
+  sectionTitleClasses,
+} from "@/components/ui";
 import { createPageMetadata } from "@/config/site-metadata";
 
 const documents = [
@@ -68,65 +73,65 @@ export const metadata: Metadata = createPageMetadata({
 
 export default function LegalPage() {
   return (
-    <div className="bg-page py-section">
-      <div className="mx-auto w-full max-w-4xl px-gutter">
-        <header>
-          <p className="text-label font-control text-accent-strong">
-            Versioned demonstration documents
-          </p>
-          <h1 className="mt-2 font-display text-page-title font-heading">
-            Legal information
-          </h1>
-        </header>
-        <nav className="mt-layout" aria-label="Legal documents">
-          <ul className="flex flex-wrap gap-2">
-            {documents.map((document) => (
+    <PageShell>
+      <PageHeader
+        eyebrow="Versioned demonstration documents"
+        title="Legal information"
+      />
+      <div className="grid min-w-0 gap-layout lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start">
+        <nav className="min-w-0 lg:sticky lg:top-6" aria-label="Legal documents">
+          <ol className="divide-y divide-dashed divide-border-strong border-y border-dashed border-border-strong">
+            {documents.map((document, index) => (
               <li key={document.type}>
                 <a
-                  className="inline-flex min-h-11 items-center rounded-control border border-border-strong bg-surface px-3 text-brand underline"
+                  className="flex min-h-11 items-baseline gap-3 rounded-control-small py-2.5 text-supporting font-emphasis text-brand underline-offset-4 transition-colors duration-(--duration-fast) hover:text-brand-hover hover:underline motion-reduce:transition-none"
                   href={"#" + document.type}
                 >
-                  {document.title}
+                  <span
+                    aria-hidden="true"
+                    className="font-mono text-eyebrow tabular-nums text-text-muted"
+                  >
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="min-w-0">{document.title}</span>
                 </a>
               </li>
             ))}
-          </ul>
+          </ol>
         </nav>
-        <div className="mt-layout space-y-layout">
+        <div className="min-w-0 max-w-reading space-y-component">
           {documents.map((document) => (
             <article
               id={document.type}
               key={document.type}
-              className="scroll-mt-layout rounded-panel border border-border bg-surface p-card shadow-card"
+              className="scroll-mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline"
             >
-              <h2 className="mt-2 font-display text-section-title font-heading">
-                {document.title}
-              </h2>
+              <h2 className={sectionTitleClasses}>{document.title}</h2>
               {document.body.map((paragraph) => (
-                <p className="mt-3 text-text-muted" key={paragraph}>
+                <p className="mt-3 text-body text-text-muted" key={paragraph}>
                   {paragraph}
                 </p>
               ))}
             </article>
           ))}
+          <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+            <h2 className={sectionTitleClasses}>
+              Third-party processing categories and retention map
+            </h2>
+            <p id="retention-scroll-help" className="mt-3 text-supporting text-text-muted">Scroll horizontally to read all columns when needed.</p>
+            <div role="region" aria-label="Processing categories and retention" aria-describedby="retention-scroll-help" tabIndex={0} className="mt-4 overflow-x-auto rounded-card border border-border">
+              <table className="w-full min-w-[36rem] border-collapse text-left text-supporting">
+                <thead className="bg-surface-subtle"><tr><th scope="col" className="border-b border-border-strong px-4 py-3 font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Category</th><th scope="col" className="border-b border-border-strong px-4 py-3 font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Configured boundary</th><th scope="col" className="border-b border-border-strong px-4 py-3 font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Portfolio retention</th></tr></thead>
+                <tbody className="divide-y divide-dashed divide-border-strong">
+                  <tr><th scope="row" className="px-4 py-3 align-top font-control text-text-primary">Payments</th><td className="px-4 py-3 align-top text-text-muted">Stripe configured-only; sandbox local</td><td className="px-4 py-3 align-top text-text-muted">No raw payment payload; immutable order and verified-event digest retained</td></tr>
+                  <tr><th scope="row" className="px-4 py-3 align-top font-control text-text-primary">Uploads</th><td className="px-4 py-3 align-top text-text-muted">Private S3-compatible storage and external moderation configured-only</td><td className="px-4 py-3 align-top text-text-muted">Private objects deleted on account/upload deletion except protected paid-order derivatives</td></tr>
+                  <tr><th scope="row" className="px-4 py-3 align-top font-control text-text-primary">Shipping</th><td className="px-4 py-3 align-top text-text-muted">Encrypted database fields; allowlisted fictional carriers</td><td className="px-4 py-3 align-top text-text-muted">Removed when a retained order is detached on account deletion</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
-        <section className="mt-layout rounded-panel border border-border bg-surface p-card">
-          <h2 className="font-display text-section-title font-heading">
-            Third-party processing categories and retention map
-          </h2>
-          <p id="retention-scroll-help" className="mt-3 text-supporting text-text-muted">Scroll horizontally to read all columns when needed.</p>
-          <div role="region" aria-label="Processing categories and retention" aria-describedby="retention-scroll-help" tabIndex={0} className="mt-3 overflow-x-auto rounded-control">
-            <table className="w-full min-w-[36rem] border-collapse text-left text-supporting">
-              <thead><tr><th scope="col" className="border border-border p-2">Category</th><th scope="col" className="border border-border p-2">Configured boundary</th><th scope="col" className="border border-border p-2">Portfolio retention</th></tr></thead>
-              <tbody>
-                <tr><th scope="row" className="border border-border p-2">Payments</th><td className="border border-border p-2">Stripe configured-only; sandbox local</td><td className="border border-border p-2">No raw payment payload; immutable order and verified-event digest retained</td></tr>
-                <tr><th scope="row" className="border border-border p-2">Uploads</th><td className="border border-border p-2">Private S3-compatible storage and external moderation configured-only</td><td className="border border-border p-2">Private objects deleted on account/upload deletion except protected paid-order derivatives</td></tr>
-                <tr><th scope="row" className="border border-border p-2">Shipping</th><td className="border border-border p-2">Encrypted database fields; allowlisted fictional carriers</td><td className="border border-border p-2">Removed when a retained order is detached on account deletion</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
       </div>
-    </div>
+    </PageShell>
   );
 }

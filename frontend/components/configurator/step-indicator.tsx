@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties } from "react";
 
 import { classNames } from "../ui/class-names";
 
@@ -18,6 +18,16 @@ export interface StepIndicatorProps
   steps: readonly StepIndicatorStep[];
 }
 
+type ProgressTrackStyle = CSSProperties & {
+  "--progress": number;
+  "--track-inset": string;
+};
+
+/**
+ * Stage progress drawn as a tape measure: numbered ticks on a ruler line that
+ * fills with brand colour up to the current stage. Labels show from md up and
+ * status words from lg up; both stay in each item for assistive technology.
+ */
 export function StepIndicator({
   "aria-label": ariaLabel = "Configuration progress",
   className,
@@ -55,6 +65,12 @@ export function StepIndicator({
 
   const completedIds = new Set(completedStepIds);
   const revisitableIds = new Set(revisitableStepIds);
+  const trackStyle: ProgressTrackStyle = {
+    "--progress":
+      steps.length > 1 ? Math.max(currentStepIndex, 0) / (steps.length - 1) : 0,
+    "--track-inset": `${50 / Math.max(steps.length, 1)}%`,
+    gridTemplateColumns: `repeat(${Math.max(steps.length, 1)}, minmax(0, 1fr))`,
+  };
 
   return (
     <nav
@@ -66,10 +82,10 @@ export function StepIndicator({
         <p className="text-supporting text-text-muted">{emptyMessage}</p>
       ) : (
         <>
-          <p className="mb-3 text-supporting font-control text-text-muted">
+          <p className="mb-4 font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
             Stage {currentStepIndex + 1} of {steps.length}
           </p>
-          <ol className="grid min-w-0 grid-cols-1 gap-2 min-[350px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+          <ol className="progress-track grid min-w-0 gap-1" style={trackStyle}>
             {steps.map((step, index) => {
               const isCurrent = index === currentStepIndex;
               const isCompleted = completedIds.has(step.id);
@@ -87,26 +103,28 @@ export function StepIndicator({
                   <span
                     aria-hidden="true"
                     className={classNames(
-                      "flex size-7 shrink-0 items-center justify-center rounded-pill border text-label font-control",
+                      "flex size-11 shrink-0 items-center justify-center rounded-pill border-[1.5px] font-mono text-label transition-[background-color,border-color,color,box-shadow] duration-(--duration-base) motion-reduce:transition-none",
                       isCurrent
-                        ? "border-brand bg-brand text-on-brand"
+                        ? "border-brand bg-brand text-on-brand shadow-current"
                         : isCompleted
                           ? "border-brand bg-surface text-brand"
-                          : "border-border-strong bg-surface-subtle text-text-muted",
+                          : "border-dashed border-border-strong bg-surface-subtle text-text-muted",
                     )}
                   >
                     {isCompleted ? "✓" : index + 1}
                   </span>
-                  <span className="min-w-0">
+                  <span className="min-w-0 max-w-full">
                     <span
                       className={classNames(
-                        "block break-words text-label font-control tracking-label",
-                        isCurrent ? "text-brand" : "text-text-primary",
+                        "sr-only md:not-sr-only md:block md:break-words md:text-label md:tracking-label",
+                        isCurrent
+                          ? "md:font-control md:text-brand"
+                          : "md:font-emphasis md:text-text-primary",
                       )}
                     >
                       {step.label}
                     </span>
-                    <span className="block text-supporting text-text-muted">
+                    <span className="sr-only lg:not-sr-only lg:mt-0.5 lg:block lg:font-mono lg:text-eyebrow lg:uppercase lg:tracking-eyebrow lg:text-text-muted">
                       {statusLabel}
                     </span>
                   </span>
@@ -117,26 +135,19 @@ export function StepIndicator({
                 <li
                   key={step.id}
                   aria-current={isCurrent ? "step" : undefined}
-                  className={classNames(
-                    "flex min-h-20 min-w-0 items-stretch rounded-card border bg-surface shadow-card",
-                    isCurrent
-                      ? "border-brand"
-                      : isCompleted
-                        ? "border-border-strong"
-                        : "border-border",
-                  )}
+                  className="relative z-1 flex min-w-0 justify-center text-center"
                 >
                   {isRevisitable ? (
                     <button
                       type="button"
-                      className="flex min-w-0 flex-1 items-center gap-2 rounded-card px-3 py-2 text-left transition-colors hover:bg-surface-subtle motion-reduce:transition-none"
+                      className="group flex min-w-0 max-w-full flex-col items-center gap-2 rounded-card px-1 pb-1 transition-colors duration-(--duration-fast) hover:[&>span:first-child]:bg-brand-tint motion-reduce:transition-none"
                       aria-label={`Return to ${step.label}, completed stage ${index + 1} of ${steps.length}`}
                       onClick={() => onStepSelect(step.id)}
                     >
                       {content}
                     </button>
                   ) : (
-                    <div className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2">
+                    <div className="flex min-w-0 max-w-full flex-col items-center gap-2 px-1 pb-1">
                       {content}
                     </div>
                   )}

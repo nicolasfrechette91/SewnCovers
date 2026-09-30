@@ -1,7 +1,12 @@
-import Link from "next/link";
-
-import { ErrorMessage } from "@/components/ui";
-import { classNames } from "@/components/ui/class-names";
+import {
+  ButtonLink,
+  cardTitleClasses,
+  ErrorMessage,
+  sectionTitleClasses,
+  StitchDivider,
+  surfaceClasses,
+  TextLink,
+} from "@/components/ui";
 import {
   buildAccountHref,
   type AuthenticationReturnTarget,
@@ -37,13 +42,10 @@ export function AccountRequired({
   const Heading = headingLevel;
 
   return (
-    <section
-      className={classNames(
-        "min-w-0 rounded-panel border border-border bg-surface p-card",
-        className,
-      )}
-    >
-      <Heading className="break-words font-display text-section-title font-heading">
+    <section className={surfaceClasses({ className })}>
+      <Heading
+        className={headingLevel === "h2" ? sectionTitleClasses : cardTitleClasses}
+      >
         {title}
       </Heading>
       <p className="mt-2 max-w-3xl break-words text-body text-text-muted">
@@ -57,31 +59,24 @@ export function AccountRequired({
           {sessionNotice}
         </ErrorMessage>
       ) : null}
-      <div className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <Link
-          href={buildAccountHref("login", returnTo)}
-          className="inline-flex min-h-12 max-w-full items-center justify-center rounded-control bg-brand px-control-x py-control-y text-center text-button font-control break-words text-on-brand no-underline"
-        >
-          Sign in
-        </Link>
-        <Link
+      <div className="mt-component flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <ButtonLink href={buildAccountHref("login", returnTo)}>Sign in</ButtonLink>
+        <ButtonLink
           href={buildAccountHref("register", returnTo)}
-          className="inline-flex min-h-12 max-w-full items-center justify-center rounded-control border border-border-strong bg-surface px-control-x py-control-y text-center text-button font-control break-words text-text-primary no-underline"
+          variant="secondary"
         >
           Create account
-        </Link>
+        </ButtonLink>
       </div>
       {guestAlternative ? (
-        <div className="mt-4 border-t border-border pt-4">
-          <p className="max-w-3xl break-words text-supporting text-text-muted">
+        <div className="mt-component">
+          <StitchDivider />
+          <p className="mt-4 max-w-3xl break-words text-supporting text-text-muted">
             {guestAlternative.description}
           </p>
-          <Link
-            href={guestAlternative.href}
-            className="mt-2 inline-flex min-h-11 max-w-full items-center text-button font-control break-words text-brand underline"
-          >
+          <TextLink href={guestAlternative.href} className="mt-1">
             {guestAlternative.label}
-          </Link>
+          </TextLink>
         </div>
       ) : null}
     </section>

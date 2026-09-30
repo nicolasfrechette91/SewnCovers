@@ -95,7 +95,7 @@ export function PatternFilter<Value extends string = string>(
       disabled={disabled}
       className={classNames("min-w-0", className)}
     >
-      <legend className="mb-3 text-label font-control tracking-label text-text-primary">
+      <legend className="mb-3 font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
         {legend}
       </legend>
       {options.length === 0 ? (
@@ -120,7 +120,7 @@ export function PatternFilter<Value extends string = string>(
                 />
                 <label
                   htmlFor={optionId}
-                  className="pattern-filter-label flex min-h-11 max-w-full cursor-pointer items-center gap-icon rounded-pill border border-border-strong bg-surface px-control-x py-2 text-label font-control text-text-primary shadow-card transition-[background-color,border-color,color,box-shadow,opacity] hover:bg-surface-subtle active:shadow-none peer-checked:border-brand peer-checked:bg-brand peer-checked:text-on-brand peer-checked:hover:bg-brand-hover peer-disabled:cursor-not-allowed peer-disabled:border-control-disabled-border peer-disabled:bg-control-disabled-surface peer-disabled:text-control-disabled-text peer-disabled:opacity-75 motion-reduce:transition-none"
+                  className="pattern-filter-label flex min-h-11 max-w-full cursor-pointer items-center gap-icon rounded-pill border border-border-strong bg-surface px-4 py-2 text-label font-control text-text-primary transition-[background-color,border-color,color,box-shadow,opacity] duration-(--duration-fast) hover:border-brand hover:text-brand active:bg-surface-subtle peer-checked:border-brand peer-checked:bg-brand peer-checked:text-on-brand peer-checked:hover:bg-brand-hover peer-disabled:cursor-not-allowed peer-disabled:border-control-disabled-border peer-disabled:bg-control-disabled-surface peer-disabled:text-control-disabled-text peer-disabled:opacity-75 motion-reduce:transition-none"
                 >
                   <span
                     aria-hidden="true"

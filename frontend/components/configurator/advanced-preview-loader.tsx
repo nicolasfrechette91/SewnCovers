@@ -38,7 +38,7 @@ export function AdvancedPreviewLoader({
       />
     </Suspense>
   ) : (
-    <div className="mt-component rounded-card border border-border bg-surface p-4">
+    <div className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-4 sm:p-5">
       <p className="text-supporting text-text-muted">
         The main preview above shows your selected fabric and edge styling.
         The optional 3D view shows approximate proportions; built-in patterns use

@@ -281,11 +281,11 @@ export function MeasurementDiagram({
   };
 
   return (
-    <figure className="min-w-0 rounded-card border border-border bg-surface-subtle px-control-x py-4 sm:p-card">
-      <p className="text-label font-control tracking-label text-text-primary">
+    <figure className="min-w-0 rounded-card border border-border bg-surface-subtle p-4 sm:p-5">
+      <p className="font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
         {definition.name} measurement guide
       </p>
-      <div className="mt-component min-w-0 rounded-control border border-border bg-surface p-2 sm:p-3">
+      <div className="cutting-mat mt-4 min-w-0 rounded-control border border-border p-2 sm:p-3">
         <svg
           aria-hidden="true"
           className="measurement-diagram block h-auto w-full"
@@ -300,7 +300,7 @@ export function MeasurementDiagram({
           {shape === "tapered" ? <TaperedDiagram /> : null}
         </svg>
       </div>
-      <figcaption className="mt-component text-supporting text-text-muted">
+      <figcaption className="mt-4 text-supporting text-text-muted">
         {captions[shape]}
       </figcaption>
     </figure>

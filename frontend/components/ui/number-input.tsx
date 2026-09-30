@@ -3,6 +3,7 @@
 import { useId, type ComponentPropsWithRef, type ReactNode } from "react";
 
 import { classNames } from "./class-names";
+import { controlClasses, fieldHelpClasses, fieldLabelClasses } from "./field-styles";
 
 export interface NumberInputProps
   extends Omit<ComponentPropsWithRef<"input">, "type"> {
@@ -11,6 +12,9 @@ export interface NumberInputProps
   label: ReactNode;
   supportingText?: ReactNode;
   type?: "number" | "text";
+  /** Visual unit suffix inside the field, e.g. "cm". The label should still
+   * name the unit; the suffix is hidden from assistive technology. */
+  unit?: ReactNode;
 }
 
 export function NumberInput({
@@ -25,6 +29,7 @@ export function NumberInput({
   ref,
   supportingText,
   type = "number",
+  unit,
   ...inputProps
 }: NumberInputProps) {
   const generatedId = useId();
@@ -36,27 +41,36 @@ export function NumberInput({
 
   return (
     <div className={classNames("flex min-w-0 flex-col gap-2", containerClassName)}>
-      <label
-        htmlFor={inputId}
-        className="text-label font-control tracking-label text-text-primary"
-      >
+      <label htmlFor={inputId} className={fieldLabelClasses}>
         {label}
       </label>
-      <input
-        {...inputProps}
-        ref={ref}
-        id={inputId}
-        type={type}
-        inputMode={inputMode}
-        aria-describedby={describedBy || undefined}
-        aria-invalid={invalid ? true : ariaInvalid}
-        className={classNames(
-          "min-h-12 min-w-0 rounded-control border border-border-strong bg-surface px-control-x py-control-y text-body text-text-primary transition-[background-color,border-color,box-shadow] placeholder:text-text-muted motion-reduce:transition-none disabled:cursor-not-allowed disabled:border-control-disabled-border disabled:bg-control-disabled-surface disabled:text-control-disabled-text aria-invalid:border-error-border aria-invalid:bg-error-surface",
-          className,
-        )}
-      />
+      <div className="relative min-w-0">
+        <input
+          {...inputProps}
+          ref={ref}
+          id={inputId}
+          type={type}
+          inputMode={inputMode}
+          aria-describedby={describedBy || undefined}
+          aria-invalid={invalid ? true : ariaInvalid}
+          className={classNames(
+            controlClasses,
+            "font-mono tabular-nums",
+            unit ? "pr-14" : null,
+            className,
+          )}
+        />
+        {unit ? (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 flex items-center border-l border-dashed border-border-strong px-3 font-mono text-supporting text-text-muted"
+          >
+            {unit}
+          </span>
+        ) : null}
+      </div>
       {supportingText ? (
-        <p id={supportingTextId} className="text-supporting text-text-muted">
+        <p id={supportingTextId} className={fieldHelpClasses}>
           {supportingText}
         </p>
       ) : null}

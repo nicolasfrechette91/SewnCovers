@@ -84,7 +84,7 @@ export function SharedDesignLoader({
   return (
     <section
       aria-labelledby="shared-design-status-heading"
-      className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-raised"
+      className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline"
     >
       <h2
         id="shared-design-status-heading"

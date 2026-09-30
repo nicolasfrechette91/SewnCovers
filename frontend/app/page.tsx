@@ -1,7 +1,17 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { CushionExample } from "@/components/landing";
+import {
+  ButtonLink,
+  buttonClasses,
+  cardTitleClasses,
+  eyebrowClasses,
+  noticeClasses,
+  noticeTitleClasses,
+  sectionTitleClasses,
+  StitchDivider,
+  textLinkClasses,
+} from "@/components/ui";
 import {
   createPageMetadata,
   DEFAULT_DESCRIPTION,
@@ -56,62 +66,55 @@ const designSteps = [
   },
 ] as const;
 
-const primaryLinkClasses =
-  "inline-flex min-h-12 max-w-full items-center justify-center rounded-control border border-brand bg-brand px-5 py-control-y text-center text-button font-control tracking-label break-words text-on-brand shadow-raised transition-[background-color,border-color,box-shadow,transform] hover:border-brand-hover hover:bg-brand-hover hover:shadow-overlay active:translate-y-px active:border-brand-active active:bg-brand-active active:shadow-card motion-reduce:transform-none motion-reduce:transition-none";
-
-const secondaryLinkClasses =
-  "inline-flex min-h-12 max-w-full items-center justify-center rounded-control border border-border-strong bg-surface px-5 py-control-y text-center text-button font-control tracking-label break-words text-text-primary shadow-card transition-[background-color,border-color,color,box-shadow] hover:border-brand hover:bg-surface-subtle hover:text-brand active:bg-surface-subtle active:text-brand-active active:shadow-none motion-reduce:transition-none";
-
 export default function Home() {
   return (
     <>
       <section
         aria-labelledby="landing-title"
-        className="landing-hero overflow-hidden border-b border-border bg-surface"
+        className="landing-hero overflow-hidden border-b border-border"
       >
-        <div className="mx-auto grid w-full max-w-6xl min-w-0 gap-layout px-gutter py-section lg:grid-cols-[minmax(0,1.12fr)_minmax(20rem,0.88fr)] lg:items-center lg:py-[clamp(5rem,8vw,7rem)]">
+        <div className="mx-auto grid w-full max-w-page min-w-0 gap-layout px-gutter py-section lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] lg:items-center lg:gap-16">
           <div className="min-w-0">
-            <p className="landing-eyebrow text-label font-control tracking-label text-accent-strong">
-              A cushion-cover design prototype
-            </p>
+            <p className={eyebrowClasses}>A cushion-cover design prototype</p>
             <h1
               id="landing-title"
-              className="mt-4 max-w-3xl font-display text-page-title font-heading tracking-heading text-text-primary"
+              className="mt-5 max-w-3xl font-display text-display font-heading tracking-heading text-text-primary"
             >
               Plan a replacement cover around your cushion&apos;s real
               measurements.
             </h1>
-            <p className="mt-component max-w-2xl text-body text-text-muted sm:text-lg sm:leading-8">
+            <p className="mt-component max-w-2xl text-lede text-text-muted">
               SewnCovers explores a guided way to combine a supported cushion
               shape, exact dimensions, and a fabric direction before saving a
               design.
             </p>
             <div className="landing-hero-actions mt-8 flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              <Link href="/configure/" className={primaryLinkClasses}>
-                Start configuring
-              </Link>
-              <a href="#examples" className={secondaryLinkClasses}>
+              <ButtonLink href="/configure/">Start configuring</ButtonLink>
+              <a
+                href="#examples"
+                className={buttonClasses({
+                  element: "link",
+                  variant: "secondary",
+                })}
+              >
                 Explore cover examples
               </a>
-              <a
-                href="#how-it-works"
-                className="inline-flex min-h-11 max-w-full items-center rounded-control px-2 text-button font-control break-words text-brand underline decoration-2 underline-offset-4 transition-colors hover:text-brand-hover active:text-brand-active motion-reduce:transition-none"
-              >
+              <a href="#how-it-works" className={`${textLinkClasses} px-2`}>
                 See how the idea works
               </a>
             </div>
 
             <aside
               aria-labelledby="prototype-status-title"
-              className="landing-prototype-note mt-10 max-w-2xl rounded-card border border-border bg-surface-subtle p-card shadow-card"
+              className={noticeClasses("prototype", "mt-10 max-w-2xl")}
             >
               <h2
                 id="prototype-status-title"
-                className="text-label font-control tracking-label text-text-primary"
+                className={noticeTitleClasses("prototype")}
               >
                 Prototype status
               </h2>
-              <p className="mt-2 text-supporting text-text-muted">
+              <p className="mt-2 text-supporting text-notice-text">
                 This experience demonstrates the design journey and an optional
                 fictional CAD commerce sandbox. It cannot charge money, create
                 a real shipment, or produce finished covers.
@@ -119,23 +122,31 @@ export default function Home() {
             </aside>
           </div>
 
-          <figure className="landing-hero-figure min-w-0 rounded-panel border border-border bg-page p-card shadow-raised">
+          <figure className="min-w-0 rounded-panel border border-border bg-surface p-3 shadow-raised sm:p-4">
             <div
               aria-hidden="true"
-              className="landing-hero-media relative flex min-h-72 items-center justify-center overflow-hidden rounded-card border border-border bg-surface-subtle px-card py-layout sm:min-h-80"
+              className="cutting-mat relative flex min-h-80 items-center justify-center overflow-hidden rounded-card border border-border px-card pt-24 pb-14 sm:min-h-96"
             >
-              <span className="absolute top-5 left-5 text-supporting font-control tracking-label text-brand">
+              <span className="absolute bottom-4 left-4 font-mono text-eyebrow uppercase tracking-eyebrow text-brand">
                 Shape + size + fabric
               </span>
-              <span className="landing-cushion landing-cushion-square landing-pattern-botanical block w-[68%] max-w-64" />
-              <span className="absolute right-5 bottom-5 flex max-w-36 flex-col gap-1 rounded-control border border-border bg-surface px-3 py-2 text-supporting text-text-muted shadow-card">
+              <span className="landing-measured">
+                <span className="landing-cushion landing-cushion-square landing-pattern-botanical block w-full" />
+                <span className="dimension dimension-x">
+                  <span className="dimension-label">45 cm</span>
+                </span>
+                <span className="dimension dimension-y">
+                  <span className="dimension-label">45 cm</span>
+                </span>
+              </span>
+              <span className="absolute top-3 right-3 flex max-w-44 flex-col gap-0.5 rounded-control border border-border bg-surface px-3 py-2 text-supporting text-text-muted shadow-card">
                 <span className="font-control text-text-primary">
                   Visual direction
                 </span>
                 <span>before a saved design</span>
               </span>
             </div>
-            <figcaption className="mt-3 text-supporting text-text-muted">
+            <figcaption className="mt-3 px-1 text-supporting text-text-muted">
               Illustrative study of a measured square cushion with a patterned
               face and piped edge.
             </figcaption>
@@ -146,18 +157,13 @@ export default function Home() {
       <section
         id="examples"
         aria-labelledby="examples-title"
-        className="landing-showcase scroll-mt-6 border-b border-border bg-page py-section"
+        className="scroll-mt-6 border-b border-border bg-page py-section"
       >
-        <div className="mx-auto w-full max-w-6xl min-w-0 px-gutter">
-          <div className="grid min-w-0 gap-4 border-b border-border pb-layout lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.62fr)] lg:items-end lg:gap-layout">
+        <div className="mx-auto w-full max-w-page min-w-0 px-gutter">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.62fr)] lg:items-end lg:gap-layout">
             <div className="min-w-0 max-w-2xl">
-              <p className="landing-eyebrow text-label font-control tracking-label text-accent-strong">
-                Illustrative examples
-              </p>
-              <h2
-                id="examples-title"
-                className="mt-3 font-display text-section-title font-heading tracking-heading text-text-primary"
-              >
+              <p className={eyebrowClasses}>Illustrative examples</p>
+              <h2 id="examples-title" className={`mt-3 ${sectionTitleClasses}`}>
                 Start with the cushion, then explore the finish.
               </h2>
             </div>
@@ -167,6 +173,8 @@ export default function Home() {
               products or accurate previews.
             </p>
           </div>
+
+          <StitchDivider className="mt-layout" />
 
           <ul className="mt-layout grid min-w-0 auto-rows-fr gap-component sm:grid-cols-12 lg:grid-cols-3">
             {coverExamples.map((example) => (
@@ -181,43 +189,41 @@ export default function Home() {
         aria-labelledby="how-it-works-title"
         className="scroll-mt-6 bg-surface-subtle py-section"
       >
-        <div className="mx-auto w-full max-w-6xl min-w-0 px-gutter">
+        <div className="mx-auto w-full max-w-page min-w-0 px-gutter">
           <div className="max-w-3xl">
-            <p className="landing-eyebrow text-label font-control tracking-label text-accent-strong">
-              Three clear steps
-            </p>
+            <p className={eyebrowClasses}>Three clear steps</p>
             <h2
               id="how-it-works-title"
-              className="mt-3 font-display text-section-title font-heading tracking-heading text-text-primary"
+              className={`mt-3 ${sectionTitleClasses}`}
             >
               From an existing cushion to a considered cover idea.
             </h2>
           </div>
 
-          <ol className="mt-layout grid min-w-0 auto-rows-fr gap-component lg:grid-cols-3">
+          <ol className="landing-steps mt-layout grid min-w-0 gap-layout lg:grid-cols-3 lg:gap-component">
             {designSteps.map((step, index) => (
               <li
                 key={step.title}
-                className="landing-step-card min-w-0 rounded-card border border-border bg-surface p-card shadow-card"
+                className="flex min-w-0 gap-4 lg:flex-col lg:items-center lg:px-4 lg:text-center"
               >
-                <span className="flex size-10 items-center justify-center rounded-pill border border-brand bg-brand text-button font-control text-on-brand">
+                <span className="landing-step-marker flex size-12 shrink-0 items-center justify-center rounded-pill border-[1.5px] border-brand bg-surface font-mono text-readout text-brand shadow-card">
                   <span className="sr-only">Step </span>
                   {index + 1}
                 </span>
-                <h3 className="mt-component font-display text-xl font-heading tracking-heading text-text-primary">
-                  {step.title}
-                </h3>
-                <p className="mt-3 text-body text-text-muted">
-                  {step.description}
-                </p>
+                <div className="min-w-0">
+                  <h3 className={cardTitleClasses}>{step.title}</h3>
+                  <p className="mt-2 text-body text-text-muted">
+                    {step.description}
+                  </p>
+                </div>
               </li>
             ))}
           </ol>
         </div>
       </section>
 
-      <section aria-labelledby="landing-cta-title" className="bg-brand">
-        <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-component px-gutter py-layout sm:flex-row sm:items-center sm:justify-between">
+      <section aria-labelledby="landing-cta-title" className="landing-cta">
+        <div className="relative mx-auto flex w-full max-w-page min-w-0 flex-col gap-component px-gutter py-layout sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 max-w-2xl">
             <h2
               id="landing-cta-title"
@@ -232,7 +238,12 @@ export default function Home() {
           </div>
           <a
             href="#examples"
-            className="inline-flex min-h-12 max-w-full shrink-0 items-center justify-center self-start rounded-control border border-on-brand bg-surface px-control-x py-control-y text-center text-button font-control tracking-label break-words text-brand shadow-raised transition-[background-color,color,box-shadow] hover:bg-surface-subtle hover:text-brand-hover active:bg-page active:text-brand-active motion-reduce:transition-none sm:self-auto"
+            className={buttonClasses({
+              className:
+                "shrink-0 self-start border-on-brand bg-surface text-brand hover:border-on-brand hover:bg-surface-subtle hover:text-brand-hover sm:self-auto",
+              element: "link",
+              variant: "secondary",
+            })}
           >
             View the cover examples
           </a>

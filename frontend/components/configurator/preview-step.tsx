@@ -32,7 +32,7 @@ import {
 
 import { CushionPreview } from "./cushion-preview";
 import { CushionModel } from "./cushion-model";
-import { Button } from "../ui";
+import { Button, buttonClasses, noticeClasses } from "../ui";
 import { AdvancedPreviewLoader } from "./advanced-preview-loader";
 
 export interface SelectedPatternPresentation {
@@ -224,7 +224,7 @@ function PreviewStepContent({
   return (
     <section
       aria-label={`${definition.name} cushion preview`}
-      className="mt-layout scroll-mt-layout"
+      className="@container scroll-mt-layout"
     >
       <CushionPreview
         balanced
@@ -254,7 +254,7 @@ function PreviewStepContent({
         }
         description={
           <div className="min-w-0">
-            <h3 className="text-body font-control text-text-primary">Currently previewing</h3>
+            <h3 className="text-subhead font-control text-text-primary">Currently previewing</h3>
             <p role="status" className="mt-2 text-supporting text-text-muted">
               {failedPatternUrl && failedPatternUrl === selectedPattern?.previewUrl
                 ? "The selected pattern could not be displayed. Neutral cushion shown; your measurements remain saved."
@@ -270,28 +270,28 @@ function PreviewStepContent({
               // eslint-disable-next-line @next/next/no-img-element
               <img key={patternObjectUrl} hidden alt="" src={patternObjectUrl} onLoad={() => setLoadedPatternUrl(selectedPattern.previewUrl!)} onError={() => setFailedPatternUrl(selectedPattern.previewUrl!)} />
             ) : null}
-            <dl className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
+            <dl className="mt-4 grid min-w-0 gap-x-component gap-y-4 border-y border-dashed border-border-strong py-4 sm:grid-cols-2">
               <div className="min-w-0">
-                <dt className="font-control text-text-primary">Shape</dt>
-                <dd className="break-words">{definition.name}</dd>
+                <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Shape</dt>
+                <dd className="mt-1 break-words text-text-primary">{definition.name}</dd>
               </div>
               <div className="min-w-0">
-                <dt className="font-control text-text-primary">Fit preference</dt>
-                <dd className="break-words">
+                <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Fit preference</dt>
+                <dd className="mt-1 break-words text-text-primary">
                   {findCoverOption(fitOptions, state.fitPreference).name}
                 </dd>
               </div>
               <div className="min-w-0">
-                <dt className="font-control text-text-primary">Edge finish</dt>
-                <dd className="break-words">
+                <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Edge finish</dt>
+                <dd className="mt-1 break-words text-text-primary">
                   {findCoverOption(seamOptions, state.seamStyle).name}
                 </dd>
               </div>
               <div className="min-w-0">
-                <dt className="font-control text-text-primary">
+                <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
                   Fabric
                 </dt>
-                <dd className="break-words">
+                <dd className="mt-1 break-words text-text-primary">
                   {selectedPattern?.name ??
                     (state.pattern === null
                       ? "Not selected"
@@ -301,22 +301,22 @@ function PreviewStepContent({
               </div>
               {dimensionDetails.map((detail) => (
                 <div className="min-w-0" key={detail.label}>
-                  <dt className="font-control text-text-primary">
+                  <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
                     {detail.label}
                   </dt>
-                  <dd className="break-words">{detail.value}</dd>
+                  <dd className="mt-1 break-words text-text-primary">{detail.value}</dd>
                 </div>
               ))}
               <div className="min-w-0">
-                <dt className="font-control text-text-primary">
+                <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
                   Pattern scale
                 </dt>
-                <dd className="break-words">{formattedScale}</dd>
+                <dd className="mt-1 break-words text-text-primary">{formattedScale}</dd>
               </div>
             </dl>
             <p className="mt-3 hidden forced-colors:block">High-contrast settings may hide pattern colors and motifs. Use the selected pattern name and scale above as your text alternative.</p>
             {selectedPattern && !selectedPattern.solidColor && showScaleControls ? (
-              <div className="mt-component rounded-card border border-border bg-surface-subtle p-control-x py-4">
+              <div className="mt-component rounded-card border border-border bg-surface-subtle p-4 sm:p-5">
                 <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
                   <label
                     htmlFor={scaleControlId}
@@ -328,7 +328,7 @@ function PreviewStepContent({
                     id={`${scaleControlId}-output`}
                     aria-live="off"
                     htmlFor={scaleControlId}
-                    className="text-body font-control text-brand"
+                    className="font-mono text-readout tabular-nums text-brand"
                   >
                     {formattedScale}
                   </output>
@@ -347,7 +347,11 @@ function PreviewStepContent({
                 />
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <button
-                    className="min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 py-2 text-button font-control break-words text-brand transition-[background-color,border-color,box-shadow] hover:bg-page active:bg-surface-subtle motion-reduce:transition-none disabled:cursor-not-allowed disabled:border-control-disabled-border disabled:bg-control-disabled-surface disabled:text-control-disabled-text"
+                    className={buttonClasses({
+                      className: "min-w-0",
+                      size: "compact",
+                      variant: "secondary",
+                    })}
                     type="button"
                     disabled={
                       state.patternScale <= PATTERN_SCALE_MIN
@@ -360,7 +364,11 @@ function PreviewStepContent({
                     Smaller
                   </button>
                   <button
-                    className="min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 py-2 text-button font-control break-words text-brand transition-[background-color,border-color,box-shadow] hover:bg-page active:bg-surface-subtle motion-reduce:transition-none disabled:cursor-not-allowed disabled:border-control-disabled-border disabled:bg-control-disabled-surface disabled:text-control-disabled-text"
+                    className={buttonClasses({
+                      className: "min-w-0",
+                      size: "compact",
+                      variant: "secondary",
+                    })}
                     type="button"
                     disabled={
                       state.patternScale >= PATTERN_SCALE_MAX
@@ -385,14 +393,14 @@ function PreviewStepContent({
                 </p>
               </div>
             ) : null}
-            <div className="mt-component space-y-3">
-              <div><h3 className="font-control text-text-primary">How fit is represented</h3>
+            <div className="mt-component space-y-4">
+              <div><h3 className="text-label font-control text-text-primary">How fit is represented</h3>
                 <p>{fitCharacter}. Fit is recorded with your design but intentionally does not reshape this reusable cushion model or alter the entered measurements. No fit allowances are calculated. Fit can affect fictional demonstration pricing.</p>
               </div>
-              <div><h3 className="font-control text-text-primary">Shown in this preview</h3>
+              <div><h3 className="text-label font-control text-text-primary">Shown in this preview</h3>
                 <p>{patternCanBeShown ? `${selectedPattern?.solidColor ? "The selected solid fabric color" : "The selected pattern and motif scale"} on one consistent cushion model, with ${state.seamStyle === "piped" ? "a piped seam" : "a plain seam"}, permanent folds, highlights, and shadows.` : "A neutral cushion model. Choose an available fabric option to apply it without changing the model’s size or silhouette."}</p>
               </div>
-              <div><h3 className="font-control text-text-primary">Recorded in your design</h3>
+              <div><h3 className="text-label font-control text-text-primary">Recorded in your design</h3>
                 <p>Material: {findCoverOption(materialOptions, state.materialId).name}. Fabric feel and drape are not simulated. Closure / access: {findCoverOption(closureOptions, state.closureType).name}; not visible from this view. Construction details and fit are recorded without changing the reusable model.</p>
               </div>
             </div>
@@ -402,7 +410,7 @@ function PreviewStepContent({
               <Button variant="secondary" onClick={() => onEdit("details")}>Edit cover details</Button>
               <Button variant="secondary" onClick={() => onEdit("pattern")}>Change pattern</Button>
             </nav> : null}
-            <p className="mt-component rounded-card border border-border-strong p-3 text-supporting text-text-muted">Illustrative preview only, not a manufacturing specification. It does not calculate seam allowances or cutting instructions, and cannot guarantee color, texture, scale, fit, or finished appearance. Not every saved setting is visually represented.</p>
+            <p className={noticeClasses("prototype", "mt-component")}>Illustrative preview only, not a manufacturing specification. It does not calculate seam allowances or cutting instructions, and cannot guarantee color, texture, scale, fit, or finished appearance. Not every saved setting is visually represented.</p>
           </div>
         }
       />

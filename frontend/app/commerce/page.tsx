@@ -3,7 +3,13 @@ import { Suspense } from "react";
 
 import { PricingQuotesScreen } from "@/components/commerce/pricing-quotes-screen";
 import { PublicPricingOverview } from "@/components/commerce/public-pricing-overview";
-import { LoadingState } from "@/components/ui";
+import {
+  LoadingState,
+  PageHeader,
+  PageShell,
+  sectionTitleClasses,
+  StitchDivider,
+} from "@/components/ui";
 import { createPageMetadata } from "@/config/site-metadata";
 
 export const metadata: Metadata = createPageMetadata({
@@ -12,4 +18,32 @@ export const metadata: Metadata = createPageMetadata({
   path: "/commerce/",
 });
 
-export default function CommercePage() { return <div className="bg-page py-section"><div className="mx-auto w-full max-w-6xl min-w-0 px-gutter"><header className="mb-layout max-w-3xl"><p className="text-label font-control text-accent-strong">Optional sandbox commerce</p><h1 className="mt-2 font-display text-page-title font-heading">Pricing and quotes</h1><p className="mt-3 text-text-muted">Explore illustrative demonstration prices publicly, then sign in if you want to create and keep an account-owned quote.</p></header><PublicPricingOverview /><section className="mt-layout" aria-labelledby="private-pricing-heading"><h2 id="private-pricing-heading" className="font-display text-section-title font-heading">Your private quote workspace</h2><p className="mt-2 mb-component max-w-3xl text-text-muted">Owned estimates, saved quotes, quote history, and cart actions are private to an account.</p><Suspense fallback={<LoadingState label="Checking your private pricing workspace…" />}><PricingQuotesScreen /></Suspense></section></div></div>; }
+export default function CommercePage() {
+  return (
+    <PageShell>
+      <PageHeader
+        eyebrow="Optional sandbox commerce"
+        title="Pricing and quotes"
+        lede="Explore illustrative demonstration prices publicly, then sign in if you want to create and keep an account-owned quote."
+      />
+      <PublicPricingOverview />
+      <section className="mt-layout" aria-labelledby="private-pricing-heading">
+        <StitchDivider className="mb-layout" />
+        <h2 id="private-pricing-heading" className={sectionTitleClasses}>
+          Your private quote workspace
+        </h2>
+        <p className="mt-2 mb-component max-w-3xl text-body text-text-muted">
+          Owned estimates, saved quotes, quote history, and cart actions are
+          private to an account.
+        </p>
+        <Suspense
+          fallback={
+            <LoadingState label="Checking your private pricing workspace…" />
+          }
+        >
+          <PricingQuotesScreen />
+        </Suspense>
+      </section>
+    </PageShell>
+  );
+}

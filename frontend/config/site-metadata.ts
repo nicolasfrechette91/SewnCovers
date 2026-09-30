@@ -9,6 +9,9 @@ export const PRODUCTION_ORIGIN = "https://nicolasfrechette91.github.io";
 export const PRODUCTION_BASE_PATH = "/SewnCovers";
 export const REPOSITORY_URL =
   "https://github.com/nicolasfrechette91/SewnCovers";
+// Browser chrome colour; mirrors --color-brand in app/globals.css and the
+// theme_color in public/site.webmanifest.
+export const THEME_COLOR = "#24513b";
 
 export const SOCIAL_IMAGE = Object.freeze({
   alt: "SewnCovers portfolio prototype: a measured approach to cushion-cover design.",

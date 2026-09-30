@@ -548,6 +548,9 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
         "--color-error-surface",
         "--color-error-border",
         "--color-error-text",
+        "--color-notice-surface",
+        "--color-notice-border",
+        "--color-notice-text",
       ].map((name) => [name, read(name)]),
     );
   });
@@ -561,6 +564,7 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
     ["on-brand", "brand"],
     ["accent-strong", "surface"],
     ["error-text", "error-surface"],
+    ["notice-text", "notice-surface"],
   ]) {
     expect(ratio(foreground, background)).toBeGreaterThanOrEqual(4.5);
   }
@@ -569,6 +573,7 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
     ["focus", "surface"],
     ["focus", "page"],
     ["error-border", "error-surface"],
+    ["notice-border", "notice-surface"],
   ]) {
     expect(ratio(foreground, background)).toBeGreaterThanOrEqual(3);
   }

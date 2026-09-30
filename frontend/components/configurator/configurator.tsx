@@ -13,6 +13,7 @@ import { getPatternById } from "@/data/patterns";
 import { getCompleteCatalogueResult } from "@/services/pattern-catalogue";
 import { usePatternCatalogue } from "@/services/use-pattern-catalogue";
 
+import { CurrentSelections } from "./current-selections";
 import type { SelectedPatternPresentation } from "./preview-step";
 import {
   deriveReviewReadiness,
@@ -28,7 +29,10 @@ import { WorkspaceConfigurationLoader } from "./workspace-configuration-loader";
 
 function StageLoading() {
   return (
-    <p className="mt-layout text-supporting text-text-muted" role="status">
+    <p
+      className="flex min-h-40 items-center justify-center rounded-panel border border-dashed border-border-strong bg-surface px-card py-layout text-supporting text-text-muted"
+      role="status"
+    >
       Loading this configuration stage…
     </p>
   );
@@ -282,17 +286,28 @@ export function Configurator() {
   const stageActions = (
     <nav
       aria-label={`${activeStep.label} stage actions`}
-      className="print-hidden mt-component min-w-0 rounded-card border border-border-strong bg-surface p-control-x py-4 shadow-card"
+      className={
+        activeStepId === "review"
+          ? "print-hidden min-w-0"
+          : "print-hidden mt-component min-w-0"
+      }
     >
+      {activeStepId !== "review" ? (
+        <span aria-hidden="true" className="stitch-rule block" />
+      ) : null}
       {nextStep !== null ? (
         <p
           id="configuration-stage-action-help"
-          className="break-words text-supporting text-text-muted"
+          className={
+            canContinue
+              ? "mt-4 break-words text-supporting text-text-muted"
+              : "mt-4 break-words text-supporting font-emphasis text-accent-strong"
+          }
         >
           {continueHelp}
         </p>
       ) : null}
-      <div className="mt-3 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-between">
+      <div className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-between">
         {previousStep !== null ? (
           <Button variant="secondary" onClick={returnToPreviousStep}>
             Back to {previousStep.label}
@@ -316,7 +331,7 @@ export function Configurator() {
   let activeStageContent;
   if (activeStepId === "shape") {
     activeStageContent = (
-      <section aria-label="Shape selection" className="mt-layout">
+      <section aria-label="Shape selection">
         <ShapeSelectionStep focusTargetId={focusTargetIds.shape} />
       </section>
     );
@@ -357,10 +372,15 @@ export function Configurator() {
       ) : null;
   }
 
+  const showSelections =
+    activeStepId === "measurements" ||
+    activeStepId === "details" ||
+    activeStepId === "pattern";
+
   return (
     <>
       <StepIndicator
-        className="configurator-progress print-hidden mt-layout"
+        className="configurator-progress print-hidden"
         completedStepIds={completedStepIds}
         currentStepId={activeStepId}
         revisitableStepIds={completedStepIds}
@@ -385,10 +405,28 @@ export function Configurator() {
         {stageAnnouncement}
       </p>
 
-      <div className="configurator-active-stage min-w-0">
-        {activeStepId === "review" ? stageActions : null}
-        {activeStageContent}
-        {activeStepId !== "review" ? stageActions : null}
+      <div
+        className={
+          showSelections
+            ? "mt-layout grid min-w-0 gap-component lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start lg:gap-layout"
+            : "mt-layout min-w-0"
+        }
+      >
+        {showSelections ? (
+          <CurrentSelections
+            className="lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1"
+            fabricName={selectedPattern?.name ?? null}
+            fabricSolidColor={selectedPattern?.solidColor ?? null}
+            stage={activeStepId}
+          />
+        ) : null}
+        <div className="configurator-active-stage min-w-0 lg:col-start-1 lg:row-start-1">
+          {activeStepId === "review" ? stageActions : null}
+          <div key={activeStepId} className="stage-enter min-w-0">
+            {activeStageContent}
+          </div>
+          {activeStepId !== "review" ? stageActions : null}
+        </div>
       </div>
     </>
   );
