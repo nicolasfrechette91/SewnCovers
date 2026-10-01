@@ -120,12 +120,12 @@ export default function RootLayout({
         <AuthProvider>
           <RouteAwareSiteHeader
             primaryItems={[
-              { href: "/configure/", label: "Configure" },
-              { href: "/projects/", label: "My projects" },
+              { asButton: true, href: "/configure/", label: "Configure" },
               { href: "/commerce/", label: "Pricing" },
             ]}
             utilityItems={[
-              { href: "/cart/", label: "Cart" },
+              { href: "/projects/", label: "My projects", requiresAccount: true },
+              { href: "/cart/", label: "Cart", requiresAccount: true },
               { href: "/account/", label: "Account" },
             ]}
           />

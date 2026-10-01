@@ -1,6 +1,10 @@
 export interface SiteNavigationItem {
   href: string;
   label: string;
+  /** The header's call to action, drawn as a compact primary button. */
+  asButton?: boolean;
+  /** Hidden from guests, for whom the destination is only a sign-in prompt. */
+  requiresAccount?: boolean;
 }
 
 function normalizeBasePath(basePath: string): string {

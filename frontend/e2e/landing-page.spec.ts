@@ -17,45 +17,74 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
 }
 
-test("renders the hero action hierarchy and preserves its content", async ({
+function heroOf(page: Page) {
+  return page.locator('section[aria-labelledby="landing-title"]');
+}
+
+test("leads with one action and states the prototype notice once", async ({
   page,
 }) => {
   await page.goto(homePath);
-  const hero = page.locator('section[aria-labelledby="landing-title"]');
-  const actions = hero.locator(".landing-hero-actions").getByRole("link");
+  const hero = heroOf(page);
 
-  await expect(actions).toHaveText([
-    "Start configuring",
-    "Explore cover examples",
-    "See how the idea works",
-  ]);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Design a cover that fits the cushion you already have.",
+  );
+  await expect(hero.getByRole("link")).toHaveText(["Start configuring"]);
   const start = hero.getByRole("link", {
     name: "Start configuring",
     exact: true,
   });
   await expect(start).toHaveAttribute("href", configurePath);
   expect(await start.evaluate((element) => element.tagName)).toBe("A");
+
+  // Every action in main moves forward to the configurator; none loops back.
+  expect(
+    await page
+      .getByRole("main")
+      .getByRole("link")
+      .evaluateAll((links) => links.map((link) => link.getAttribute("href"))),
+  ).toEqual([configurePath, configurePath]);
+
   await expect(
-    hero.getByRole("link", { name: "Explore cover examples" }),
-  ).toHaveAttribute("href", "#examples");
+    page.getByRole("region", { name: "How it works" }).locator("li p"),
+  ).toHaveText([
+    "Pick the shape that matches your cushion.",
+    "Enter its measurements, with a diagram to guide you.",
+    "Choose fabric and a pattern, then preview, save or share.",
+  ]);
   await expect(
-    hero.getByRole("link", { name: "See how the idea works" }),
-  ).toHaveAttribute("href", "#how-it-works");
-  await expect(page.locator("#examples")).toHaveCount(1);
-  await expect(page.locator("#how-it-works")).toHaveCount(1);
+    page.getByRole("region", { name: "Five cushion shapes" }).getByRole("listitem"),
+  ).toHaveText(["Square", "Rectangle", "Box / bench", "Round", "Tapered / trapezoid"]);
+
+  await expect(page.getByRole("complementary")).toHaveCount(1);
   await expect(
-    hero.getByRole("complementary", { name: "Prototype status" }),
+    page.getByRole("complementary", { name: "Prototype" }),
   ).toContainText(
     "It cannot charge money, create a real shipment, or produce finished covers.",
   );
-  await expect(hero.locator("figure")).toBeVisible();
+  const textOutsideNotice = await page.evaluate(() => {
+    const notice = document.querySelector<HTMLElement>("aside");
+    if (!notice) throw new Error("The prototype notice is missing.");
+    notice.style.display = "none";
+    const text = document.body.innerText;
+    notice.style.removeProperty("display");
+    return text;
+  });
+  expect(textOutsideNotice).not.toMatch(/prototype|demo|illustrative/i);
+
+  // Pages without their own notice keep the footer's prototype line.
+  await page.goto(configurePath);
+  await expect(page.getByRole("contentinfo")).toContainText(
+    "A portfolio prototype for custom cushion covers.",
+  );
 });
 
 test("starts the unauthenticated configurator by pointer and keyboard at Shape", async ({
   page,
 }) => {
   await page.goto(homePath);
-  await page.getByRole("link", { name: "Start configuring" }).click();
+  await heroOf(page).getByRole("link", { name: "Start configuring" }).click();
   await expect(page).toHaveURL(`${appOrigin}${configurePath}`);
   await expect(
     page.getByRole("group", { name: "Choose your cushion shape" }),
@@ -63,7 +92,7 @@ test("starts the unauthenticated configurator by pointer and keyboard at Shape",
   await expect(page.locator('[aria-current="step"]')).toContainText("Shape");
 
   await page.goto(homePath);
-  const start = page.getByRole("link", { name: "Start configuring" });
+  const start = heroOf(page).getByRole("link", { name: "Start configuring" });
   await start.focus();
   await expect(start).toBeFocused();
   await start.press("Enter");
@@ -78,9 +107,16 @@ test("starts the unauthenticated configurator by pointer and keyboard at Shape",
   await expect(
     page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: /sign in/i }),
   ).toHaveCount(1);
+
+  await page.goto(homePath);
+  await page
+    .getByRole("region", { name: "Ready with a tape measure?" })
+    .getByRole("link", { name: "Start configuring" })
+    .click();
+  await expect(page).toHaveURL(`${appOrigin}${configurePath}`);
 });
 
-test("keeps hero actions distinct, focused, and overflow-free", async ({ page }) => {
+test("keeps both actions reachable, focused, and overflow-free", async ({ page }) => {
   for (const viewport of [
     { width: 320, height: 568 },
     { width: 375, height: 667 },
@@ -92,59 +128,32 @@ test("keeps hero actions distinct, focused, and overflow-free", async ({ page })
     await page.goto(homePath);
     await expectNoHorizontalOverflow(page);
 
-    const hero = page.locator('section[aria-labelledby="landing-title"]');
-    const actionBoxes = await hero.locator(".landing-hero-actions").getByRole("link").evaluateAll((links) =>
-      links.map((link) => {
-        const rect = link.getBoundingClientRect();
-        return {
-          bottom: rect.bottom,
-          height: rect.height,
-          left: rect.left,
-          right: rect.right,
-          top: rect.top,
-        };
-      }),
-    );
+    const actionBoxes = await page
+      .getByRole("main")
+      .getByRole("link", { name: "Start configuring" })
+      .evaluateAll((links) =>
+        links.map((link) => {
+          const rect = link.getBoundingClientRect();
+          return {
+            bottom: rect.bottom,
+            height: rect.height,
+            left: rect.left,
+            right: rect.right,
+          };
+        }),
+      );
 
-    expect(actionBoxes).toHaveLength(3);
+    expect(actionBoxes).toHaveLength(2);
     for (const box of actionBoxes) {
       expect(box.left).toBeGreaterThanOrEqual(0);
       expect(box.right).toBeLessThanOrEqual(viewport.width);
       expect(box.height).toBeGreaterThanOrEqual(44);
     }
-    for (let first = 0; first < actionBoxes.length; first += 1) {
-      for (let second = first + 1; second < actionBoxes.length; second += 1) {
-        const a = actionBoxes[first];
-        const b = actionBoxes[second];
-        const overlaps =
-          a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-        expect(overlaps).toBe(false);
-      }
-    }
+    // The hero's action is visible without scrolling.
+    expect(actionBoxes[0].bottom).toBeLessThanOrEqual(viewport.height);
   }
 
-  const hero = page.locator('section[aria-labelledby="landing-title"]');
-  const start = hero.getByRole("link", { name: "Start configuring" });
-  const examples = hero.getByRole("link", { name: "Explore cover examples" });
-  const visualHierarchy = await Promise.all(
-    [start, examples].map((action) =>
-      action.evaluate((element) => {
-        const styles = getComputedStyle(element);
-        return {
-          backgroundColor: styles.backgroundColor,
-          borderColor: styles.borderColor,
-          boxShadow: styles.boxShadow,
-        };
-      }),
-    ),
-  );
-  expect(visualHierarchy[0].backgroundColor).not.toBe(
-    visualHierarchy[1].backgroundColor,
-  );
-  expect(visualHierarchy[0].borderColor).not.toBe(
-    visualHierarchy[1].borderColor,
-  );
-
+  const start = heroOf(page).getByRole("link", { name: "Start configuring" });
   await start.focus();
   await expect(start).toBeFocused();
   await expect
@@ -158,72 +167,66 @@ test("keeps hero actions distinct, focused, and overflow-free", async ({ page })
     .not.toBe("none");
 });
 
-test("keeps example cards aligned and intentionally responsive", async ({ page }) => {
+test("lays out the five shapes evenly at every width", async ({ page }) => {
   for (const expectation of [
-    { columns: 1, viewport: { width: 390, height: 844 } },
-    { columns: 2, viewport: { width: 768, height: 1024 } },
-    { columns: 3, viewport: { width: 1440, height: 900 } },
+    { rows: [1, 1, 1, 1, 1], viewport: { width: 390, height: 844 } },
+    { rows: [3, 2], viewport: { width: 768, height: 1024 } },
+    { rows: [5], viewport: { width: 1440, height: 900 } },
   ]) {
     await page.setViewportSize(expectation.viewport);
     await page.goto(homePath);
 
-    const cards = page.locator(".landing-example-card");
-    const boxes = await cards.evaluateAll((figures) =>
-      figures.map((figure) => {
-        const media = figure.querySelector<HTMLElement>(
-          ".landing-example-media",
-        );
-        const illustration = figure.querySelector<HTMLElement>(
-          ".landing-example-illustration",
-        );
-        if (!media || !illustration) {
-          throw new Error("Example card structure is incomplete.");
+    const tiles = page
+      .getByRole("region", { name: "Five cushion shapes" })
+      .getByRole("listitem");
+    await expect(tiles).toHaveCount(5);
+    const boxes = await tiles.evaluateAll((items) =>
+      items.map((item) => {
+        const icon = item.querySelector("svg.shape-illustration");
+        if (!icon || !item.parentElement) {
+          throw new Error("Shape tile structure is incomplete.");
         }
-
-        const cardBox = figure.getBoundingClientRect();
-        const mediaBox = media.getBoundingClientRect();
-        const illustrationBox = illustration.getBoundingClientRect();
+        const tile = item.getBoundingClientRect();
+        const iconBox = icon.getBoundingClientRect();
+        const list = item.parentElement.getBoundingClientRect();
         return {
-          cardBottom: cardBox.bottom,
-          cardHeight: cardBox.height,
-          cardTop: cardBox.top,
-          illustrationBottom: illustrationBox.bottom,
-          illustrationLeft: illustrationBox.left,
-          illustrationRight: illustrationBox.right,
-          illustrationTop: illustrationBox.top,
-          mediaBottom: mediaBox.bottom,
-          mediaLeft: mediaBox.left,
-          mediaRight: mediaBox.right,
-          mediaTop: mediaBox.top,
+          bottom: tile.bottom,
+          height: tile.height,
+          iconBottom: iconBox.bottom,
+          iconLeft: iconBox.left,
+          iconRight: iconBox.right,
+          iconTop: iconBox.top,
+          left: tile.left,
+          listLeft: list.left,
+          listRight: list.right,
+          right: tile.right,
+          top: tile.top,
         };
       }),
     );
 
-    expect(boxes).toHaveLength(3);
-    const rowTops = [...new Set(boxes.map((box) => Math.round(box.cardTop)))];
-    expect(rowTops).toHaveLength(
-      Math.ceil(boxes.length / expectation.columns),
+    const rowTops = [...new Set(boxes.map((box) => Math.round(box.top)))];
+    const rows = rowTops.map((rowTop) =>
+      boxes.filter((box) => Math.abs(Math.round(box.top) - rowTop) <= 1),
     );
+    expect(rows.map((row) => row.length)).toEqual(expectation.rows);
 
-    for (const rowTop of rowTops) {
-      const row = boxes.filter(
-        (box) => Math.abs(Math.round(box.cardTop) - rowTop) <= 1,
-      );
-      expect(Math.max(...row.map((box) => box.cardHeight))).toBeCloseTo(
-        Math.min(...row.map((box) => box.cardHeight)),
+    for (const row of rows) {
+      expect(Math.max(...row.map((box) => box.height))).toBeCloseTo(
+        Math.min(...row.map((box) => box.height)),
         0,
       );
-      expect(Math.max(...row.map((box) => box.mediaBottom))).toBeCloseTo(
-        Math.min(...row.map((box) => box.mediaBottom)),
-        0,
-      );
+      // A short last row sits centred under the full one.
+      const leftGap = row[0].left - row[0].listLeft;
+      const rightGap = row[0].listRight - row[row.length - 1].right;
+      expect(Math.abs(leftGap - rightGap)).toBeLessThanOrEqual(1);
     }
 
     for (const box of boxes) {
-      expect(box.illustrationTop).toBeGreaterThan(box.mediaTop);
-      expect(box.illustrationBottom).toBeLessThan(box.mediaBottom);
-      expect(box.illustrationLeft).toBeGreaterThan(box.mediaLeft);
-      expect(box.illustrationRight).toBeLessThan(box.mediaRight);
+      expect(box.iconTop).toBeGreaterThan(box.top);
+      expect(box.iconBottom).toBeLessThan(box.bottom);
+      expect(box.iconLeft).toBeGreaterThan(box.left);
+      expect(box.iconRight).toBeLessThan(box.right);
     }
   }
 });

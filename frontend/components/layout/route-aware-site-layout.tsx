@@ -14,7 +14,7 @@ import {
   takeAuthReturnHint,
 } from "@/services/configurator-draft";
 
-import type { SiteNavigationItem } from "./navigation";
+import { isCurrentNavigationPath, type SiteNavigationItem } from "./navigation";
 import { SiteFooter, type SiteFooterProps } from "./site-footer";
 import { SiteHeader, type SiteHeaderProps } from "./site-header";
 
@@ -34,10 +34,12 @@ function hasStoredSession(): boolean {
 }
 
 /**
- * Guests see a quiet "Sign in" link that returns them to this page; a stored
- * or verified session keeps the "Account" link.
+ * Guests see a quiet "Sign in" link that returns them to this page and none
+ * of the links that would only ask them to sign in; a stored or verified
+ * session keeps every link, including "Account".
  */
 export function RouteAwareSiteHeader({
+  primaryItems,
   utilityItems,
   ...props
 }: Omit<SiteHeaderProps, "currentHref">) {
@@ -51,18 +53,28 @@ export function RouteAwareSiteHeader({
   const signedIn =
     state.status === "authenticated" ||
     (state.status === "initializing" && storedSession);
-  const items = signedIn
-    ? utilityItems
-    : utilityItems?.map((item) =>
-        item.href === ACCOUNT_HREF
-          ? {
-              href: buildAccountHref("login", returnTargetForPath(pathname)),
-              label: "Sign in",
-            }
-          : item,
-      );
+  const forVisitor = (items?: readonly SiteNavigationItem[]) =>
+    signedIn
+      ? items
+      : items
+          ?.filter((item) => !item.requiresAccount)
+          .map((item) =>
+            item.href === ACCOUNT_HREF
+              ? {
+                  href: buildAccountHref("login", returnTargetForPath(pathname)),
+                  label: "Sign in",
+                }
+              : item,
+          );
 
-  return <SiteHeader {...props} currentHref={pathname} utilityItems={items} />;
+  return (
+    <SiteHeader
+      {...props}
+      currentHref={pathname}
+      primaryItems={forVisitor(primaryItems)}
+      utilityItems={forVisitor(utilityItems)}
+    />
+  );
 }
 
 /**
@@ -86,17 +98,24 @@ export function AuthReturnFocus() {
   return null;
 }
 
+/** The home page states the prototype disclaimer once, in its own notice. */
 export function RouteAwareSiteFooter({
   navigationItems,
   ...props
-}: Omit<SiteFooterProps, "currentHref" | "navigationItems"> & {
+}: Omit<
+  SiteFooterProps,
+  "currentHref" | "navigationItems" | "showPrototypeNote"
+> & {
   navigationItems?: readonly SiteNavigationItem[];
 }) {
+  const pathname = usePathname() ?? "/";
+
   return (
     <SiteFooter
       {...props}
-      currentHref={usePathname()}
+      currentHref={pathname}
       navigationItems={navigationItems}
+      showPrototypeNote={!isCurrentNavigationPath(pathname, "/")}
     />
   );
 }

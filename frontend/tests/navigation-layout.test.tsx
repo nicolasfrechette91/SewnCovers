@@ -12,6 +12,7 @@ import {
 
 import { AccountNavigation } from "../components/account";
 import {
+  SiteFooter,
   SiteHeader,
   isCurrentNavigationPath,
   normalizeNavigationPath,
@@ -19,13 +20,14 @@ import {
 import { AuthProvider } from "../context/auth";
 import { storeSessionToken } from "../services/account-api";
 
+// Mirrors app/layout.tsx.
 const primaryItems = [
-  { href: "/configure/", label: "Configure" },
-  { href: "/projects/", label: "My projects" },
+  { asButton: true, href: "/configure/", label: "Configure" },
   { href: "/commerce/", label: "Pricing" },
 ] as const;
 const utilityItems = [
-  { href: "/cart/", label: "Cart" },
+  { href: "/projects/", label: "My projects", requiresAccount: true },
+  { href: "/cart/", label: "Cart", requiresAccount: true },
   { href: "/account/", label: "Account" },
 ] as const;
 
@@ -87,12 +89,18 @@ test("separates desktop primary and utility destinations", () => {
 
   assert.deepEqual(
     Array.from(primary.querySelectorAll("a"), (link) => link.textContent),
-    ["Configure", "My projects", "Pricing"],
+    ["Configure", "Pricing"],
   );
   assert.deepEqual(
     Array.from(utilities.querySelectorAll("a"), (link) => link.textContent),
-    ["Cart", "Account"],
+    ["My projects", "Cart", "Account"],
   );
+  // Configure is the one call to action: a compact primary button.
+  const buttonLinks = Array.from(
+    navigation.querySelectorAll("a"),
+    (link) => [link.textContent, link.classList.contains("bg-brand")],
+  ).filter(([, isButton]) => isButton);
+  assert.deepEqual(buttonLinks, [["Configure", true]]);
   for (const removed of ["Orders", "Admin", "Legal"]) {
     assert.equal(
       navigation.querySelector(`a[href$="/${removed.toLowerCase()}/"]`),
@@ -156,6 +164,18 @@ test("normalizes trailing slashes and the GitHub Pages base path", () => {
   const currentLinks = document.querySelectorAll('[aria-current="page"]');
   assert.equal(currentLinks.length, 1);
   assert.equal(currentLinks[0].textContent, "Configure");
+});
+
+test("leaves the footer prototype line to pages without their own notice", () => {
+  const view = render(<SiteFooter year={2026} />);
+  assert.match(
+    view.container.textContent ?? "",
+    /A portfolio prototype for custom cushion covers..*© 2026 SewnCovers. Portfolio prototype./,
+  );
+
+  view.rerender(<SiteFooter showPrototypeNote={false} year={2026} />);
+  assert.doesNotMatch(view.container.textContent ?? "", /prototype/i);
+  assert.match(view.container.textContent ?? "", /© 2026 SewnCovers.$/);
 });
 
 test("shows Orders but not Administration in a verified customer account", async () => {

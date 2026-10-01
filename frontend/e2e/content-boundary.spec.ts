@@ -13,7 +13,11 @@ test("keeps guest pages task-focused while preserving prototype and account disc
   page,
 }) => {
   await page.goto(`${basePath}/`);
-  await expect(page.getByRole("link", { name: "Start configuring" })).toBeVisible();
+  await expect(
+    page
+      .locator('section[aria-labelledby="landing-title"]')
+      .getByRole("link", { name: "Start configuring" }),
+  ).toBeVisible();
   await expect(page.getByText(/cannot charge money, create a real shipment, or produce finished covers/i)).toBeVisible();
   await expectCustomerLanguage(page);
 

@@ -295,15 +295,13 @@ body {
 
 @layer components {
   /* Eyebrow: a short measuring rule before a mono label. */
-  .eyebrow,
-  .landing-eyebrow {
+  .eyebrow {
     display: flex;
     align-items: center;
     gap: 0.625rem;
   }
 
-  .eyebrow::before,
-  .landing-eyebrow::before {
+  .eyebrow::before {
     width: 1.5rem;
     height: 1px;
     flex: 0 0 auto;
@@ -599,33 +597,6 @@ body {
   content: "";
 }
 
-.landing-cushion-square {
-  aspect-ratio: 1;
-}
-
-.landing-cushion-rectangle {
-  aspect-ratio: 1.55 / 1;
-}
-
-.landing-cushion-box {
-  aspect-ratio: 1.8 / 1;
-  border-radius: var(--radius-card);
-  transform: perspective(32rem) rotateX(8deg) rotateY(-5deg);
-}
-
-.landing-cushion-box::before {
-  position: absolute;
-  right: 0.25rem;
-  bottom: -0.65rem;
-  left: 0.5rem;
-  height: 0.75rem;
-  border: 2px solid var(--dye-forest);
-  border-top: 0;
-  border-radius: 0 0 var(--radius-card) var(--radius-card);
-  background: var(--dye-terracotta);
-  content: "";
-}
-
 .landing-hero {
   background-color: var(--color-surface);
   background-image:
@@ -716,38 +687,6 @@ body {
   writing-mode: vertical-rl;
 }
 
-.landing-example-card {
-  transition-duration: var(--duration-base);
-  transition-property: border-color, box-shadow, transform;
-  transition-timing-function: var(--ease-standard);
-}
-
-.landing-example-media {
-  background-image:
-    radial-gradient(
-      circle at 50% 46%,
-      color-mix(in srgb, var(--color-surface) 80%, transparent) 0 32%,
-      transparent 66%
-    ),
-    repeating-linear-gradient(
-      0deg,
-      color-mix(in srgb, var(--color-text-primary) 3%, transparent) 0 1px,
-      transparent 1px 3px
-    );
-}
-
-.landing-example-illustration.landing-cushion-square {
-  width: min(58%, 10rem);
-}
-
-.landing-example-illustration.landing-cushion-rectangle {
-  width: min(76%, 13.5rem);
-}
-
-.landing-example-illustration.landing-cushion-box {
-  width: min(78%, 14rem);
-}
-
 /* How it works: numbered stations joined by a running stitch. */
 .landing-steps {
   position: relative;
@@ -801,14 +740,6 @@ body {
   content: "";
 }
 
-@media (hover: hover) {
-  .landing-example-card:hover {
-    border-color: var(--color-border-strong);
-    box-shadow: var(--shadow-raised);
-    transform: translateY(-2px);
-  }
-}
-
 /* 6. Fabric pattern artwork ------------------------------------------------ */
 
 .landing-pattern-botanical {
@@ -827,42 +758,6 @@ body {
       transparent 8%
     );
   background-size: 5rem 5rem;
-}
-
-.landing-pattern-geometric {
-  background-color: var(--dye-cream);
-  background-image:
-    linear-gradient(
-      135deg,
-      var(--dye-terracotta) 25%,
-      transparent 25% 75%,
-      var(--dye-terracotta) 75%
-    ),
-    linear-gradient(
-      45deg,
-      var(--dye-forest) 25%,
-      transparent 25% 75%,
-      var(--dye-forest) 75%
-    );
-  background-position:
-    0 0,
-    1.25rem 1.25rem;
-  background-size: 2.5rem 2.5rem;
-}
-
-.landing-pattern-woven {
-  background-color: var(--dye-linen);
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent 0 0.4rem,
-      var(--dye-taupe) 0.45rem 0.5rem
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent 0 0.4rem,
-      var(--dye-oat) 0.45rem 0.5rem
-    );
 }
 
 .prototype-pattern {
@@ -1440,15 +1335,13 @@ body {
     transition-property: none !important;
   }
 
-  .choice-card:active,
-  .landing-example-card:hover {
+  .choice-card:active {
     transform: none;
   }
 }
 
 @media (forced-colors: active) {
-  .landing-cushion,
-  .landing-cushion-box::before {
+  .landing-cushion {
     border-color: CanvasText;
     background: Canvas;
     box-shadow: none;

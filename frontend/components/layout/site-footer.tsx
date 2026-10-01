@@ -11,6 +11,8 @@ export interface SiteFooterProps
   extends Omit<ComponentPropsWithoutRef<"footer">, "children"> {
   currentHref?: string;
   navigationItems?: readonly SiteNavigationItem[];
+  /** Pages with their own prototype notice turn this off to avoid repeating it. */
+  showPrototypeNote?: boolean;
   year?: number;
 }
 
@@ -18,6 +20,7 @@ export function SiteFooter({
   className,
   currentHref = "/",
   navigationItems = [],
+  showPrototypeNote = true,
   year = new Date().getFullYear(),
   ...footerProps
 }: SiteFooterProps) {
@@ -40,9 +43,11 @@ export function SiteFooter({
           <p className="break-words font-display text-section-title font-heading tracking-heading text-brand">
             SewnCovers
           </p>
-          <p className="mt-2 max-w-md break-words text-supporting text-text-muted">
-            A portfolio prototype for custom cushion covers.
-          </p>
+          {showPrototypeNote ? (
+            <p className="mt-2 max-w-md break-words text-supporting text-text-muted">
+              A portfolio prototype for custom cushion covers.
+            </p>
+          ) : null}
         </div>
 
         {navigationItems.length > 0 ? (
@@ -74,7 +79,7 @@ export function SiteFooter({
         ) : null}
 
         <p className="break-words font-mono text-eyebrow tracking-eyebrow text-text-muted uppercase">
-          © {year} SewnCovers. Portfolio prototype.
+          © {year} SewnCovers.{showPrototypeNote ? " Portfolio prototype." : null}
         </p>
       </div>
     </footer>

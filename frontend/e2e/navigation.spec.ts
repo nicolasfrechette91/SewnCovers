@@ -72,10 +72,25 @@ test("organizes desktop navigation and preserves secondary destinations", async 
   const navigation = page.getByRole("navigation", { name: "Primary navigation" });
   await expect(
     navigation.getByRole("list", { name: "Primary destinations" }).getByRole("link"),
-  ).toHaveText(["Configure", "My projects", "Pricing"]);
+  ).toHaveText(["Configure", "Pricing"]);
+  // My projects and Cart would only ask a guest to sign in.
   await expect(
     navigation.getByRole("list", { name: "Shopping and account" }).getByRole("link"),
-  ).toHaveText(["Cart", "Sign in"]);
+  ).toHaveText(["Sign in"]);
+  // Configure is the one filled button; Pricing stays a plain link.
+  const [configureBackground, pricingBackground] = await Promise.all(
+    ["Configure", "Pricing"].map((name) =>
+      navigation
+        .getByRole("link", { name })
+        .evaluate((link) => getComputedStyle(link).backgroundColor),
+    ),
+  );
+  expect(configureBackground).not.toBe(pricingBackground);
+  expect(
+    await navigation
+      .getByRole("link", { name: "Configure" })
+      .evaluate((link) => link.getBoundingClientRect().height),
+  ).toBeGreaterThanOrEqual(44);
   await expect(navigation.getByRole("link", { name: "Sign in" })).toHaveAttribute(
     "href",
     `${basePath}/account/?mode=login&returnTo=configure`,
@@ -156,6 +171,14 @@ test("relocates Orders and authorizes Administration navigation from account con
   await mockAccount(customer);
   const customerPage = await customer.newPage();
   await customerPage.goto(`${basePath}/account/`);
+  // A verified session keeps every header destination.
+  const customerHeader = customerPage.getByRole("navigation", { name: "Primary navigation" });
+  await expect(
+    customerHeader.getByRole("list", { name: "Primary destinations" }).getByRole("link"),
+  ).toHaveText(["Configure", "Pricing"]);
+  await expect(
+    customerHeader.getByRole("list", { name: "Shopping and account" }).getByRole("link"),
+  ).toHaveText(["My projects", "Cart", "Account"]);
   const customerAccount = customerPage.getByRole("navigation", { name: "Account navigation" });
   await expect(customerAccount.getByRole("link", { name: "Orders" })).toBeVisible();
   await expect(customerAccount.getByRole("link", { name: "Administration" })).toHaveCount(0);

@@ -282,15 +282,17 @@ test("signing out clears a saved draft from storage and from the open design", a
 });
 
 const utilityItems = [
-  { href: "/cart/", label: "Cart" },
+  { href: "/projects/", label: "My projects", requiresAccount: true },
+  { href: "/cart/", label: "Cart", requiresAccount: true },
   { href: "/account/", label: "Account" },
 ];
 
 test("shows guests a quiet Sign in link that returns to the current page", async () => {
   render(<AuthProvider><RouteAwareSiteHeader utilityItems={utilityItems} /></AuthProvider>);
   const utilities = screen.getByRole("list", { name: "Shopping and account" });
+  // My projects and Cart would only ask a guest to sign in.
   await waitFor(() =>
-    assert.deepEqual(Array.from(utilities.querySelectorAll("a"), (link) => link.textContent), ["Cart", "Sign in"]),
+    assert.deepEqual(Array.from(utilities.querySelectorAll("a"), (link) => link.textContent), ["Sign in"]),
   );
   assert.match(screen.getByRole("link", { name: "Sign in" }).getAttribute("href") ?? "", /^\/account\/?\?mode=login&returnTo=home$/);
 });
@@ -303,6 +305,10 @@ test("keeps the Account link for a stored or verified session", async () => {
     render(<AuthProvider><RouteAwareSiteHeader utilityItems={utilityItems} /></AuthProvider>);
     await screen.findByRole("link", { name: "Account" });
     assert.equal(screen.queryByRole("link", { name: "Sign in" }), null);
+    assert.deepEqual(
+      Array.from(screen.getByRole("list", { name: "Shopping and account" }).querySelectorAll("a"), (link) => link.textContent),
+      ["My projects", "Cart", "Account"],
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

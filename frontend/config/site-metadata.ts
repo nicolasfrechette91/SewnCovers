@@ -4,7 +4,7 @@ export const SITE_NAME = "SewnCovers";
 export const DEFAULT_TITLE =
   "SewnCovers | Cushion-cover design prototype";
 export const DEFAULT_DESCRIPTION =
-  "Explore a portfolio prototype for planning a replacement cushion cover around an existing cushion's shape, measurements, and fabric direction.";
+  "Explore a portfolio prototype for designing a replacement cushion cover: pick one of five shapes, enter real measurements, choose fabric and pattern, and preview it.";
 export const PRODUCTION_ORIGIN = "https://nicolasfrechette91.github.io";
 export const PRODUCTION_BASE_PATH = "/SewnCovers";
 export const REPOSITORY_URL =

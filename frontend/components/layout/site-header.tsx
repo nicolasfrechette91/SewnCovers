@@ -62,12 +62,23 @@ export function SiteHeader({
               href={item.href}
               aria-current={isCurrent ? "page" : undefined}
               onClick={closeMenu}
-              className={classNames(
-                "inline-flex min-h-11 max-w-full items-center rounded-control px-3 py-2 text-button font-emphasis break-words text-text-primary underline-offset-8 transition-colors duration-(--duration-fast) hover:text-brand hover:underline hover:decoration-dashed hover:decoration-accent active:text-brand-active motion-reduce:transition-none",
-                isCurrent
-                  ? "font-control text-brand underline decoration-brand decoration-2"
-                  : "no-underline",
-              )}
+              className={
+                item.asButton
+                  ? buttonClasses({
+                      className: classNames(
+                        "w-full md:w-auto",
+                        isCurrent && "underline decoration-2 underline-offset-4",
+                      ),
+                      element: "link",
+                      size: "compact",
+                    })
+                  : classNames(
+                      "inline-flex min-h-11 max-w-full items-center rounded-control px-3 py-2 text-button font-emphasis break-words text-text-primary underline-offset-8 transition-colors duration-(--duration-fast) hover:text-brand hover:underline hover:decoration-dashed hover:decoration-accent active:text-brand-active motion-reduce:transition-none",
+                      isCurrent
+                        ? "font-control text-brand underline decoration-brand decoration-2"
+                        : "no-underline",
+                    )
+              }
             >
               {item.label}
             </Link>
