@@ -36,6 +36,12 @@ export const initialConfigurationState: ConfigurationState = {
   seamStyle: DEFAULT_SEAM_STYLE,
 };
 
+/** True while nothing has been chosen yet, so there is nothing worth keeping. */
+export function isInitialConfiguration(state: ConfigurationState): boolean {
+  return (Object.keys(initialConfigurationState) as (keyof ConfigurationState)[])
+    .every((key) => state[key] === initialConfigurationState[key]);
+}
+
 export function configurationReducer(
   state: ConfigurationState,
   action: ConfigurationAction,
@@ -228,6 +234,12 @@ export function configurationReducer(
         seamStyle: action.seamStyle,
       })
         ? { ...state, seamStyle: action.seamStyle }
+        : state;
+    case "restoreDraft":
+      return action.configuration;
+    case "clearCustomPattern":
+      return state.pattern?.kind === "custom"
+        ? { ...state, pattern: null }
         : state;
     case "resetConfiguration":
       return initialConfigurationState;

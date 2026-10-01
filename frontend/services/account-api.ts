@@ -283,16 +283,32 @@ function isUploadOperation(value: unknown): value is UploadOperation {
 
 type Parser<T> = (value: unknown) => value is T;
 
+// Browsers that block site storage throw on access; treat that as no session.
+function tokenStorage(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 function clearStoredToken(): void {
   if (typeof window === "undefined") return;
-  window.sessionStorage.removeItem(TOKEN_KEY);
+  try {
+    tokenStorage()?.removeItem(TOKEN_KEY);
+  } catch {
+    // Nothing stored to clear.
+  }
   window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }
 
 export function readSessionToken(): string | null {
-  if (typeof window === "undefined") return null;
-  const value = window.sessionStorage.getItem(TOKEN_KEY);
-  return value && /^[A-Za-z0-9_-]{43}$/.test(value) ? value : null;
+  try {
+    const value = tokenStorage()?.getItem(TOKEN_KEY);
+    return value && /^[A-Za-z0-9_-]{43}$/.test(value) ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 export function storeSessionToken(token: string): void {

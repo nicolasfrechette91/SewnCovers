@@ -1,15 +1,24 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui";
 import {
   getBuiltInPatternId,
   hasValidMeasurementsForShape,
+  isInitialConfiguration,
   useConfiguration,
 } from "@/context/configuration";
 import { getPatternById } from "@/data/patterns";
+import {
+  clearDraft,
+  clearPendingAccountAction,
+  readDraft,
+  storableConfiguration,
+  takeAuthReturnHint,
+  writeDraft,
+} from "@/services/configurator-draft";
 import { getCompleteCatalogueResult } from "@/services/pattern-catalogue";
 import { usePatternCatalogue } from "@/services/use-pattern-catalogue";
 
@@ -103,8 +112,34 @@ function focusStage(targetId: string): boolean {
   return true;
 }
 
+// After a client-side navigation Next.js settles focus in its own layout
+// effect, and lazily loaded stages mount a little later; wait for both.
+function focusWhenReady(targetId: string, attempts = 120): void {
+  requestAnimationFrame(() => {
+    if (!focusStage(targetId) && attempts > 0) {
+      focusWhenReady(targetId, attempts - 1);
+    }
+  });
+}
+
+// Restoring and protecting the browser draft lives outside the initial chunk.
+// It is requested as soon as this module loads, so arrival rarely waits.
+type DraftSession = typeof import("./draft-session");
+const loadDraftSession = () => import("./draft-session");
+const draftSessionRequest =
+  typeof window === "undefined" ? null : loadDraftSession();
+
+type DraftGate =
+  | { readonly status: "checking" }
+  | {
+      readonly status: "confirm";
+      readonly reason: import("./draft-session").ReplaceReason;
+    }
+  | { readonly status: "link" }
+  | { readonly status: "ready"; readonly restored: boolean };
+
 export function Configurator() {
-  const { state } = useConfiguration();
+  const { dispatch, state } = useConfiguration();
   const {
     retry: retryPatternCatalogue,
     setFilters: setPatternFilters,
@@ -114,7 +149,10 @@ export function Configurator() {
     useState<ConfiguratorStepId>("shape");
   const [highestStepReached, setHighestStepReached] = useState(0);
   const [stageAnnouncement, setStageAnnouncement] = useState("");
+  const [gate, setGate] = useState<DraftGate>({ status: "checking" });
+  const [session, setSession] = useState<DraftSession | null>(null);
   const pendingFocusTarget = useRef<string | null>(null);
+  const latestState = useRef(state);
   const measurementsAreValid = hasValidMeasurementsForShape(
     state.shape,
     state.width,
@@ -194,6 +232,132 @@ export function Configurator() {
       );
     })
     .map((step) => step.id);
+
+  const announceStage = (prefix: string, stepId: ConfiguratorStepId) => {
+    const stepIndex = getStepIndex(stepId);
+    setStageAnnouncement(
+      `${prefix} Stage ${stepIndex + 1} of ${configuratorSteps.length}: ${configuratorSteps[stepIndex].label}.`,
+    );
+  };
+
+  useEffect(() => {
+    latestState.current = state;
+  }, [state]);
+
+  // Brings back the design kept in this browser, at the stage it was left on.
+  // Returns the stage, or null when there is nothing worth restoring.
+  const restoreStoredDesign = (
+    loaded: DraftSession,
+  ): ConfiguratorStepId | null => {
+    const stored = loaded.readStoredDesign(readDraft());
+    if (!stored) return null;
+    dispatch({ type: "restoreDraft", configuration: stored.configuration });
+    setRequestedStepId(stored.step);
+    setHighestStepReached(stored.highestStep);
+    return stored.step;
+  };
+
+  // On arrival a shared or project link takes precedence, unless it would
+  // overwrite an unsaved design: then the visitor chooses. Otherwise the
+  // stored draft comes back at the stage it was left on.
+  const arrive = (loaded: DraftSession) => {
+    const plan = loaded.planArrival(
+      window.location.search,
+      readDraft(),
+      latestState.current,
+    );
+    if (plan.kind === "link") {
+      setGate({ status: "link" });
+      return;
+    }
+    if (plan.kind === "confirm") {
+      setGate({ status: "confirm", reason: plan.reason });
+      return;
+    }
+    const stepId = plan.kind === "restore" ? restoreStoredDesign(loaded) : null;
+    const returningFromSignIn = takeAuthReturnHint("configure");
+    setGate({ status: "ready", restored: stepId !== null });
+    if (stepId !== null) {
+      announceStage(
+        returningFromSignIn
+          ? "Signed in. Your design is as you left it."
+          : "Picked up where you left off.",
+        stepId,
+      );
+    } else if (returningFromSignIn) {
+      setStageAnnouncement("Signed in.");
+    }
+    if (returningFromSignIn) focusWhenReady(focusTargetIds[stepId ?? "shape"]);
+  };
+
+  useEffect(() => {
+    let active = true;
+    void (draftSessionRequest ?? loadDraftSession()).then((loaded) => {
+      if (!active) return;
+      setSession(loaded);
+      arrive(loaded);
+    });
+    return () => {
+      active = false;
+    };
+    // Runs once on arrival; later changes come from the stage actions.
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keeps the design and stage in this browser. Nothing is written until
+  // something has been chosen, or while a replace decision is pending.
+  useEffect(() => {
+    if (gate.status === "checking" || gate.status === "confirm") return;
+    if (isInitialConfiguration(state) && activeStepIndex === 0) return;
+    writeDraft({
+      configuration: storableConfiguration(state),
+      step: activeStepId,
+      highestStep: highestStepReached,
+    });
+  }, [activeStepId, activeStepIndex, gate.status, highestStepReached, state]);
+
+  // Keeps the stored design: after a link would have replaced it, or after
+  // the visitor started a new one before it loaded.
+  const keepStoredDesign = () => {
+    if (!session) return;
+    session.removeLinkParameters();
+    const stepId = restoreStoredDesign(session);
+    setGate({ status: "ready", restored: stepId !== null });
+    announceStage("Your design was kept.", stepId ?? "shape");
+    focusWhenReady(focusTargetIds[stepId ?? "shape"]);
+  };
+
+  const replaceStoredDesign = () => {
+    if (gate.status !== "confirm") return;
+    if (gate.reason === "started") {
+      setGate({ status: "ready", restored: false });
+      focusWhenReady(focusTargetIds[activeStepId]);
+      return;
+    }
+    setGate({ status: "link" });
+    focusWhenReady(
+      gate.reason === "design" ? "shared-design-status-heading" : "workspace-load-heading",
+    );
+  };
+
+  // "Continue with my configuration" after a link fails: bring back the
+  // stored design if nothing else has been chosen since.
+  const restoreAfterDismissedLink = () => {
+    if (!session || !isInitialConfiguration(state)) return;
+    if (restoreStoredDesign(session) !== null) {
+      setGate({ status: "ready", restored: true });
+    }
+  };
+
+  const startNewDesign = () => {
+    clearDraft();
+    clearPendingAccountAction();
+    dispatch({ type: "resetConfiguration" });
+    setRequestedStepId("shape");
+    setHighestStepReached(0);
+    setGate({ status: "ready", restored: false });
+    announceStage("Started a new design.", "shape");
+    focusWhenReady(focusTargetIds.shape);
+  };
 
   useLayoutEffect(() => {
     let frame: number | undefined;
@@ -390,11 +554,32 @@ export function Configurator() {
         }
       />
 
-      <SharedDesignLoader
-        catalogue={catalogueResult}
-        onRetryPatterns={retryPatternCatalogue}
-      />
-      <WorkspaceConfigurationLoader />
+      {session && gate.status === "confirm" ? (
+        <session.DraftReplaceConfirmation
+          reason={gate.reason}
+          onKeep={keepStoredDesign}
+          onReplace={replaceStoredDesign}
+        />
+      ) : null}
+
+      {gate.status === "link" || gate.status === "ready" ? (
+        <>
+          <SharedDesignLoader
+            catalogue={catalogueResult}
+            onDismiss={restoreAfterDismissedLink}
+            onRestored={session?.recordLinkRestore}
+            onRetryPatterns={retryPatternCatalogue}
+          />
+          <WorkspaceConfigurationLoader
+            onDismiss={restoreAfterDismissedLink}
+            onRestored={session?.recordLinkRestore}
+          />
+        </>
+      ) : null}
+
+      {session && gate.status === "ready" && gate.restored ? (
+        <session.DraftRestoredNotice onStartOver={startNewDesign} />
+      ) : null}
 
       <p
         className="sr-only"

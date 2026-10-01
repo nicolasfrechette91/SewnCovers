@@ -19,6 +19,7 @@ import {
   storeSessionToken,
 } from "@/services/account-api";
 import { assuranceApi } from "@/services/assurance-api";
+import { clearAccountLinkedBrowserData } from "@/services/configurator-draft";
 
 export type AuthState =
   | { readonly status: "initializing" }
@@ -130,8 +131,11 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     [],
   );
 
+  // Explicit sign-out (and account deletion or revoking this session): also
+  // remove account-linked drafts and pending actions from this browser.
   const clear = useCallback(() => {
     removeSessionToken();
+    clearAccountLinkedBrowserData();
     setState({ status: "guest" });
   }, []);
 

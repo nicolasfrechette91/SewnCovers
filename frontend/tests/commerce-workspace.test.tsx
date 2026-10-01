@@ -114,15 +114,28 @@ test("shows solid fabric and its hexadecimal value in cart and order summaries",
   assert.ok(screen.getByText(/Solid color #F5F2EB/));
 });
 
-test("keeps the fictional-commerce warning visible when sign-in is required", () => {
-  render(<SignInForCommerce />);
+test("explains account-only commerce to guests calmly, with the fictional-commerce warning", () => {
+  const view = render(<SignInForCommerce />);
   assert.ok(screen.getByText(/Fictional CAD prices and payment events only/));
   assert.ok(screen.getByText(/No live charge, tax, shipment, or production service/));
-  assert.ok(screen.getByRole("heading", { name: "Sign in to create an owned demonstration quote" }));
-  assert.ok(screen.getByText(/public examples above remain available/));
-  assert.ok(screen.getByRole("link", { name: "Sign in" }));
-  assert.ok(screen.getByRole("link", { name: "Create account" }));
+  assert.ok(screen.getByRole("heading", { level: 3, name: "No quotes yet" }));
+  assert.ok(screen.getByText(/priced from designs saved to My projects/));
+  assert.ok(screen.getByText(/never need an account/));
+  assert.ok(screen.getByRole("link", { name: "Sign in to see your quotes" }).getAttribute("href")?.includes("returnTo=pricing"));
+  assert.ok(screen.getByRole("link", { name: "Create an account" }).getAttribute("href")?.includes("mode=register&returnTo=pricing"));
   assert.ok(screen.getByRole("link", { name: "Start configuring" }));
+  view.unmount();
+
+  render(<SignInForCommerce context="cart" />);
+  assert.ok(screen.getByRole("heading", { level: 2, name: "Your demonstration cart is empty" }));
+  assert.ok(screen.getByRole("link", { name: "Sign in to see your cart" }).getAttribute("href")?.includes("returnTo=cart"));
+  assert.equal(screen.queryByRole("link", { name: "Sign in" }), null);
+});
+
+test("keeps administrator access behind a sign-in prompt", () => {
+  render(<SignInForCommerce context="administrator" />);
+  assert.ok(screen.getByRole("heading", { name: "Sign in to check administrator access" }));
+  assert.ok(screen.getByRole("link", { name: "Sign in" }));
 });
 
 test("shows public pricing, deterministic CAD examples, safe actions, and limitations to guests", async () => {
@@ -143,8 +156,7 @@ test("shows public pricing, deterministic CAD examples, safe actions, and limita
   assert.equal(screen.queryByRole("button", { name: /add to cart/i }), null);
 
   assert.equal(screen.getByRole("link", { name: "Start configuring" }).getAttribute("href"), "/configure");
-  assert.equal(screen.getByRole("link", { name: "Sign in for an owned demo quote" }).getAttribute("href"), "/account?mode=login&returnTo=pricing");
-  assert.equal(screen.getByRole("link", { name: "Create an account" }).getAttribute("href"), "/account?mode=register&returnTo=pricing");
+  assert.equal(screen.queryByRole("link", { name: /sign in|create an account/i }), null);
 });
 
 test("keeps public pricing visible while session verification is unresolved", () => {

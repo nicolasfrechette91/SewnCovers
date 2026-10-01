@@ -93,6 +93,12 @@ export type ConfigurationAction =
       readonly closureType: ClosureType;
     }
   | { readonly type: "setSeamStyle"; readonly seamStyle: SeamStyle }
+  | {
+      /** A browser draft, already validated field by field. */
+      readonly type: "restoreDraft";
+      readonly configuration: Readonly<ConfigurationState>;
+    }
+  | { readonly type: "clearCustomPattern" }
   | { readonly type: "resetConfiguration" };
 
 export function getBuiltInPatternId(

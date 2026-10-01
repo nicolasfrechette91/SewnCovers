@@ -4,12 +4,14 @@ import {
   useCallback,
   createContext,
   useContext,
+  useEffect,
   useRef,
   useReducer,
   type Dispatch,
   type ReactNode,
 } from "react";
 
+import { subscribeToDraftReset } from "../../services/configurator-draft";
 import {
   configurationReducer,
   initialConfigurationState,
@@ -39,6 +41,18 @@ export function ConfigurationProvider({
     reducerDispatch(action);
   }, []);
   const getRevision = useCallback(() => revision.current, []);
+
+  // Signing out removes account-linked drafts from storage; drop the same
+  // data from the in-memory design so it cannot be written back.
+  useEffect(
+    () =>
+      subscribeToDraftReset((kind) =>
+        dispatch({
+          type: kind === "cleared" ? "resetConfiguration" : "clearCustomPattern",
+        }),
+      ),
+    [dispatch],
+  );
 
   return (
     <ConfigurationContext.Provider

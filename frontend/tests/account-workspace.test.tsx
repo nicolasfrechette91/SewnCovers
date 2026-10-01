@@ -25,7 +25,14 @@ import {
   parseAuthenticationMode,
   parseAuthenticationReturnTarget,
   resolveAuthenticationReturnDestination,
+  resolveAuthenticationReturnPath,
+  returnTargetForPath,
 } from "../services/auth-navigation";
+import {
+  readDraft,
+  reloadDraftFromStorage,
+  writeDraft,
+} from "../services/configurator-draft";
 
 const configuration: CreateDesignRequest = {
   shape: "tapered",
@@ -59,6 +66,7 @@ afterEach(() => {
   cleanup();
   window.sessionStorage.clear();
   window.localStorage.clear();
+  reloadDraftFromStorage();
   window.history.replaceState({}, "", "/");
 });
 
@@ -213,6 +221,18 @@ test("allowlists authentication returns and rejects redirect-shaped input", () =
   assert.equal(resolveAuthenticationReturnDestination("cart"), "/cart/");
   assert.equal(resolveAuthenticationReturnDestination("orders"), "/orders/");
   assert.equal(resolveAuthenticationReturnDestination("projects", "/SewnCovers/"), "/SewnCovers/projects/");
+  assert.equal(resolveAuthenticationReturnDestination("configure", "/SewnCovers"), "/SewnCovers/configure/");
+  assert.equal(resolveAuthenticationReturnDestination("home"), "/");
+  assert.equal(resolveAuthenticationReturnPath("legal"), "/legal/");
+  assert.equal(resolveAuthenticationReturnPath("pricing"), "/commerce/");
+  assert.equal(resolveAuthenticationReturnPath("admin"), null);
+  assert.equal(returnTargetForPath("/configure/"), "configure");
+  assert.equal(returnTargetForPath("/SewnCovers/configure", "/SewnCovers"), "configure");
+  assert.equal(returnTargetForPath("/"), "home");
+  assert.equal(returnTargetForPath("/commerce/"), "pricing");
+  assert.equal(returnTargetForPath("/checkout/return/"), "orders");
+  assert.equal(returnTargetForPath("/account/"), null);
+  assert.equal(returnTargetForPath("/admin/"), null);
   for (const value of [
     "https://attacker.example/",
     "//attacker.example/",
@@ -227,23 +247,164 @@ test("allowlists authentication returns and rejects redirect-shaped input", () =
   }
 });
 
-test("distinguishes private project saving from public guest sharing", async () => {
+const { solidColor: _unusedSolidColor, ...savedConfiguration } = projectConfiguration as ProjectConfigurationRequest & { solidColor?: null };
+void _unusedSolidColor;
+
+function projectDetail(id: string, name: string, versionId: string, versionNumber: number, saved: ProjectConfigurationRequest) {
+  return {
+    id, name, versionCount: versionNumber, updatedAt: "2026-09-30T10:00:00Z", privacy: "private", createdAt: "2026-09-30T10:00:00Z",
+    currentVersion: { id: versionId, versionNumber, configuration: saved, createdAt: "2026-09-30T10:00:00Z", isCurrent: true },
+    activeShares: [],
+  };
+}
+
+const signedInSession = {
+  account: { email: "guest@example.com", createdAt: "2026-09-30T09:00:00Z", role: "customer" },
+  token: "G".repeat(43),
+  expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+};
+
+async function signInInline(button: string) {
+  fireEvent.change(await screen.findByLabelText("Email"), { target: { value: "guest@example.com" } });
+  fireEvent.change(screen.getByLabelText("Passphrase"), { target: { value: "correct horse battery staple" } });
+  fireEvent.click(screen.getByRole("button", { name: button }));
+}
+
+test("offers private saving to guests as an optional inline step", async () => {
   render(<AuthProvider><PrivateProjectPanel configuration={configurationState} onSavingChange={() => undefined} /></AuthProvider>);
   await screen.findByRole("heading", { name: "Save to a private project" });
-  await screen.findByRole("link", { name: "Sign in" });
-  assert.ok(screen.getByRole("link", { name: "Create account" }));
-  assert.ok(screen.getByRole("link", { name: "Continue configuring as a guest" }));
   assert.ok(screen.getByText(/separate from the public design link/));
-  assert.ok(screen.getByText(/public-link workflow above/));
+  await screen.findByText(/need an account/);
+  assert.equal(screen.queryByRole("link", { name: /sign in/i }), null);
+
+  fireEvent.click(screen.getByRole("button", { name: "Create private project" }));
+  assert.ok(screen.getByText("Enter a project name."));
+  await waitFor(() => assert.equal(document.activeElement, screen.getByLabelText("Project name")));
+
+  fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Patio bench" } });
+  fireEvent.click(screen.getByRole("button", { name: "Create private project" }));
+  const heading = await screen.findByRole("heading", { name: "Sign in to save this design" });
+  await waitFor(() => assert.equal(document.activeElement, heading));
+  assert.ok(screen.getByText(/My projects are private to an account/));
+  assert.ok(window.sessionStorage.getItem("sewncovers.pending-account-action"));
+
+  fireEvent.click(screen.getByRole("button", { name: "Create an account instead" }));
+  await screen.findByRole("heading", { name: "Create an account to save this design" });
+  assert.ok(screen.getByRole("checkbox", { name: /account terms version 1/i }));
+  assert.ok(screen.getByRole("button", { name: "Create account and save" }));
+
+  fireEvent.click(screen.getByRole("button", { name: "Continue as guest" }));
+  const save = await screen.findByRole("button", { name: "Create private project" });
+  await waitFor(() => assert.equal(document.activeElement, save));
+  assert.equal(window.sessionStorage.getItem("sewncovers.pending-account-action"), null);
 });
 
-test("keeps built-in patterns available when private custom patterns are locked", async () => {
+test("signs in at save, saves the design once, and links the draft to the project", async () => {
+  writeDraft({ configuration: configurationState, step: "review", highestStep: 5 });
+  const originalFetch = globalThis.fetch;
+  const projectId = "P".repeat(22);
+  const versionId = "V".repeat(22);
+  let created: unknown = null;
+  let projectPosts = 0;
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    const method = init?.method ?? "GET";
+    if (url.endsWith("/auth/login")) return json(signedInSession);
+    if (url.endsWith("/account")) return json(signedInSession.account);
+    if (url.endsWith("/account/sessions")) return json([{ id: 1, createdAt: "2026-09-30T09:00:00Z", expiresAt: signedInSession.expiresAt, revokedAt: null, current: true }]);
+    if (method === "POST" && url.endsWith("/projects")) {
+      projectPosts += 1;
+      created = JSON.parse(String(init?.body));
+      return json(projectDetail(projectId, "Patio bench", versionId, 1, savedConfiguration), 201);
+    }
+    if (url.endsWith(`/projects/${projectId}`)) return json(projectDetail(projectId, "Patio bench", versionId, 1, savedConfiguration));
+    throw new Error(`Unexpected request: ${method} ${url}`);
+  };
+  try {
+    const view = render(<AuthProvider><PrivateProjectPanel configuration={configurationState} onSavingChange={() => undefined} /></AuthProvider>);
+    fireEvent.change(await screen.findByLabelText("Project name"), { target: { value: "Patio bench" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create private project" }));
+    await signInInline("Sign in and save");
+
+    const status = await screen.findByText("Private project created with version 1.");
+    await waitFor(() => assert.equal(document.activeElement, status));
+    assert.equal(projectPosts, 1);
+    assert.deepEqual(created, { name: "Patio bench", configuration: savedConfiguration });
+    assert.equal(readDraft()?.project?.projectId, projectId);
+    assert.equal(window.sessionStorage.getItem("sewncovers.pending-account-action"), null);
+    assert.ok(screen.getByRole("link", { name: "Open saved project" }));
+
+    // Coming back to Review with the same design never saves it again.
+    view.unmount();
+    render(<AuthProvider><PrivateProjectPanel configuration={configurationState} onSavingChange={() => undefined} /></AuthProvider>);
+    await screen.findByText(/This design matches version 1, the current version/);
+    assert.ok(screen.getByRole("heading", { name: "Saved to My projects" }));
+    assert.ok(screen.getByText(/This design is saved as “Patio bench”/));
+    assert.equal(screen.queryByRole("button", { name: /Create private project|Save as new version/ }), null);
+    assert.equal(projectPosts, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("adds a design to the cart once after sign-in, even when asked again", async () => {
+  writeDraft({ configuration: configurationState, step: "review", highestStep: 5 });
+  const originalFetch = globalThis.fetch;
+  const projectId = "P".repeat(22);
+  const versionId = "V".repeat(22);
+  const counts = { projects: 0, quotes: 0, lines: 0 };
+  const quote = {
+    demonstration: true, modelLabel: "Demonstration CAD price model v1", priceBookVersion: 1, currency: "CAD", quantity: 1,
+    unitAmountMinor: 10450, subtotalAmountMinor: 10450, subtotalFormatted: "$104.50 CAD", breakdown: [],
+    taxTreatment: "Fictional.", shippingTreatment: "Fictional.", id: "Q".repeat(22), status: "active", projectVersionId: versionId,
+    configuration: {}, createdAt: "2026-09-30T10:00:00Z", expiresAt: "2026-10-07T10:00:00Z", canCheckout: true, customAsset: null,
+  };
+  const line = { id: "L".repeat(22), quote, quantity: 1, extendedAmountMinor: 10450 };
+  const cart = (lines: unknown[]) => ({ id: "K".repeat(22), demonstration: true, state: "active", currency: "CAD", lines, subtotalAmountMinor: 0, subtotalFormatted: "$0.00 CAD", notices: [] });
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    const method = init?.method ?? "GET";
+    if (url.endsWith("/auth/login")) return json(signedInSession);
+    if (method === "POST" && url.endsWith("/projects")) { counts.projects += 1; return json(projectDetail(projectId, "Patio bench", versionId, 1, savedConfiguration), 201); }
+    if (url.endsWith(`/projects/${projectId}`)) return json(projectDetail(projectId, "Patio bench", versionId, 1, savedConfiguration));
+    if (method === "GET" && url.endsWith("/commerce/cart")) return json(cart(counts.lines ? [line] : []));
+    if (method === "POST" && url.endsWith("/commerce/quotes")) { counts.quotes += 1; return json(quote, 201); }
+    if (method === "POST" && url.endsWith("/commerce/cart/lines")) { counts.lines += 1; return json(cart([line])); }
+    throw new Error(`Unexpected request: ${method} ${url}`);
+  };
+  try {
+    render(<AuthProvider><PrivateProjectPanel configuration={configurationState} onSavingChange={() => undefined} /></AuthProvider>);
+    fireEvent.change(await screen.findByLabelText("Project name"), { target: { value: "Patio bench" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save and add to cart" }));
+    await screen.findByRole("heading", { name: "Sign in to add this design to your cart" });
+    await signInInline("Sign in and add to cart");
+
+    await screen.findByText(/Private project created with version 1\. Added to your demonstration cart/);
+    assert.ok(screen.getByRole("link", { name: "View cart" }));
+    assert.deepEqual(counts, { projects: 1, quotes: 1, lines: 1 });
+    assert.equal(readDraft()?.cart?.versionId, versionId);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Add to cart" }));
+    await screen.findByText("This design is already in your demonstration cart.");
+    assert.deepEqual(counts, { projects: 1, quotes: 1, lines: 1 });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("offers private custom patterns to guests as an optional inline step", async () => {
   render(<AuthProvider><ConfigurationProvider><YourPatterns /></ConfigurationProvider></AuthProvider>);
-  await screen.findByRole("heading", { name: "Sign in to use private custom patterns" });
-  assert.ok(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")?.includes("returnTo=configure"));
-  assert.ok(screen.getByRole("link", { name: "Create account" }));
-  assert.ok(screen.getByRole("link", { name: "Continue with built-in patterns" }));
-  assert.ok(screen.getByText(/All built-in patterns and the guest configuration stages remain available/));
+  const upload = await screen.findByRole("button", { name: "Upload your own pattern" });
+  assert.ok(screen.getByRole("heading", { name: "Your patterns" }));
+  assert.ok(screen.getByText(/Uploading your own image needs an account/));
+  assert.equal(screen.queryByRole("link", { name: /sign in/i }), null);
+
+  fireEvent.click(upload);
+  await screen.findByRole("heading", { name: "Sign in to upload your own pattern" });
+  assert.ok(screen.getByText(/Uploads stay private to an account/));
+  fireEvent.click(screen.getByRole("button", { name: "Continue with built-in patterns" }));
+  const reopened = await screen.findByRole("button", { name: "Upload your own pattern" });
+  await waitFor(() => assert.equal(document.activeElement, reopened));
 });
 
 test("shows every Task 10.1 field in a read-only version summary", () => {

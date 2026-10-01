@@ -75,7 +75,11 @@ test("organizes desktop navigation and preserves secondary destinations", async 
   ).toHaveText(["Configure", "My projects", "Pricing"]);
   await expect(
     navigation.getByRole("list", { name: "Shopping and account" }).getByRole("link"),
-  ).toHaveText(["Cart", "Account"]);
+  ).toHaveText(["Cart", "Sign in"]);
+  await expect(navigation.getByRole("link", { name: "Sign in" })).toHaveAttribute(
+    "href",
+    `${basePath}/account/?mode=login&returnTo=configure`,
+  );
   for (const removed of ["Orders", "Admin", "Legal"]) {
     await expect(navigation.getByRole("link", { name: removed })).toHaveCount(0);
   }
@@ -124,8 +128,8 @@ test("uses an accessible closed-by-default mobile disclosure", async ({ page }) 
   await expect(menu).toBeFocused();
 
   await menu.click();
-  await navigation.getByRole("link", { name: "Account" }).click();
-  await expect(page).toHaveURL(`${appOrigin}${basePath}/account/`);
+  await navigation.getByRole("link", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(`${appOrigin}${basePath}/account/?mode=login&returnTo=home`);
   await expect(menu).toHaveAttribute("aria-expanded", "false");
 });
 

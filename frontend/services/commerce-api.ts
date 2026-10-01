@@ -283,6 +283,7 @@ export const commerceApi = {
     return commerceRequest("/commerce/quotes", { method: "POST", token, body: { projectVersionId, quantity }, parser: isQuote });
   },
   quotes(token: string) { return commerceRequest("/commerce/quotes", { token, parser: isQuoteList }); },
+  quote(token: string, quoteId: string) { return commerceRequest(`/commerce/quotes/${encodeURIComponent(quoteId)}`, { token, parser: isQuote }); },
   reprice(token: string, quoteId: string, quantity: number) {
     return commerceRequest(`/commerce/quotes/${encodeURIComponent(quoteId)}/reprice`, { method: "POST", token, body: { quantity }, parser: isQuote });
   },

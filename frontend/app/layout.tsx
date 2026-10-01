@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
 import {
+  AuthReturnFocus,
   RouteAwareSiteFooter,
   RouteAwareSiteHeader,
 } from "@/components/layout/route-aware-site-layout";
@@ -116,31 +117,32 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <RouteAwareSiteHeader
-          primaryItems={[
-            { href: "/configure/", label: "Configure" },
-            { href: "/projects/", label: "My projects" },
-            { href: "/commerce/", label: "Pricing" },
-          ]}
-          utilityItems={[
-            { href: "/cart/", label: "Cart" },
-            { href: "/account/", label: "Account" },
-          ]}
-        />
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className="flex min-w-0 flex-1 flex-col"
-        >
-          <AuthProvider>
+        <AuthProvider>
+          <RouteAwareSiteHeader
+            primaryItems={[
+              { href: "/configure/", label: "Configure" },
+              { href: "/projects/", label: "My projects" },
+              { href: "/commerce/", label: "Pricing" },
+            ]}
+            utilityItems={[
+              { href: "/cart/", label: "Cart" },
+              { href: "/account/", label: "Account" },
+            ]}
+          />
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="flex min-w-0 flex-1 flex-col"
+          >
             <ConfigurationProvider>{children}</ConfigurationProvider>
-          </AuthProvider>
-        </main>
-        <RouteAwareSiteFooter
-          navigationItems={[
-            { href: "/legal/", label: "Legal and privacy" },
-          ]}
-        />
+          </main>
+          <RouteAwareSiteFooter
+            navigationItems={[
+              { href: "/legal/", label: "Legal and privacy" },
+            ]}
+          />
+          <AuthReturnFocus />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -25,19 +25,20 @@ test("keeps guest pages task-focused while preserving prototype and account disc
 
   await page.goto(`${basePath}/projects/`);
   await expect(page.getByRole("heading", { name: "My projects" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sign in to view private projects" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Continue configuring as a guest" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your projects will appear here" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in to see your projects" })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Start configuring" })).toBeVisible();
   await expectCustomerLanguage(page);
 
-  for (const [route, heading, lockedHeading] of [
-    ["commerce", "Pricing and quotes", "Sign in to create an owned demonstration quote"],
-    ["cart", "Cart", "Sign in to view your demonstration cart"],
-    ["orders", "Orders", "Sign in to view demonstration orders"],
+  for (const [route, heading, guestHeading] of [
+    ["commerce", "Pricing and quotes", "No quotes yet"],
+    ["cart", "Cart", "Your demonstration cart is empty"],
+    ["orders", "Orders", "No demonstration orders to show"],
   ] as const) {
     await page.goto(`${basePath}/${route}/`);
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
     await expect(page.getByText(/Fictional CAD prices and payment events only/i)).toBeVisible();
-    await expect(page.getByRole("heading", { name: lockedHeading })).toBeVisible();
+    await expect(page.getByRole("heading", { name: guestHeading })).toBeVisible();
     await expectCustomerLanguage(page);
   }
 

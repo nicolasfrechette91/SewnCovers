@@ -71,7 +71,13 @@ test("starts the unauthenticated configurator by pointer and keyboard at Shape",
   await expect(
     page.getByRole("group", { name: "Choose your cushion shape" }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: /sign in/i })).toHaveCount(0);
+  // Guests are never prompted to sign in while designing; the header keeps
+  // one quiet, optional link.
+  await expect(page.getByRole("main").getByRole("link", { name: /sign in/i })).toHaveCount(0);
+  await expect(page.getByRole("main").getByRole("button", { name: /sign in/i })).toHaveCount(0);
+  await expect(
+    page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: /sign in/i }),
+  ).toHaveCount(1);
 });
 
 test("keeps hero actions distinct, focused, and overflow-free", async ({ page }) => {

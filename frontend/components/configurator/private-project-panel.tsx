@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
-import { AccountRequired } from "@/components/account";
+import { InlineSignIn } from "@/components/account/inline-sign-in";
 import {
   Button,
   controlClasses,
@@ -13,76 +13,303 @@ import {
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import type { ConfigurationState } from "@/context/configuration";
-import { accountApi, AccountApiError } from "@/services/account-api";
+import { accountApi, AccountApiError, type ProjectDetail } from "@/services/account-api";
+import { commerceApi } from "@/services/commerce-api";
+import {
+  clearPendingAccountAction,
+  getDraftSnapshot,
+  getServerDraftSnapshot,
+  readDraft,
+  setPendingAccountAction,
+  subscribeToDraft,
+  takePendingAccountAction,
+  writeDraft,
+  type PendingAccountActionKind,
+} from "@/services/configurator-draft";
 import { mapConfigurationToProjectConfiguration } from "@/services/design-save";
+import { designFingerprint } from "@/services/draft-links";
+
+interface LinkedProject {
+  readonly projectId: string;
+  readonly name: string;
+  readonly currentFingerprint: string;
+  readonly versionNumber: number;
+}
+
+interface SavedProject {
+  readonly projectId: string;
+  readonly versionId: string;
+  readonly message: string;
+  /** False when the design was already saved as the current version. */
+  readonly changed: boolean;
+}
+
+interface Outcome {
+  readonly message: string;
+  readonly projectId: string | null;
+  readonly cart: boolean;
+}
+
+class ProjectNameRequiredError extends Error {}
+
+const SIGN_IN_COPY = {
+  save: {
+    titles: { login: "Sign in to save this design", register: "Create an account to save this design" },
+    submitLabels: { login: "Sign in and save", register: "Create account and save" },
+    reason: "My projects are private to an account, so saving needs one. Your design stays in this browser meanwhile, and it is saved as soon as you are signed in.",
+  },
+  cart: {
+    titles: { login: "Sign in to add this design to your cart", register: "Create an account to add it to your cart" },
+    submitLabels: { login: "Sign in and add to cart", register: "Create account and add to cart" },
+    reason: "The demonstration cart holds fictional quotes for designs saved to My projects, so it belongs to an account. Once you are signed in, this design is saved and added to the cart.",
+  },
+} as const;
+
+// One save at a time, across remounts and React's development double effects.
+let actionInFlight = false;
+
+function isMissingProject(error: unknown): boolean {
+  return error instanceof AccountApiError && (error.status === 403 || error.status === 404);
+}
+
+function linkedFrom(project: ProjectDetail): LinkedProject {
+  return {
+    projectId: project.id,
+    name: project.name,
+    currentFingerprint: designFingerprint(project.currentVersion.configuration),
+    versionNumber: project.currentVersion.versionNumber,
+  };
+}
 
 export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<{ configuration: ConfigurationState; onSavingChange: (saving: boolean) => void }>) {
   const { state: auth } = useAuth();
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const draft = useSyncExternalStore(subscribeToDraft, getDraftSnapshot, getServerDraftSnapshot);
+  const link = draft?.project ?? null;
+  const fingerprint = designFingerprint(configuration);
+  const token = auth.status === "authenticated" ? auth.token : null;
+  const [linked, setLinked] = useState<LinkedProject | null>(null);
+  const [name, setName] = useState("");
+  const [signInFor, setSignInFor] = useState<PendingAccountActionKind | null>(null);
+  const [busy, setBusy] = useState<PendingAccountActionKind | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ projectId: string; message: string } | null>(null);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const statusRef = useRef<HTMLParagraphElement>(null);
-  useEffect(() => {
-    const timer = globalThis.setTimeout(() => {
-      const value = new URL(window.location.href).searchParams.get("project");
-      setProjectId(value && /^[A-Za-z0-9_-]{22}$/.test(value) ? value : null);
-    }, 0);
-    return () => globalThis.clearTimeout(timer);
-  }, []);
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
+  const cartButtonRef = useRef<HTMLButtonElement>(null);
+  const returnFocusTo = useRef<PendingAccountActionKind | null>(null);
+  const linkedProjectId = link?.projectId ?? null;
+  const verified = linked !== null && linked.projectId === linkedProjectId ? linked : null;
+  const savedAndUnchanged = verified !== null && verified.currentFingerprint === fingerprint;
 
-  const save = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (auth.status !== "authenticated") return;
-    setPending(true); onSavingChange(true); setError(null); setSuccess(null);
-    try {
-      const snapshot = mapConfigurationToProjectConfiguration(configuration);
-      if (projectId) {
-        const version = await accountApi.createVersion(auth.token, projectId, snapshot);
-        setSuccess({ projectId, message: `Version ${version.versionNumber} saved without changing earlier history.` });
-      } else {
-        const name = String(new FormData(event.currentTarget).get("name") ?? "").trim();
-        if (!name) { setError("Enter a project name."); requestAnimationFrame(() => nameRef.current?.focus()); return; }
-        const project = await accountApi.createProject(auth.token, name, snapshot);
-        setSuccess({ projectId: project.id, message: "Private project created with version 1." });
+  // A draft linked to a project: confirm it still belongs to this account
+  // and learn its name. A project that's gone (or another account's) is
+  // unlinked, so the next save creates a new one.
+  useEffect(() => {
+    if (!token || !linkedProjectId) return;
+    let cancelled = false;
+    const timer = globalThis.setTimeout(async () => {
+      try {
+        const project = await accountApi.getProject(token, linkedProjectId);
+        if (!cancelled) setLinked(linkedFrom(project));
+      } catch (caught) {
+        if (!cancelled && isMissingProject(caught)) writeDraft({ project: null, cart: null });
       }
+    }, 0);
+    return () => {
+      cancelled = true;
+      globalThis.clearTimeout(timer);
+    };
+  }, [linkedProjectId, token]);
+
+  // Saves to the linked project when there is one (a new version only if the
+  // design changed), otherwise creates a project and links the draft to it,
+  // so saving again never creates a duplicate.
+  const ensureSaved = async (sessionToken: string, projectName: string): Promise<SavedProject> => {
+    const snapshot = mapConfigurationToProjectConfiguration(configuration);
+    const current = readDraft()?.project ?? null;
+    if (current) {
+      let project: ProjectDetail | null = null;
+      try {
+        project = await accountApi.getProject(sessionToken, current.projectId);
+      } catch (caught) {
+        if (!isMissingProject(caught)) throw caught;
+        writeDraft({ project: null, cart: null });
+      }
+      if (project) {
+        if (designFingerprint(project.currentVersion.configuration) === fingerprint) {
+          writeDraft({ project: { projectId: project.id, versionId: project.currentVersion.id, fingerprint } });
+          setLinked(linkedFrom(project));
+          return { projectId: project.id, versionId: project.currentVersion.id, message: `Already saved in My projects as “${project.name}”, version ${project.currentVersion.versionNumber}.`, changed: false };
+        }
+        const version = await accountApi.createVersion(sessionToken, project.id, snapshot);
+        writeDraft({ project: { projectId: project.id, versionId: version.id, fingerprint } });
+        setLinked({ projectId: project.id, name: project.name, currentFingerprint: fingerprint, versionNumber: version.versionNumber });
+        return { projectId: project.id, versionId: version.id, message: `Version ${version.versionNumber} saved without changing earlier history.`, changed: true };
+      }
+    }
+    const trimmed = projectName.trim();
+    if (!trimmed) throw new ProjectNameRequiredError();
+    const project = await accountApi.createProject(sessionToken, trimmed, snapshot);
+    writeDraft({ project: { projectId: project.id, versionId: project.currentVersion.id, fingerprint }, cart: null });
+    setLinked({ ...linkedFrom(project), currentFingerprint: fingerprint });
+    return { projectId: project.id, versionId: project.currentVersion.id, message: "Private project created with version 1.", changed: true };
+  };
+
+  // Quotes are priced from a saved version. A version already in the cart is
+  // never added twice; an earlier quote for it is reused while still valid.
+  const addToCart = async (sessionToken: string, saved: SavedProject): Promise<string> => {
+    const cart = await commerceApi.cart(sessionToken);
+    if (cart.lines.some((line) => line.quote.projectVersionId === saved.versionId)) {
+      return "This design is already in your demonstration cart.";
+    }
+    const marker = readDraft()?.cart ?? null;
+    let quoteId: string | null = null;
+    if (marker && marker.versionId === saved.versionId) {
+      try {
+        const quote = await commerceApi.quote(sessionToken, marker.quoteId);
+        if (quote.status === "active" && quote.canCheckout) quoteId = quote.id;
+      } catch {
+        // Create a fresh quote below.
+      }
+    }
+    if (!quoteId) {
+      const quote = await commerceApi.createQuote(sessionToken, saved.versionId, 1);
+      quoteId = quote.id;
+      writeDraft({ cart: { versionId: saved.versionId, quoteId } });
+    }
+    await commerceApi.addQuote(sessionToken, quoteId);
+    return "Added to your demonstration cart as a fictional quote.";
+  };
+
+  const run = async (kind: PendingAccountActionKind, projectName: string, sessionToken: string) => {
+    if (actionInFlight) return;
+    actionInFlight = true;
+    setBusy(kind); onSavingChange(true); setError(null); setOutcome(null);
+    requestAnimationFrame(() => statusRef.current?.focus());
+    let saved: SavedProject | null = null;
+    try {
+      saved = await ensureSaved(sessionToken, projectName);
+      const cartMessage = kind === "cart" ? await addToCart(sessionToken, saved) : null;
+      const message = cartMessage === null
+        ? saved.message
+        : saved.changed ? `${saved.message} ${cartMessage}` : cartMessage;
+      setOutcome({ message, projectId: saved.projectId, cart: kind === "cart" });
       requestAnimationFrame(() => statusRef.current?.focus());
     } catch (caught) {
-      setError(caught instanceof AccountApiError ? caught.message : "The private project could not be saved. Try again.");
-      requestAnimationFrame(() => (projectId ? statusRef.current : nameRef.current)?.focus());
-    } finally { setPending(false); onSavingChange(false); }
+      if (caught instanceof ProjectNameRequiredError) {
+        setError("Enter a project name.");
+        requestAnimationFrame(() => nameRef.current?.focus());
+      } else {
+        const reason = caught instanceof AccountApiError ? caught.message : "The request could not be completed. Try again.";
+        setError(saved ? `The demonstration cart could not be updated. ${reason}` : reason);
+        if (saved) setOutcome({ message: saved.message, projectId: saved.projectId, cart: false });
+        requestAnimationFrame(() => statusRef.current?.focus());
+      }
+    } finally {
+      actionInFlight = false;
+      setBusy(null); onSavingChange(false);
+    }
   };
+
+  // Resume the Save or Add to cart that asked for sign-in, exactly once:
+  // the pending record is removed as it is read. The timer is not cancelled
+  // on cleanup, so a taken action always runs.
+  useEffect(() => {
+    if (!token) return;
+    const action = takePendingAccountAction(fingerprint);
+    if (!action) return;
+    globalThis.setTimeout(() => {
+      setSignInFor(null);
+      void run(action.kind, action.name, token);
+    }, 0);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const start = (kind: PendingAccountActionKind) => {
+    if (auth.status === "initializing" || busy !== null) return;
+    setError(null);
+    setOutcome(null);
+    if (!link && !name.trim()) {
+      setError("Enter a project name.");
+      requestAnimationFrame(() => nameRef.current?.focus());
+      return;
+    }
+    if (token) {
+      void run(kind, name, token);
+      return;
+    }
+    setPendingAccountAction({ kind, name: name.trim(), fingerprint });
+    setSignInFor(kind);
+  };
+
+  // "Continue as guest" puts focus back on the button that opened sign-in.
+  useEffect(() => {
+    if (signInFor !== null || returnFocusTo.current === null) return;
+    const opener = returnFocusTo.current === "save" ? saveButtonRef.current : null;
+    returnFocusTo.current = null;
+    (opener ?? cartButtonRef.current)?.focus();
+  }, [signInFor]);
+
+  const continueAsGuest = () => {
+    clearPendingAccountAction();
+    returnFocusTo.current = signInFor;
+    setSignInFor(null);
+  };
+
+  const heading = !link
+    ? "Save to a private project"
+    : savedAndUnchanged
+      ? "Saved to My projects"
+      : "Save a new version";
+  const description = !link
+    ? "A named project is private in your account. It is separate from the public design link above; other people can view a project version only if you create a read-only share link."
+    : savedAndUnchanged && verified
+      ? `This design is saved as “${verified.name}”. If you change it, saving adds the next version and leaves earlier versions unchanged.`
+      : verified
+        ? `Linked to “${verified.name}” in My projects. Saving adds the next version and leaves earlier versions unchanged.`
+        : "This design is linked to a project in My projects. Saving adds the next version and leaves earlier versions unchanged.";
+  const statusText = busy === "cart"
+    ? "Saving your design and adding it to the cart…"
+    : busy === "save"
+      ? "Saving your design to My projects…"
+      : outcome?.message ?? "";
+  const copy = signInFor ? SIGN_IN_COPY[signInFor] : null;
 
   return (
     <section aria-labelledby="private-project-heading" className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline">
       <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">Private account workspace</p>
-      <h3 id="private-project-heading" className="mt-3 font-display text-section-title font-heading tracking-heading text-text-primary">{projectId ? "Save a new version" : "Save to a private project"}</h3>
-      <p className="mt-3 max-w-3xl text-body text-text-muted">{projectId ? "This design was opened from project history. Saving adds the next version and leaves earlier versions unchanged." : "A named project is private in your account. It is separate from the public design link above; other people can view a project version only if you create a read-only share link."}</p>
+      <h3 id="private-project-heading" className="mt-3 font-display text-section-title font-heading tracking-heading text-text-primary">{heading}</h3>
+      <p className="mt-3 max-w-3xl text-body text-text-muted">{description}</p>
       {auth.status === "initializing" ? <p className="mt-3" role="status">Restoring your session…</p> : null}
-      {auth.status === "guest" ? (
-        <AccountRequired
-          className="mt-4 bg-surface-subtle"
-          headingLevel="h4"
-          title="Sign in to save this design privately"
-          description="A private project requires an account so its name, saved versions, and revocable project shares remain owner-only."
-          unlocks="Signing in lets you save this configuration to an existing account. Creating an account gives it a new private workspace."
-          returnTo="configure"
+      <form className="mt-4" noValidate onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); start("save"); }}>
+        {!link ? <><label htmlFor="private-project-name" className={`block ${fieldLabelClasses}`}>Project name</label><input ref={nameRef} id="private-project-name" name="name" required maxLength={120} value={name} readOnly={busy !== null || signInFor !== null} onChange={(event) => setName(event.target.value)} className={`mt-2 ${controlClasses}`} /></> : null}
+        {savedAndUnchanged && verified && !outcome && busy === null ? <p className="mt-3 max-w-3xl text-supporting text-text-muted">This design matches version {verified.versionNumber}, the current version.</p> : null}
+        {error ? <ErrorMessage className="mt-3">{error}</ErrorMessage> : null}
+        <p ref={statusRef} tabIndex={-1} role="status" aria-live="polite" className={statusText ? "mt-3 text-body font-emphasis" : "sr-only"}>{statusText}</p>
+        {outcome?.projectId || (savedAndUnchanged && verified) ? (
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            <Link href={{ pathname: "/projects/", query: { project: outcome?.projectId ?? verified?.projectId } }} className={textLinkClasses}>Open saved project</Link>
+            {outcome?.cart ? <Link href="/cart/" className={textLinkClasses}>View cart</Link> : null}
+          </div>
+        ) : null}
+        {signInFor === null ? (
+          <div className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
+            {!savedAndUnchanged ? <Button ref={saveButtonRef} type="submit" disabled={auth.status === "initializing" || busy === "cart"} isLoading={busy === "save"} loadingLabel="Saving private version…">{link ? "Save as new version" : "Create private project"}</Button> : null}
+            <Button ref={cartButtonRef} variant="secondary" disabled={auth.status === "initializing" || busy === "save"} isLoading={busy === "cart"} loadingLabel="Adding to cart…" onClick={() => start("cart")}>{savedAndUnchanged ? "Add to cart" : "Save and add to cart"}</Button>
+          </div>
+        ) : null}
+        {auth.status === "guest" && signInFor === null ? <p className="mt-3 max-w-3xl text-supporting text-text-muted">Saving and the demonstration cart need an account. You&apos;ll be asked to sign in or create one next; your design stays in this browser either way.</p> : null}
+      </form>
+      {auth.status === "guest" && copy ? (
+        <InlineSignIn
+          idPrefix={`private-${signInFor}`}
+          titles={copy.titles}
+          reason={<p>{copy.reason}</p>}
+          submitLabels={copy.submitLabels}
           sessionNotice={auth.notice}
-          guestAlternative={{
-            href: "/configure/",
-            label: "Continue configuring as a guest",
-            description: "You can keep this design in the configurator and use the public-link workflow above when it uses a built-in pattern.",
-          }}
+          guestNote="Your design stays in this browser. You can still create a public link above, or print or download the summary."
+          onCancel={continueAsGuest}
         />
-      ) : null}
-      {auth.status === "authenticated" ? (
-        <form className="mt-4" onSubmit={(event) => void save(event)}>
-          {!projectId ? <><label htmlFor="private-project-name" className={`block ${fieldLabelClasses}`}>Project name</label><input ref={nameRef} id="private-project-name" name="name" required maxLength={120} className={`mt-2 ${controlClasses}`} /></> : null}
-          {error ? <ErrorMessage className="mt-3">{error}</ErrorMessage> : null}
-          {success ? <div className="mt-3"><p ref={statusRef} tabIndex={-1} role="status" aria-live="polite" className="text-body font-emphasis">{success.message}</p><Link href={{ pathname: "/projects/", query: { project: success.projectId } }} className={`mt-2 ${textLinkClasses}`}>Open saved project</Link></div> : null}
-          {!success ? <Button className="mt-4" type="submit" isLoading={pending} loadingLabel="Saving private version…">{projectId ? "Save as new version" : "Create private project"}</Button> : null}
-        </form>
       ) : null}
     </section>
   );

@@ -11,6 +11,7 @@ import {
 import { Button, ErrorMessage } from "@/components/ui";
 import type { ConfigurationState } from "@/context/configuration";
 import { apiClient } from "@/services/api-client";
+import { recordPublicDesign } from "@/services/draft-links";
 import {
   buildDesignShareUrl,
   copyDesignShareUrl,
@@ -66,6 +67,12 @@ export function SaveSharePanel({
     shareUrlInput.current?.focus();
     shareUrlInput.current?.select();
   }, [saveState.phase]);
+
+  // Opening this public link later must not be mistaken for replacing work.
+  const savedPublicId = saveState.phase === "success" ? saveState.publicId : null;
+  useEffect(() => {
+    if (savedPublicId) recordPublicDesign(savedPublicId, configuration);
+  }, [configuration, savedPublicId]);
 
   const saveDesign = () => {
     onSavingChange(true);

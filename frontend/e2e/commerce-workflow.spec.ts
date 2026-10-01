@@ -42,8 +42,9 @@ test("public pricing stays useful and non-transactional for guests", async ({ pa
     await expect(page.getByRole("button", { name: /create quote/i })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /add to cart/i })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Start configuring" }).first()).toHaveAttribute("href", `${basePath}/configure/`);
-    await expect(page.getByRole("link", { name: "Sign in for an owned demo quote" })).toHaveAttribute("href", `${basePath}/account/?mode=login&returnTo=pricing`);
-    await expect(page.getByRole("link", { name: "Create an account" }).first()).toHaveAttribute("href", `${basePath}/account/?mode=register&returnTo=pricing`);
+    await expect(page.getByRole("heading", { name: "No quotes yet" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in to see your quotes" })).toHaveAttribute("href", `${basePath}/account/?mode=login&returnTo=pricing`);
+    await expect(page.getByRole("link", { name: "Create an account" })).toHaveAttribute("href", `${basePath}/account/?mode=register&returnTo=pricing`);
     await noOverflow(page);
   }
   expect(privateCommerceRequests).toBe(0);

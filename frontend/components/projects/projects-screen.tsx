@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
-import { AccountRequired } from "@/components/account";
+import { GuestEmptyState } from "@/components/account/guest-empty-state";
 import {
   Button,
   buttonClasses,
@@ -12,6 +12,8 @@ import {
   EmptyState,
   ErrorMessage,
   LoadingState,
+  Notice,
+  TextLink,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
@@ -22,6 +24,12 @@ import {
   type ProjectSummary,
   type ProjectVersion,
 } from "@/services/account-api";
+import {
+  draftHasDesign,
+  getDraftSnapshot,
+  getServerDraftSnapshot,
+  subscribeToDraft,
+} from "@/services/configurator-draft";
 
 import { ConfigurationReadonly } from "./configuration-readonly";
 
@@ -184,23 +192,29 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
   );
 }
 
+// A signed-in visitor with a design in this browser that was never saved.
+function UnsavedDraftNotice() {
+  const draft = useSyncExternalStore(subscribeToDraft, getDraftSnapshot, getServerDraftSnapshot);
+  if (!draftHasDesign(draft) || draft?.project) return null;
+  return (
+    <Notice className="mb-component" title="Design in progress">
+      <p>This browser has a design that isn&apos;t in My projects yet. Open it and choose Save to a private project on its Review stage.</p>
+      <TextLink href="/configure/">Continue your design</TextLink>
+    </Notice>
+  );
+}
+
 export function ProjectsScreen() {
   const { state } = useAuth();
   const projectId = useSearchParams().get("project");
   if (state.status === "initializing") return <LoadingState label="Restoring your session…" />;
   if (state.status === "guest") return (
-    <AccountRequired
-      title="Sign in to view private projects"
-      description="Private projects require an account so named designs, immutable version history, and revocable project shares stay associated with their owner."
-      unlocks="Signing in opens the private projects and saved versions already associated with your account. Creating an account gives you a new private workspace."
+    <GuestEmptyState
+      title="Your projects will appear here"
+      description={<p>Save a design from its Review stage and it appears here, with its version history and read-only links you can revoke. You&apos;ll be asked to sign in or create an account then.</p>}
       returnTo="projects"
-      sessionNotice={state.notice}
-      guestAlternative={{
-        href: "/configure/",
-        label: "Continue configuring as a guest",
-        description: "Without an account, you can still complete a design with built-in patterns and create an existing public, read-only design link.",
-      }}
+      signInLabel="Sign in to see your projects"
     />
   );
-  return projectId ? <ProjectView token={state.token} projectId={projectId} /> : <ProjectList token={state.token} />;
+  return projectId ? <ProjectView token={state.token} projectId={projectId} /> : <><UnsavedDraftNotice /><ProjectList token={state.token} /></>;
 }

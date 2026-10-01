@@ -5,6 +5,7 @@ export {
 export {
   configurationReducer,
   initialConfigurationState,
+  isInitialConfiguration,
 } from "./reducer";
 export { getBuiltInPatternId, getSolidColor } from "./types";
 export {

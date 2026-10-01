@@ -1,7 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import { useAuth } from "@/context/auth";
@@ -13,6 +13,11 @@ import {
   resolveAssetUrl,
   type ProjectConfigurationRequest,
 } from "@/services/account-api";
+
+// Loaded only when a guest opens a private project version link.
+const PrivateVersionSignIn = dynamic(() =>
+  import("./private-version-sign-in").then((loaded) => loaded.PrivateVersionSignIn),
+);
 
 type LoaderState =
   | { status: "idle" }
@@ -69,11 +74,24 @@ async function restoreState(
   return { ...configuration, pattern };
 }
 
-export function WorkspaceConfigurationLoader() {
+export function WorkspaceConfigurationLoader({
+  onDismiss,
+  onRestored,
+}: Readonly<{
+  onDismiss?: () => void;
+  /** Records where a restored design came from, for the browser draft. */
+  onRestored?: (
+    ref: string,
+    configuration: ConfigurationState,
+    project: { readonly projectId: string; readonly versionId: string } | null,
+  ) => void;
+}> = {}) {
   const { state: auth } = useAuth();
   const { dispatch, getRevision } = useConfiguration();
   const [state, setState] = useState<LoaderState>({ status: "idle" });
   const generation = useRef(0);
+  const focusRestored = useRef(false);
+  const restoredRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -137,27 +155,51 @@ export function WorkspaceConfigurationLoader() {
         setState({ status: "error", label: "Your configuration changed while the saved version was loading, so it was not overwritten." });
         return;
       }
+      onRestored?.(
+        share ? `share:${share}` : `project:${project}:${version}`,
+        configuration,
+        share ? null : { projectId: project!, versionId: version! },
+      );
       dispatch({ type: "restoreConfiguration", configuration });
       setState({ status: "restored", label: share ? "Read-only project share restored. Changes affect only your current configurator unless you save them separately." : "Private project version restored for editing. Saving adds a new version and leaves this one unchanged." });
     } catch (error) {
       if (active !== generation.current) return;
       setState({ status: "error", label: error instanceof AccountApiError ? error.message : "The saved configuration could not be loaded." });
     }
-  }, [auth, dispatch, getRevision]);
+  }, [auth, dispatch, getRevision, onRestored]);
 
   useEffect(() => {
     const timer = globalThis.setTimeout(() => void load(), 0);
     return () => { globalThis.clearTimeout(timer); generation.current += 1; };
   }, [load]);
+  useEffect(() => {
+    if (state.status !== "restored" || !focusRestored.current) return;
+    focusRestored.current = false;
+    const frame = requestAnimationFrame(() => restoredRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [state.status]);
+
+  const continueWithMine = () => {
+    removeWorkspaceParameters();
+    setState({ status: "idle" });
+    onDismiss?.();
+  };
+
   if (state.status === "idle") return null;
   return (
     <section aria-labelledby="workspace-load-heading" className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline">
-      <h2 id="workspace-load-heading" className="font-display text-section-title font-heading">{state.status === "signin" ? "Private project version" : "Saved configuration"}</h2>
+      <h2 id="workspace-load-heading" tabIndex={-1} className="font-display text-section-title font-heading">{state.status === "signin" ? "Private project version" : "Saved configuration"}</h2>
       {state.status === "loading" ? <LoadingState className="mt-3" label={state.label} /> : null}
-      {state.status === "restored" ? <p className="mt-3 text-supporting text-text-muted" role="status" aria-live="polite">{state.label}</p> : null}
-      {state.status === "signin" ? <div className="mt-3"><p className="text-body text-text-muted">Sign in to open this private project version. Only the project owner&apos;s account can open it.</p><Link href="/account/" className="mt-3 inline-flex min-h-11 items-center text-button font-control text-brand underline">Sign in</Link></div> : null}
+      {state.status === "restored" ? <p ref={restoredRef} tabIndex={-1} className="mt-3 text-supporting text-text-muted" role="status" aria-live="polite">{state.label}</p> : null}
+      {state.status === "signin" ? (
+        <PrivateVersionSignIn
+          sessionNotice={auth.status === "guest" ? auth.notice : undefined}
+          onCancel={continueWithMine}
+          onSignedIn={() => { focusRestored.current = true; }}
+        />
+      ) : null}
       {state.status === "error" ? <ErrorMessage className="mt-3">{state.label}</ErrorMessage> : null}
-      {state.status === "error" ? <div className="mt-3 flex flex-wrap gap-3"><Button variant="secondary" onClick={() => void load()}>Try loading again</Button><Button variant="secondary" onClick={() => { removeWorkspaceParameters(); setState({ status: "idle" }); }}>Continue with my configuration</Button></div> : null}
+      {state.status === "error" ? <div className="mt-3 flex flex-wrap gap-3"><Button variant="secondary" onClick={() => void load()}>Try loading again</Button><Button variant="secondary" onClick={continueWithMine}>Continue with my configuration</Button></div> : null}
     </section>
   );
 }

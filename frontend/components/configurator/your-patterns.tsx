@@ -10,7 +10,7 @@ import {
   type DragEvent,
 } from "react";
 
-import { AccountRequired } from "@/components/account";
+import { InlineSignIn } from "@/components/account/inline-sign-in";
 import {
   Button,
   cardTitleClasses,
@@ -89,6 +89,16 @@ export function YourPatterns() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rightsAcknowledged, setRightsAcknowledged] = useState(false);
+  const [signInOpen, setSignInOpen] = useState(false);
+  const uploadActionRef = useRef<HTMLButtonElement>(null);
+  const returnFocusToUpload = useRef(false);
+
+  // "Continue with built-in patterns" puts focus back on the action that opened sign-in.
+  useEffect(() => {
+    if (signInOpen || !returnFocusToUpload.current) return;
+    returnFocusToUpload.current = false;
+    uploadActionRef.current?.focus();
+  }, [signInOpen]);
 
   const load = useCallback(async () => {
     if (auth.status !== "authenticated") return;
@@ -240,19 +250,34 @@ export function YourPatterns() {
       <StitchDivider className="mb-component" />
       <p className={eyebrowClasses}>Private account feature</p>
       <h3 id={`${id}-heading`} className={`mt-3 ${cardTitleClasses}`}>Your patterns</h3>
-      {auth.status === "guest" ? (
-        <AccountRequired
-          className="mt-4"
-          headingLevel="h4"
-          title="Sign in to use private custom patterns"
-          description="Custom uploads require an account because originals, processed derivatives, moderation state, and saved references remain private to their owner."
-          unlocks="Signing in opens custom patterns already associated with your account. Creating an account starts a new private pattern workspace."
-          returnTo="configure"
+      {auth.status === "guest" && !signInOpen ? (
+        <div className="mt-3 flex min-w-0 flex-col items-start gap-3">
+          <p className="max-w-3xl text-supporting text-text-muted">
+            Uploading your own image needs an account. Built-in patterns and
+            solid colors don&apos;t.
+          </p>
+          <Button ref={uploadActionRef} variant="secondary" onClick={() => setSignInOpen(true)}>
+            Upload your own pattern
+          </Button>
+        </div>
+      ) : null}
+      {auth.status === "guest" && signInOpen ? (
+        <InlineSignIn
+          idPrefix="upload"
+          titles={{ login: "Sign in to upload your own pattern", register: "Create an account to upload your own pattern" }}
+          reason={<p>Uploads stay private to an account: the original image, its processed copies and its moderation status belong to their owner. Your design stays as it is while you sign in.</p>}
+          submitLabels={{ login: "Sign in", register: "Create account" }}
           sessionNotice={auth.notice}
-          guestAlternative={{
-            href: "/configure/",
-            label: "Continue with built-in patterns",
-            description: "All built-in patterns and the guest configuration stages remain available without an account.",
+          cancelLabel="Continue with built-in patterns"
+          guestNote="Every built-in pattern and solid color stays available without an account."
+          onCancel={() => {
+            returnFocusToUpload.current = true;
+            setSignInOpen(false);
+          }}
+          onSignedIn={() => {
+            setSignInOpen(false);
+            setMessage("Signed in. You can upload your own pattern below.");
+            requestAnimationFrame(() => statusRef.current?.focus());
           }}
         />
       ) : null}

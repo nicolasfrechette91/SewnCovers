@@ -229,7 +229,8 @@ test("touch navigation, form errors, table scrolling and forced-colors reflow", 
   expect(await region.evaluate(el => getComputedStyle(el).outlineStyle)).not.toBe("none");
   expect((await geometry(page)).overflow).toBeLessThanOrEqual(1);
   await expect(page.locator('thead th[scope="col"]')).toHaveCount(3);
-  await expect(page.locator('tbody th[scope="row"]')).toHaveCount(3);
+  // Payments, uploads, browser storage (the guest draft) and shipping.
+  await expect(page.locator('tbody th[scope="row"]')).toHaveCount(4);
 });
 
 test("public content reflows with WCAG text-spacing overrides", async ({ page }) => {

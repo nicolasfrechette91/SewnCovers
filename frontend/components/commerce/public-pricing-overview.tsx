@@ -1,17 +1,12 @@
 "use client";
 
-import Link from "next/link";
-
 import {
   ButtonLink,
   noticeClasses,
   noticeTitleClasses,
-  textLinkClasses,
 } from "@/components/ui";
 
 import examples from "@/data/public-pricing-examples.json";
-import { useAuth } from "@/context/auth";
-import { buildAccountHref } from "@/services/auth-navigation";
 
 export function formatPublicCad(amountMinor: number): string {
   const amount = new Intl.NumberFormat("en-CA", {
@@ -23,9 +18,6 @@ export function formatPublicCad(amountMinor: number): string {
 }
 
 export function PublicPricingOverview() {
-  const { state } = useAuth();
-  const showAccountActions = state.status !== "authenticated";
-
   return (
     <div className="space-y-component">
       <section className="rounded-panel border border-border bg-surface p-card shadow-hairline" aria-labelledby="public-pricing-heading">
@@ -36,16 +28,6 @@ export function PublicPricingOverview() {
         </p>
         <div className="mt-component flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <ButtonLink href="/configure/">Start configuring</ButtonLink>
-          {showAccountActions ? (
-            <>
-              <ButtonLink href={buildAccountHref("login", "pricing")} variant="secondary">
-                Sign in for an owned demo quote
-              </ButtonLink>
-              <Link href={buildAccountHref("register", "pricing")} className={`${textLinkClasses} px-2`}>
-                Create an account
-              </Link>
-            </>
-          ) : null}
         </div>
         <p className="mt-3 text-supporting text-text-muted">Starting a configuration does not create a quote.</p>
       </section>

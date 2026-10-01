@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { AccountScreen } from "@/components/account/account-screen";
+import { RoutedAccountScreen } from "@/components/account/account-screen";
 import { LoadingState, PageHeader, PageShell } from "@/components/ui";
 import { createPageMetadata } from "@/config/site-metadata";
 
@@ -22,7 +22,7 @@ export default function AccountPage() {
       />
       <div className="min-h-[36rem]">
         <Suspense fallback={<LoadingState label="Opening account access…" />}>
-          <AccountScreen />
+          <RoutedAccountScreen />
         </Suspense>
       </div>
     </PageShell>

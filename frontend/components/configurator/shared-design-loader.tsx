@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
-import { useConfiguration } from "@/context/configuration";
+import {
+  useConfiguration,
+  type ConfigurationState,
+} from "@/context/configuration";
 import type { PatternCatalogueResult } from "@/data/patterns";
 import { apiClient } from "@/services/api-client";
 import {
@@ -20,11 +23,17 @@ function removeDesignParameter(): void {
 
 export interface SharedDesignLoaderProps {
   catalogue: PatternCatalogueResult;
+  /** Called after "Continue with my configuration" removes the link. */
+  onDismiss?: () => void;
+  /** Records where a restored design came from, for the browser draft. */
+  onRestored?: (ref: string, configuration: ConfigurationState) => void;
   onRetryPatterns: () => void;
 }
 
 export function SharedDesignLoader({
   catalogue,
+  onDismiss,
+  onRestored,
   onRetryPatterns,
 }: SharedDesignLoaderProps) {
   const { dispatch, getRevision, state: configuration } =
@@ -34,6 +43,8 @@ export function SharedDesignLoader({
       new SharedDesignController(
         apiClient,
         (restoredConfiguration) => {
+          const publicId = new URLSearchParams(window.location.search).get("design");
+          if (publicId) onRestored?.(`design:${publicId}`, restoredConfiguration);
           dispatch({
             configuration: restoredConfiguration,
             type: "restoreConfiguration",
@@ -67,7 +78,8 @@ export function SharedDesignLoader({
   const dismiss = useCallback(() => {
     controller.dismiss();
     removeDesignParameter();
-  }, [controller]);
+    onDismiss?.();
+  }, [controller, onDismiss]);
 
   if (state.phase === "idle") {
     return null;
@@ -88,6 +100,7 @@ export function SharedDesignLoader({
     >
       <h2
         id="shared-design-status-heading"
+        tabIndex={-1}
         className="font-display text-section-title font-heading tracking-heading text-text-primary"
       >
         Shared design

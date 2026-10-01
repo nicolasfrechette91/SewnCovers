@@ -1,4 +1,5 @@
-import { AccountRequired } from "@/components/account";
+import { AccountRequired } from "@/components/account/account-required";
+import { GuestEmptyState } from "@/components/account/guest-empty-state";
 import { noticeClasses, noticeTitleClasses } from "@/components/ui";
 import type { AuthenticationReturnTarget } from "@/services/auth-navigation";
 
@@ -13,7 +14,7 @@ export function DemoBanner() {
 
 type CommerceAccessContext = "administrator" | "cart" | "checkout" | "orders" | "pricing";
 
-const ACCESS_COPY: Readonly<Record<CommerceAccessContext, {
+const ACCESS_COPY: Readonly<Record<"administrator" | "checkout", {
   description: string;
   guestDescription?: string;
   guestLabel?: string;
@@ -26,14 +27,6 @@ const ACCESS_COPY: Readonly<Record<CommerceAccessContext, {
     description: "Administration requires a current session whose server-verified role is administrator.",
     unlocks: "Signing in checks that existing role. Creating an account creates a customer account and cannot grant administrator access.",
   },
-  cart: {
-    title: "Sign in to view your demonstration cart",
-    description: "The cart is private because it contains fictional quotes saved to one account.",
-    unlocks: "Signing in opens the cart associated with your account. Creating an account starts a new, empty private cart.",
-    returnTo: "cart",
-    guestDescription: "A cart is not needed to configure or publicly share a design with a built-in pattern.",
-    guestLabel: "Return to the configurator",
-  },
   checkout: {
     title: "Sign in to check your demonstration order",
     description: "Checkout return details are private because they refer to an account-owned fictional order.",
@@ -42,23 +35,30 @@ const ACCESS_COPY: Readonly<Record<CommerceAccessContext, {
     guestDescription: "You can still configure and publicly share a design without viewing private checkout or order records.",
     guestLabel: "Return to the configurator",
   },
+};
+
+// Guests reach the cart, orders and quotes pages from the header and pricing
+// page, so they get a calm explanation rather than a sign-in wall.
+const GUEST_COPY = {
+  cart: {
+    title: "Your demonstration cart is empty",
+    description: "In this sandbox a cart holds fictional quotes for designs saved to My projects, so it belongs to an account. Add a design from its Review stage; you’ll be asked to sign in then.",
+    signInLabel: "Sign in to see your cart",
+    titleAs: "h2",
+  },
   orders: {
-    title: "Sign in to view demonstration orders",
-    description: "Fictional order records and fulfilment timelines are private to the account that created them.",
-    unlocks: "Signing in opens your account's demonstration order history. Creating an account starts with no orders.",
-    returnTo: "orders",
-    guestDescription: "Orders are optional; guest configuration and public sharing with built-in patterns remain available.",
-    guestLabel: "Start a guest design",
+    title: "No demonstration orders to show",
+    description: "Fictional orders come from a signed-in demonstration cart and stay private to that account.",
+    signInLabel: "Sign in to see your orders",
+    titleAs: "h2",
   },
   pricing: {
-    title: "Sign in to create an owned demonstration quote",
-    description: "Owned demonstration estimates and quotes use account-owned saved project versions, keeping quote history private.",
-    unlocks: "Signing in opens eligible private project versions and your fictional quote history. Creating an account starts a new private workspace without prices or saved projects.",
-    returnTo: "pricing",
-    guestDescription: "The public examples above remain available, and configuring does not require an account or create a quote.",
-    guestLabel: "Start configuring",
+    title: "No quotes yet",
+    description: "Owned quotes are priced from designs saved to My projects. Save a design, or add it to the cart, from its Review stage; you’ll be asked to sign in then.",
+    signInLabel: "Sign in to see your quotes",
+    titleAs: "h3",
   },
-};
+} as const;
 
 export function SignInForCommerce({
   context = "pricing",
@@ -67,6 +67,21 @@ export function SignInForCommerce({
   context?: CommerceAccessContext;
   sessionNotice?: string;
 }>) {
+  if (context === "cart" || context === "orders" || context === "pricing") {
+    const guest = GUEST_COPY[context];
+    return (
+      <div className="space-y-component">
+        <DemoBanner />
+        <GuestEmptyState
+          title={guest.title}
+          titleAs={guest.titleAs}
+          description={<p>{guest.description}</p>}
+          returnTo={context}
+          signInLabel={guest.signInLabel}
+        />
+      </div>
+    );
+  }
   const copy = ACCESS_COPY[context];
   return (
     <div className="space-y-component">

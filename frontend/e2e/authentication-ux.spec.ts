@@ -145,6 +145,11 @@ async function installAuthApi(page: Page, onLogin?: () => void) {
   });
 }
 
+// The header also offers guests a "Sign in" link; these tests mean the page's tabs.
+function authenticationOptions(page: Page) {
+  return page.getByRole("navigation", { name: "Authentication options" });
+}
+
 async function completeSignIn(page: Page, email = "fixture@example.invalid") {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Passphrase").fill(passphrase);
@@ -176,7 +181,7 @@ test("authentication modes remain distinct, reversible, and field-accessible", a
 
   await page.getByLabel("Passphrase").fill(passphrase);
   await page.getByRole("checkbox", { name: /account terms version 1/i }).check();
-  await page.getByRole("link", { name: "Sign in" }).press("Enter");
+  await authenticationOptions(page).getByRole("link", { name: "Sign in" }).press("Enter");
   await expect(page).toHaveURL(`${accountPath}?mode=login`);
   await expect(page.getByLabel("Passphrase")).toHaveValue("");
   await expect(page.getByRole("checkbox")).toHaveCount(0);
@@ -229,7 +234,7 @@ test("authentication failures, registration, and duplicate submission recover sa
   await expect(page.getByRole("alert").filter({ hasText: "Email or password could not be accepted." })).toBeVisible();
   await expect(page.getByLabel("Email")).toHaveValue("existing@example.invalid");
 
-  await page.getByRole("link", { name: "Sign in" }).click();
+  await authenticationOptions(page).getByRole("link", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   const beforeSlowRequest = loginRequests;
   await page.getByLabel("Email").fill("slow@example.invalid");
@@ -285,6 +290,7 @@ test("safe return identifiers restore known destinations and reject redirect att
     ["projects", `${basePath}/projects/`],
     ["cart", `${basePath}/cart/`],
     ["orders", `${basePath}/orders/`],
+    ["home", `${basePath}/`],
   ] as const;
 
   for (const [target, expected] of valid) {
@@ -313,7 +319,7 @@ test("safe return identifiers restore known destinations and reject redirect att
   }
 });
 
-test("locked routes stay private, offer guest configuration, and fit required widths", async ({ page }) => {
+test("account-only pages explain what an account adds, without walls or protected requests", async ({ page }) => {
   await blockUnrelatedNetwork(page);
   let protectedRequests = 0;
   await page.route(`${apiOrigin}/**`, async (route) => {
@@ -326,20 +332,28 @@ test("locked routes stay private, offer guest configuration, and fit required wi
     }
   });
 
-  const locked = [
-    ["projects", "Sign in to view private projects", "projects"],
-    ["commerce", "Sign in to create an owned demonstration quote", "pricing"],
-    ["cart", "Sign in to view your demonstration cart", "cart"],
-    ["orders", "Sign in to view demonstration orders", "orders"],
-    ["checkout/return/?order=O", "Sign in to check your demonstration order", "orders"],
+  const main = page.getByRole("main");
+  const header = page.getByRole("navigation", { name: "Primary navigation" });
+  const guestPages = [
+    ["projects", "Your projects will appear here", "Sign in to see your projects", "projects"],
+    ["commerce", "No quotes yet", "Sign in to see your quotes", "pricing"],
+    ["cart", "Your demonstration cart is empty", "Sign in to see your cart", "cart"],
+    ["orders", "No demonstration orders to show", "Sign in to see your orders", "orders"],
   ] as const;
-  for (const [path, heading, returnTo] of locked) {
-    await page.goto(`${basePath}/${path}${path.includes("?") ? "" : "/"}`);
-    await expect(page.getByRole("heading", { name: heading })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", new RegExp(`returnTo=${returnTo}$`));
-    await expect(page.getByRole("link", { name: "Create account" })).toBeVisible();
-    await expect(page.getByRole("link", { name: /guest design|configurator|configuring as a guest|start configuring/i }).first()).toBeVisible();
+  for (const [path, heading, signIn, returnTo] of guestPages) {
+    await page.goto(`${basePath}/${path}/`);
+    await expect(main.getByRole("heading", { name: heading })).toBeVisible();
+    await expect(main.getByRole("link", { name: signIn })).toHaveAttribute("href", `${basePath}/account/?mode=login&returnTo=${returnTo}`);
+    await expect(main.getByRole("link", { name: "Create an account" })).toHaveAttribute("href", `${basePath}/account/?mode=register&returnTo=${returnTo}`);
+    await expect(main.getByRole("link", { name: "Start configuring" }).first()).toBeVisible();
+    await expect(main.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
+    await expect(header.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", `${basePath}/account/?mode=login&returnTo=${returnTo}`);
   }
+
+  // Checkout return is reached only from a signed-in cart, so it keeps its prompt.
+  await page.goto(`${basePath}/checkout/return/?order=O`);
+  await expect(main.getByRole("heading", { name: "Sign in to check your demonstration order" })).toBeVisible();
+  await expect(main.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", /returnTo=orders$/);
   expect(protectedRequests).toBe(0);
 
   await page.goto(`${basePath}/configure/`);
