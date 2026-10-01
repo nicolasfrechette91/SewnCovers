@@ -11,6 +11,8 @@ import {
 } from "react";
 
 import {
+  ACKNOWLEDGEMENT_FAILED_CODE,
+  AccountApiError,
   accountApi,
   AUTH_CHANGED_EVENT,
   type Account,
@@ -119,11 +121,20 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       }
       const response = await accountApi[mode](email, password);
       if (mode === "register") {
-        await assuranceApi.acknowledge(
-          response.token,
-          "terms",
-          "account_terms",
-        );
+        try {
+          await assuranceApi.acknowledge(
+            response.token,
+            "terms",
+            "account_terms",
+          );
+        } catch (caught) {
+          // The account now exists, so say so instead of a bare failure.
+          throw new AccountApiError(
+            "The terms acknowledgement could not be saved.",
+            caught instanceof AccountApiError ? caught.status : 0,
+            ACKNOWLEDGEMENT_FAILED_CODE,
+          );
+        }
       }
       storeSessionToken(response.token);
       setState({ status: "authenticated", account: response.account, token: response.token, expiresAt: response.expiresAt });

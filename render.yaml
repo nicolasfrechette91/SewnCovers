@@ -9,7 +9,7 @@ services:
     buildCommand: python -m pip install .
     startCommand: python -m app.production
     healthCheckPath: /health
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: "off"
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.2

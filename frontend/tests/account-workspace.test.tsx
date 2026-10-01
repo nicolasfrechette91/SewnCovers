@@ -182,7 +182,7 @@ test("keeps secure credential failures at form level without erasing email", asy
     fireEvent.change(screen.getByLabelText("Passphrase"), { target: { value: "correct horse battery staple" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
     await screen.findByRole("alert");
-    assert.ok(screen.getByText("Email or password could not be accepted."));
+    assert.ok(screen.getByText("That email and passphrase don't match an account. Check them and try again."));
     assert.equal((screen.getByLabelText("Email") as HTMLInputElement).value, "person@example.com");
     assert.ok(document.activeElement?.contains(screen.getByRole("alert")));
   } finally {

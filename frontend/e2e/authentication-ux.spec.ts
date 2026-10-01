@@ -212,17 +212,17 @@ test("authentication failures, registration, and duplicate submission recover sa
   await page.goto(accountPath);
 
   await completeSignIn(page, "invalid@example.invalid");
-  const credentialAlert = page.getByRole("alert").filter({ hasText: "Email or password could not be accepted." });
+  const credentialAlert = page.getByRole("alert").filter({ hasText: "That email and passphrase don't match an account. Check them and try again." });
   await expect(credentialAlert).toBeVisible();
   await expect(page.getByLabel("Email")).toHaveValue("invalid@example.invalid");
   await expect(credentialAlert.locator("..")).toBeFocused();
 
   await completeSignIn(page, "unavailable@example.invalid");
-  await expect(page.getByRole("alert").filter({ hasText: "The service could not be reached. Try again." })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "may be waking up or temporarily unavailable" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeEnabled();
 
   await completeSignIn(page, "server@example.invalid");
-  await expect(page.getByRole("alert").filter({ hasText: "An unexpected error occurred." })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Something unexpected went wrong. Try again in a moment." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeEnabled();
 
   await page.getByRole("link", { name: "Create account" }).click();
@@ -231,7 +231,7 @@ test("authentication failures, registration, and duplicate submission recover sa
   await page.getByLabel("Passphrase").fill(passphrase);
   await page.getByRole("checkbox", { name: /account terms version 1/i }).check();
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "Email or password could not be accepted." })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "couldn't create an account with those details" })).toBeVisible();
   await expect(page.getByLabel("Email")).toHaveValue("existing@example.invalid");
 
   await authenticationOptions(page).getByRole("link", { name: "Sign in" }).click();

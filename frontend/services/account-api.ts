@@ -128,6 +128,9 @@ export interface AssetAccess {
   readonly contentType: "image/png";
 }
 
+/** Set when the account exists but the terms acknowledgement was not saved. */
+export const ACKNOWLEDGEMENT_FAILED_CODE = "acknowledgement_failed";
+
 export class AccountApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -356,7 +359,7 @@ async function request<T>(
     try {
       body = text ? JSON.parse(text) : undefined;
     } catch {
-      throw new AccountApiError("The API returned an unreadable response.", response.status);
+      throw new AccountApiError("The API returned an unreadable response.", response.status, "unreadable_response");
     }
     if (response.status === 401 && options.token) clearStoredToken();
     if (!response.ok) {
@@ -378,10 +381,13 @@ async function request<T>(
     return body;
   } catch (error) {
     if (error instanceof AccountApiError) throw error;
+    const timedOut = error instanceof DOMException && error.name === "AbortError";
     throw new AccountApiError(
-      error instanceof DOMException && error.name === "AbortError"
+      timedOut
         ? "The request timed out. Try again."
         : "The service could not be reached. Try again.",
+      0,
+      timedOut ? "timeout" : "network_error",
     );
   } finally {
     globalThis.clearTimeout(timeout);

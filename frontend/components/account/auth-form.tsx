@@ -142,7 +142,9 @@ export function AuthForm({
       form.reset();
       onSuccess();
     } catch (caught) {
-      setError(authErrorMessage(caught));
+      // Only a failure needs the wording, so it loads on demand.
+      const { signInErrorMessage } = await import("@/services/auth-errors");
+      setError(signInErrorMessage(caught, mode));
       requestAnimationFrame(() => errorRef.current?.focus());
     } finally {
       pendingRef.current = false;

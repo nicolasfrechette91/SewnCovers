@@ -564,7 +564,12 @@ compatibility, and starts Uvicorn only after both steps succeed. Render supplies
 GitHub Actions runs frontend lint, type-check, tests, ordinary and Pages builds,
 and export verification plus backend Ruff, tests, and `pip check` on pushes to
 `main` and pull requests targeting `main`. The Pages workflow builds and
-publishes only `frontend/out`. Render auto-deploys after checks pass.
+publishes only `frontend/out`. Render does not deploy on its own
+(`autoDeployTrigger: "off"`): the `Deploy backend to Render` workflow re-runs the
+backend checks on pushes to `main` that touch `backend/**` or `render.yaml`, calls
+the Render deploy hook held in the `RENDER_DEPLOY_HOOK_URL` repository secret,
+and then fails if the live OpenAPI document does not list `/auth/register`.
+It can also be run manually from the Actions tab.
 
 ## Engineering decisions and trade-offs
 

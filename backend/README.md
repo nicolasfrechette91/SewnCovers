@@ -511,7 +511,7 @@ Task 8.3 settings are:
 | Build command | `python -m pip install .` |
 | Start command | `python -m app.production` |
 | Health check path | `/health` |
-| Auto-deploy | After CI checks pass |
+| Auto-deploy | Off; the `Deploy backend to Render` GitHub Actions workflow calls the deploy hook after backend checks pass |
 | Non-secret environment values | `PYTHON_VERSION=3.13.2`, `ENVIRONMENT=production`, `FRONTEND_ORIGIN=https://nicolasfrechette91.github.io` |
 | Protected environment value | Render-owned `DATABASE_URL`; never shown or stored in the repository |
 

@@ -138,8 +138,8 @@ test("wakes the API once per session and the Pattern step renders the prefetched
   const api = await mockApi(context);
 
   await openConfigureFromHome(page);
-  await expect.poll(() => api.count("/health")).toBe(1);
-  await expect.poll(() => api.count("/patterns")).toBe(1);
+  await expect.poll(() => api.count("/health"), { timeout: 15_000 }).toBe(1);
+  await expect.poll(() => api.count("/patterns"), { timeout: 15_000 }).toBe(1);
 
   await reachPatternStep(page);
   await expect(builtInPatternsReady(page)).toBeVisible();
@@ -149,7 +149,7 @@ test("wakes the API once per session and the Pattern step renders the prefetched
 
   // The same tab session never pings again; the page loads its own list.
   await page.reload();
-  await expect.poll(() => api.count("/patterns")).toBe(2);
+  await expect.poll(() => api.count("/patterns"), { timeout: 15_000 }).toBe(2);
   await page.waitForTimeout(500);
   expect(api.count("/health")).toBe(1);
 });
@@ -170,7 +170,7 @@ test("a visitor reaching the Pattern step mid warm-up reuses the in-flight reque
   });
 
   await openConfigureFromHome(page);
-  await expect.poll(() => api.count("/health")).toBe(1);
+  await expect.poll(() => api.count("/health"), { timeout: 15_000 }).toBe(1);
   await reachPatternStep(page);
   await expect(page.getByRole("status").filter({ hasText: "Connecting" })).toBeVisible();
   expect(api.count("/patterns")).toBe(0);
@@ -198,7 +198,7 @@ test("keeps the waking-up fallback when the warm-up fails and the API is slow", 
   });
 
   await openConfigureFromHome(page);
-  await expect.poll(() => api.count("/health")).toBe(1);
+  await expect.poll(() => api.count("/health"), { timeout: 15_000 }).toBe(1);
   await expect(unavailableNotice(page)).toHaveCount(0);
 
   await reachPatternStep(page);

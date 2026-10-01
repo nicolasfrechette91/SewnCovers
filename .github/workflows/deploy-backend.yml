@@ -1,0 +1,115 @@
+name: Deploy backend to Render
+
+# Render's own auto-deploy is off (render.yaml: autoDeployTrigger: off). This
+# workflow is the only thing that deploys the API: it re-runs the backend
+# checks, then calls the Render deploy hook, then confirms the new routes are
+# live so a broken Render deploy shows up red here.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - backend/**
+      - render.yaml
+      - .github/workflows/deploy-backend.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push replaces an older run that is still testing or polling, so
+# overlapping pushes never queue redundant deploys.
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Backend - Ruff and tests before deploy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5
+        with:
+          python-version: 3.13.2
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install pinned backend dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Check Ruff formatting
+        run: python -m ruff format --check .
+
+      - name: Run Ruff lint
+        run: python -m ruff check .
+
+      - name: Run backend tests
+        run: python -m pytest
+
+      - name: Check installed dependency consistency
+        run: python -m pip check
+
+  deploy:
+    name: Trigger Render deploy and confirm it is live
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # Deploys the latest commit of the service's branch. Never echoed.
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      API_URL: https://sewncovers-api.onrender.com
+      REQUIRED_API_PATH: /auth/register
+      CONFIRM_TIMEOUT_SECONDS: "600"
+      CONFIRM_INTERVAL_SECONDS: "15"
+
+    steps:
+      - name: Require the deploy hook secret
+        run: |
+          if [ -z "${RENDER_DEPLOY_HOOK_URL}" ]; then
+            echo "::error title=Missing secret::The RENDER_DEPLOY_HOOK_URL repository secret is not set. Add the Render deploy hook URL under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Trigger the Render deploy hook
+        run: |
+          # --fail turns an HTTP error into a failure without printing the
+          # response body; the URL is read from the environment and never echoed.
+          if ! status="$(curl --fail --silent --show-error --max-time 30 \
+              --request POST --output /dev/null \
+              --write-out '%{http_code}' \
+              "${RENDER_DEPLOY_HOOK_URL}" 2>/dev/null)"; then
+            echo "::error title=Render deploy hook failed::The deploy hook request failed or returned an error status (HTTP ${status:-none}). Check that the secret holds a valid, current hook URL."
+            exit 1
+          fi
+          echo "Render deploy hook accepted the request (HTTP ${status})."
+
+      - name: Wait for the new API routes to go live
+        run: |
+          deadline=$(( $(date +%s) + CONFIRM_TIMEOUT_SECONDS ))
+          attempt=0
+          while [ "$(date +%s)" -lt "${deadline}" ]; do
+            attempt=$(( attempt + 1 ))
+            # Quiet on purpose: a sleeping, restarting, or old instance simply
+            # fails this check and is retried.
+            if curl --fail --silent --max-time 30 "${API_URL}/openapi.json" \
+                | jq --exit-status --arg path "${REQUIRED_API_PATH}" '.paths | has($path)' >/dev/null 2>&1; then
+              echo "${API_URL} now serves ${REQUIRED_API_PATH} (attempt ${attempt})."
+              exit 0
+            fi
+            echo "Attempt ${attempt}: ${REQUIRED_API_PATH} is not live yet; retrying in ${CONFIRM_INTERVAL_SECONDS}s."
+            sleep "${CONFIRM_INTERVAL_SECONDS}"
+          done
+          echo "::error title=Render deploy not live::${API_URL}/openapi.json still does not list ${REQUIRED_API_PATH} after ${CONFIRM_TIMEOUT_SECONDS} seconds. The deploy hook was accepted, so open the sewncovers-api service in Render and read the latest deploy's logs (a failed migration or startup check keeps the previous version serving)."
+          exit 1
