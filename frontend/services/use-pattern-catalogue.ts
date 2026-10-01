@@ -8,6 +8,7 @@ import {
 } from "@/services/pattern-catalogue";
 
 import { apiClient } from "./api-client";
+import { awaitWarmPatterns, noteApiRequest } from "./api-warmup";
 import type { PatternFilters } from "../data/patterns";
 
 export interface PatternCatalogueRuntime {
@@ -18,12 +19,13 @@ export interface PatternCatalogueRuntime {
 
 export function usePatternCatalogue(): PatternCatalogueRuntime {
   const [controller] = useState(
-    () => new PatternCatalogueController(apiClient),
+    () => new PatternCatalogueController(apiClient, awaitWarmPatterns),
   );
   const [state, setState] = useState(controller.getSnapshot);
 
   useEffect(() => {
     const unsubscribe = controller.subscribe(setState);
+    noteApiRequest();
     void controller.loadInitial();
 
     return () => {

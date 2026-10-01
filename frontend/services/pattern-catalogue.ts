@@ -9,6 +9,7 @@ import {
 import type {
   ApiRequestStatus,
   PatternQuery,
+  PatternResponse,
   SewnCoversApiClient,
 } from "./api-client";
 
@@ -30,6 +31,15 @@ export interface PatternCatalogueState {
 type PatternCatalogueListener = (
   state: PatternCatalogueState,
 ) => void;
+
+/**
+ * Joins a request that already started before this controller existed (the
+ * API warm-up). Returns nothing when there is none to reuse; the promise
+ * resolves nothing when that request failed, so the controller falls back.
+ */
+export type WarmPatternSource = (
+  onStatus: (status: ApiRequestStatus) => void,
+) => Promise<readonly PatternResponse[] | undefined> | undefined;
 
 export const initialPatternFilters: PatternFilters = Object.freeze({
   categoryId: ALL_PATTERN_CATEGORIES,
@@ -88,11 +98,13 @@ function stateFromStatus(
 export class PatternCatalogueController {
   readonly #client: SewnCoversApiClient;
   readonly #listeners = new Set<PatternCatalogueListener>();
+  readonly #warmSource: WarmPatternSource | undefined;
   #requestVersion = 0;
   #state: PatternCatalogueState = initialState;
 
-  constructor(client: SewnCoversApiClient) {
+  constructor(client: SewnCoversApiClient, warmSource?: WarmPatternSource) {
     this.#client = client;
+    this.#warmSource = warmSource;
   }
 
   getSnapshot = (): PatternCatalogueState => this.#state;
@@ -109,7 +121,7 @@ export class PatternCatalogueController {
   }
 
   loadInitial(): Promise<void> {
-    return this.#load(initialPatternFilters);
+    return this.#load(initialPatternFilters, this.#warmSource);
   }
 
   retry(): Promise<void> {
@@ -145,7 +157,10 @@ export class PatternCatalogueController {
     this.#listeners.forEach((listener) => listener(this.#state));
   }
 
-  async #load(filters: PatternFilters): Promise<void> {
+  async #load(
+    filters: PatternFilters,
+    warmSource?: WarmPatternSource,
+  ): Promise<void> {
     const requestVersion = this.#requestVersion + 1;
     this.#requestVersion = requestVersion;
     const completeCatalogue =
@@ -162,18 +177,25 @@ export class PatternCatalogueController {
     });
 
     try {
-      const response = await this.#client.listPatterns(
-        buildPatternQuery(filters),
-        {
-          onStatus: (status) => {
-            if (requestVersion !== this.#requestVersion) {
-              return;
-            }
+      const onStatus = (status: ApiRequestStatus) => {
+        if (requestVersion !== this.#requestVersion) {
+          return;
+        }
 
-            this.#publish(stateFromStatus(this.#state, status));
-          },
-        },
-      );
+        this.#publish(stateFromStatus(this.#state, status));
+      };
+      const warming = warmSource?.(onStatus);
+      const warmed = warming ? await warming : undefined;
+
+      if (requestVersion !== this.#requestVersion) {
+        return;
+      }
+
+      const response =
+        warmed ??
+        (await this.#client.listPatterns(buildPatternQuery(filters), {
+          onStatus,
+        }));
 
       if (requestVersion !== this.#requestVersion) {
         return;

@@ -324,7 +324,7 @@ test("account-only pages explain what an account adds, without walls or protecte
   let protectedRequests = 0;
   await page.route(`${apiOrigin}/**`, async (route) => {
     const path = new URL(route.request().url()).pathname;
-    if (path !== "/patterns") protectedRequests += 1;
+    if (path !== "/patterns" && path !== "/health") protectedRequests += 1;
     if (route.request().method() === "OPTIONS") {
       await route.fulfill({ headers: corsHeaders, status: 204 });
     } else {

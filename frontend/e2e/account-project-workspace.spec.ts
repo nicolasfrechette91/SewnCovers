@@ -106,7 +106,7 @@ test("account workspace preserves immutable history and revocable sharing", asyn
   await page.locator("#register-password").press("Enter");
   await expect(page.getByRole("heading", { name: "person@example.com" })).toBeVisible();
   expect(await page.evaluate(() => localStorage.length)).toBe(0);
-  expect(await page.evaluate(() => sessionStorage.length)).toBe(1);
+  expect(await page.evaluate(() => Object.keys(sessionStorage).filter((key) => key !== "sewncovers:api-warmup").length)).toBe(1);
 
   await page.getByRole("link", { name: "Open My projects" }).press("Enter");
   await expect(page.getByRole("heading", { name: "Patio bench" })).toBeVisible();
@@ -179,7 +179,7 @@ test("an authenticated 401 clears the tab session and returns to sign in", async
   await page.goto(accountPath);
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   await expect(page.getByText(/previous sign-in expired or is no longer valid/)).toBeVisible();
-  expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
+  expect(await page.evaluate(() => Object.keys(sessionStorage).filter((key) => key !== "sewncovers:api-warmup").length)).toBe(0);
   await page.goto(configurePath);
   await expect(page.getByRole("heading", { name: "Build your custom cover design." })).toBeVisible();
 });

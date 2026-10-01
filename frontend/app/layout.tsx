@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 
+import { ApiWarmup } from "@/components/layout/api-warmup";
 import {
   AuthReturnFocus,
   RouteAwareSiteFooter,
@@ -142,6 +143,7 @@ export default function RootLayout({
             ]}
           />
           <AuthReturnFocus />
+          <ApiWarmup />
         </AuthProvider>
       </body>
     </html>

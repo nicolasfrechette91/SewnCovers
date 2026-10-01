@@ -363,3 +363,79 @@ test("rejects semantically malformed responses and missing visual mappings", asy
   );
 
 });
+
+test("reuses the warm-up result without a second request", async () => {
+  const { PatternCatalogueController } = await loadCatalogueModule();
+  const { client, requests } = createMockClient(async () => {
+    throw new Error("must not request");
+  });
+  const controller = new PatternCatalogueController(client, () =>
+    Promise.resolve(completeCatalogue()),
+  );
+
+  await controller.loadInitial();
+
+  assert.deepEqual(requests, []);
+  assert.equal(controller.getSnapshot().phase, "ready");
+  assert.equal(controller.getSnapshot().allPatterns.length, 15);
+});
+
+test("shows the waking-up message while joining a slow warm-up, then renders", async () => {
+  const { PatternCatalogueController } = await loadCatalogueModule();
+  const pending = deferred();
+  const { client, requests } = createMockClient(async () => []);
+  const controller = new PatternCatalogueController(client, (onStatus) => {
+    onStatus({
+      message: "The SewnCovers API may be waking up. Retrying (1 of 2)…",
+      retry: 1,
+      retryLimit: 2,
+      state: "retrying",
+    });
+    return pending.promise;
+  });
+
+  const loading = controller.loadInitial();
+  assert.equal(controller.getSnapshot().phase, "loading");
+  assert.match(controller.getSnapshot().message, /may be waking up/i);
+
+  pending.resolve(completeCatalogue());
+  await loading;
+  assert.equal(controller.getSnapshot().phase, "ready");
+  assert.deepEqual(requests, []);
+});
+
+test("falls back to its own request when the warm-up has nothing to offer", async () => {
+  const { PatternCatalogueController } = await loadCatalogueModule();
+  const { client, requests } = createMockClient(async () =>
+    completeCatalogue(),
+  );
+  const failedWarmup = new PatternCatalogueController(client, () =>
+    Promise.resolve(undefined),
+  );
+  await failedWarmup.loadInitial();
+  assert.equal(requests.length, 1);
+  assert.equal(failedWarmup.getSnapshot().phase, "ready");
+
+  const noWarmup = new PatternCatalogueController(client, () => undefined);
+  await noWarmup.loadInitial();
+  assert.equal(requests.length, 2);
+  assert.equal(noWarmup.getSnapshot().phase, "ready");
+});
+
+test("retry after an error always requests again instead of reusing the warm-up", async () => {
+  const { PatternCatalogueController } = await loadCatalogueModule();
+  const { client, requests } = createMockClient(async () =>
+    completeCatalogue(),
+  );
+  let warmCalls = 0;
+  const controller = new PatternCatalogueController(client, () => {
+    warmCalls += 1;
+    return Promise.resolve(undefined);
+  });
+
+  await controller.loadInitial();
+  await controller.retry();
+
+  assert.equal(warmCalls, 1);
+  assert.equal(requests.length, 2);
+});
