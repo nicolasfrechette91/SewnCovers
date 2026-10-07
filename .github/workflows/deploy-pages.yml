@@ -1,77 +1,40 @@
 name: Deploy frontend to GitHub Pages
 
+# Runs the frontend half of CI (ci.yml), deploys the GitHub Pages export that
+# CI built and verified, then checks that the live pages answer. A push that
+# touches only the backend or the docs does not redeploy the site.
+
 on:
   push:
     branches:
       - main
+    paths:
+      - frontend/**
+      - .github/workflows/ci.yml
+      - .github/workflows/deploy-pages.yml
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# Never cancel a Pages deploy halfway; a newer push waits its turn.
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build GitHub Pages artifact
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
-      pages: write
-    defaults:
-      run:
-        working-directory: frontend
-    env:
-      NEXT_PUBLIC_API_URL: https://sewncovers-api.onrender.com
-      SEWNCOVERS_GITHUB_PAGES: "true"
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          persist-credentials: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 24.15.0
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-
-      - name: Install locked frontend dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Run strict type-check
-        run: npm run typecheck
-
-      - name: Run frontend tests
-        run: npm test
-
-      - name: Build production static export
-        run: npm run build
-        env:
-          NEXT_FONT_GOOGLE_MOCKED_RESPONSES: ${{ github.workspace }}/frontend/e2e/font-responses.cjs
-
-      - name: Verify routes and repository-prefixed assets
-        run: npm run verify:export
-
-      - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: frontend/out
+    with:
+      scope: frontend
+      upload-pages-artifact: true
 
   deploy:
     name: Deploy GitHub Pages artifact
-    needs: build
+    needs: ci
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -85,3 +48,42 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+
+  smoke:
+    name: Smoke-check the live site
+    needs: deploy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    env:
+      SITE_URL: https://nicolasfrechette91.github.io/SewnCovers
+
+    steps:
+      - name: Fetch the home page and the configurator
+        run: |
+          # Each page must answer 200 with its own canonical URL (the right
+          # route) and base-path-prefixed scripts (the Pages build). The query
+          # string bypasses any cached copy of the previous deploy.
+          check_page() {
+            local path="$1"
+            local url="${SITE_URL}/${path}"
+            local body="${RUNNER_TEMP}/page.html"
+            local status="none"
+            for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              status="$(curl --silent --location --max-time 20 --output "${body}" \
+                --write-out '%{http_code}' "${url}?deploy=${GITHUB_SHA}" || true)"
+              if [ "${status}" = "200" ] \
+                  && grep -qF "rel=\"canonical\" href=\"${url}\"" "${body}" \
+                  && grep -qF '/SewnCovers/_next/static/' "${body}"; then
+                echo "${url} answers 200 with its canonical URL and Pages assets (attempt ${attempt})."
+                return 0
+              fi
+              echo "Attempt ${attempt}: ${url} answered HTTP ${status} without the expected markers; retrying in 10s."
+              sleep 10
+            done
+            echo "::error title=Pages smoke check failed::${url} did not answer 200 with its canonical link and /SewnCovers/_next/static/ assets within two minutes (last HTTP ${status}). The deploy step succeeded, so check the Pages settings and the uploaded artifact."
+            return 1
+          }
+
+          check_page ""
+          check_page "configure/"

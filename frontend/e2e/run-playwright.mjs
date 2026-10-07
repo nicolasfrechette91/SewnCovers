@@ -16,10 +16,6 @@ const playwrightCli = path.join(
   frontendDirectory,
   "node_modules/@playwright/test/cli.js",
 );
-const fontResponses = path.join(
-  frontendDirectory,
-  "e2e/font-responses.cjs",
-);
 
 function run(args, env) {
   return new Promise((resolve, reject) => {
@@ -43,7 +39,6 @@ function run(args, env) {
 
 const buildExitCode = await run([nextCli, "build"], {
   ...process.env,
-  NEXT_FONT_GOOGLE_MOCKED_RESPONSES: fontResponses,
   NEXT_PUBLIC_API_URL: "http://api.sewncovers.test",
   SEWNCOVERS_E2E: "true",
 });

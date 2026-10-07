@@ -97,7 +97,7 @@ Neon hosts one project in AWS US East 2 (Ohio), next to the Render region, with 
 Use Neon's **Connect** dialog to pick the branch, database and role, choose a **direct** connection (Alembic needs session-compatible connections) and confirm the URL has `sslmode=require` and `channel_binding=require`. Never paste either URL into chat, documentation, the frontend, a test snapshot or a tracked file. You can verify a configured development database without printing its URL:
 
 ```powershell
-python -c "from fastapi.testclient import TestClient; from app.main import app; r = TestClient(app).get('/health'); assert r.status_code == 200 and r.json() == {'process': 'healthy', 'database': 'healthy'}; print('health: ok')"
+python -c "from fastapi.testclient import TestClient; from app.main import app; r = TestClient(app).get('/health'); assert r.status_code == 200 and r.json() == {'process': 'healthy', 'database': 'healthy', 'commit': None}; print('health: ok')"
 ```
 
 Neon's free-plan allowances (compute hours, storage, transfer, history window) change over time. Check the current numbers in the [Neon plans documentation](https://neon.com/docs/introduction/plans) and the project's usage panel rather than relying on a copy here. The practical consequences for this project are: keep binary assets out of Postgres, avoid redundant indexes, avoid polling, and expect the first query after idle to be slower because compute scales to zero.

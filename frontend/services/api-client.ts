@@ -80,6 +80,8 @@ export interface ApiErrorResponse {
 export interface HealthResponse {
   readonly process: "healthy";
   readonly database: "healthy" | "unavailable" | "unconfigured";
+  /** Deployed commit SHA; absent from APIs older than the field, null locally. */
+  readonly commit?: string | null;
 }
 
 export interface PatternResponse {
@@ -231,9 +233,22 @@ function hasAtMostDecimalPlaces(value: number, places: number): boolean {
 }
 
 function parseHealthResponse(value: unknown): HealthResponse | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  // `commit` is optional so this build accepts the API from before and after
+  // that field shipped: the frontend and the API deploy independently.
+  const hasCommit = Object.hasOwn(value, "commit");
+
   if (
-    !isRecord(value) ||
-    !hasExactKeys(value, ["process", "database"]) ||
+    !hasExactKeys(
+      value,
+      hasCommit ? ["process", "database", "commit"] : ["process", "database"],
+    ) ||
+    (hasCommit &&
+      value.commit !== null &&
+      !(typeof value.commit === "string" && /^[0-9a-f]{40}$/.test(value.commit))) ||
     value.process !== "healthy" ||
     !["healthy", "unavailable", "unconfigured"].includes(
       String(value.database),

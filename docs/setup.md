@@ -7,7 +7,7 @@ How to run the frontend and the API on your own machine. You do not need a Neon 
 | Tool | Version | Notes |
 | --- | --- | --- |
 | Git | any recent | |
-| Node.js and npm | Node 20.9.0 or newer (CI and deployment use 24.15.0) | Install with `npm ci` so the committed `package-lock.json` is honoured. |
+| Node.js and npm | Node 24: 24.15.0 or a later 24.x, as `engines` in `frontend/package.json` says (CI and deployment use 24.15.0) | Install with `npm ci` so the committed `package-lock.json` is honoured. |
 | Python | 3.13 (`>=3.13,<3.14`; CI and Render use 3.13.2) | With `venv` and `pip`. |
 
 Commands below are for Windows PowerShell; the macOS and Linux equivalents are shown where they differ.
@@ -52,7 +52,7 @@ python -m alembic upgrade head
 python -m uvicorn app.main:app --reload
 ```
 
-Check it at <http://127.0.0.1:8000/health>, which should return `{"process":"healthy","database":"healthy"}`, and <http://127.0.0.1:8000/docs> for the interactive API documentation. `GET /patterns` returns the 15 seeded patterns. Stop either server with `Ctrl+C`.
+Check it at <http://127.0.0.1:8000/health>, which should return `{"process":"healthy","database":"healthy","commit":null}` (`commit` is only set on Render), and <http://127.0.0.1:8000/docs> for the interactive API documentation. `GET /patterns` returns the 15 seeded patterns. Stop either server with `Ctrl+C`.
 
 The root endpoint (`/`) works without any database. Every other route needs `DATABASE_URL` and a migrated schema.
 

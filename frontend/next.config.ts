@@ -14,6 +14,9 @@ createBuildEnvironment(
 
 const nextConfig: NextConfig = {
   output: "export",
+  // `npm run verify:performance` reads these maps to tell app code from the
+  // framework. The deployed GitHub Pages build ships without them.
+  productionBrowserSourceMaps: !isGitHubPagesBuild,
   basePath,
   trailingSlash: true,
   images: {

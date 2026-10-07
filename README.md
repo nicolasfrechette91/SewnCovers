@@ -2,9 +2,9 @@
 
 Measure the cushion you already own, pick a fabric, and get a previewed, shareable specification for a replacement cover. A full-stack portfolio project: Next.js on GitHub Pages, FastAPI on Render, PostgreSQL on Neon.
 
-[![CI](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/ci.yml/badge.svg)](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/ci.yml)
-[![Deploy frontend](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-pages.yml)
-[![Deploy backend](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-backend.yml/badge.svg)](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-backend.yml)
+[![Frontend CI and deploy](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-pages.yml)
+[![Backend CI and deploy](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-backend.yml/badge.svg)](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-backend.yml)
+[![Keep the API warm](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/keep-warm.yml/badge.svg)](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/keep-warm.yml)
 
 ![The configurator's Preview stage: a rectangular cushion covered in the green Fern trail pattern on a cutting mat, beside the pattern-size slider and the design details.](docs/images/preview-step.jpg)
 
@@ -12,7 +12,7 @@ Measure the cushion you already own, pick a fabric, and get a previewed, shareab
 - **Demo share link:** [a saved box cushion in Terrace wave](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg), restored exactly from the API
 - **API docs:** [Swagger UI](https://sewncovers-api.onrender.com/docs) · [OpenAPI JSON](https://sewncovers-api.onrender.com/openapi.json) · [health](https://sewncovers-api.onrender.com/health)
 
-The API runs on a free Render instance, so the first request after a quiet period can take up to a minute. The site shows a waking notice and retries reads for you.
+The API runs on a free Render instance. A scheduled ping keeps it awake from 07:00 to 23:00 Toronto time; outside those hours the first request can take up to a minute, and the site shows a waking notice and retries reads for you.
 
 | Home | Shape stage |
 | --- | --- |
@@ -27,7 +27,7 @@ The API runs on a free Render instance, so the first request after a quiet perio
 - **A production start that refuses a wrong schema.** The API migrates, verifies the exact schema, constraints and seed, and only then serves ([ADR 0003](docs/adr/0003-migration-gated-production-start.md)).
 - **Guest-first accounts.** The whole design flow works without signing up; sign-in is inline and never costs the design. Argon2id passwords, hashed and revocable bearer sessions, object-level authorization ([ADR 0004](docs/adr/0004-guest-first-opaque-sessions.md)).
 - **A documented, enforced design system.** Tokens, checked contrast ratios, reduced-motion and forced-colours support, guarded by a test ([design](docs/design.md)).
-- **Offline-by-construction tests.** 186 frontend unit tests, 56 Playwright journeys against a mocked API, and 281 backend tests on migrated SQLite databases ([testing](docs/testing.md)).
+- **Offline-by-construction tests.** 187 frontend unit tests, 60 Playwright journeys against a mocked API, and 290 backend tests on migrated SQLite databases, all run by CI before either side deploys ([testing](docs/testing.md)).
 
 The reasoning behind the project is in the [case study](docs/case-study.md).
 
@@ -55,7 +55,7 @@ GitHub Actions builds the static site and publishes it to Pages under the `/Sewn
 
 ## Run it locally
 
-You need Node.js 20.9+ and Python 3.13. No Neon account is required: the API runs on a local SQLite file.
+You need Node.js 24 (24.15.0 or a later 24.x) and Python 3.13. No Neon account is required: the API runs on a local SQLite file.
 
 ```powershell
 # Frontend, http://localhost:3000
@@ -92,7 +92,7 @@ macOS and Linux commands, PostgreSQL, and how to switch on commerce and custom u
 - **Custom uploads and commerce are switched off in production.** Both are implemented and tested, but the live API answers `503` for them. Uploads need object storage and an image-moderation provider, commerce needs a payment provider, tax and legal review, and none of that is worth operating for a portfolio. Both run locally ([setup](docs/setup.md#3-turn-on-commerce-and-custom-uploads-locally)). Commerce is a fictional CAD sandbox that never contacts a provider.
 - **It is a prototype.** It cannot charge money, ship anything or produce a finished cover, and says so where it matters.
 - **Authentication is portfolio-grade.** No email verification or password recovery, a per-process login throttle, and the session token lives in `sessionStorage`. See [SECURITY.md](SECURITY.md).
-- **The browser test suite runs locally, not in CI**, and the free tiers mean cold starts.
+- **Free tiers mean cold starts.** The keep-warm ping covers waking hours only, and GitHub can delay or pause scheduled runs ([deployment](docs/deployment.md#free-tier-behaviour)).
 
 ## Repository map
 
@@ -101,7 +101,7 @@ macOS and Linux commands, PostgreSQL, and how to switch on commerce and custom u
 | `frontend/` | Next.js app: routes, configurator, design system, API clients, tests ([readme](frontend/README.md)) |
 | `backend/` | FastAPI service, Alembic migrations, pytest suite ([readme](backend/README.md)) |
 | `docs/` | Guides, ADRs, design system, case study and screenshots |
-| `.github/workflows/` | CI, GitHub Pages deploy, Render deploy |
+| `.github/` | One reusable CI workflow, the Pages and Render deploys that call it, the keep-warm ping, Dependabot |
 | `render.yaml` | Render service definition (no secrets) |
 | `AGENTS.md`, `SECURITY.md` | Contributor and agent notes; vulnerability reporting |
 

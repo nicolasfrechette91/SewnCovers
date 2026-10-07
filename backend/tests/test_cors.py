@@ -329,5 +329,9 @@ def test_non_browser_health_request_remains_available_without_cors_headers(
     response = local_client.get("/health")
 
     assert response.status_code == 503
-    assert response.json() == {"process": "healthy", "database": "unconfigured"}
+    assert response.json() == {
+        "process": "healthy",
+        "database": "unconfigured",
+        "commit": None,
+    }
     assert cors_headers(response.headers) == {}

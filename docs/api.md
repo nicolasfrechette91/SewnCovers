@@ -19,7 +19,7 @@ The API has 66 paths (OpenAPI version 0.4.0). Groups, access rules and availabil
 
 | Group | Paths | Access | Availability |
 | --- | --- | --- | --- |
-| Service | `GET /`, `GET /health` | Public | Always. `/` needs no database. |
+| Service | `GET /`, `GET /health`, `HEAD /health` | Public | Always. `/` needs no database. |
 | Patterns | `GET /patterns` | Public | Always |
 | Designs | `POST /designs`, `GET /designs/{public_id}` | Public, no account | Always |
 | Accounts | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `POST /auth/logout-all`, `GET /account`, `GET /account/sessions`, `DELETE /account/sessions/{session_id}`, `GET /account/export`, `POST /account/delete` | Register and login are public; the rest need a bearer token | Always |
@@ -134,11 +134,15 @@ Responses never copy submitted values, exception text, SQL, constraint names, in
 
 | Status | Body | Meaning |
 | --- | --- | --- |
-| `200` | `{"process":"healthy","database":"healthy"}` | The process answered and the query succeeded. |
-| `503` | `{"process":"healthy","database":"unconfigured"}` | `DATABASE_URL` is missing or invalid. |
-| `503` | `{"process":"healthy","database":"unavailable"}` | The session, connection or query failed. |
+| `200` | `{"process":"healthy","database":"healthy","commit":"3bed4fc…"}` | The process answered and the query succeeded. |
+| `503` | `{"process":"healthy","database":"unconfigured","commit":"3bed4fc…"}` | `DATABASE_URL` is missing or invalid. |
+| `503` | `{"process":"healthy","database":"unavailable","commit":"3bed4fc…"}` | The session, connection or query failed. |
 
-Render probes this path; a `200` requires both fields to be healthy.
+`commit` is the full 40-character SHA of the deployed commit, taken from the `RENDER_GIT_COMMIT` variable that Render sets for each deploy, and `null` anywhere that does not set it (local runs, tests). A value that is not a full SHA is reported as `null`, and an upper-case one is lower-cased. It is present on every status, so a deploy can be confirmed even while the database is down; the [backend deploy workflow](deployment.md#deploying-a-backend-change) polls for it. The repository is public, so the SHA reveals nothing new.
+
+`HEAD /health` runs the same checks and returns the same status code and headers with no body, for uptime monitors.
+
+Render probes this path; a `200` requires both health fields to be healthy.
 
 ## Readiness and trust
 

@@ -10,6 +10,8 @@ import {
 // waking up.
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
+const probePath = "/__test-probe";
+const warmupSessionKey = "sewncovers:api-warmup";
 const basePath =
   process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
 
@@ -78,6 +80,11 @@ async function mockApi(
       return;
     }
 
+    if (path === probePath) {
+      await fulfillJson(route, {});
+      return;
+    }
+
     requests.push(path);
 
     if (path === "/health") {
@@ -126,6 +133,28 @@ async function reachPatternStep(page: Page) {
   ).toBeVisible();
 }
 
+// The warm-up is scheduled by an effect after hydration and decides in the
+// next idle period whether to ping. Rather than sleeping, wait for hydration,
+// then for an idle callback registered after the warm-up's own, then send a
+// probe through the mocked API: anything the warm-up sent reached the mock
+// before the probe's response comes back.
+async function settleWarmup(page: Page) {
+  await page.waitForFunction(() =>
+    Object.keys(document.body).some((key) => key.startsWith("__reactFiber$")),
+  );
+  await page.evaluate(
+    async ({ origin, path }) => {
+      for (let period = 0; period < 2; period += 1) {
+        await new Promise<void>((resolve) =>
+          window.requestIdleCallback(() => resolve(), { timeout: 3_000 }),
+        );
+      }
+      await fetch(`${origin}${path}`);
+    },
+    { origin: apiOrigin, path: probePath },
+  );
+}
+
 const builtInPatternsReady = (page: Page) =>
   page.getByText("Showing 6 of 15 patterns.").first();
 const unavailableNotice = (page: Page) =>
@@ -150,7 +179,7 @@ test("wakes the API once per session and the Pattern step renders the prefetched
   // The same tab session never pings again; the page loads its own list.
   await page.reload();
   await expect.poll(() => api.count("/patterns"), { timeout: 15_000 }).toBe(2);
-  await page.waitForTimeout(500);
+  await settleWarmup(page);
   expect(api.count("/health")).toBe(1);
 });
 
@@ -185,6 +214,11 @@ test("keeps the waking-up fallback when the warm-up fails and the API is slow", 
   context,
   page,
 }) => {
+  // The retry stays in flight until the test has seen the waking-up notice.
+  let releaseRetry!: () => void;
+  const retryGate = new Promise<void>((resolve) => {
+    releaseRetry = resolve;
+  });
   const api = await mockApi(context, {
     health: (route) => fulfillJson(route, { errors: [] }, 404),
     patterns: async (route, call) => {
@@ -192,7 +226,7 @@ test("keeps the waking-up fallback when the warm-up fails and the API is slow", 
         await fulfillJson(route, { errors: [] }, 503);
         return;
       }
-      await new Promise((resolve) => setTimeout(resolve, 6_000));
+      await retryGate;
       await fulfillJson(route, patterns);
     },
   });
@@ -205,6 +239,9 @@ test("keeps the waking-up fallback when the warm-up fails and the API is slow", 
   await expect(
     page.getByText("The SewnCovers API may be waking up. Retrying (1 of 2)…"),
   ).toBeVisible();
+  await expect(builtInPatternsReady(page)).toHaveCount(0);
+
+  releaseRetry();
   await expect(builtInPatternsReady(page)).toBeVisible({ timeout: 15_000 });
 });
 
@@ -221,6 +258,10 @@ test("skips the warm-up entirely when the browser asks to save data", async ({
   const api = await mockApi(context);
 
   await page.goto(`${basePath}/`);
-  await page.waitForTimeout(4_500);
+  await settleWarmup(page);
+  // The warm-up writes this flag before it sends anything.
+  expect(
+    await page.evaluate((key) => sessionStorage.getItem(key), warmupSessionKey),
+  ).toBeNull();
   expect(api.requests).toEqual([]);
 });

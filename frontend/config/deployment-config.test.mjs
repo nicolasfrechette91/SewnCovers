@@ -8,27 +8,37 @@ const productionApiUrl = "https://sewncovers-api.onrender.com";
 const productionFrontendOrigin = "https://nicolasfrechette91.github.io";
 const repositoryRoot = new URL("../../", import.meta.url);
 
-const [pagesWorkflow, ciWorkflow, renderBlueprint, rootReadme] = await Promise.all([
+const [
+  pagesWorkflow,
+  ciWorkflow,
+  backendWorkflow,
+  keepWarmWorkflow,
+  renderBlueprint,
+  rootReadme,
+] = await Promise.all([
   readFile(new URL(".github/workflows/deploy-pages.yml", repositoryRoot), "utf8"),
   readFile(new URL(".github/workflows/ci.yml", repositoryRoot), "utf8"),
+  readFile(new URL(".github/workflows/deploy-backend.yml", repositoryRoot), "utf8"),
+  readFile(new URL(".github/workflows/keep-warm.yml", repositoryRoot), "utf8"),
   readFile(new URL("render.yaml", repositoryRoot), "utf8"),
   readFile(new URL("README.md", repositoryRoot), "utf8"),
 ]);
 
-test("Pages and CI production builds declare the exact public Render API URL", () => {
-  assert.match(
-    pagesWorkflow,
-    new RegExp(`NEXT_PUBLIC_API_URL: ${productionApiUrl}`),
+test("the CI Pages build declares the exact public Render API URL and the deploy reuses it", () => {
+  const apiUrls = [...ciWorkflow.matchAll(/NEXT_PUBLIC_API_URL: (\S+)/g)].map(
+    (match) => match[1],
   );
-  assert.match(
-    ciWorkflow,
-    new RegExp(`NEXT_PUBLIC_API_URL: ${productionApiUrl}`),
-  );
+  assert.ok(apiUrls.length > 0, "ci.yml should build the GitHub Pages export.");
+  assert.deepEqual([...new Set(apiUrls)], [productionApiUrl]);
+  assert.doesNotMatch(ciWorkflow, /SEWNCOVERS_E2E/);
+
+  // The deploy builds nothing itself: it ships the export CI verified.
+  assert.match(pagesWorkflow, /uses: \.\/\.github\/workflows\/ci\.yml/);
+  assert.match(pagesWorkflow, /upload-pages-artifact: true/);
   assert.doesNotMatch(
     pagesWorkflow,
-    /localhost|api\.sewncovers\.test|SEWNCOVERS_E2E|secrets\.|DATABASE_URL|FRONTEND_ORIGIN/,
+    /npm |NEXT_PUBLIC_API_URL|localhost|api\.sewncovers\.test|SEWNCOVERS_E2E|secrets\.|DATABASE_URL|FRONTEND_ORIGIN/,
   );
-  assert.doesNotMatch(ciWorkflow, /SEWNCOVERS_E2E/);
 });
 
 test("Render production declares only the exact path-free Pages browser origin", () => {
@@ -44,7 +54,7 @@ test("Render production declares only the exact path-free Pages browser origin",
 });
 
 test("public deployment configuration remains secret-free", () => {
-  for (const source of [pagesWorkflow, ciWorkflow]) {
+  for (const source of [pagesWorkflow, ciWorkflow, backendWorkflow, keepWarmWorkflow]) {
     assert.doesNotMatch(
       source,
       /postgres(?:ql)?(:|%3A)|private[-_](?:key|token)|password\s*[:=]/i,

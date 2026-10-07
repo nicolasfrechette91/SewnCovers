@@ -1,9 +1,11 @@
 name: Deploy backend to Render
 
 # Render's own auto-deploy is off (render.yaml: autoDeployTrigger: off). This
-# workflow is the only thing that deploys the API: it re-runs the backend
-# checks, then calls the Render deploy hook, then confirms the new routes are
-# live so a broken Render deploy shows up red here.
+# workflow is the only thing that deploys the API: it runs the backend half of
+# CI (ci.yml), asks Render to deploy exactly this commit, waits until /health
+# reports that commit, then smoke-checks the live API. An old instance keeps
+# serving until the new one passes Render's health check, so waiting for the
+# commit, not for a route, is what proves the new code is live.
 
 on:
   push:
@@ -12,6 +14,7 @@ on:
     paths:
       - backend/**
       - render.yaml
+      - .github/workflows/ci.yml
       - .github/workflows/deploy-backend.yml
   workflow_dispatch:
 
@@ -25,52 +28,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Backend - Ruff and tests before deploy
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: backend
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5
-        with:
-          python-version: 3.13.2
-          cache: pip
-          cache-dependency-path: backend/pyproject.toml
-
-      - name: Install pinned backend dependencies
-        run: python -m pip install -e ".[dev]"
-
-      - name: Check Ruff formatting
-        run: python -m ruff format --check .
-
-      - name: Run Ruff lint
-        run: python -m ruff check .
-
-      - name: Run backend tests
-        run: python -m pytest
-
-      - name: Check installed dependency consistency
-        run: python -m pip check
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+    with:
+      scope: backend
 
   deploy:
-    name: Trigger Render deploy and confirm it is live
-    needs: test
+    name: Deploy this commit to Render and confirm it is live
+    needs: ci
+    # The Render service tracks main; never deploy another branch's commit.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      # Deploys the latest commit of the service's branch. Never echoed.
+      # Never echoed. The ref parameter pins the deploy to this commit.
       RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
       API_URL: https://sewncovers-api.onrender.com
-      REQUIRED_API_PATH: /auth/register
       CONFIRM_TIMEOUT_SECONDS: "600"
       CONFIRM_INTERVAL_SECONDS: "15"
 
@@ -82,34 +58,56 @@ jobs:
             exit 1
           fi
 
-      - name: Trigger the Render deploy hook
+      - name: Ask Render to deploy this commit
         run: |
+          case "${RENDER_DEPLOY_HOOK_URL}" in
+            *\?*) separator="&" ;;
+            *) separator="?" ;;
+          esac
           # --fail turns an HTTP error into a failure without printing the
           # response body; the URL is read from the environment and never echoed.
-          if ! status="$(curl --fail --silent --show-error --max-time 30 \
+          if ! status="$(curl --fail --silent --max-time 30 \
               --request POST --output /dev/null \
               --write-out '%{http_code}' \
-              "${RENDER_DEPLOY_HOOK_URL}" 2>/dev/null)"; then
-            echo "::error title=Render deploy hook failed::The deploy hook request failed or returned an error status (HTTP ${status:-none}). Check that the secret holds a valid, current hook URL."
+              "${RENDER_DEPLOY_HOOK_URL}${separator}ref=${GITHUB_SHA}" 2>/dev/null)"; then
+            echo "::error title=Render deploy hook failed::The deploy hook request failed or returned an error status (HTTP ${status:-none}). HTTP 404 means Render does not recognise commit ${GITHUB_SHA} or the hook URL is no longer valid; check the secret and that Render can see this commit."
             exit 1
           fi
-          echo "Render deploy hook accepted the request (HTTP ${status})."
+          echo "Render accepted a deploy of ${GITHUB_SHA} (HTTP ${status})."
 
-      - name: Wait for the new API routes to go live
+      - name: Wait for /health to report this commit
         run: |
           deadline=$(( $(date +%s) + CONFIRM_TIMEOUT_SECONDS ))
           attempt=0
+          seen="none"
+          status="none"
           while [ "$(date +%s)" -lt "${deadline}" ]; do
             attempt=$(( attempt + 1 ))
-            # Quiet on purpose: a sleeping, restarting, or old instance simply
-            # fails this check and is retried.
-            if curl --fail --silent --max-time 30 "${API_URL}/openapi.json" \
-                | jq --exit-status --arg path "${REQUIRED_API_PATH}" '.paths | has($path)' >/dev/null 2>&1; then
-              echo "${API_URL} now serves ${REQUIRED_API_PATH} (attempt ${attempt})."
+            # Quiet on purpose: a sleeping, restarting or old instance simply
+            # reports another commit (or nothing) and is asked again.
+            body="$(curl --silent --max-time 30 --write-out '\n%{http_code}' "${API_URL}/health" || true)"
+            status="$(tail -n 1 <<<"${body}")"
+            seen="$(sed '$d' <<<"${body}" | jq -r '.commit // "none"' 2>/dev/null || echo "unreadable")"
+            if [ "${seen}" = "${GITHUB_SHA}" ]; then
+              echo "${API_URL} now runs ${GITHUB_SHA} (attempt ${attempt}, HTTP ${status})."
               exit 0
             fi
-            echo "Attempt ${attempt}: ${REQUIRED_API_PATH} is not live yet; retrying in ${CONFIRM_INTERVAL_SECONDS}s."
+            echo "Attempt ${attempt}: /health reports commit ${seen} (HTTP ${status}); waiting for ${GITHUB_SHA}."
             sleep "${CONFIRM_INTERVAL_SECONDS}"
           done
-          echo "::error title=Render deploy not live::${API_URL}/openapi.json still does not list ${REQUIRED_API_PATH} after ${CONFIRM_TIMEOUT_SECONDS} seconds. The deploy hook was accepted, so open the sewncovers-api service in Render and read the latest deploy's logs (a failed migration or startup check keeps the previous version serving)."
+          echo "::error title=Render deploy not live::After ${CONFIRM_TIMEOUT_SECONDS} seconds ${API_URL}/health still reports commit ${seen} (last HTTP ${status}), not ${GITHUB_SHA}. Render accepted the deploy, so open the sewncovers-api service in Render and read this deploy's logs: a failed build, migration or start-up check keeps the previous version serving."
           exit 1
+
+      - name: Smoke-check /health and /patterns
+        run: |
+          health="$(curl --fail --silent --show-error --max-time 30 "${API_URL}/health")"
+          jq --exit-status --arg commit "${GITHUB_SHA}" \
+            '.process == "healthy" and .database == "healthy" and .commit == $commit' \
+            <<<"${health}" >/dev/null \
+            || { echo "::error title=API smoke check failed::/health is not healthy: ${health}"; exit 1; }
+
+          patterns="$(curl --fail --silent --show-error --max-time 30 "${API_URL}/patterns")"
+          count="$(jq --exit-status 'if type == "array" and any(.[]; .id == "fern-trail") then length else error("unexpected") end' \
+            <<<"${patterns}" 2>/dev/null)" \
+            || { echo "::error title=API smoke check failed::/patterns did not return the seeded catalogue."; exit 1; }
+          echo "/health is healthy on ${GITHUB_SHA}; /patterns returns ${count} patterns."

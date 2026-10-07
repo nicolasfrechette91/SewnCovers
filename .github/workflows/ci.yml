@@ -1,12 +1,32 @@
 name: CI
 
+# The one definition of the repository's checks. It runs on its own for pull
+# requests and for pushes to branches other than main. On main, the two deploy
+# workflows call it for their own side (workflow_call) and deploy only if it
+# passes, so no check runs twice for one push.
+#
+# Mark only "CI result" as a required status check: a job skipped by a paths
+# decision reports as passing, but a skipped matrix job never reports its
+# per-entry names, so requiring those directly would block forever.
+
 on:
   pull_request:
     branches:
       - main
   push:
-    branches:
+    branches-ignore:
       - main
+  workflow_call:
+    inputs:
+      scope:
+        description: Which side to check, "frontend" or "backend".
+        required: true
+        type: string
+      upload-pages-artifact:
+        description: Upload the verified GitHub Pages export for a deploy job.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -16,8 +36,77 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      frontend: ${{ steps.areas.outputs.frontend }}
+      backend: ${{ steps.areas.outputs.backend }}
+
+    steps:
+      - name: Check out repository
+        if: inputs.scope == ''
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Decide which checks to run
+        id: areas
+        env:
+          SCOPE: ${{ inputs.scope }}
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          frontend=false
+          backend=false
+
+          if [ -n "${SCOPE}" ]; then
+            # Called by a deploy workflow, which already filtered on paths.
+            case "${SCOPE}" in
+              frontend) frontend=true ;;
+              backend) backend=true ;;
+              *)
+                echo "::error title=Unknown CI scope::scope must be frontend or backend, not '${SCOPE}'."
+                exit 1
+                ;;
+            esac
+          else
+            if [ "${EVENT_NAME}" = "pull_request" ]; then
+              # The checkout is the merge commit; its first parent is the base.
+              base="HEAD^1"
+            elif [ -n "${PUSH_BEFORE}" ] && git cat-file -e "${PUSH_BEFORE}^{commit}" 2>/dev/null; then
+              base="${PUSH_BEFORE}"
+            else
+              # A new branch or an unknown previous commit: check everything.
+              base=""
+            fi
+
+            if [ -z "${base}" ]; then
+              frontend=true
+              backend=true
+            else
+              changed="$(git diff --name-only "${base}" HEAD)"
+              printf 'Changed files:\n%s\n' "${changed}"
+              if grep -qE '^(frontend/|\.github/workflows/ci\.yml$)' <<<"${changed}"; then
+                frontend=true
+              fi
+              if grep -qE '^(backend/|render\.yaml$|\.github/workflows/ci\.yml$)' <<<"${changed}"; then
+                backend=true
+              fi
+            fi
+          fi
+
+          echo "frontend=${frontend}" >> "${GITHUB_OUTPUT}"
+          echo "backend=${backend}" >> "${GITHUB_OUTPUT}"
+          printf '| Area | Checks run |\n| --- | --- |\n| Frontend | %s |\n| Backend | %s |\n' \
+            "${frontend}" "${backend}" >> "${GITHUB_STEP_SUMMARY}"
+
   frontend:
-    name: Frontend - lint, type-check, test, and build
+    name: Frontend - lint, types, tests, exports, budgets, audit
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
@@ -49,18 +138,19 @@ jobs:
       - name: Run frontend tests
         run: npm test
 
+      # The ordinary build emits source maps, which the budget check needs.
       - name: Build ordinary static export
         run: npm run build
-        env:
-          NEXT_FONT_GOOGLE_MOCKED_RESPONSES: ${{ github.workspace }}/frontend/e2e/font-responses.cjs
 
       - name: Verify ordinary static export
         run: npm run verify:export
 
+      - name: Check first-load JavaScript budgets
+        run: npm run verify:performance
+
       - name: Build GitHub Pages static export
         run: npm run build
         env:
-          NEXT_FONT_GOOGLE_MOCKED_RESPONSES: ${{ github.workspace }}/frontend/e2e/font-responses.cjs
           NEXT_PUBLIC_API_URL: https://sewncovers-api.onrender.com
           SEWNCOVERS_GITHUB_PAGES: "true"
 
@@ -70,8 +160,71 @@ jobs:
           NEXT_PUBLIC_API_URL: https://sewncovers-api.onrender.com
           SEWNCOVERS_GITHUB_PAGES: "true"
 
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Upload GitHub Pages artifact
+        if: inputs.upload-pages-artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: frontend/out
+
+  frontend-e2e:
+    name: Frontend - Playwright (${{ matrix.layout }})
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        layout:
+          - root
+          - github-pages
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.15.0
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install locked frontend dependencies
+        run: npm ci
+
+      - name: Install Chromium and its system dependencies
+        run: npx playwright install --with-deps chromium
+
+      # The runner builds its own export against the reserved test API origin
+      # and answers every API call from memory; nothing leaves the runner.
+      - name: Run the Playwright suite
+        run: npm run test:e2e
+        env:
+          SEWNCOVERS_GITHUB_PAGES: ${{ matrix.layout == 'github-pages' && 'true' || 'false' }}
+
+      - name: Upload Playwright traces and report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-${{ matrix.layout }}
+          path: frontend/.playwright/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 14
+
   backend:
-    name: Backend - Ruff, tests, and dependency check
+    name: Backend - Ruff, tests, dependency checks, audit
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
@@ -105,3 +258,38 @@ jobs:
 
       - name: Check installed dependency consistency
         run: python -m pip check
+
+      # Audits the runtime dependencies as Render installs them (a fresh
+      # resolution of pyproject.toml without the dev extra), like
+      # `npm audit --omit=dev`. pip-audit runs from its own virtual
+      # environment, so it never joins the project's dependency set.
+      - name: Audit runtime dependencies
+        run: |
+          python -m venv "${RUNNER_TEMP}/pip-audit"
+          "${RUNNER_TEMP}/pip-audit/bin/python" -m pip install --quiet "pip-audit==${PIP_AUDIT_VERSION}"
+          "${RUNNER_TEMP}/pip-audit/bin/pip-audit" --strict --progress-spinner off .
+        env:
+          PIP_AUDIT_VERSION: 2.10.1
+
+  ci-result:
+    name: CI result
+    needs:
+      - changes
+      - frontend
+      - frontend-e2e
+      - backend
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Report the outcome of every check
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "Results (changes, frontend, frontend-e2e, backend): ${RESULTS}"
+          if [ "${FAILED}" = "true" ]; then
+            echo "::error title=CI failed::At least one check failed or was cancelled; see the jobs above."
+            exit 1
+          fi

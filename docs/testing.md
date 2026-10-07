@@ -4,18 +4,19 @@ Every suite runs offline: no test contacts Render, Neon, a payment provider or a
 
 | Suite | Count (October 2026) | Runs in CI | Command |
 | --- | --- | --- | --- |
-| Frontend unit, component and service tests | 186 in two runners | Yes | `npm test` |
-| Playwright browser journeys (Chromium) | 56 | No (local gate) | `npm run test:e2e` |
-| Backend tests | 281 | Yes | `python -m pytest` |
+| Frontend unit, component and service tests | 187 in two runners | Yes | `npm test` |
+| Playwright browser journeys (Chromium) | 60 | Yes, in the root and GitHub Pages layouts | `npm run test:e2e` |
+| Backend tests | 290 | Yes | `python -m pytest` |
 | Lint, formatting and type checks | n/a | Yes | see below |
 | Static-export verification | n/a | Yes | `npm run verify:export` |
-| First-load JavaScript budgets | n/a | No (run by hand) | `npm run verify:performance` |
+| First-load JavaScript budgets | n/a | Yes | `npm run verify:performance` |
+| Dependency audits | n/a | Yes | `npm audit --omit=dev --audit-level=high`, `pip-audit` |
 
 ## Frontend unit, component and service tests
 
 `npm test` runs two runners in sequence:
 
-1. **Node's built-in test runner** over `config/*.test.mjs` and `services/*.test.mjs` (68 tests). They cover environment validation, base-path and URL construction, the typed API clients (exact response contracts, timeout, retry and cold-start policy, malformed and backend errors), the pattern catalogue, duplicate-safe saving, share-link generation and exact restoration for every shape. The `.mjs` files import the TypeScript sources, so there is no separate build step.
+1. **Node's built-in test runner** over `config/*.test.mjs` and `services/*.test.mjs` (69 tests). They cover environment validation, base-path and URL construction, the typed API clients (exact response contracts, timeout, retry and cold-start policy, malformed and backend errors), the pattern catalogue, duplicate-safe saving, share-link generation and exact restoration for every shape. The `.mjs` files import the TypeScript sources, so there is no separate build step.
 2. **`tsx` with jsdom and React Testing Library** over `tests/*.test.ts` and `tests/*.test.tsx` (118 tests). They cover the configurator components for all five shapes, measurement and unit behaviour, review and summary output, the draft and sign-in flow, account, project and commerce screens, the landing page, navigation and site metadata, and the design-token guard.
 
 Assertions prefer accessible roles, names and visible recovery text. Requests are mocked, promises are controlled by the test and timers are deterministic, so races (stale responses, edits during restoration, duplicate saves) are tested directly.
@@ -26,7 +27,7 @@ Assertions prefer accessible roles, names and visible recovery text. Requests ar
 
 ## Browser journeys (Playwright)
 
-The 56 tests in `frontend/e2e/` use accessible locators and are offline by construction: the runner builds the real static export with the API origin set to the reserved `http://api.sewncovers.test`, serves `out/` from a single-process loopback server, and blocks every other origin. Playwright intercepts the API origin and answers patterns, designs, accounts, projects, uploads, commerce and operations from memory.
+The 60 tests in `frontend/e2e/` use accessible locators and are offline by construction: the runner builds the real static export with the API origin set to the reserved `http://api.sewncovers.test`, serves `out/` from a single-process loopback server, and blocks every other origin. Playwright intercepts the API origin and answers patterns, designs, accounts, projects, uploads, commerce and operations from memory.
 
 ```powershell
 cd frontend
@@ -51,13 +52,15 @@ Coverage includes:
 - responsive layout at 320 × 568, 768 × 1024 and 1440 × 900 with no horizontal overflow;
 - accessibility: a keyboard walk through all six stages with focus assertions, contrast ratios derived from the computed CSS variables, reduced motion and forced colours.
 
-These accessibility checks are hand-written; there is no automated axe audit. Two specs (`solid-color-screenshots.spec.ts` and part of `responsive-layout.spec.ts`) write PNGs into the tracked `frontend/screenshots/` directory, so a run can leave modified files there.
+These accessibility checks are hand-written; there is no automated axe audit. The API warm-up tests wait on conditions (the app's idle callback, then a probe request through the mocked API) rather than fixed sleeps.
 
-The suite is not run in CI yet.
+Everything the runner writes stays under the git-ignored `frontend/.playwright/`: test output and traces in `test-results/`, the reference captures from `solid-color-screenshots.spec.ts` in `artifacts/solid-color/`, and the full-page captures `responsive-layout.spec.ts` takes when `RESPONSIVE_CAPTURE=true`. A run never modifies tracked files.
+
+CI runs the suite in both layouts (see [Continuous integration](#continuous-integration)). When `CI` is set, each test gets one retry, the whole run may take 10 minutes instead of 4, and Playwright also writes GitHub annotations and an HTML report to `.playwright/report/`; a failing job uploads `frontend/.playwright/` as an artifact. Locally there are no retries and the 4-minute limit stands.
 
 ## Backend tests
 
-`python -m pytest` runs 281 tests in 15 files under `backend/tests/`. Each file that needs a database creates its own SQLite database and migrates it with Alembic, so the tests exercise the real migrations. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic.
+`python -m pytest` runs 290 tests in 15 files under `backend/tests/`. Each file that needs a database creates its own SQLite database and migrates it with Alembic, so the tests exercise the real migrations. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic.
 
 They cover:
 
@@ -82,7 +85,27 @@ python -m pytest --basetemp=C:\t
 ## Static-export and budget checks
 
 - `npm run verify:export` (after `npm run build`) asserts the exported routes, document titles, canonical and Open Graph tags, the social image, local asset and link targets, base-path prefixes, and that exactly the expected API URL is embedded (and the test origin is not). CI runs it for both the root and the GitHub Pages layouts.
-- `npm run verify:performance` (after a build) asserts per-route budgets on first-load uncompressed JavaScript (`/configure` is held to 630,000 bytes) and that the Pattern stage is not in the configurator's initial chunks. It counts raw bytes including the framework runtime, so a framework upgrade can move it. It is not part of CI.
+- `npm run verify:performance` (after `npm run build` without `SEWNCOVERS_GITHUB_PAGES`) budgets each route's first-load JavaScript and asserts that the Pattern stage is not in the configurator's initial chunks. See below.
+
+### Performance budgets
+
+Most first-load JavaScript is not this repository's code. On every route about 459 KB of the raw bytes are the framework (Next.js with its bundled React, SWC helpers and the Turbopack runtime), the same everywhere, and they move with each framework release. Upgrading Next.js from 16.2.11 to 16.3.8 took `/configure` from 629,625 to 572,896 raw bytes without touching app code, which is why the old raw budget (630,000 bytes, 375 above the measured size) could fail on a framework patch alone.
+
+So the check measures two things per route. The ordinary build emits browser source maps (the deployed Pages build does not), and the check uses them to attribute every byte of the route's first-load chunks to **app** code (any source outside `node_modules`), the **framework**, or unmapped **glue** (module wrappers). The three add up exactly to the route's first-load size.
+
+| Route | App code (raw bytes) | App budget | Framework (raw bytes) | Transfer (gzip bytes) | Transfer budget |
+| --- | --- | --- | --- | --- | --- |
+| `/` | 44,222 | 55,000 | 459,020 | 151,534 | 175,000 |
+| `/configure` | 105,678 | 130,000 | 462,973 | 172,316 | 200,000 |
+| `/commerce` | 78,540 | 98,000 | 459,020 | 160,598 | 185,000 |
+| `/admin` | 100,605 | 125,000 | 459,020 | 165,718 | 190,000 |
+
+Measured on Next.js 16.3.8 in October 2026.
+
+- **App budget** (about 25 percent headroom): fails when this repository's code for that route grows, whatever the framework does. App code includes the root layout's providers and header, which every route loads.
+- **Transfer budget** (about 15 percent headroom): the gzip size of every first-load chunk, close to what a visitor downloads. It absorbs an ordinary framework patch but catches a new heavy dependency or a framework regression, which the app budget cannot see.
+
+When a budget fails, the printed table says which: a larger app column means the route's own code grew; a larger transfer total with a steady app column means a dependency or the framework did. Raise a budget only with a reason in the commit message.
 
 ## README screenshots
 
@@ -90,23 +113,43 @@ python -m pytest --basetemp=C:\t
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on pushes to `main` and on pull requests:
+`.github/workflows/ci.yml` is the only definition of the checks. It runs on its own for pull requests and for pushes to branches other than `main`. On `main`, `deploy-pages.yml` and `deploy-backend.yml` call it as a reusable workflow for their own side and deploy only if it passes ([deployment](deployment.md)), so no check runs twice for one push.
 
-| Job | Steps |
-| --- | --- |
-| Frontend (Node 24.15.0) | `npm ci`, ESLint, `tsc --noEmit`, `npm test`, build and verify the ordinary export, then build and verify the GitHub Pages export. |
-| Backend (Python 3.13.2) | `pip install -e ".[dev]"`, `ruff format --check`, `ruff check`, `pytest`, `pip check`. |
+| Job | Runs when | Steps |
+| --- | --- | --- |
+| Detect changed areas | Always | Chooses the frontend jobs, the backend job or both from the changed paths: `frontend/**`; `backend/**` and `render.yaml`; `ci.yml` selects both. A deploy workflow names its side instead. |
+| Frontend - lint, types, tests, exports, budgets, audit (Node 24.15.0) | Frontend changed | `npm ci`, ESLint, `tsc --noEmit`, `npm test`, build and verify the ordinary export, `verify:performance`, build and verify the GitHub Pages export, `npm audit --omit=dev --audit-level=high`. For a deploy, it uploads that Pages export as the artifact. |
+| Frontend - Playwright (root, github-pages) | Frontend changed | `npx playwright install --with-deps chromium`, then `npm run test:e2e` in each layout. Uploads `frontend/.playwright/` on failure. |
+| Backend - Ruff, tests, dependency checks, audit (Python 3.13.2) | Backend changed | `pip install -e ".[dev]"`, `ruff format --check`, `ruff check`, `pytest`, `pip check`, then `pip-audit` of the runtime dependencies as Render resolves them. |
+| CI result | Always | Fails if any job above failed or was cancelled. |
 
-`deploy-pages.yml` and `deploy-backend.yml` repeat the relevant checks before deploying ([deployment](deployment.md)). Actions are pinned by commit SHA with least-privilege permissions.
+In branch protection, require only **CI result**. A job skipped because its side did not change reports as passing, but a skipped matrix job never reports its per-layout names, so requiring "Frontend - Playwright (root)" directly would wait forever on a backend-only pull request.
+
+The audits can fail on a newly published advisory even when nothing in the repository changed; that is deliberate. [Dependabot](../.github/dependabot.yml) proposes updates weekly for npm, pip and GitHub Actions, one grouped pull request per ecosystem for minor and patch releases and one per dependency for majors, and skips releases younger than five days. Development-only npm advisories are not gated; at the time of writing that is `braces` under `eslint-config-next`, which has no fix within Next.js 16. `pip-audit` (pinned in the workflow) runs from its own virtual environment, so it is not a project dependency.
+
+Actions are pinned by commit SHA with version comments, every job has least-privilege permissions, and checkouts never persist credentials. The scheduled [keep-warm](deployment.md#free-tier-behaviour) workflow is not part of CI.
 
 ## Before you push
 
 ```powershell
 cd frontend
-npm run lint; npm run typecheck; npm test; npm run build; npm run verify:export
+npm run lint; npm run typecheck; npm test; npm run build; npm run verify:export; npm run verify:performance
+npm run test:e2e
 
 cd ../backend
 python -m ruff format --check .; python -m ruff check .; python -m pytest; python -m pip check
 ```
 
-To reproduce the Pages build, repeat the build and verification with `NEXT_PUBLIC_API_URL=https://sewncovers-api.onrender.com` and `SEWNCOVERS_GITHUB_PAGES=true`. Run `npm run test:e2e` for changes to the configurator, accounts or layout.
+To reproduce the Pages build, repeat the build and verification with `NEXT_PUBLIC_API_URL=https://sewncovers-api.onrender.com` and `SEWNCOVERS_GITHUB_PAGES=true` (run `verify:performance` before this, since the Pages build has no source maps).
+
+To run the audits as CI does:
+
+```powershell
+cd frontend; npm audit --omit=dev --audit-level=high
+
+cd ../backend
+python -m venv $env:TEMP\pip-audit; & $env:TEMP\pip-audit\Scripts\python.exe -m pip install pip-audit==2.10.1
+& $env:TEMP\pip-audit\Scripts\pip-audit.exe --strict .
+```
+
+For workflow changes, run [actionlint](https://github.com/rhysd/actionlint) (a standalone binary, not a project dependency) from the repository root.

@@ -247,7 +247,8 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         description=(
             "Checks process readiness and performs one database query only when this "
             "endpoint is requested. A missing configuration reports `unconfigured`; "
-            "a failed query reports `unavailable`."
+            "a failed query reports `unavailable`. `commit` is the deployed commit "
+            "SHA, or null when the platform does not report one."
         ),
         responses={
             503: {
@@ -255,6 +256,22 @@ def create_application(settings: Settings | None = None) -> FastAPI:
                 "model": HealthResponse,
             }
         },
+    )
+    # FastAPI routes do not answer HEAD implicitly. A separate route keeps the
+    # OpenAPI operation ids unique; the server drops the body for HEAD.
+    application.add_api_route(
+        "/health",
+        read_health,
+        methods=["HEAD"],
+        name="head_health",
+        response_model=HealthResponse,
+        tags=["Service"],
+        summary="Check health without a response body",
+        description=(
+            "Runs the same checks as `GET /health` and returns only its status code "
+            "and headers, for uptime monitors."
+        ),
+        responses={503: {"description": "Database is unconfigured or unavailable"}},
     )
     application.add_api_route(
         "/patterns",

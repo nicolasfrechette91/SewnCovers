@@ -2,13 +2,25 @@
 
 | Layer | Host | Source | Trigger |
 | --- | --- | --- | --- |
-| Frontend | GitHub Pages, <https://nicolasfrechette91.github.io/SewnCovers/> | `frontend/out` | `.github/workflows/deploy-pages.yml` on every push to `main`, or manually |
-| API | Render Free web service, <https://sewncovers-api.onrender.com> | `backend/`, described by [`render.yaml`](../render.yaml) | `.github/workflows/deploy-backend.yml` on pushes to `main` that touch `backend/**` or `render.yaml`, or manually |
+| Frontend | GitHub Pages, <https://nicolasfrechette91.github.io/SewnCovers/> | `frontend/out`, built and verified by CI | `.github/workflows/deploy-pages.yml` on pushes to `main` that touch `frontend/**`, `ci.yml` or the workflow itself, or manually |
+| API | Render Free web service, <https://sewncovers-api.onrender.com> | `backend/`, described by [`render.yaml`](../render.yaml) | `.github/workflows/deploy-backend.yml` on pushes to `main` that touch `backend/**`, `render.yaml`, `ci.yml` or the workflow itself, or manually |
 | Database | Neon PostgreSQL, Ohio | Alembic migrations run by the API at start-up | Every API start |
+
+Both deploy workflows start with the matching half of [CI](testing.md#continuous-integration) (`ci.yml`, called as a reusable workflow) and deploy only if it passes, so every check runs once per push. A push that touches only `docs/` or the README deploys nothing.
+
+## Order of deploys
+
+The two workflows run independently, so on a push that changes both sides either can go live first. The frontend's response validators reject fields they do not know, so a change that spans both sides has to be deployable in either order: ship a frontend that accepts a new API field before (or with) the API that sends it, and an API route before a frontend that calls it. `/health`'s `commit` field followed that rule: the frontend accepts health with or without it.
 
 ## Frontend on GitHub Pages
 
-The workflow installs with `npm ci` (Node 24.15.0), runs ESLint, the type check and the tests, builds the static export, runs `npm run verify:export`, uploads `frontend/out` as the Pages artifact and deploys it.
+`deploy-pages.yml` has three jobs:
+
+1. **CI** (`scope: frontend`): ESLint, the type check, the unit tests, both static exports with `verify:export`, the performance budgets, `npm audit --omit=dev --audit-level=high`, and the Playwright suite in the root and Pages layouts. The verified Pages export is uploaded as the Pages artifact; nothing is rebuilt afterwards.
+2. **Deploy** that artifact to the `github-pages` environment.
+3. **Smoke-check** `/SewnCovers/` and `/SewnCovers/configure/`: each must answer `200`, carry its own canonical URL and load scripts from `/SewnCovers/_next/static/`. The request adds a query string so a cached copy of the previous deploy cannot satisfy it, and it retries for up to two minutes.
+
+Concurrent runs queue rather than cancel, so a deploy is never interrupted.
 
 Two build variables matter:
 
@@ -43,12 +55,16 @@ Render supplies `PORT`; the production entry point binds `0.0.0.0` on it. Depend
 
 `deploy-backend.yml` runs two jobs:
 
-1. **Test.** Ruff format and lint, the pytest suite and `pip check`, on Python 3.13.2.
-2. **Deploy.** Requires the `RENDER_DEPLOY_HOOK_URL` repository secret, posts to the Render deploy hook (the URL is read from the environment and never printed), then polls the live `openapi.json` every 15 seconds for up to 10 minutes until it lists `/auth/register`.
+1. **CI** (`scope: backend`): Ruff format and lint, the pytest suite, `pip check` and `pip-audit` of the runtime dependencies, on Python 3.13.2.
+2. **Deploy**, only from `main`:
+   - requires the `RENDER_DEPLOY_HOOK_URL` repository secret;
+   - posts to the deploy hook with `ref=<commit SHA>`, so Render deploys exactly the commit that passed CI even if `main` has moved on (the URL is read from the environment and never printed);
+   - polls `/health` every 15 seconds for up to 10 minutes until its `commit` equals that SHA;
+   - then requires `/health` to be fully healthy and `/patterns` to return the seeded catalogue.
 
-The confirmation step shows that the API is up and serving that route. It does not prove that the new commit is the one serving, because an earlier instance serves the same route. After a deploy, check the latest deploy and its logs in the Render dashboard.
+Render sets `RENDER_GIT_COMMIT` for each deploy and the API reports it as `commit` in [`/health`](api.md#health). Render keeps the previous instance serving until the new one passes its health check, so during a deploy, and after a failed one, the old commit keeps answering. The wait step therefore fails on a failed build, migration or start-up check, and its error names the commit still serving.
 
-To deploy by hand, run the **Deploy backend to Render** workflow from the Actions tab.
+Concurrent runs cancel the older one; the newer run deploys its own commit. To deploy by hand, run the **Deploy backend to Render** workflow from the Actions tab on `main`.
 
 ### Migration-gated start-up
 
@@ -69,7 +85,8 @@ Enabling either in production needs, at minimum, private S3-compatible storage a
 
 ## Free-tier behaviour
 
-- **Cold starts.** Render's free instances spin down after about 15 minutes without traffic and take around a minute to wake (see Render's current documentation). The frontend handles this: the home page sends one quiet `/health` request per browser session, the configurator's first catalogue request wakes the service if needed, and the UI reports "the API may be waking" after two seconds with bounded retries for reads. Warm responses are typically a few hundred milliseconds. There is no keep-alive traffic, and the instance filesystem is ephemeral, so no application data is stored on it.
+- **Cold starts.** Render's free instances spin down after about 15 minutes without traffic and take around a minute to wake (see Render's current documentation). The frontend handles this: the home page sends one quiet `/health` request per browser session, the configurator's first catalogue request wakes the service if needed, and the UI reports "the API may be waking" after two seconds with bounded retries for reads. Warm responses are typically a few hundred milliseconds. The instance filesystem is ephemeral, so no application data is stored on it.
+- **Keep-warm.** `.github/workflows/keep-warm.yml` sends `GET /health` every 12 minutes from 07:03 to 22:51 Toronto time, so the API is awake from the first ping until about 23:05. The schedule uses GitHub's `timezone: America/Toronto`, so daylight saving needs no UTC arithmetic. That is about 16 instance-hours a day, inside Render's 750 free hours a month if this is the workspace's only free service. Each ping also runs one database query, so Neon stays awake during those hours as well. Two limits to know: GitHub can start scheduled runs late, most often at the top of the hour (hence minute 3), so a cold start remains possible; and GitHub disables scheduled workflows in a public repository after 60 days without repository activity. Re-enable it from the Actions tab, or run it by hand with **Run workflow**. A failed ping (the API not answering `200` within about three and a half minutes) shows as a failed run.
 - **Neon.** Compute scales to zero on the free plan, so the first query after idle is slower. Check Neon's usage panel for the current allowances.
 
 ## After a deploy
@@ -79,7 +96,7 @@ curl https://sewncovers-api.onrender.com/health
 curl https://sewncovers-api.onrender.com/patterns
 ```
 
-`/health` should return `{"process":"healthy","database":"healthy"}` and `/patterns` the 15 seeded patterns (the first request may take up to a minute). Then open the [live site](https://nicolasfrechette91.github.io/SewnCovers/configure/), walk to the Pattern stage, and open the demonstration [share link](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg), which should restore a box cushion in the Terrace wave pattern.
+The deploy workflow already checks both. `/health` should return `{"process":"healthy","database":"healthy","commit":"<deployed SHA>"}` and `/patterns` the 15 seeded patterns (the first request may take up to a minute). Then open the [live site](https://nicolasfrechette91.github.io/SewnCovers/configure/), walk to the Pattern stage, and open the demonstration [share link](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg), which should restore a box cushion in the Terrace wave pattern.
 
 ## Troubleshooting
 
@@ -89,4 +106,8 @@ curl https://sewncovers-api.onrender.com/patterns
 | The browser reports a CORS error | Production allows exactly `https://nicolasfrechette91.github.io`, with no `/SewnCovers` path and no trailing path. A successful `curl` does not prove browser CORS permission. |
 | The first request is slow or times out | Render may be waking. Wait and retry reads. Do not replay a design `POST` automatically; the first attempt may have succeeded. |
 | The deploy workflow fails at "Require the deploy hook secret" | Add `RENDER_DEPLOY_HOOK_URL` under Settings, Secrets and variables, Actions. |
+| "Ask Render to deploy this commit" fails with HTTP 404 | The hook URL is stale (regenerate it in Render and update the secret) or Render cannot see that commit in the repository. |
+| "Wait for /health to report this commit" times out | Render accepted the deploy but the new instance never became healthy. The error shows the commit still serving; read that deploy's logs in Render. |
+| The Pages smoke check fails after a successful deploy | Check that Pages is set to deploy from GitHub Actions and open the two URLs it names. |
+| The keep-warm workflow stopped running | GitHub disabled it after 60 days without activity; re-enable it in the Actions tab. |
 | The API restarts and never becomes healthy | Read the deploy log in Render: a failed migration or schema verification stops the process before Uvicorn starts. |

@@ -6,7 +6,7 @@ Live site: <https://nicolasfrechette91.github.io/SewnCovers/>
 
 ## Quick start
 
-Requires Node.js 20.9 or newer (CI uses 24.15.0).
+Requires Node.js 24, 24.15.0 or a later 24.x (`engines` in `package.json`; CI uses 24.15.0).
 
 ```powershell
 npm ci
@@ -26,7 +26,7 @@ Open <http://localhost:3000>. `.env.example` points the app at `http://localhost
 | `npm run check:config` | Only the environment and deployment-config tests. |
 | `npm run build` | Static export into `out/`. |
 | `npm run verify:export` | Check the export's routes, metadata, base path and embedded API URL. |
-| `npm run verify:performance` | Check first-load JavaScript budgets (after a build). |
+| `npm run verify:performance` | Check app-code and transfer budgets for first-load JavaScript (after `npm run build` without `SEWNCOVERS_GITHUB_PAGES`). |
 | `npm run test:e2e` | Build, serve and run the Playwright journeys (Chromium; run `npx playwright install chromium` once). |
 | `npm run screenshots:readme` | Regenerate the README screenshots in `../docs/images/`. |
 

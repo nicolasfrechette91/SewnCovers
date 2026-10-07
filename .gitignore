@@ -8,6 +8,8 @@ node_modules/
 /frontend/.next/
 /frontend/out/
 /frontend/.playwright/
+# Old e2e captures; the specs now write under frontend/.playwright/artifacts/
+/frontend/screenshots/
 *.tsbuildinfo
 next-env.d.ts
 

@@ -48,14 +48,13 @@ Other choices worth reading in the code:
 
 ## How it is tested
 
-Tests run offline by construction: frontend units use mocked requests and deterministic timers, the browser journeys intercept a reserved `.test` API origin and block everything else, and every backend test builds its own migrated SQLite database. Migrations are tested for the exact schema from empty, up and down, and against the model metadata. Static-export and bundle-size checks run against the real build. Details are in [testing](testing.md).
+Tests run offline by construction: frontend units use mocked requests and deterministic timers, the browser journeys intercept a reserved `.test` API origin and block everything else, and every backend test builds its own migrated SQLite database. Migrations are tested for the exact schema from empty, up and down, and against the model metadata. Static-export and bundle-size checks run against the real build, and CI runs every suite, the browser journeys in both layouts included, before either side deploys. Details are in [testing](testing.md).
 
 ## Trade-offs and known limits
 
-- The live site runs on free tiers, so the first request after idle can take up to a minute.
+- The live site runs on free tiers. A scheduled ping keeps the API awake during the day; otherwise the first request after idle can take up to a minute.
 - Uploads and commerce cannot be tried on the live site (by design); they run locally in a few steps.
 - Authentication is portfolio-grade: no email verification or recovery, and the credential throttle is per process.
-- The browser test suite is a local gate and does not yet run in CI.
 - The API has no structured logging yet, and backend dependencies are pinned directly but not locked transitively.
 - The frontend handwrites its API types and validators instead of generating them from the OpenAPI document, which is more code but gives strict runtime checks.
 - Dark mode is token-ready and deliberately not shipped.

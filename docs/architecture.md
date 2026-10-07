@@ -70,7 +70,7 @@ Six stages: **Shape, Measurements, Cover details, Pattern, Preview, Review**. Th
 
 ### Accessibility and build verification
 
-Keyboard operation, visible focus, 44 px targets, labelled landmarks, live-region stage announcements, reduced-motion and forced-colours support, and a print stylesheet are built in and checked by hand-written unit and Playwright tests (see [testing](testing.md)); there is no automated axe audit. `npm run verify:export` asserts the exported routes, titles, canonical and Open Graph tags, base-path-prefixed assets, the social image and the embedded API URL; `npm run verify:performance` asserts first-load JavaScript budgets per route.
+Keyboard operation, visible focus, 44 px targets, labelled landmarks, live-region stage announcements, reduced-motion and forced-colours support, and a print stylesheet are built in and checked by hand-written unit and Playwright tests (see [testing](testing.md)); there is no automated axe audit. `npm run verify:export` asserts the exported routes, titles, canonical and Open Graph tags, base-path-prefixed assets, the social image and the embedded API URL; `npm run verify:performance` budgets each route's first-load JavaScript twice: the bytes of app code (attributed through source maps, so framework releases do not move it) and the gzip transfer size.
 
 ## Backend
 

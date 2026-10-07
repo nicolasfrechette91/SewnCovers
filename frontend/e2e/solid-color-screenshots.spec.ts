@@ -5,7 +5,8 @@ import { expect, test } from "@playwright/test";
 const apiOrigin = "https://sewncovers-api.onrender.com";
 const basePath =
   process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
-const screenshotDirectory = path.resolve("screenshots/solid-color");
+// Reference captures, not assertions: kept out of git under .playwright/.
+const screenshotDirectory = path.resolve(".playwright/artifacts/solid-color");
 
 const patterns = [
   {

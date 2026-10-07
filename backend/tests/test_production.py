@@ -344,7 +344,7 @@ def test_openapi_is_public_complete_and_matches_runtime_contracts() -> None:
         "/readiness",
     }
     assert set(openapi["paths"]["/"]) == {"get"}
-    assert set(openapi["paths"]["/health"]) == {"get"}
+    assert set(openapi["paths"]["/health"]) == {"get", "head"}
     assert set(openapi["paths"]["/patterns"]) == {"get"}
     assert set(openapi["paths"]["/designs"]) == {"post"}
     assert set(openapi["paths"]["/designs/{public_id}"]) == {"get"}

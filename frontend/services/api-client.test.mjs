@@ -425,6 +425,32 @@ test("distinguishes malformed success payloads from unexpected HTTP failures", a
   );
 });
 
+test("accepts health with or without the deployed commit and rejects a malformed one", async () => {
+  const { apiClient, ApiClientError } = await loadClient();
+  const commit = "3bed4fc0a1b2c3d4e5f60718293a4b5c6d7e8f90";
+
+  for (const body of [
+    { process: "healthy", database: "healthy" },
+    { process: "healthy", database: "healthy", commit: null },
+    { process: "healthy", database: "healthy", commit },
+  ]) {
+    globalThis.fetch = async () => jsonResponse(body);
+    assert.deepEqual(await apiClient.getHealth(), body);
+  }
+
+  for (const malformed of [commit.slice(0, 7), commit.toUpperCase(), 42, ""]) {
+    globalThis.fetch = async () =>
+      jsonResponse({ process: "healthy", database: "healthy", commit: malformed });
+
+    await assert.rejects(
+      apiClient.getHealth(),
+      (error) =>
+        error instanceof ApiClientError &&
+        error.category === "malformed-response",
+    );
+  }
+});
+
 test("rejects a malformed design-creation success without retrying or trusting its public ID", async () => {
   const { apiClient, ApiClientError } = await loadClient();
   let fetchCalls = 0;
