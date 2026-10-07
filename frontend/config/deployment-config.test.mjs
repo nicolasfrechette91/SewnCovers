@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
+import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 const productionApiUrl = "https://sewncovers-api.onrender.com";
 const productionFrontendOrigin = "https://nicolasfrechette91.github.io";
@@ -56,13 +58,62 @@ test("public deployment configuration remains secret-free", () => {
   );
 });
 
-test("root documentation keeps every repository-local Markdown target resolvable", async () => {
-  const targets = Array.from(
-    rootReadme.matchAll(/!?\[[^\]]*\]\((?!https?:\/\/|mailto:|#)([^)]+)\)/g),
-    (match) => decodeURIComponent(match[1].split("#", 1)[0]),
-  );
+// Fenced blocks and inline code spans are not links, so drop them before parsing.
+function withoutCode(markdown) {
+  let fence = null;
+  const prose = [];
+  for (const line of markdown.split(/\r?\n/)) {
+    const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+    if (fence === null) {
+      if (marker) fence = marker;
+      else prose.push(line);
+    } else if (marker?.[0] === fence[0] && marker.length >= fence.length) {
+      fence = null;
+    }
+  }
+  return prose.join("\n").replace(/(`+)[^`]*?\1/g, "");
+}
 
+// Every inline link or image destination (including an image nested in a link)
+// and every reference definition, minus remote URLs and pure #anchors, with any
+// #fragment removed.
+function localMarkdownTargets(markdown) {
+  const prose = withoutCode(markdown);
+  return [
+    ...prose.matchAll(/\]\(\s*(?:<([^>\n]*)>|([^\s)]*))/g),
+    ...prose.matchAll(/^ {0,3}\[[^\]\n]+\]:[ \t]*(?:<([^>\n]*)>|(\S+))/gm),
+  ]
+    .map((match) => match[1] ?? match[2])
+    .filter((destination) => !/^(?:https?:|mailto:|#)/i.test(destination))
+    .map((destination) => destination.split("#", 1)[0])
+    .filter((target) => target !== "")
+    .map((target) => {
+      try {
+        return decodeURIComponent(target);
+      } catch {
+        return target;
+      }
+    });
+}
+
+test("root documentation keeps every repository-local Markdown target resolvable", async () => {
+  const targets = [...new Set(localMarkdownTargets(rootReadme))];
   assert.ok(targets.length > 0, "Expected repository-local README links.");
-  assert.doesNotMatch(rootReadme, /\]\(docs\//, "The absent docs/ tree must not be referenced.");
-  await Promise.all(targets.map((target) => access(new URL(target, repositoryRoot))));
+
+  const repositoryPath = fileURLToPath(repositoryRoot);
+  const exists = await Promise.all(
+    targets.map((target) =>
+      access(path.join(repositoryPath, target)).then(
+        () => true,
+        () => false,
+      ),
+    ),
+  );
+  const missing = targets.filter((_, index) => !exists[index]);
+
+  assert.deepEqual(
+    missing,
+    [],
+    `README.md links to targets missing from the repository:\n${missing.map((target) => `  - ${target}`).join("\n")}`,
+  );
 });
