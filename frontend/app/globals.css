@@ -3,7 +3,7 @@
 /*
  * SewnCovers design system: "The Cutting Table".
  * A tailor's workroom laid out like a clean editorial spread. See
- * DESIGN_AUDIT.md for the rationale, contrast ratios and principles.
+ * docs/design.md for the rationale, contrast ratios and principles.
  *
  * 1. Primitive palette: raw values; not exposed as utilities
  * 2. Semantic theme tokens: Tailwind @theme, generates utilities
@@ -243,7 +243,7 @@
  * Dark mode is deliberately deferred. A future "After hours" theme only needs
  * to redefine the semantic --color-* tokens above inside
  * @media (prefers-color-scheme: dark) and switch color-scheme; the palette and
- * contrast ratios are recorded in DESIGN_AUDIT.md. Fabric dyes stay as-is.
+ * contrast ratios are recorded in docs/design.md. Fabric dyes stay as-is.
  */
 
 /* 3. Base ----------------------------------------------------------------- */

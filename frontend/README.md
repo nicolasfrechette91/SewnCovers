@@ -1,357 +1,49 @@
 # SewnCovers frontend
 
-This directory contains the Next.js 16.2.11, React, and TypeScript App Router frontend. It is configured for static export to GitHub Pages and uses browser-side typed FastAPI clients for the guest configurator plus the local optional account/project workspace. The account functionality is not deployed.
+The web app: Next.js 16 (App Router), React 19, TypeScript and Tailwind CSS v4, built as a static export for GitHub Pages. It talks to the FastAPI service in [`../backend`](../backend/README.md) over HTTPS. The only runtime dependencies are `next`, `react` and `react-dom`.
 
-## Requirements
+Live site: <https://nicolasfrechette91.github.io/SewnCovers/>
 
-- Node.js 20.9.0 or newer, as required by the installed Next.js version
-- npm, using the committed `package-lock.json`
+## Quick start
 
-## Local setup
-
-Install the locked dependencies from the `frontend` directory:
+Requires Node.js 20.9 or newer (CI uses 24.15.0).
 
 ```powershell
 npm ci
-```
-
-If `.env.local` does not already exist, create it in Windows PowerShell with:
-
-```powershell
 if (-not (Test-Path .env.local)) { Copy-Item .env.example .env.local }
-```
-
-On macOS or Linux, create it only when it does not already exist:
-
-```bash
-test -e .env.local || cp .env.example .env.local
-```
-
-`NEXT_PUBLIC_API_URL` is the only application environment variable owned by the frontend. It is required whenever an API client method is called; the example provides the safe local value `http://localhost:8000`. A missing value does not block an ordinary static build, but a request fails before `fetch` with a typed configuration error. A configured value must be an absolute HTTP or HTTPS URL without credentials, a query, or a fragment. The typed configuration boundary trims whitespace and removes trailing slashes before exposing an immutable `{ apiUrl: string | undefined }` object. Invalid values fail with an actionable configuration error naming `NEXT_PUBLIC_API_URL` without echoing its contents. A deployable GitHub Pages build additionally requires the exact public value `https://sewncovers-api.onrender.com` and fails before building if it is missing or different.
-
-Next.js reads `NEXT_PUBLIC_API_URL` explicitly at build time and embeds it in browser code. Changing it after `npm run build` does not change an existing static export. Never put credentials, database URLs, API keys, or other private values in `NEXT_PUBLIC_` variables. Backend environment variables are not imported by the frontend. Local environment files are ignored and must not be committed.
-
-## Run the frontend
-
-Start the development server:
-
-```powershell
 npm run dev
 ```
 
-Open <http://localhost:3000>. Run the backend separately with its configured pattern database so the configurator can load `/patterns`. Missing or unreachable API configuration produces a retryable screen state; the frontend never substitutes bundled catalogue metadata.
-
-Press `Ctrl+C` in this terminal to stop the development server.
-
-## Quality checks
-
-Run these commands from the `frontend` directory:
-
-```powershell
-npm run lint
-npm run typecheck
-npm run check:config
-npm test
-npm run test:e2e
-npm run build
-npm run verify:export
-```
-
-`npm run typecheck` performs strict TypeScript checking without emitting files. `npm run check:config` runs the focused environment and deployment-configuration tests. `npm test` uses Node's built-in test runner with mocked requests and deterministic timers; it exercises configuration, URL construction, typed responses, backend and malformed errors, timeout and retry policy, cold-start recovery, API filters, empty results, stale-response protection, selection retention, frontend artwork mapping, duplicate-safe saving, ordinary and GitHub Pages share paths, exact shared-design restoration for every shape, recovery, cleanup, and secret-safe failures without contacting Render or Neon. `npm run test:e2e` runs the pinned Playwright journey described below. `npm run build` performs the production build and writes the static export to the ignored `out/` directory. The project-specific `SEWNCOVERS_GITHUB_PAGES=true` build flag applies the case-sensitive `/SewnCovers` base path required by GitHub Pages; local development, ordinary local builds, and unrelated GitHub Actions builds remain at the domain root. The Playwright runner alone adds `SEWNCOVERS_E2E=true` so its Pages-layout artifact may use the intercepted `.test` API; neither deployment workflow contains that flag. `npm run verify:export` checks the generated routes, metadata, local asset/link targets, deployment-path prefix, exact production API embedding for Pages, and absence of the browser-test API origin.
-
-## Typed API client
-
-`services/api-client.ts` owns the established guest endpoints. `services/account-api.ts` adds exact runtime parsing for account, session, project, version, and revocable-share responses, attaches bearer authorization only to authenticated requests, and clears the tab session after an authenticated `401`. Both read only the statically inlined public API origin. Runtime validators reject malformed responses and never accept database or credential fields.
-
-Each attempt owns one `AbortController` and a 20-second timeout. Safe `GET` requests retry only timeout, network, HTTP 408/425/429/500/502/503/504, or documented backend failures with those transient statuses. The retry limit is two additional sequential attempts, delayed by 500 ms and 1 second; permanent 4xx validation/not-found responses and malformed success payloads do not retry. `POST /designs` never retries automatically because a lost response could follow a successful write. Every attempt clears its timer and aborts its controller after completion, and the single sequential loop prevents overlapping attempts.
-
-## Optional account workspace
-
-`AuthProvider` restores a bearer session from `sessionStorage`, verifies it
-against `/account` and `/account/sessions`, schedules local expiry cleanup, and
-clears state on logout, revocation, expiry, account deletion, or any
-authenticated `401`. It never uses `localStorage`, cookies, URL parameters, or
-persisted configuration state for the session token. Session storage avoids a
-cross-site-cookie dependency but remains readable after successful same-origin
-script injection; this is a portfolio architecture, not commercial-grade auth.
-
-`/projects/` uses a query parameter for runtime project IDs so one statically
-exported route supports listing and detail/refresh in root and Pages modes.
-Opening a private version places only opaque project/version identifiers in the
-configurator URL; the browser must still authenticate and the backend must still
-authorize both. A `?share=` URL instead carries an explicit read-only bearer
-grant. Anonymous `?design=` links remain public, immutable, and non-revocable.
-
-Callers may supply `onStatus` to receive `connecting`, `cold-start`, `retrying`, `success`, and `failure` states. After two seconds without completion, the message says the API *may* be waking and can take up to a minute; retry messages report the exact bounded retry count. A later response reports recovery, while final failures use fixed, actionable, secret-safe copy. Errors distinguish `configuration`, `timeout`, `network`, `http`, `backend-contract`, and `malformed-response`; caught exception details, response bodies, URLs, submitted designs, credentials, stack traces, and database fields are never logged or copied into client error messages.
-
-## Design tokens
-
-The visual direction is "The Cutting Table": a tailor's workroom laid out like a clean editorial spread. `DESIGN_AUDIT.md` records the audit, the principles, every token and the WCAG contrast ratios.
-
-`app/globals.css` is the single source of truth. It is organised in three layers:
-
-1. **Primitive palette.** Raw values on `:root` (linen, ink, loden, terracotta, brass and madder), which generate no utilities.
-2. **Semantic theme tokens.** CSS-first Tailwind v4 `@theme` variables that generate utilities such as `bg-page`, `text-text-muted`, `border-border-strong`, `rounded-card`, `shadow-raised` and `max-w-page`.
-3. **Fabric dye tokens** (`--dye-*`). These colour the pattern artwork independently of the UI theme.
-
-Tailwind's default colour, type, radius and shadow scales are reset to `initial`, so every utility resolves to a SewnCovers token. `tests/design-tokens.test.ts` fails if components use default scale utilities, arbitrary colours or raw colour literals.
-
-- **Colour.** Roles cover:
-  - page and surfaces, primary and muted text;
-  - brand states and a brand tint;
-  - decorative and text-safe accents, tape-measure brass, borders and stitch lines, focus;
-  - three feedback palettes: a brass "care label" `notice` palette for prototype and sandbox disclaimers, `success`, and a madder-red `error`.
-
-  Disclaimers never reuse the error palette. Semantic colours stay 6-digit hex after substitution because the e2e contrast check parses them. Primary text is 13.49:1 on the page. Muted text is 5.97:1 on the page and 6.56:1 on surfaces. On-brand text is 8.86:1. Notice text is 6.23:1. The strong border is 3.56:1 on the page. Focus is 4.81:1 on the page.
-- **Type.** Three self-hosted OFL families live in `app/fonts/`, loaded with `next/font/local`:
-  - Fraunces for display type;
-  - Geist for UI and body copy;
-  - Geist Mono for measurements, eyebrows and numerals.
-
-  Builds need no network access for fonts, and the files are served from `/_next/static/media` behind the GitHub Pages base path. The CI `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` variable is now a harmless no-op. The scale runs from `display` through `page-title`, `section-title`, `card-title`, `subhead`, `lede`, `body`, `supporting`, `label`, `button`, `eyebrow` and `readout`, without coupling visual size to heading level.
-- **Spacing and containers.** Spacing keeps Tailwind's 4px base plus the named steps `icon`, `control-x`/`control-y`, `component`, `card`, `gutter`, `layout` and `section`. Containers are `page` for workspaces, `content` for forms and `reading` for long copy.
-- **Radius and elevation.** Radii are tight (4, 6, 8 and 12px, plus `pill`). Elevation is flat: `hairline`, `card`, `raised`, `overlay`, `focus`, `selected` (an inset brand ring) and `current`.
-- **Motion.** Durations are 120, 180 and 280ms with a single `ease-standard` curve. Only colour, opacity, transform, border and shadow are animated; buttons press by darkening and flattening rather than moving. A global `prefers-reduced-motion` guard removes every transition and animation.
-- **Textile details.** A few reusable classes are used sparingly:
-  - `stitch-rule` (a running-stitch divider);
-  - `choice-card` (a radio-backed option with a dashed "basting stitch" when selected);
-  - `care-label`, `cutting-mat`, `ruler`;
-  - `pinked-edge` (a responsive utility);
-  - `progress-track`.
-
-  Every selected state has a forced-colours equivalent.
-- **Dark mode is token-ready but deferred.** `:root` declares `color-scheme: light`. The planned "After hours" palette and its checked ratios are in `DESIGN_AUDIT.md`.
-
-The global `:focus-visible` fallback draws a two-colour ring (2px surface gap plus 3px terracotta) on standard interactive or explicitly focusable elements, with a system-colour outline in forced-colours mode.
-
-## UI primitives
-
-Reusable typed primitives live in `components/ui/` and are available from the `@/components/ui` barrel. Components use them, or the exported class helpers, instead of hand-written class strings.
-
-- **`Button` and `ButtonLink`** share `buttonClasses()`. They have primary, secondary and ghost variants and default or compact sizes. Disabled buttons use a dashed "unavailable" frame. `ButtonLink` wraps `next/link` and renders its children directly, which keeps the exported `>Start configuring</a>` markup stable. `TextLink` and `textLinkClasses` cover underlined text links with 44px targets.
-- **`Surface` and `surfaceClasses()`** provide the panel and card frames: default, subtle, page, emphasis and danger tones with flat to raised elevation. `EmptyState` draws a dashed "pattern piece" outline.
-- **`PageShell`, `PageHeader` and `SectionHeader`** replace the page wrapper and the eyebrow + heading + lede markup that was repeated inside each page. They are exported alongside the `eyebrowClasses`, `pageTitleClasses`, `sectionTitleClasses`, `cardTitleClasses`, `subheadClasses` and `ledeClasses` helpers.
-- **Form fields.** `Field`, `TextInput`, `Select`, `Textarea` and `Checkbox` share one control frame (`controlClasses`) and wire up label, help and error IDs. `NumberInput` accepts an optional `unit` suffix, rendered in mono and hidden from assistive technology because the label already names the unit. `UnitSelector` is a segmented control for `cm` and `in`.
-- **Status.** `Badge` is a small non-interactive status tag. `Notice` covers prototype, sandbox, info and success tones; prototype and sandbox render as care labels. `ErrorMessage` keeps assertive alert semantics and accepts an optional visible `heading`. `LoadingState` is unchanged.
-- **Content helpers.** `StitchDivider` draws a decorative divider. `SpecList` renders label and value pairs as a spec sheet.
-
-Business validation, measurement conversion, screen-level persistence integration, overlays, skeletons, toasts, and global error handling remain deferred to their roadmap tasks.
-
-## Configurator component shells
-
-Reusable domain-oriented shells live in `components/configurator/` and are exported through `@/components/configurator`. They consume the semantic design tokens and native form conventions established by the UI layer, but do not own the configurator workflow. The roadmap-aligned progress labels are Shape, Measurements, Cover details, Pattern, Preview, and Review.
-
-- `StepIndicator` renders a display-only ordered list, derives completed and upcoming states from a validated current step ID, and exposes the current item with `aria-current="step"`.
-- `ShapeSelectionStep` owns the shape-selection presentation while the central configuration Context remains the only source of selection state. It renders a native radio group with whole-card labels for square, rectangle, box / bench, round, and tapered / trapezoid shapes. A visible confirmation protects a meaningful second dimension before switching to an equal-dimension shape.
-- `CoverDetailsStep` uses native radio groups for the metadata-owned material, fit, closure/access, and seam choices. Material remains separate from pattern, and fit never rewrites entered measurements.
-- `PatternCard` associates a whole visible card with a native radio input. The caller owns controlled or uncontrolled selection and supplies preview content; previews are decorative by default, while callers may opt into accessible preview content. The shared pattern browser reuses this shell without moving catalogue data or selection state into it.
-- `PatternFilter` is a controlled generic fieldset. Its explicit selection mode renders native radios for one active value or native checkboxes for combinable values, then reports values without filtering records internally. The pattern browser supplies frontend-owned labels and sends the selected category and color IDs to the API.
-- `CushionPreview` is a labeled semantic figure with a contained decorative visual region, a deliberate empty state, and caller-supplied `figcaption` content. The shape-aware preview supplies proportional geometry and a textual summary without moving configuration state into the shell.
-- `ConfigurationSummary` renders caller-formatted label/value items as a description list, including intentional empty and missing-value fallbacks. The review derives those items before passing them to the shell; the shell performs no measurement conversion, calculation, validation, pricing, or totals.
-
-`Configurator`, `MeasurementStep`, `CoverDetailsStep`, `PatternStep`, `PreviewStep`, and the review components share the complete five-shape flow; the illustration, measurement-diagram, and preview components retain shape-specific SVG branches where geometry or terminology genuinely differs.
-
-## Configuration state
-
-The central in-memory configuration state lives in `context/configuration/`. `ConfigurationProvider` owns a `useReducer` instance and wraps route content inside the server-compatible root layout; `useConfiguration()` returns the typed `state` and `dispatch` values and throws a descriptive error outside the provider. Public state, action, reducer, initial-state, provider, and hook exports are available from `@/context/configuration`.
-
-The state includes `shape`, `width`, `height`, nullable tapered `backWidth`, `thickness`, `unit`, `materialId`, `fitPreference`, `closureType`, `seamStyle`, `patternId`, and `patternScale`. Shape, measurements, and pattern selection begin as `null`; the initial unit is centimetres, pattern scale is `1`, and safe backward-compatible detail defaults are Cotton canvas, Standard fit, Zipper access, and Plain seam. Unit conversion updates every committed measurement atomically. Square and Round keep equal face dimensions, while restoration accepts only complete invariant-preserving configurations.
-
-Pure helpers in `context/configuration/measurements.ts` define the centimetre rules, decimal parsing, two-place display formatting, `1 in = 2.54 cm` conversion, range presentation, and shape-completion checks. Face dimensions and tapered back width use 10–300 cm; Thickness uses 1–60 cm. `data/shapes.ts` is the single typed owner of shape names, descriptions, required fields, labels, tips, examples, and equal-face behavior. `data/cover-options.ts` similarly owns material, fit, closure, and seam metadata and defaults. API pattern metadata remains outside configuration state.
-
-## Shape selection
-
-The static `/configure/` route retains a server-rendered page shell around the interactive configurator subtree. Its display-only `StepIndicator` derives Shape, Measurements, Pattern, or Preview from completed central state and marks Review current only while the review screen is visible. `ShapeSelectionStep` reads `state.shape` directly and dispatches the existing typed `setShape` action; it does not duplicate the selected shape in local component state.
-
-The selection group uses a native `fieldset`, `legend`, and same-name radio inputs. All five shapes are enabled. Each radio is associated with its complete visible card label and supporting text. Checked state is communicated by the native state, a checkmark, persistent Selected text, and a stronger card boundary; focus moves to the visible card treatment. Labels and status elements meet or exceed the approximately 44px target, wrap at narrow widths, and retain system-color checked and focus boundaries in forced-colors CSS.
-
-Each option includes a decorative inline SVG silhouette with an explicit outline and internal line detail, so the shapes differ by boundary rather than color alone. The Square uses an equal-sided face, Rectangle uses an elongated face, and Box / bench uses outlined top and side planes. Equivalent visible names and descriptions carry the accessible meaning, and forced-colors CSS replaces decorative fills and strokes with system colors. The illustrations are visual guidance, not manufacturing-accurate drawings.
-
-## Shape-specific measurements
-
-Measurements appear after any supported shape is selected. Square collects Width and Thickness, and Round collects Diameter and Thickness; both keep stored face dimensions equal. Rectangle collects Width, Height, and Thickness. Box / bench collects Width, Depth, and Thickness. Tapered / trapezoid collects Front width, smaller Back width, Depth, and Thickness. No seam allowance, fabricated tolerance, or manufacturing value is added.
-
-Each visible measurement uses a small local display string so an empty field, a leading decimal, or a trailing decimal separator can remain visible while the visitor is editing. The text-based draft input uses `inputMode="decimal"` and a `0.01` step. Complete finite values within the documented range and with no more than two fractional digits are committed immediately; incomplete, invalid, over-precise, non-positive, and out-of-range drafts never replace the last committed number. On blur, a valid draft is normalized to at most two decimal places without padded zeroes, an empty draft commits `null`, and every invalid draft remains visible with a specific shape-aware inline message so it can be corrected. Errors begin on blur, clear when the draft becomes valid, use polite status semantics, and are associated through `aria-invalid` and `aria-describedby`.
-
-Validation uses the centimetre equivalent: Width, Height, and Depth must be 10–300 cm and Thickness must be 1–60 cm. The selected unit and its valid two-decimal range are visible in every label and supporting description. Inch minimums are rounded upward and maximums downward for range copy so the displayed boundary itself remains valid at the supported precision.
-
-Changing the controlled `UnitSelector` dispatches one typed reducer action. The reducer converts every non-null `width`, `height`, and `thickness` value using exactly `1 inch = 2.54 centimetres`, rounds the converted result to at most two decimal places, and changes `unit` in the same state transition. The unit-keyed form then recreates its display drafts from the converted Context values, intentionally replacing unfinished or invalid old-unit text and preventing a mixed-unit display. Centimetre-to-inch-to-centimetre round trips are accepted within `0.01 cm`, the selected display precision.
-
-Changing shape preserves the committed width, second face dimension, thickness, unit, pattern, and pattern scale where those values remain compatible. Selecting Square is the constrained transition: the reducer atomically replaces `height` with the current `width`, including `null`, without deriving a value from another field or inserting a default. Leaving Square preserves its equal second dimension as an editable starting value for Rectangle Height or Box / bench Depth. Invalid or missing values stay invalid or missing and keep later steps in their honest incomplete state.
-
-The responsive inline SVG measurement guide changes with the selected shape and visibly labels the same terms as its inputs. Every control has persistent units plus a concise shape-specific tip and example in its programmatic description. Additional general tips use a native `details` disclosure that works without hover. Geometry is decorative and hidden from assistive technology because the labels, descriptions, and caption provide equivalent guidance. System-color strokes and fills keep boundaries visible in forced-colors mode.
-
-## API pattern catalogue and filters
-
-After the selected shape’s required measurements contain committed values within the existing unit-aware ranges, `/configure/` reveals the pattern fieldset and advances the display-only progress indicator to Pattern. `PatternStep` calls the shared shape-completion helper instead of maintaining another measurement ruleset. Clearing a required measurement hides the browser without clearing an already committed pattern, so unrelated central state remains intact.
-
-`GET /patterns` is the runtime source of truth for stable pattern IDs, names, descriptions, category IDs, and color IDs. The response order is rendered unchanged. `services/pattern-catalogue.ts` owns request state and validates the established 12–20 complete-catalogue boundary, supported facets, complete metadata, unique IDs/names, color tags, and a corresponding frontend artwork entry. Empty or incompatible responses never trigger a local metadata fallback.
-
-The ownership boundary is deliberate: the API and database own catalogue metadata and deterministic ordering, while `data/patterns.ts` owns only user-facing facet labels and the stable pattern-ID-to-CSS-artwork mapping. `app/globals.css` owns the actual gradients. The API's `previewClassName` remains part of the established transport schema, but rendering resolves the local class from the stable `id`; an unknown ID fails visibly instead of allowing backend data to select an arbitrary CSS class.
-
-Category and color each use a visibly labeled native single-choice radio group supplied through `PatternFilter`, including explicit All categories and All colors choices. Every category, color, or combined change makes a new `/patterns` request with AND semantics. An incrementing request version prevents late status or data from an older filter request from replacing the newest result. Clear filters requests the unfiltered catalogue and focuses the stable All categories control.
-
-Filtering never chooses, clears, or replaces a pattern. The complete API response remains available to preview and review while filtered results drive only the visible cards, so a merely hidden selection remains valid in Context and the shape-aware preview. A named polite status explains the hidden selection and offers a clear-filters action. A selected ID absent from the complete API catalogue is reported without a fallback and can be replaced by choosing an available card.
-
-Initial and filter requests expose visible polite loading states, including the typed cold-start and retry messages. Final failures use the alert primitive and a retry button; a later success recovers in place. Zero filter results have a named clear-filters recovery, while a genuinely empty API catalogue has a distinct retryable state. Structurally or semantically malformed responses show an error and suppress misleading cards.
-
-Every card displays its pattern name, category label, color labels, and description. The complete visible card remains associated with one same-name native radio, while checked state also has a persistent checkmark, Selected text, and stronger boundary. The expanded grid stacks without horizontal overflow at narrow widths. Polite result and hidden-selection statuses avoid assertive filter announcements; reset recovery returns focus to the visible All categories treatment. Forced-colors rules retain system-color card, checked, pattern, and focus boundaries even when decorative gradients are suppressed.
-
-All 15 previews are responsive repeating CSS gradients in `app/globals.css`, selected through the frontend mapping and reused by the browser card and every shape-aware cushion preview. The `--pattern-scale` value continues to change each motif’s tile or repeat interval. The artwork makes no image request, so there is no public pattern URL that can lose the GitHub Pages `/SewnCovers` prefix. API-owned names and descriptions remain visible and the decorative preview containers remain hidden from assistive technology.
-
-Uploads, search, sorting, pagination, advanced faceting, full step navigation, pricing, persistence, cart, and checkout remain deferred.
-
-## Shape-aware proportional preview
-
-`PreviewStep` appears after any shape selection and reads the full central configuration directly from Context. It owns no duplicate configuration state. `CushionModel` draws a silhouette for the selected shape, turns the dotted seam into piping only for Piped edge, and keeps the same outline for every fit preference. Closure remains text-only because the preview does not show an opening, and the copy explicitly says fit does not reshape the model or alter entered measurements. The Pattern step's solid-colour "Live cushion preview" uses the same model and shape.
-
-The decorative visual is a responsive inline SVG with a `640 × 430` view box. The pure `buildCushionGeometry` helper in `components/configurator/cushion-geometry.ts` builds each outline from measurement ratios only, so equivalent centimetre and inch values draw the same shape:
-
-- **Square:** equal sides with soft pillow corners.
-- **Rectangle:** the same puffed pillow, with width ÷ height between 0.4 and 3.
-- **Box / bench:** a firm top face and a visible boxing strip in the oblique angle of its shape-card icon. Depth ÷ width is kept between 0.15 and 1, and thickness ÷ width between 0.035 and 0.35.
-- **Round:** a softly puffed circle whose seam follows the edge. A side band appears once thickness reaches 18% of the diameter, and it is capped at 60%.
-- **Tapered / trapezoid:** the wider front edge at the bottom nearest the viewer and the back edge at the top. Front width ÷ depth is kept between 0.5 and 3, and back ÷ front between 0.45 and 0.95. The seam follows the slanted sides.
-
-Thickness also sets how far pillow edges puff out. Missing or invalid values fall back to reference proportions, and every outline is scaled into one shared frame, so extreme values stay legible and inside the canvas. The older `calculatePreviewGeometry` helper is retained but no longer drives the preview. All projections are illustrative 2D aids, not manufacturing templates, perspective guarantees, fit guarantees, or true 3D rendering.
-
-The selected API record is resolved through its stable ID to a frontend-owned typed CSS class; `app/globals.css` remains the only owner of all 15 gradient definitions. The fabric is rendered through an SVG `foreignObject` clipped to the whole silhouette, including any boxing strip or side band, which is darkened with `--shade-band-*` tokens. A safe numeric `--pattern-scale` custom property changes each pattern’s tile or repeat interval. `0.5×` makes the motif half the default size and `2.0×` makes it twice the default size; this visual multiplier is explicitly not presented as a real-world measurement.
-
-Pattern size uses a labeled native range input plus visible Smaller and Larger native buttons. All three dispatch the existing typed `setPatternScale` action, use the shared `0.5`–`2.0` bounds and `0.1` step, and have no local scale state. The output and textual summary update from Context immediately, and the endpoint button disables at its bound.
-
-The preview shell is a semantic figure. Its text includes Shape, Material, Fit preference, Closure / access, Edge finish, Pattern, every shape-specific dimension, Thickness, and Pattern scale, so the decorative SVG and gradient are hidden from assistive technology without losing information. The spec list sits directly under the visual; from a 48rem container up, that column is sticky beside the pattern-size control, notes, and edit actions. The illustrative-only notice is the figure caption. Before completion, the figure stays visible with an honest shape-specific message and `Invalid or incomplete` or `Not selected` values; it never invents measurements or silently chooses a pattern. Forced-colors CSS replaces decorative geometry with system-color outlines and surfaces. The control transitions retain reduced-motion suppression.
-
-The 2D preview is the configurator's only preview; the optional WebGL view
-from Task 10.5 has been removed, and a photo-based mockup is a separate
-follow-up. Private custom-pattern derivatives use short-lived authorization,
-`no-store` fetches, and temporary object URLs that are revoked on change or
-unmount. Expired or unauthorized textures fall back to the neutral cushion with
-a visible message; originals and expiring URLs never enter saved snapshots.
-Photorealism and manufacturing output remain unimplemented.
-
-## Configuration review and summary output
-
-The review remains inside `/configure/` and the existing `ConfigurationProvider`. `Configurator` owns only the local configure-versus-review view state; the complete specification remains in Context. The editing subtree stays mounted while review is visible, so returning to any section preserves filters, measurements, and every unrelated choice.
-
-The pure `deriveReviewReadiness` helper reuses `hasValidMeasurementsForShape`, the shared field-range helpers, the shared pattern-scale validator, the authoritative shape definitions, and a validated `PatternCatalogueResult`. Review requires a supported shape, every shape-required measurement, a selected ID that resolves in a ready catalogue, and a valid pattern scale. Empty or invalid catalogues, missing or unresolved selections, missing fields, invalid ranges, and an invalid scale return specific section-owned issues instead of a partial summary. Printing and downloading are withheld, the affected edit actions remain named, and pattern editing stays disabled with a visible reason until prerequisite measurements make that existing section available.
-
-Ready summaries use a semantic description list in a stable order: Shape; every metadata-defined measurement; equal-face relationship where applicable; Unit; Material; Fit preference; Closure / access; Edge finish; Pattern; Pattern category; Pattern colors; and Pattern scale. All measurements use the existing two-decimal formatter, and the reused shape-aware preview remains decorative alongside the complete textual equivalent.
-
-Review edit actions return to Shape, Measurements, Cover details, Pattern, or Pattern scale without route navigation or resets. Stable element IDs identify the relevant legend, heading, or range control. A layout effect focuses that semantic target and scrolls it to the start without animation. A focused Return to review action remains available after editing and disables with a visible reason when a change makes the configuration incomplete. The display-only step indicator remains non-interactive.
-
-The visible Prototype notice states that SewnCovers is a prototype, the summary is not an order, quote, or manufacturing specification, the values are demonstrations, saving creates only a public prototype configuration link, and no purchase, payment, fabrication, delivery, or order submission occurs. The notice is a labeled complementary region rather than an error alert and is repeated verbatim in the downloaded summary. System-color boundaries preserve the notice and programmatically focused edit targets in forced-colors mode.
-
-Print summary calls only the browser's native print flow from its button. Focused print CSS removes site navigation, the editing workflow, preview imagery, edit controls, and output buttons; it keeps the summary title, readable black-on-white details, and prototype notice, removes decorative backgrounds and shadows, and avoids page breaks inside the notice and details. Browser Print to PDF is available through the native dialog; no PDF library or generated PDF is included.
-
-Download summary generates `sewncovers-configuration-summary.txt` locally as UTF-8 plain text only after its button is activated. Pure `serializeReviewSummary` uses the same derived fields as the visible description list, a stable order, and the complete notice; it includes no internal identifiers, customer data, price, timestamp, tracking value, or order number. The small client action creates one Blob URL, removes its temporary link immediately, and revokes the URL on the next browser task (or immediately if the click fails). No request, endpoint, persistence layer, dependency, or file storage is involved.
-
-The review heading is programmatically focusable for predictable entry, labels and values retain definition-list relationships, edit and output actions are native buttons, the prototype notice is discoverable without an alert role, and unavailable output has visible and programmatic reasons. The layout wraps at narrow widths, keeps approximately 44-pixel or larger controls, and prints without relying on decorative pattern imagery. Screen-reader software, OS-level forced-colors, physical printers, browser zoom, and complete assistive-technology testing remain outside the automated verification performed for this task.
-
-Orders, quotes, checkout, payment, pricing, availability, manufacturing specifications, customer information, server PDFs, and later roadmap work remain deferred.
-
-## Saving and sharing reviewed configurations
-
-Saving is available only on the ready review screen. The save boundary maps the authoritative Context state to `shape`, `width`, `height`, `backWidth`, `thickness`, `unit`, `patternId`, `patternScale`, `materialId`, `fitPreference`, `closureType`, and `seamStyle`. It rechecks metadata-owned options, shape relationships, ranges and precision before calling the typed `POST /designs` client. Pattern selection must already resolve through the validated `/patterns` catalogue; no bundled metadata or internal UI fields enter the request.
-
-Design creation is deliberately single-attempt because retrying an unsafe POST could create a second immutable record after an ambiguous network failure. The save controller admits one in-flight request, ignores duplicate clicks and any repeat action after success, and exposes connecting, possible cold-start, saving, retryable error, and success states. Review edit actions are disabled while the POST is unresolved, so the saving panel and its duplicate-submission lock cannot be bypassed by leaving and reopening review. A failure never resets or mutates Context. Recovery is an explicit **Try saving again** action, and the interface states that no automatic retry occurred.
-
-The typed client accepts only the exact documented 201 response, including a URL-safe 22-character `publicId`; the save boundary additionally requires the returned public configuration to exactly match the submitted request and rejects extra fields, mismatches, or malformed IDs. Only then does it generate `<origin><basePath>/configure/?design=<encoded_public_id>`. `NEXT_PUBLIC_BASE_PATH` is statically inlined as empty for ordinary exports and `/SewnCovers` for GitHub Pages, while `encodeURIComponent` protects the query value.
-
-The success region announces that the design is saved, labels a read-only URL input, selects the full URL on focus, and provides a native **Copy share link** button. Clipboard success is announced politely. Missing or rejected Clipboard API access exposes a fixed error, focuses and selects the URL for manual copying, and never includes browser exception details. Save errors use an assertive alert with the retained-configuration and explicit-retry recovery instructions.
-
-## Restoring shared designs
-
-On `/configure/`, the client reads exactly one `design` query value with `URLSearchParams`, which safely decodes the value independently of whether the route is served at the domain root or beneath `/SewnCovers`. Only the established 22-character URL-safe public-ID format reaches `GET /designs/{public_id}`. Empty, duplicate, malformed, truncated, or incorrectly encoded values fail locally and do not make a request.
-
-The retrieval boundary accepts the expanded public response or the exact legacy response, requires `publicId` to match, and rechecks every shape, measurement, option, unit, pattern ID, and scale rule. Legacy responses receive only the documented null back width, Cotton canvas, Standard fit, Zipper access, and Plain seam defaults. Restoration then dispatches one atomic Context action without conversion, rounding, a POST request, or automatic saving.
-
-Design retrieval and the complete API-backed pattern catalogue may finish in either order. A retrieved design waits until its pattern resolves in the validated complete catalogue; no bundled pattern metadata is used as a fallback. Catalogue failures and temporarily unavailable patterns retain the pending public configuration so an explicit pattern retry can finish restoration. A synchronous Context revision counter and request generation invalidate pending work as soon as the visitor changes any configuration field, so neither a late design response nor later pattern loading can overwrite that edit.
-
-The labeled shared-design region announces connecting, possible cold-start, bounded retry, pattern-waiting, and success states. Malformed links, malformed responses, unknown or expired IDs, request failures, catalogue failures, unavailable patterns, and superseded loads use fixed detail-free messages and keep the current local configuration. Retryable retrieval failures offer an explicit design retry; catalogue failures offer a pattern retry. **Continue with my configuration** cancels pending restoration and removes only the `design` parameter with `history.replaceState`, preserving the current pathname, GitHub Pages base path, other query values, hash, and valid Context state.
-
-## Phase 6 local integration verification
-
-Task 6.5 ran the complete browser journey against a disposable in-memory local API, never Neon. It loaded the 15-pattern catalogue, changed category and color filters rapidly, recovered from no matches, configured and reviewed Square, Rectangle, and Box / bench with exact decimal centimetre and inch values, changed preview scale, protected a deliberately duplicated save activation, copied and opened the generated ordinary share URL, and restored the saved public fields exactly. The focused cross-boundary regression repeats catalogue loading, duplicate-safe save, root and `/sewncovers` URL generation, and exact restore for all three shapes.
-
-The visible browser checks also covered connecting, delayed possible-cold-start, empty catalogue, bounded retry and final API failure, explicit recovery, malformed catalogue/design responses, single-attempt save failure, unknown designs, filtered-but-retained selections, edits during delayed restoration, and clipboard success. Mocked regressions cover the unavailable/rejected clipboard fallback and the remaining deterministic races. At 320 and 768 pixels the inspected layouts had no horizontal overflow; visible controls or their associated labels retained at least 40-pixel targets. Input labels, landmarks, heading order, ARIA references, live regions, duplicate IDs, and browser console output were inspected.
-
-## Frontend unit and component tests
-
-Run the complete deterministic frontend suite with:
-
-```powershell
-npm test
-```
-
-The existing Node runner remains responsible for environment, typed-client, catalogue, save/share, restoration, and Phase 6 integration tests. Exact-pinned `tsx`, `jsdom`, and React Testing Library development dependencies add client-component interaction coverage without changing the production dependency set. No coverage-report command is currently configured.
-
-The deterministic suite covers all five shapes, tapered and equal-face rules,
-associated guidance/errors, shape-change confirmation, cover-detail controls,
-preview and review output, legacy and expanded restoration, save payloads,
-decimal/unit behavior, catalogue states, retries, immutable-save recovery,
-session-only token storage, guest account states, private/share distinctions,
-complete version summaries, the custom-upload lifecycle, server-owned cart
-changes, role denial/allowance, production specifications, financial summaries,
-tracking-link allowlisting, private-texture fallbacks, Global Privacy Control, and
-legal/trust/authorization surfaces. Component assertions prefer accessible
-names, roles, controls, and visible recovery text; mocked clients, controlled
-promises, mocked fetch, and deterministic timers keep all request and failure
-paths local and repeatable.
-
-## Playwright shared-design journey
-
-Install the Chromium runtime that matches the exact-pinned Playwright dependency, then run the ordinary static-export path:
-
-```powershell
-npx playwright install chromium
-npm run test:e2e
-```
-
-Run the same journey against the GitHub Pages repository path from PowerShell with:
-
-```powershell
-$env:SEWNCOVERS_GITHUB_PAGES = "true"
-npm run test:e2e
-```
-
-On macOS or Linux, use `SEWNCOVERS_GITHUB_PAGES=true npm run test:e2e`. The runner builds the real static export with the self-hosted fonts in `app/fonts/` (the test-only Google Fonts mapping is kept for CI parity but no longer used), serves `out/` from a single-process loopback server, and blocks every browser origin except that server and `api.sewncovers.test`. Playwright intercepts the reserved `.test` origin before DNS and fulfills patterns, design creation, and design retrieval entirely in memory, so the journey cannot contact Neon, Render, Google Fonts, or another external service.
-
-The Chromium journey suite uses accessible roles, names, status regions,
-visible values, and native controls. In addition to the guest save/restore and
-accessibility journeys, intercepted account coverage registers, restores and
-expires a session, lists/renames/deletes a project, opens history, appends a
-version, creates/restores/revokes a share, exports data, signs out/in, and
-deletes the account. Custom-upload coverage transfers a generated local PNG,
-observes fail-closed/pending, failed, rejected, and approved states, selects the
-approved texture with the keyboard, checks the repeat preview and mobile
-overflow, and confirms referenced-asset deletion. Commerce coverage uses
-keyboard activation from server estimate through quote, cart, hosted fictional
-checkout, authoritative return status, customer-role admin denial, and
-administrator production review. Task 10.5 coverage exercises legal/trust, production checklist,
-issue/QC/packet, and readiness. It covers `320×568`,
-`768×1024`, and `1440×900` in both root and `/SewnCovers/` modes without
-production writes.
-
-## Global layout components
-
-Reusable server-compatible layout components live in `components/layout/` and are exported through `@/components/layout`. The root layout renders the site header and footer around one flexing `<main id="main-content">` landmark and provides a focus-revealed skip link to that stable target. The starter homepage keeps its existing content and now relies on the root layout for its main landmark.
-
-- `SiteHeader` renders a static semantic header and primary navigation with an accessible text-based SewnCovers home link because no approved logo asset exists. Optional typed navigation items use `next/link`; a caller may provide an exact `currentHref` to add `aria-current="page"` and a persistent underline without route-dependent client logic.
-- Navigation stacks and wraps with responsive CSS. The integrated header continues to expose only the home destination; Task 3.2 adds the minimal `/configure/` page without expanding global navigation or adding a redundant disclosure menu. The component has no client boundary; a mobile disclosure can be added when later navigation work defines the complete destination set.
-- `SiteFooter` renders the documented SewnCovers portfolio-prototype identity and a build-time year. Optional typed footer navigation is omitted from the integrated frame until real destinations are defined.
-- Internal `next/link` destinations remain application-relative because Next.js applies the configured `/SewnCovers` base path automatically in GitHub Pages builds. Public image paths continue to use the existing build-time base-path strategy.
-
-Versioned demonstration legal information
-are directly navigable under root and `/SewnCovers/`; qualified legal,
-operational, accessibility, and security review remain outstanding. The local
-`/account/`, `/projects/`, `/commerce/`, `/cart/`, `/orders/`, `/admin/`, legal,
-trust, and checkout routes are static-export-compatible shells whose private
-and commercial data always comes from backend-authorized API calls; they are not
-available on the live site until a separately authorized deployment and
-migration.
-
-## Landing page
-
-The `/` route is a server-compatible landing page composed inside the shared header, single `main#main-content`, and footer frame. It has one job: lead visitors into the configurator. The hero holds a single `h1`, one sentence, and one primary `next/link` to `/configure/`; it is followed by three one-line steps, the five supported shapes (drawn with the configurator's `ShapeIllustration` and named from `data/shapes.ts`), one prototype notice, and a closing link to the same destination. The page has no in-page anchor links. Next.js applies the configured `/SewnCovers` base path to the configurator destination in GitHub Pages exports.
-
-The prototype notice is the page's only disclaimer, so the shared footer omits its prototype line on `/`. The hero's measured cushion is a decorative CSS illustration built from the existing semantic palette; it creates no pattern records, product selection, pricing, or configurator state. The default Next.js starter graphics remain in `public/` for now but are not referenced by the landing page; no remote images or new image assets are used.
+Open <http://localhost:3000>. `.env.example` points the app at `http://localhost:8000`; start the API from `../backend` to load the pattern catalogue ([setup guide](../docs/setup.md)). `NEXT_PUBLIC_API_URL` is the only variable the frontend reads; it is embedded at build time, so never put secrets in it.
+
+## Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Development server. |
+| `npm run lint` · `npm run typecheck` | ESLint · strict TypeScript. |
+| `npm test` | Unit, component, service and configuration tests (offline). |
+| `npm run check:config` | Only the environment and deployment-config tests. |
+| `npm run build` | Static export into `out/`. |
+| `npm run verify:export` | Check the export's routes, metadata, base path and embedded API URL. |
+| `npm run verify:performance` | Check first-load JavaScript budgets (after a build). |
+| `npm run test:e2e` | Build, serve and run the Playwright journeys (Chromium; run `npx playwright install chromium` once). |
+| `npm run screenshots:readme` | Regenerate the README screenshots in `../docs/images/`. |
+
+Set `SEWNCOVERS_GITHUB_PAGES=true` (and `NEXT_PUBLIC_API_URL=https://sewncovers-api.onrender.com`) to build the GitHub Pages variant under the `/SewnCovers` base path.
+
+## Layout
+
+| Path | Contents |
+| --- | --- |
+| `app/` | Routes, metadata, `globals.css` (design tokens), self-hosted fonts. |
+| `components/` | `configurator/`, `account/`, `projects/`, `commerce/`, `assurance/`, `layout/`, `ui/`. |
+| `context/` | Configuration reducer and auth session state. |
+| `services/` | Typed API clients, catalogue, save and share, draft storage. |
+| `data/` | Shape and cover-option metadata, pattern artwork mapping. |
+| `config/` | Environment validation, export and budget verifiers. |
+| `tests/`, `e2e/` | Unit and component tests; Playwright journeys. |
+
+## Documentation
+
+[Architecture](../docs/architecture.md) (configurator, state, API client, storage) · [Design system](../docs/design.md) · [Testing](../docs/testing.md) · [Deployment](../docs/deployment.md) · [Setup](../docs/setup.md)

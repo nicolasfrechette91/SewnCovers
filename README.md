@@ -1,177 +1,45 @@
 # SewnCovers
 
-SewnCovers is a full-stack portfolio proof of concept for planning a replacement
-cushion cover instead of replacing the cushion. A visitor chooses a supported
-shape, enters exact measurements, selects one of 15 curated fabric patterns,
-previews the result, reviews it, and saves an immutable configuration behind a
-shareable link. Saving never places an order, requests a quote, or starts a
-purchase.
+Measure the cushion you already own, pick a fabric, and get a previewed, shareable specification for a replacement cover. A full-stack portfolio project: Next.js on GitHub Pages, FastAPI on Render, PostgreSQL on Neon.
 
-The repository also includes an optional account-backed workspace with private
-named projects, immutable version history, revocable read-only shares, private
-processed custom patterns, and a fictional commerce sandbox. Repository changes
-are not deployed as part of this improvement.
+[![CI](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/ci.yml/badge.svg)](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/ci.yml)
+[![Deploy frontend](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-pages.yml)
+[![Deploy backend](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-backend.yml/badge.svg)](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-backend.yml)
 
-| Public resource | URL |
+![The configurator's Preview stage: a rectangular cushion covered in the green Fern trail pattern on a cutting mat, beside the pattern-size slider and the design details.](docs/images/preview-step.jpg)
+
+- **Live demo:** [nicolasfrechette91.github.io/SewnCovers](https://nicolasfrechette91.github.io/SewnCovers/) ([open the configurator](https://nicolasfrechette91.github.io/SewnCovers/configure/))
+- **Demo share link:** [a saved box cushion in Terrace wave](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg), restored exactly from the API
+- **API docs:** [Swagger UI](https://sewncovers-api.onrender.com/docs) · [OpenAPI JSON](https://sewncovers-api.onrender.com/openapi.json) · [health](https://sewncovers-api.onrender.com/health)
+
+The API runs on a free Render instance, so the first request after a quiet period can take up to a minute. The site shows a waking notice and retries reads for you.
+
+| Home | Shape stage |
 | --- | --- |
-| Case study | [Product and engineering decisions](https://nicolasfrechette91.github.io/SewnCovers/case-study/) |
-| Technical evidence | [Trust, boundaries, and readiness](https://nicolasfrechette91.github.io/SewnCovers/trust/) |
-| Source repository | [github.com/nicolasfrechette91/SewnCovers](https://github.com/nicolasfrechette91/SewnCovers) |
-| Live frontend | [nicolasfrechette91.github.io/SewnCovers/](https://nicolasfrechette91.github.io/SewnCovers/) |
-| Configurator | [Open the configurator](https://nicolasfrechette91.github.io/SewnCovers/configure/) |
-| Demonstration share | [Restore the Box / bench design](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg) |
-| Production API | [sewncovers-api.onrender.com](https://sewncovers-api.onrender.com) |
-| API health | [sewncovers-api.onrender.com/health](https://sewncovers-api.onrender.com/health) |
-| Swagger UI | [sewncovers-api.onrender.com/docs](https://sewncovers-api.onrender.com/docs) |
-| OpenAPI JSON | [sewncovers-api.onrender.com/openapi.json](https://sewncovers-api.onrender.com/openapi.json) |
+| ![The landing page: the headline "Design a cover that fits the cushion you already have", a Start configuring button and a measured 45 by 45 cm patterned cushion drawing.](docs/images/home.jpg) | ![The configurator's Shape stage: a six-stage progress track and five cushion shape cards with Rectangle cushion selected.](docs/images/shape-step.png) |
+| **Pattern stage** | **Review stage** |
+| ![The Pattern stage: built-in pattern search and filters, the Fern trail card selected, and a Current selections panel listing the rectangle's measurements and cover choices.](docs/images/pattern-step.png) | ![The Review stage: the prototype notice, a table of the chosen measurements and options, and the patterned cushion preview.](docs/images/review.jpg) |
 
-## Live-demo walkthrough
+## What this demonstrates
 
-### 1. Start with the cushion
+- **A static frontend on a separate API.** Next.js 16 exported to GitHub Pages with no frontend server and no third-party runtime dependencies, validating every API response at runtime ([architecture](docs/architecture.md)).
+- **Immutable share links with an explicit no-retry policy.** A saved design never changes, and the client never silently retries the write ([ADR 0002](docs/adr/0002-immutable-designs-no-post-retry.md)).
+- **A production start that refuses a wrong schema.** The API migrates, verifies the exact schema, constraints and seed, and only then serves ([ADR 0003](docs/adr/0003-migration-gated-production-start.md)).
+- **Guest-first accounts.** The whole design flow works without signing up; sign-in is inline and never costs the design. Argon2id passwords, hashed and revocable bearer sessions, object-level authorization ([ADR 0004](docs/adr/0004-guest-first-opaque-sessions.md)).
+- **A documented, enforced design system.** Tokens, checked contrast ratios, reduced-motion and forced-colours support, guarded by a test ([design](docs/design.md)).
+- **Offline-by-construction tests.** 186 frontend unit tests, 56 Playwright journeys against a mocked API, and 281 backend tests on migrated SQLite databases ([testing](docs/testing.md)).
 
-Visit the [live frontend](https://nicolasfrechette91.github.io/SewnCovers/), then
-[open the configurator](https://nicolasfrechette91.github.io/SewnCovers/configure/)
-and choose Square cushion, Rectangle cushion, or Box / bench cushion. The shape
-sets the measurement terms used in the next step.
+The reasoning behind the project is in the [case study](docs/case-study.md).
 
-The landing page introduces the project, its portfolio-prototype boundary, and
-the measurement-first design idea.
+## Tech stack
 
-### 2. Configure and preview the cover
-
-Enter the shape-specific measurements, choose a catalogue pattern, and adjust
-Pattern size from `0.5×` to `2.0×` with the slider or Smaller and Larger
-buttons. The demonstration below uses Box / bench, `73.25 × 49.75 × 13.5 cm`,
-Terrace wave, and `1.6×`; the proportional preview and visible text summary
-update together.
-
-The preview is a planning aid; its text summary remains the authoritative
-description of the prototype configuration.
-
-### 3. Review, save, share, and restore
-
-Choose **Review configuration**, check the summary, then use **Save and create
-share link** and **Copy share link**. Every successful save creates a new
-immutable public ID; saving identical values again intentionally creates a
-separate record with another ID. Open the
-[existing demonstration share](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg)
-directly—or refresh it—to restore the same seven configuration fields before
-reviewing them again.
-
-The immutable link restores the saved design without creating a new copy. The
-responsive review keeps the configuration readable on a narrow screen.
-
-The [public API](https://sewncovers-api.onrender.com),
-[interactive API documentation](https://sewncovers-api.onrender.com/docs), and
-[health endpoint](https://sewncovers-api.onrender.com/health) are available for
-reviewers who want to inspect the deployed service behind the walkthrough.
-
-## What the MVP does
-
-- Supports square, rectangle, box / bench, round, and tapered / trapezoid cushions.
-- Validates dimensions in centimetres or inches and converts with
-  `1 in = 2.54 cm`.
-- Loads, filters, and orders the active pattern catalogue from the API while
-  keeping pattern artwork in the frontend bundle.
-- Renders a responsive, shape-aware 2D preview with adjustable pattern scale.
-- Produces a reviewable, printable, and downloadable configuration summary.
-- Creates immutable saved designs and restores all seven configuration fields
-  from `?design=<public_id>`.
-- Handles API wake-up, loading, empty, validation, retry, and recovery states
-  without silently replacing the visitor's work.
-
-The supported measurement contract is:
-
-| Shape | Stored measurements | Interpretation |
-| --- | --- | --- |
-| `square` | `width`, equal `height`, `thickness` | The face must remain square. |
-| `rectangle` | `width`, `height`, `thickness` | Width and height describe the face. |
-| `box` | `width`, `height`, `thickness` | The UI labels stored `height` as depth. |
-
-### Local Task 10.1 expansion (not deployed)
-
-The current worktree adds Round and Tapered / trapezoid shapes, shape-aware
-measurement guidance, and separate material, fit, closure, seam, pattern, and
-pattern-scale choices. Every visible specification is included in preview and
-review where it can be represented honestly, then saved and restored through an
-additive API/database contract. Existing links remain readable through the
-documented Cotton canvas, Standard fit, Zipper access, Plain seam, and null back
-width defaults. These local changes are not yet available on the production URLs
-or applied to the production database.
-
-Width and height must be 10-300 cm equivalent, thickness must be 1-60 cm
-equivalent, measurements allow at most two decimal places, and pattern scale is
-0.5-2.0 at one-decimal resolution.
-
-### Local Task 10.2 account workspace (not deployed)
-
-Accounts remain optional. Email identifiers are case-normalized, passwords use
-Argon2id, and sessions use independently revocable seven-day opaque bearer
-tokens. PostgreSQL stores only token hashes; the browser receives a raw token
-only when a session is created and keeps it only in `sessionStorage`. This
-avoids cross-site-cookie dependence but remains exposed to successful
-same-origin script injection and is not commercial-grade authentication. Email
-verification and password recovery are not implemented.
-
-An account owns private named projects. Each save appends a complete validated
-snapshot with an atomically allocated sequential version number; older versions
-never change. Explicit read-only project shares use separate high-entropy
-bearer tokens, store only token hashes, and can be revoked. The longstanding
-`?design=<public_id>` guest workflow stays public, immutable, account-free, and
-non-revocable. Account export returns versioned JSON. Confirmed account deletion
-removes only that account's sessions, projects, private versions, and share
-grants—not legacy anonymous designs.
-
-### Local Task 10.3 private custom patterns (not deployed)
-
-Signed-in customers can upload a still JPEG, PNG, or WebP to private quarantine
-storage, preview its full-image repeat, and select it only after server-side
-validation, deterministic derivative processing, and fail-closed moderation.
-Private snapshots preserve the exact owned approved derivative and processing
-version. Deletion revokes access immediately while immutable history shows a
-deleted-asset state. The provider-neutral filesystem/S3 architecture, durable
-worker, limits, privacy boundary, and local setup are summarized in
-[Local Task 10.3 private custom patterns](#local-task-103-private-custom-patterns-not-deployed). No production bucket,
-credential, upload, worker, moderation call, or migration was created.
-
-### Local Task 10.4 demonstration commerce (not deployed)
-
-The local API now owns one-currency CAD pricing, immutable published price
-books and quotes, a private cart, pending-order checkout, signed/idempotent
-payment events, encrypted fictional shipping details, production-asset copies,
-manufacturing/fulfilment states, full sandbox refunds, CLI-assigned
-administrators, and audit history. The static frontend supplies customer and
-administrator workflows under both root and `/SewnCovers/` base paths. Every
-commerce surface is labelled as a sandbox demonstration; no live provider,
-charge, refund, tax, shipment, order, or migration was created. See
-[Local Task 10.4 demonstration commerce](#local-task-104-demonstration-commerce-not-deployed).
-
-### Local Task 10.5 assurance and production operations (not deployed)
-
-Verified paid-order lines create durable, idempotent production work
-with structured checklists/issues, optimistic transitions, quality control,
-append-only history, and checksum-stable safe packets. Versioned legal pages
-and explicit account/upload/sandbox-checkout
-acknowledgements sit beside a public evidence-bounded Trust area and read-only
-readiness checks. No live provider, production migration, deployment, legal
-review, security certification, or manufacturing validation occurred. See
-[Local Task 10.5 assurance and production operations](#local-task-105-assurance-and-production-operations-not-deployed).
-
-## Technology and responsibilities
-
-| Area | Technology | Responsibility |
-| --- | --- | --- |
-| Web application | Next.js 16.2.11, React 19.2.4, TypeScript, Tailwind CSS 4 | App Router UI, typed configuration state, validation, static routes, 2D preview, and share-link experience. |
-| Browser integration | Typed `fetch` client | Validates public API responses, applies bounded retries only to safe reads, and reports cold-start states. |
-| API | Python 3.13, FastAPI 0.139.2, Pydantic Settings 2.13.1, Argon2-cffi 25.1.0, Uvicorn 0.51.0 | Public/private HTTP contracts, authentication, authorization, CORS, validation, and production process startup. |
-| Persistence | SQLAlchemy 2.0.51, Psycopg 3.3.4, Alembic 1.18.5 | Lazy sessions, explicit transactions, PostgreSQL models, schema migrations, and the canonical seed. |
-| Database | Neon PostgreSQL | Catalogue and anonymous designs plus local account, session, private-project, version, and hashed share-grant models. |
-| Hosting | GitHub Pages and Render Free | Static frontend delivery and the migration-gated FastAPI service. |
-| Verification | Node test runner, React Testing Library, jsdom, Playwright 1.62.1, pytest 9.1.1, Ruff 0.15.22 | Deterministic frontend and backend tests plus browser journeys in both base-path modes, lint, type, build, export, readiness, and dependency checks. Current totals belong in the latest improvement report rather than this durable overview. |
-
-The frontend has a committed npm lockfile. Backend direct dependencies are
-exact-pinned in `backend/pyproject.toml`; standard pip is used without a
-backend lockfile to match the Render build.
+| Layer | Technology |
+| --- | --- |
+| Frontend | Next.js 16 (App Router, static export), React 19, TypeScript (strict), Tailwind CSS v4, self-hosted fonts |
+| API | Python 3.13, FastAPI, Pydantic v2, Argon2id |
+| Data | PostgreSQL on Neon, SQLAlchemy 2 (synchronous), Alembic; SQLite for local work and tests |
+| Tests | Node test runner, tsx + jsdom + React Testing Library, Playwright, pytest, Ruff |
+| Delivery | GitHub Actions, GitHub Pages, Render |
 
 ## Architecture
 
@@ -183,447 +51,64 @@ flowchart LR
     Render -->|"SQLAlchemy + Psycopg"| Neon["Neon PostgreSQL"]
 ```
 
-Next.js exports static HTML, CSS, and JavaScript. GitHub Pages serves those
-files under the case-sensitive `/SewnCovers` base path; there is no frontend
-server or runtime SSR layer. The browser calls Render directly using the public
-build-time `NEXT_PUBLIC_API_URL`. FastAPI is the only application component
-that receives `DATABASE_URL` or connects to Neon.
+GitHub Actions builds the static site and publishes it to Pages under the `/SewnCovers` base path. The browser loads it, then calls the API directly at a build-time URL. FastAPI is the only component that holds the database credential. Because the site and API are on different domains, sessions use opaque bearer tokens instead of cookies. See [architecture](docs/architecture.md).
 
-## Repository map
+## Run it locally
 
-| Path | Purpose |
-| --- | --- |
-| `frontend/app/` | Static App Router pages, metadata, and global layout. |
-| `frontend/components/` | Configurator, landing, layout, and UI components. |
-| `frontend/context/` | Typed configuration state, reducer, measurements, and conversions. |
-| `frontend/services/` | API client, catalogue, save/share, and restoration boundaries. |
-| `frontend/data/` | Supported shape metadata and frontend-owned pattern artwork handles. |
-| `frontend/config/` | Environment validation and generated-export verification. |
-| `frontend/tests/`, `frontend/e2e/` | Deterministic unit/component tests and Playwright journey. |
-| `backend/app/` | FastAPI routes, services, repositories, settings, and persistence. |
-| `backend/migrations/` | Linear Alembic schema/index/seed history. |
-| `backend/tests/` | Isolated API, model, migration, production, and failure tests. |
-| `.github/workflows/` | CI and GitHub Pages build/deployment workflows. |
-| `frontend/IMPROVEMENT-*.md` | Evidence and handoff reports for the completed improvement sequence. |
-| `render.yaml` | Non-secret Render Blueprint configuration. |
-
-Detailed component notes remain in the
-[frontend guide](frontend/README.md) and [backend guide](backend/README.md).
-
-## Prerequisites
-
-- Git plus Node.js 20.9.0 or newer and npm. CI and deployment use Node.js
-  24.15.0; use the committed `frontend/package-lock.json` with `npm ci`.
-- Python 3.13 with `venv` and pip. CI and Render use Python 3.13.2.
-- A private PostgreSQL development connection for database-backed local
-  behavior. The project uses a direct Neon development-branch URL with
-  `sslmode=require` and `channel_binding=require`; never use the production
-  connection locally.
-
-## Local frontend setup
-
-1. Install the locked dependencies.
-
-   ```powershell
-   cd frontend
-   npm ci
-   ```
-
-2. Create the ignored local environment file only if it does not exist.
-
-   ```powershell
-   if (-not (Test-Path .env.local)) { Copy-Item .env.example .env.local }
-   ```
-
-   On macOS/Linux use
-   `test -e .env.local || cp .env.example .env.local`. The safe example points
-   to `http://localhost:8000`.
-
-3. Start Next.js and open <http://localhost:3000>.
-
-   ```powershell
-   npm run dev
-   ```
-
-## Local backend setup
-
-1. From `backend`, create and activate a Python 3.13 virtual environment.
-
-   ```powershell
-   cd backend
-   python -m venv .venv
-   .venv\Scripts\Activate.ps1
-   ```
-
-   On macOS/Linux use
-   `python3.13 -m venv .venv && source .venv/bin/activate`. Reuse an existing
-   Python 3.13 environment rather than recreating it.
-
-2. Install the application and development tools, then create the ignored
-   settings file only if absent.
-
-   ```powershell
-   python -m pip install -e ".[dev]"
-   if (-not (Test-Path .env)) { Copy-Item .env.example .env }
-   ```
-
-   On macOS/Linux use `test -e .env || cp .env.example .env`.
-
-3. Start the development API.
-
-   ```powershell
-   python -m uvicorn app.main:app --reload
-   ```
-
-The root endpoint works without a database. `/health`, `/patterns`, and
-`/designs` require a configured, migrated database. Stop either development
-server with `Ctrl+C`.
-
-## Environment variables
-
-Populated `.env` and `.env.local` files are ignored. Values prefixed with
-`NEXT_PUBLIC_` are embedded in browser JavaScript at build time and therefore
-must never contain secrets.
-
-| Variable | Owner / exposure | Requirement | Contract |
-| --- | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | Frontend; **public** | Required when an API method runs; required for Pages builds | Absolute HTTP(S) URL without credentials, query, or fragment. Local example: `http://localhost:8000`. Pages requires exactly `https://sewncovers-api.onrender.com`. |
-| `SEWNCOVERS_GITHUB_PAGES` | Frontend build; **public control** | Optional; set to `true` only for repository-path exports | Selects the case-sensitive `/SewnCovers` base path. Ordinary development/builds omit it. |
-| `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` | Frontend build; local path, not shipped config | Optional locally; set by CI quality builds | Points Next.js to `frontend/e2e/font-responses.cjs` for deterministic offline font builds. |
-| `SEWNCOVERS_E2E` | Playwright runner; test-only | Runner-owned; do not set for deployment | Allows the Pages-layout browser test to use its intercepted `.test` API. |
-| `ENVIRONMENT` | Backend; server-only, non-secret | Optional; defaults to `development` | One of `development`, `test`, or `production`. The production entry point requires `production`. |
-| `FRONTEND_ORIGIN` | Backend; server-only, non-secret | Optional locally/test; required in production | One exact path-free HTTP(S) origin. Local default is `http://localhost:3000`; production accepts only `https://nicolasfrechette91.github.io`. |
-| `PORT` | Backend; server-only, non-secret | Optional; defaults to `8000` | Integer 1-65535. Render supplies it; the production process binds `0.0.0.0`. |
-| `DATABASE_URL` | Backend; **secret** | Required for database requests, online migrations, and production startup | Private SQLAlchemy URL. Locally use only `<NEON_DEVELOPMENT_DATABASE_URL>`; Render owns a separate protected production value. |
-| `VULNERABILITY_REPORT_CONTACT` | Backend; non-secret | Placeholder locally; replace before production | Use `security-contact@example.invalid` only as an unmistakably non-routable demonstration placeholder. |
-| `PYTHON_VERSION` | Render build; non-secret | Required by `render.yaml` | Pinned to `3.13.2`. |
-
-`NEXT_PUBLIC_BASE_PATH` is generated by `next.config.ts`; it is not a
-developer-supplied variable. No browser bundle receives backend settings.
-
-## Database and migrations
-
-### Initialize a development database
-
-1. Put the private direct development connection in `backend/.env` as
-   `DATABASE_URL=<NEON_DEVELOPMENT_DATABASE_URL>`. Do not paste the value into
-   commands, logs, screenshots, or documentation.
-
-2. Inspect the linear history and apply the forward migration from `backend`.
-
-   ```powershell
-   python -m alembic history --verbose
-   python -m alembic heads --verbose
-   python -m alembic current
-   python -m alembic upgrade head
-   ```
-
-3. Confirm `python -m alembic current` reports `20260829_01 (head)`, then
-   request `/health` and `/patterns`. A second upgrade must be a no-op.
-
-Online `current`, `upgrade`, and `downgrade` commands need
-`DATABASE_URL`. Inspection of history/heads and offline SQL do not:
+You need Node.js 20.9+ and Python 3.13. No Neon account is required: the API runs on a local SQLite file.
 
 ```powershell
-python -m alembic upgrade head --sql
-python -m alembic downgrade head:base --sql
-```
-
-Do not downgrade, reset, recreate, or manually edit a shared Neon database.
-Downgrade commands documented in the backend guide are only for isolated
-development/test recovery.
-
-### Migration history and current head
-
-| Revision | Change |
-| --- | --- |
-| `20260728_01` | Creates `patterns` and `cover_designs` with named constraints. |
-| `20260728_02` | Adds the non-redundant category and activity indexes. |
-| `20260729_01` | Seeds the canonical 15 active pattern metadata rows. |
-| `20260812_01` | Adds richer shape dimensions and backward-compatible material, fit, closure, and seam fields. |
-| `20260818_01` | Adds accounts, hashed/expiring sessions, private projects, immutable versions, and hashed revocable share grants without changing anonymous designs. |
-| `20260818_02` | Adds owned private custom uploads, derivative metadata, durable processing/moderation state, and exact project-version asset references. |
-| `20260828_01` | Adds server-owned demonstration price books, quotes, cart, payment events, immutable orders, protected production assets, fulfilment, and audit history. |
-| `20260829_01` **(head)** | Adds immutable legal versions/acknowledgements, durable paid-line production work/checklists/issues/history, and packet metadata. |
-
-Production startup additionally verifies this exact head and every expected
-migration, catalogue, anonymous-design, private-workspace, upload, and commerce table, the reviewed
-constraint/index sets, and exactly 15 pattern rows before Uvicorn starts.
-This describes the local release candidate; production remains at its previously
-deployed revision until an explicitly authorized deployment applies it.
-
-### Schema relationship and integrity
-
-`patterns.id` has a one-to-many database relationship with
-`cover_designs.pattern_id`. The named foreign key uses `ON UPDATE RESTRICT`
-and `ON DELETE RESTRICT`, so referenced pattern IDs cannot be changed or
-removed. The API and repository expose no design update or delete operation,
-and ORM update/delete attempts are rejected.
-
-| Table | Important columns | Important constraints and indexes |
-| --- | --- | --- |
-| `patterns` | String primary-key ID, visible metadata, JSON color IDs, preview handle, activity, display order | Unique name and preview handle; normalized/length/nonblank/category/order checks; `ix_patterns_category_id` and `ix_patterns_is_active`. The primary key already indexes slug lookup. |
-| `cover_designs` | Internal integer primary key, unique 22-character public ID, shape-specific dimensions, unit, material, fit, closure, seam, pattern ID, scale | Public-ID format, supported options, unit-aware ranges, equal square/round faces, tapered back-width rules, and scale checks; restrictive pattern foreign key. The public-ID unique constraint already supports retrieval, so no redundant explicit design index exists. |
-| `customer_accounts`, `authenticated_sessions` | Normalized email, Argon2id password hash, session-token hash, creation/expiry/revocation times | Unique email and token hashes, bounded lengths, account ownership, cascade deletion, and focused indexes. Raw passwords and tokens are never response columns. |
-| `saved_projects`, `project_versions`, `share_grants` | Account-owned name and atomic next-version counter; immutable JSON snapshots; share-token hashes and revocation | Ownership/cascade foreign keys, unique per-project version number, positive sequence, private-by-default access, and hashed bearer grants. |
-
-Dimensions use `NUMERIC(7,2)`; pattern scale uses `NUMERIC(2,1)`. Pattern
-artwork, images, gradients, URLs, and filesystem paths are not stored in
-PostgreSQL.
-
-### Canonical pattern seed
-
-The head migration inserts these 15 active records in deterministic display
-order:
-
-- Botanical: Botanical sample (`prototype-botanical`), Fern trail
-  (`fern-trail`), Meadow sprig (`meadow-sprig`).
-- Geometric: Geometric sample (`prototype-geometric`), Diamond path
-  (`diamond-path`), Arch grid (`arch-grid`).
-- Striped: Harbor stripe (`harbor-stripe`), Orchard stripe
-  (`orchard-stripe`), Ribbon stripe (`ribbon-stripe`).
-- Woven: Woven sample (`prototype-woven`), Basket check
-  (`basket-check`), Linen crosshatch (`linen-crosshatch`).
-- Abstract: Terrace wave (`terrace-wave`), Pebble drift
-  (`pebble-drift`), Confetti grid (`confetti-grid`).
-
-## Development and verification commands
-
-### Everyday commands
-
-| Directory | Command | Purpose |
-| --- | --- | --- |
-| `frontend` | `npm run dev` | Start the local Next.js server. |
-| `frontend` | `npm run lint` | Run ESLint. |
-| `frontend` | `npm run typecheck` | Run strict TypeScript checking without emit. |
-| `frontend` | `npm run check:config` | Run focused build/environment tests. |
-| `frontend` | `npm test` | Run all deterministic frontend unit, component, service, and configuration tests. |
-| `frontend` | `npm run build` | Build the static export into ignored `frontend/out/`. |
-| `frontend` | `npm run verify:export` | Verify exported routes, links, assets, base path, and API embedding. |
-| `frontend` | `npm run test:e2e` | Build, serve, and run the isolated Chromium journey suite. |
-| `backend` | `python -m uvicorn app.main:app --reload` | Start the local API without automatic migrations. |
-| `backend` | `python -m ruff format --check .` | Check Python formatting. |
-| `backend` | `python -m ruff check .` | Run Ruff lint. |
-| `backend` | `python -m pytest` | Run all isolated backend tests. |
-| `backend` | `python -m pip check` | Check installed dependency consistency. |
-| `backend` | `python -m app.assurance.cli readiness` | Run read-only, secret-free production-configuration checks; incomplete local configuration intentionally returns non-zero. |
-
-### CI-equivalent frontend gate
-
-Run from `frontend` in PowerShell. The first export stays at the domain root;
-the second reproduces the Pages build.
-
-```powershell
+# Frontend, http://localhost:3000
+cd frontend
 npm ci
-npm run lint
-npm run typecheck
-npm test
-$env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES = (Resolve-Path e2e\font-responses.cjs).Path
-npm run build
-npm run verify:export
-$env:NEXT_PUBLIC_API_URL = "https://sewncovers-api.onrender.com"
-$env:SEWNCOVERS_GITHUB_PAGES = "true"
-npm run build
-npm run verify:export
-Remove-Item Env:SEWNCOVERS_GITHUB_PAGES, Env:NEXT_PUBLIC_API_URL, Env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES -ErrorAction SilentlyContinue
+if (-not (Test-Path .env.local)) { Copy-Item .env.example .env.local }; npm run dev
 ```
-
-The CI job uses Node.js 24.15.0 on Ubuntu 24.04 and the same scripts. It does not
-run Playwright. For the local browser gate, install the pinned Chromium runtime
-once with `npx playwright install chromium`, run `npm run test:e2e`, then
-repeat with `SEWNCOVERS_GITHUB_PAGES=true` to exercise `/SewnCovers`.
-
-### CI-equivalent backend gate
-
-Run from `backend` in an active Python 3.13 environment:
 
 ```powershell
+# API, http://127.0.0.1:8000 (second terminal)
+cd backend
+python -m venv .venv; .venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
-python -m ruff format --check .
-python -m ruff check .
-python -m pytest
-python -m pip check
+$env:DATABASE_URL = "sqlite:///./local.sqlite3"
+python -m alembic upgrade head
+python -m uvicorn app.main:app --reload
 ```
 
-The CI job uses Python 3.13.2 on Ubuntu 24.04. Tests use dependency overrides and
-isolated SQLite databases; neither quality gate contacts Neon or Render or
-requires a populated environment file.
+macOS and Linux commands, PostgreSQL, and how to switch on commerce and custom uploads locally are in the [setup guide](docs/setup.md).
 
-## Public API contract
-
-The local API exposes the established five public paths plus focused account,
-session, project, version, share, export, and deletion paths. Swagger UI, ReDoc, and OpenAPI are also
-available at `/docs`, `/redoc`, and `/openapi.json`.
-
-| Method and path | Successful behavior | Important failures |
-| --- | --- | --- |
-| `GET /` | `200 {"service":"SewnCovers API","status":"ready"}`; does not start database work. | Stable process verification only. |
-| `GET /health` | `200 {"process":"healthy","database":"healthy"}` after one `select(1)`. | `503` with database `unconfigured` or `unavailable`; it uses `HealthResponse`, not the general error envelope. |
-| `GET /patterns` | `200` bare array of active public pattern metadata, ordered by display order then ID. Optional `category` and `color` filters are normalized and combined with AND semantics; valid no-match filters return `[]`. | `422` invalid filter or unsupported query field, `503` storage unavailable, `500` unexpected failure. |
-| `POST /designs` | `201` exact saved-design response plus `Location: /designs/{publicId}`. Legacy core fields remain required; newer detail fields have documented defaults, and the selected pattern must be active. | `422` schema/business/pattern failure, `503` storage or ID generation unavailable, `500` unexpected failure. |
-| `GET /designs/{public_id}` | `200` exact immutable public design for a 22-character URL-safe ID. | `404` well-formed unknown ID, `422` malformed ID, `503` storage unavailable, `500` unexpected failure. |
-
-Account routes cover registration/login, current account, current/all-session
-logout, session listing/revocation, JSON export, and password-confirmed account
-deletion. Project routes cover owned list/create/detail/rename/delete, immutable
-version list/get/create, and owned share creation/revocation. `GET
-/shares/{share_token}` is the only anonymous private-project restoration path
-and returns only the complete configuration snapshot. Missing, malformed,
-expired, or revoked authentication returns `401`; absent and cross-account
-project/version/grant access uses the same non-disclosing `404` response.
-
-`GET /patterns` serializes `id`, `name`, `description`, `categoryId`,
-`colorIds`, and `previewClassName`; internal activity and display order are
-not public. Design creation accepts:
-
-```json
-{
-  "shape": "rectangle",
-  "width": 61.75,
-  "height": 39.5,
-  "backWidth": null,
-  "thickness": 14.25,
-  "unit": "cm",
-  "patternId": "arch-grid",
-  "patternScale": 1.4,
-  "materialId": "linen-blend",
-  "fitPreference": "standard",
-  "closureType": "zipper",
-  "seamStyle": "piped"
-}
-```
-
-The response adds only `publicId` and returns the validated configuration:
-
-```json
-{
-  "shape": "rectangle",
-  "width": 61.75,
-  "height": 39.5,
-  "backWidth": null,
-  "thickness": 14.25,
-  "unit": "cm",
-  "patternId": "arch-grid",
-  "patternScale": 1.4,
-  "materialId": "linen-blend",
-  "fitPreference": "standard",
-  "closureType": "zipper",
-  "seamStyle": "piped",
-  "publicId": "<22-character-public-id>"
-}
-```
-
-Non-health API failures use a deterministic
-`{"errors":[{"code","message","location"}]}` envelope. Clients should branch
-on the stable error `code`, not the human-readable message. See the
-[backend API guide](backend/README.md#api-error-contract) for the complete
-field and error tables.
-
-## Immutable saves and share-link restoration
-
-Each successful `POST /designs` is a create operation. The service generates a
-new random 22-character opaque public ID and inserts one append-only record.
-Repeated identical POST bodies intentionally create separate records with
-different IDs; there is no content deduplication, idempotency key, overwrite,
-update, or delete behavior.
-
-That also makes design creation an unsafe operation to retry. If the database
-commits but the response is lost, an automatic retry could create a second
-record. The browser client therefore gives `POST /designs` one attempt, blocks
-duplicate in-flight submissions, and requires an explicit user retry after an
-ambiguous failure. Safe GETs may retry transient failures up to two additional
-sequential attempts.
-
-Share links contain only `?design=<public_id>`. Restoration validates the ID
-locally, retrieves the exact public record, waits for its pattern to exist in
-the current API catalogue, and atomically restores `shape`, `width`,
-`height`, `backWidth`, `thickness`, `unit`, material, fit, closure, seam,
-`patternId`, and `patternScale`. Legacy records without the newer fields restore
-with `backWidth: null`, Cotton canvas, Standard fit, Zipper access, and Plain seam.
-Malformed, unknown, unavailable-pattern, failed, stale, or superseded loads keep
-the visitor's current configuration. A share ID is opaque, but it is not an
-authentication or privacy boundary.
-
-## Production deployment
-
-| Layer | Production contract |
-| --- | --- |
-| Frontend | GitHub Pages serves `https://nicolasfrechette91.github.io/SewnCovers/` from `frontend/out`. `SEWNCOVERS_GITHUB_PAGES=true` selects `basePath="/SewnCovers"`; `assetPrefix` is intentionally unset. |
-| Frontend API configuration | The Pages workflow embeds exactly `NEXT_PUBLIC_API_URL=https://sewncovers-api.onrender.com` and rejects another value before building. |
-| API | Render Free builds from `backend` with `python -m pip install .` and starts with `python -m app.production` in Ohio. |
-| CORS | Production allows exactly `https://nicolasfrechette91.github.io`. The `/SewnCovers/` path is not part of an origin. Allowed methods are DELETE/GET/PATCH/POST and request headers are Authorization/Content-Type; credentialed cookies remain disabled, and CORS is not authentication. |
-| Database | FastAPI alone uses Render's protected production `DATABASE_URL` to reach the isolated Neon production branch. No credential is stored in this repository. |
-| Health | Render probes `/health`; HTTP 200 requires both the process and database query to be healthy. |
-
-Render Free does not provide the paid pre-deploy migration command. The
-repository-owned production entry point therefore validates production
-settings, runs `alembic upgrade head`, verifies revision/schema/index/seed
-compatibility, and starts Uvicorn only after both steps succeed. Render supplies
-`PORT`; Uvicorn binds `0.0.0.0`.
-
-GitHub Actions runs frontend lint, type-check, tests, ordinary and Pages builds,
-and export verification plus backend Ruff, tests, and `pip check` on pushes to
-`main` and pull requests targeting `main`. The Pages workflow builds and
-publishes only `frontend/out`. Render does not deploy on its own
-(`autoDeployTrigger: "off"`): the `Deploy backend to Render` workflow re-runs the
-backend checks on pushes to `main` that touch `backend/**` or `render.yaml`, calls
-the Render deploy hook held in the `RENDER_DEPLOY_HOOK_URL` repository secret,
-and then fails if the live OpenAPI document does not list `/auth/register`.
-It can also be run manually from the Actions tab.
-
-## Engineering decisions and trade-offs
+## Engineering decisions
 
 | Decision | Benefit | Trade-off |
 | --- | --- | --- |
-| Static Next.js export on GitHub Pages | Simple, inexpensive, cacheable frontend with no runtime web server. | No SSR/server actions; public configuration is fixed at build time, and every route/asset must respect the case-sensitive repository base path. |
-| Render and Neon free tiers | Keeps the public portfolio demo inexpensive and separates compute from persistence. | Render can sleep after inactivity, making the first request slow; free quotas and provider availability are operational constraints. |
-| Immutable saved designs | Share links restore a stable historical configuration and persistence exposes a very small create/read surface. | Records cannot be edited or deleted, identical creates consume separate rows, and retention/storage growth is not automated. |
-| No automatic POST retry | Avoids silently creating another immutable record after an ambiguous successful write. | A visitor must choose whether to retry, and a manual retry can still create a second record. |
-| Bounded retry for safe GETs | Improves recovery from cold starts and transient network/5xx failures. | A wake-up can still exceed the client timeout/retry window and cannot guarantee availability. |
-| Frontend-owned pattern artwork | Keeps binary/static assets on static hosting and PostgreSQL focused on queryable metadata. | Catalogue metadata and shipped visual handles must stay compatible across deployments. |
-| Synchronous SQLAlchemy sessions | Compact, explicit transaction ownership for this small request workload. | High-concurrency production growth could justify revisiting worker and async strategy. |
-| Optional accounts without removing guests | Reviewers can use the configurator and anonymous immutable links without signup; signed-in customers can use server-authorized private projects locally. | The live deployment still lacks Task 10.2. Local auth has no email verification/recovery or distributed abuse protection, and bearer session/share tokens remain sensitive. Opaque IDs and CORS never supply authorization. |
+| [Static export on GitHub Pages](docs/adr/0001-static-export-on-github-pages.md) | Free, cacheable, nothing to patch | No SSR; config fixed at build time; base path everywhere |
+| [Immutable designs, no POST retry](docs/adr/0002-immutable-designs-no-post-retry.md) | A link always shows what was saved | Duplicate rows on manual retry; no delete |
+| [Migration-gated start-up](docs/adr/0003-migration-gated-production-start.md) | Fails closed on schema drift | Slower cold start |
+| [Opaque, hashed bearer sessions](docs/adr/0004-guest-first-opaque-sessions.md) | Works across domains; no CSRF surface | Token readable by injected script |
+| [Metadata in the API, artwork in the frontend](docs/adr/0005-catalogue-metadata-in-api-artwork-in-frontend.md) | No image requests; no binaries in the database | Two sources to keep in sync |
+| [Feature flags, off in production](docs/adr/0006-feature-flags-off-in-production.md) | Full pipeline without cost or risk | Not demonstrable on the live site |
 
-## Troubleshooting
+## Honest boundaries
 
-| Symptom | Check and resolution |
+- **Custom uploads and commerce are switched off in production.** Both are implemented and tested, but the live API answers `503` for them. Uploads need object storage and an image-moderation provider, commerce needs a payment provider, tax and legal review, and none of that is worth operating for a portfolio. Both run locally ([setup](docs/setup.md#3-turn-on-commerce-and-custom-uploads-locally)). Commerce is a fictional CAD sandbox that never contacts a provider.
+- **It is a prototype.** It cannot charge money, ship anything or produce a finished cover, and says so where it matters.
+- **Authentication is portfolio-grade.** No email verification or password recovery, a per-process login throttle, and the session token lives in `sessionStorage`. See [SECURITY.md](SECURITY.md).
+- **The browser test suite runs locally, not in CI**, and the free tiers mean cold starts.
+
+## Repository map
+
+| Path | Contents |
 | --- | --- |
-| Frontend shows an API configuration or catalogue error | Confirm `frontend/.env.local` contains only a valid public `NEXT_PUBLIC_API_URL=http://localhost:8000`, restart `npm run dev`, and make sure the backend and migrated development database are running. |
-| Backend root works but `/health` is 503 | `database:"unconfigured"` means `DATABASE_URL` is missing/invalid; `database:"unavailable"` means configuration succeeded but the query failed. Check the private development branch/database/role, direct URL, SSL parameters, network, and migration state without printing the URL. |
-| Alembic cannot connect or reports the wrong revision | Run commands from `backend` with the Python 3.13 environment active. Keep the development URL only in `.env`, inspect `heads` and `current`, then apply the forward `upgrade head`. Stop on drift; do not repair shared databases with reset/downgrade/manual edits. |
-| Browser reports CORS failure | Local frontend origin must match `FRONTEND_ORIGIN` exactly, normally `http://localhost:3000`. Production must use `https://nicolasfrechette91.github.io` without `/SewnCovers`, a trailing path, or the Render origin. Direct non-browser success does not prove browser CORS permission. |
-| Pages route, CSS, script, favicon, or refresh returns 404 | Build with `SEWNCOVERS_GITHUB_PAGES=true`, preserve uppercase `/SewnCovers`, use Next.js-aware links, and run `npm run verify:export`. Ordinary local exports intentionally use the domain root. |
-| First production request is slow or times out | Render Free may be waking. Wait and retry safe reads. The UI reports possible wake-up after two seconds and retries transient GETs within its bounded policy. Do not automatically replay a design POST; inspect the original outcome or use the explicit save retry knowing it may create another record. |
-| Static build tries to fetch fonts | Set `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` to the absolute `frontend/e2e/font-responses.cjs` path, matching CI. |
-| Local custom upload remains queued | Confirm Task 10.3 variables are enabled and run `python -m app.uploads.worker` from `backend`. See [Local Task 10.3 private custom patterns](#local-task-103-private-custom-patterns-not-deployed). |
+| `frontend/` | Next.js app: routes, configurator, design system, API clients, tests ([readme](frontend/README.md)) |
+| `backend/` | FastAPI service, Alembic migrations, pytest suite ([readme](backend/README.md)) |
+| `docs/` | Guides, ADRs, design system, case study and screenshots |
+| `.github/workflows/` | CI, GitHub Pages deploy, Render deploy |
+| `render.yaml` | Render service definition (no secrets) |
+| `AGENTS.md`, `SECURITY.md` | Contributor and agent notes; vulnerability reporting |
 
-## Current boundaries and future production work
+## Documentation
 
-This remains a portfolio MVP, not a commercially available commerce or
-manufacturing system. The local worktree implements optional accounts, private
-projects, custom uploads, a fully fictional Task 10.4 commerce sandbox, and
-local Task 10.5 production-work, legal, and
-trust/readiness capabilities; none of Phase 10 is deployed. The live service has no account, upload,
-pricing, quote, cart, payment, order, fulfilment, refund, or administration
-capability. Local sandbox data must remain fictional. Neither environment has
-inventory, production scheduling, reviewed
-legal content, or production-operated trust workflow. See [Local Task 10.4
-demonstration commerce](#local-task-104-demonstration-commerce-not-deployed) and
-[Local Task 10.5 assurance and production operations](#local-task-105-assurance-and-production-operations-not-deployed).
+[Setup](docs/setup.md) · [Architecture](docs/architecture.md) · [API](docs/api.md) · [Database](docs/database.md) · [Deployment](docs/deployment.md) · [Testing](docs/testing.md) · [Design system](docs/design.md) · [Case study](docs/case-study.md) · [ADRs](docs/adr/)
 
-Sensible future production improvements—not implemented today—include:
+## License
 
-- Separately review and deploy the local Phase 10 schema, private storage,
-  worker, moderation provider, retention controls, and abuse operations.
-- Rate limiting, abuse monitoring, observability, backups/recovery exercises,
-  and always-on or scaled infrastructure.
-- Idempotency keys or client operation IDs if create retries must become safe,
-  with an explicit migration and API-contract change.
-- Human escalation, appeals, provider review, and monitoring around automated
-  upload moderation, which cannot guarantee safety.
-- Independent legal, privacy, security, accessibility, manufacturing, and
-  operational review of the locally implemented workflows.
-
-See the evidence reports in `frontend/IMPROVEMENT-9.md` through
-`frontend/IMPROVEMENT-13.md` for the completed improvement sequence, current
-handoff, and verified results.
+[MIT](LICENSE)
