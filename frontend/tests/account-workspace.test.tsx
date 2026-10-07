@@ -606,3 +606,41 @@ test("revokes replaced, stale, and unmounted upload previews exactly once", asyn
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: originalRevoke });
   }
 });
+
+test("a wrong deletion passphrase keeps the session and later waits are explained", async () => {
+  const originalFetch = globalThis.fetch;
+  const deleteResponses = [
+    () => json({ errors: [{ code: "authentication_failed", message: "Email or password could not be accepted.", location: ["body", "credentials"] }], requestId: "0123456789abcdef0123456789abcdef" }, 401),
+    () => new Response(JSON.stringify({ errors: [{ code: "credential_throttled", message: "Too many incorrect passphrase attempts. Try again in 2 minutes.", location: ["request"] }], requestId: "0123456789abcdef0123456789abcdef" }), { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "120" } }),
+  ];
+  globalThis.fetch = async (input) => {
+    const path = new URL(String(input)).pathname;
+    if (path === "/account") return json({ email: "owner@example.com", role: "customer", createdAt: "2026-10-01T00:00:00Z" });
+    if (path === "/account/sessions") {
+      return json([{ id: 1, createdAt: "2026-10-01T00:00:00Z", expiresAt: "2099-01-01T00:00:00Z", revokedAt: null, current: true }]);
+    }
+    if (path === "/account/delete") return deleteResponses.shift()!();
+    return json({ errors: [{ code: "resource_not_found", message: "Resource not found.", location: ["path"] }] }, 404);
+  };
+  storeSessionToken("D".repeat(43));
+  try {
+    render(<AuthProvider><AccountScreen /></AuthProvider>);
+    // Wait until the screen has loaded its session list: that load resets the
+    // error message, so submitting before it finishes would race with it.
+    await screen.findByText(/Current session/, undefined, { timeout: 5000 });
+    fireEvent.click(screen.getByRole("button", { name: "Review account deletion" }));
+    const passphrase = screen.getByLabelText("Re-enter your passphrase to confirm");
+    fireEvent.change(passphrase, { target: { value: "not the right passphrase" } });
+    fireEvent.click(screen.getByRole("button", { name: "Permanently delete account" }));
+
+    await screen.findByText("That passphrase is incorrect. Check it and try again.");
+    assert.equal(readSessionToken(), "D".repeat(43), "the session survives a wrong passphrase");
+    assert.ok(screen.getByRole("heading", { name: "Delete account" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Permanently delete account" }));
+    await screen.findByText("Too many incorrect passphrase attempts. Try again in 2 minutes.");
+    assert.equal(readSessionToken(), "D".repeat(43));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

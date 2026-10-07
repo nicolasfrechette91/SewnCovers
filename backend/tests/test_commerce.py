@@ -32,6 +32,7 @@ from app.persistence.models import (
 )
 from app.projects.schema import ProjectConfiguration
 from app.settings import Settings, reset_settings_cache
+from tests.support import error_envelope
 
 CONFIGURATION = {
     "shape": "tapered",
@@ -367,7 +368,9 @@ def test_quote_cart_checkout_webhook_order_and_admin_workflow(
         assert stored is not None and stored.shipping_ciphertext is not None
         assert b"Demonstration Way" not in stored.shipping_ciphertext
 
-    assert client.get("/admin/orders", headers=auth(customer)).status_code == 403
+    denied = client.get("/admin/orders", headers=auth(customer))
+    assert denied.status_code == 403
+    assert error_envelope(denied)["errors"][0]["code"] == "permission_denied"
     admin_order = client.get(f"/admin/orders/{order_id}", headers=auth(administrator))
     assert admin_order.status_code == 200
     assert "password" not in admin_order.text.casefold()

@@ -75,7 +75,8 @@ def test_cors_configuration_is_explicit_typed_and_immutable() -> None:
             "Content-Type",
         )
     )
-    assert settings.cors.exposed_headers == ()
+    # Browser code needs these to show a wait time and a support reference.
+    assert settings.cors.exposed_headers == ("Retry-After", "X-Request-ID")
     assert settings.cors.allow_credentials is False
     assert settings.cors.preflight_max_age_seconds == 600
 

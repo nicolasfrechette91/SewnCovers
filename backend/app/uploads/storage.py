@@ -97,14 +97,14 @@ class FilesystemObjectStorage(ObjectStorage):
                     encoding="ascii"
                 ),
             )
-        except (OSError, UnicodeError):
-            raise ObjectStorageError("Object is unavailable") from None
+        except (OSError, UnicodeError) as error:
+            raise ObjectStorageError("Object is unavailable") from error
 
     def read(self, object_key: str) -> bytes:
         try:
             return self._path(object_key).read_bytes()
-        except OSError:
-            raise ObjectStorageError("Object is unavailable") from None
+        except OSError as error:
+            raise ObjectStorageError("Object is unavailable") from error
 
     def write(self, object_key: str, data: bytes, content_type: str) -> None:
         path = self._path(object_key)
@@ -114,16 +114,16 @@ class FilesystemObjectStorage(ObjectStorage):
             path.with_suffix(path.suffix + ".type").write_text(
                 content_type, encoding="ascii"
             )
-        except OSError:
-            raise ObjectStorageError("Object could not be written") from None
+        except OSError as error:
+            raise ObjectStorageError("Object could not be written") from error
 
     def delete(self, object_key: str) -> None:
         path = self._path(object_key)
         for target in (path, path.with_suffix(path.suffix + ".type")):
             try:
                 target.unlink(missing_ok=True)
-            except OSError:
-                raise ObjectStorageError("Object could not be deleted") from None
+            except OSError as error:
+                raise ObjectStorageError("Object could not be deleted") from error
 
 
 class S3ObjectStorage(ObjectStorage):
@@ -133,8 +133,8 @@ class S3ObjectStorage(ObjectStorage):
         try:
             import boto3
             from botocore.config import Config
-        except ImportError:
-            raise ObjectStorageError("S3 runtime dependency is unavailable") from None
+        except ImportError as error:
+            raise ObjectStorageError("S3 runtime dependency is unavailable") from error
         if not all(
             (
                 settings.object_storage_endpoint,
@@ -170,8 +170,8 @@ class S3ObjectStorage(ObjectStorage):
                 ],
                 ExpiresIn=600,
             )
-        except Exception:
-            raise ObjectStorageError("Upload operation could not be signed") from None
+        except Exception as error:
+            raise ObjectStorageError("Upload operation could not be signed") from error
         return UploadOperation(
             method="POST",
             url=str(signed["url"]),
@@ -189,8 +189,8 @@ class S3ObjectStorage(ObjectStorage):
                     response.get("ContentType", "application/octet-stream")
                 ),
             )
-        except Exception:
-            raise ObjectStorageError("Object is unavailable") from None
+        except Exception as error:
+            raise ObjectStorageError("Object is unavailable") from error
 
     def read(self, object_key: str) -> bytes:
         _validate_key(object_key)
@@ -199,8 +199,8 @@ class S3ObjectStorage(ObjectStorage):
                 Bucket=self._bucket, Key=object_key
             )["Body"]
             return body.read()
-        except Exception:
-            raise ObjectStorageError("Object is unavailable") from None
+        except Exception as error:
+            raise ObjectStorageError("Object is unavailable") from error
 
     def write(self, object_key: str, data: bytes, content_type: str) -> None:
         _validate_key(object_key)
@@ -212,15 +212,15 @@ class S3ObjectStorage(ObjectStorage):
                 ContentType=content_type,
                 CacheControl="private, no-store",
             )
-        except Exception:
-            raise ObjectStorageError("Object could not be written") from None
+        except Exception as error:
+            raise ObjectStorageError("Object could not be written") from error
 
     def delete(self, object_key: str) -> None:
         _validate_key(object_key)
         try:
             self._client.delete_object(Bucket=self._bucket, Key=object_key)
-        except Exception:
-            raise ObjectStorageError("Object could not be deleted") from None
+        except Exception as error:
+            raise ObjectStorageError("Object could not be deleted") from error
 
     def presigned_download(self, object_key: str, filename: str) -> str | None:
         _validate_key(object_key)
@@ -237,8 +237,10 @@ class S3ObjectStorage(ObjectStorage):
                 ExpiresIn=300,
                 HttpMethod="GET",
             )
-        except Exception:
-            raise ObjectStorageError("Download operation could not be signed") from None
+        except Exception as error:
+            raise ObjectStorageError(
+                "Download operation could not be signed"
+            ) from error
 
 
 def get_object_storage(settings: Settings | None = None) -> ObjectStorage:

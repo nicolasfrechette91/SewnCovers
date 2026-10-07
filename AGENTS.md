@@ -25,7 +25,7 @@ SewnCovers is a cushion-cover configurator: a static Next.js 16 frontend (`front
 - Never run `python -m app.production` locally; it is the migration-gated Render entry point. Never use the production `DATABASE_URL` locally, and never commit or print `backend/.env` or any secret.
 - A new Alembic revision must also update `EXPECTED_REVISION` and the expected tables and constraints in `backend/app/production.py`; the tests compare them with the model metadata.
 - The measurement ranges and pattern-scale rules exist on both sides (`frontend/context/configuration/` and `backend/app/designs/`) and must change together. The pattern seed migration and `frontend/data/patterns.ts` must list the same 15 ids.
-- API errors use the `{"errors": [{"code", "message", "location"}]}` envelope and must never include submitted values, SQL or exception text.
+- API errors use the `{"errors": [{"code", "message", "location"}], "requestId"}` envelope and must never include submitted values, SQL or exception text. Logs must never include tokens, request bodies, query values or raw paths: log route templates, and let `app/observability.py` redact.
 - Keep `backend/README.md` in place; `pyproject.toml` uses it as the package readme.
 
 ## Docs

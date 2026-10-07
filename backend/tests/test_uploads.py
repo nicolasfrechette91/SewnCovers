@@ -12,7 +12,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from PIL import Image, PngImagePlugin
+from PIL import Image, ImageCms, PngImagePlugin
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -475,6 +475,26 @@ def test_processing_enforces_decompression_bomb_warning(
     monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 4_000)
     with pytest.raises(ImageValidationError, match="decompression_bomb"):
         process_image(png_bytes(size=(100, 100)), "image/png")
+
+
+@pytest.mark.parametrize("image_format", ["PNG", "JPEG"])
+def test_derivatives_drop_embedded_icc_profiles(image_format: str) -> None:
+    profile = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    output = io.BytesIO()
+    Image.new("RGB", (128, 96), (34, 99, 71)).save(
+        output, format=image_format, icc_profile=profile
+    )
+    with Image.open(io.BytesIO(output.getvalue())) as source:
+        assert source.info.get("icc_profile") == profile
+
+    processed = process_image(
+        output.getvalue(), "image/png" if image_format == "PNG" else "image/jpeg"
+    )
+
+    for derivative in processed.derivatives:
+        assert b"iCCP" not in derivative.data
+        with Image.open(io.BytesIO(derivative.data)) as encoded:
+            assert "icc_profile" not in encoded.info
 
 
 def test_s3_presigning_contract_is_private_exact_and_narrowly_scoped() -> None:

@@ -27,7 +27,9 @@ const ERROR_CODES = new Set<ApiErrorCode>([
   "measurement_out_of_range",
   "method_not_allowed",
   "pattern_unavailable",
+  "payload_too_large",
   "public_id_unavailable",
+  "rate_limited",
   "resource_not_found",
   "shape_measurements_mismatch",
   "square_dimensions_mismatch",
@@ -58,7 +60,9 @@ export type ApiErrorCode =
   | "measurement_out_of_range"
   | "method_not_allowed"
   | "pattern_unavailable"
+  | "payload_too_large"
   | "public_id_unavailable"
+  | "rate_limited"
   | "resource_not_found"
   | "shape_measurements_mismatch"
   | "square_dimensions_mismatch"
@@ -75,6 +79,8 @@ export interface ApiErrorDetail {
 
 export interface ApiErrorResponse {
   readonly errors: readonly ApiErrorDetail[];
+  /** Server request id, also in X-Request-ID; quoted when reporting a problem. */
+  readonly requestId?: string;
 }
 
 export interface HealthResponse {
@@ -159,6 +165,7 @@ export class ApiClientError extends Error {
   readonly category: ApiErrorCategory;
   readonly errors: readonly ApiErrorDetail[];
   readonly status: number | undefined;
+  readonly requestId: string | undefined;
 
   constructor(
     category: ApiErrorCategory,
@@ -166,6 +173,7 @@ export class ApiClientError extends Error {
     options: {
       readonly errors?: readonly ApiErrorDetail[];
       readonly status?: number;
+      readonly requestId?: string;
     } = {},
   ) {
     super(message);
@@ -173,6 +181,7 @@ export class ApiClientError extends Error {
     this.category = category;
     this.errors = options.errors ?? [];
     this.status = options.status;
+    this.requestId = options.requestId;
   }
 }
 
@@ -449,9 +458,13 @@ function parseDesignResponse(value: unknown): DesignResponse | undefined {
 function parseApiErrorResponse(
   value: unknown,
 ): ApiErrorResponse | undefined {
+  // The envelope may carry the server's request id beside the errors; any
+  // other top-level key is still a contract violation.
+  const hasRequestId = isRecord(value) && Object.hasOwn(value, "requestId");
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, ["errors"]) ||
+    !hasExactKeys(value, hasRequestId ? ["errors", "requestId"] : ["errors"]) ||
+    (hasRequestId && typeof value.requestId !== "string") ||
     !Array.isArray(value.errors) ||
     value.errors.length === 0
   ) {
@@ -481,7 +494,9 @@ function parseApiErrorResponse(
     errors.push(error as unknown as ApiErrorDetail);
   }
 
-  return { errors };
+  return typeof value.requestId === "string"
+    ? { errors, requestId: value.requestId }
+    : { errors };
 }
 
 function configurationError(): ApiClientError {
@@ -500,9 +515,16 @@ function statusFailureMessage(error: ApiClientError): string {
     case "network":
       return "The SewnCovers API could not be reached. Check your connection and try again.";
     case "backend-contract":
-      return error.status === 422
-        ? "The API rejected the request. Review the affected fields and try again."
-        : "The SewnCovers service could not complete the request. Please try again.";
+      switch (error.status) {
+        case 422:
+          return "The API rejected the request. Review the affected fields and try again.";
+        case 429:
+          return "Too many designs were saved from your network. Wait a few minutes, then try again.";
+        case 413:
+          return "The request was larger than the SewnCovers service accepts.";
+        default:
+          return "The SewnCovers service could not complete the request. Please try again.";
+      }
     case "http":
       return "The SewnCovers API returned an unexpected HTTP response. Please try again.";
     case "malformed-response":
@@ -597,7 +619,11 @@ async function performAttempt<ResponseBody>(
         throw new ApiClientError(
           "backend-contract",
           "The API returned a documented request failure.",
-          { errors: backendError.errors, status: response.status },
+          {
+            errors: backendError.errors,
+            requestId: backendError.requestId,
+            status: response.status,
+          },
         );
       }
 

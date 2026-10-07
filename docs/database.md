@@ -4,12 +4,12 @@ Production uses PostgreSQL on Neon. Local development and the whole automated te
 
 ## Tables
 
-29 application tables plus Alembic's `alembic_version`, grouped by capability:
+30 application tables plus Alembic's `alembic_version`, grouped by capability:
 
 | Capability | Tables |
 | --- | --- |
 | Catalogue and public designs | `patterns`, `cover_designs` |
-| Accounts and private workspaces | `customer_accounts`, `authenticated_sessions`, `saved_projects`, `project_versions`, `share_grants` |
+| Accounts and private workspaces | `customer_accounts`, `authenticated_sessions`, `credential_backoffs`, `saved_projects`, `project_versions`, `share_grants` |
 | Custom uploads | `custom_uploads`, `custom_derivatives`, `project_custom_pattern_references` |
 | Demonstration commerce | `price_books`, `commerce_quotes`, `shopping_carts`, `cart_lines`, `payment_attempts`, `payment_events`, `customer_orders`, `order_history`, `order_production_assets`, `production_asset_reservations`, `shipments`, `audit_events` |
 | Legal and production operations | `legal_documents`, `legal_acknowledgements`, `production_work`, `production_checklist_results`, `production_issues`, `production_history`, `production_packets` |
@@ -44,9 +44,10 @@ Alembic owns every schema and controlled data change. The history is linear, eve
 | `20260818_02` | Adds private custom uploads, derivatives and project-version asset references. |
 | `20260828_01` | Adds price books, quotes, cart, payments, immutable orders, fulfilment and audit history. |
 | `20260829_01` | Adds legal versions and acknowledgements and production work, checklists, issues, history and packets. |
-| `20260917_01` **(head)** | Adds first-class solid fabric selections: `solid_color`, a nullable `pattern_id` and the one-of constraint. |
+| `20260917_01` | Adds first-class solid fabric selections: `solid_color`, a nullable `pattern_id` and the one-of constraint. |
+| `20261007_01` **(head)** | Adds `credential_backoffs`, the database-backed sign-in and account-deletion backoff. It holds only keyed hashes of the email or account and of the network, a failure count and timestamps, has no foreign key (so unknown emails look like known ones), and rows expire after 24 hours. The downgrade drops it. |
 
-`app.production` expects exactly this head ([`production.py`](../backend/app/production.py)). The public `/readiness` report still quotes the earlier `20260829_01` in its migration message; that text is stale and does not affect start-up.
+`app.production` expects exactly this head ([`production.py`](../backend/app/production.py)). The public `/readiness` and `/trust/metadata` reports read the head from the migration scripts, so they always agree with it.
 
 ### Everyday commands
 
@@ -104,4 +105,4 @@ Neon's free-plan allowances (compute hours, storage, transfer, history window) c
 
 ### Start-up gate
 
-On Render the start command is `python -m app.production`, which runs `alembic upgrade head`, then independently verifies the exact revision, the expected tables, the named primary, unique, check and foreign-key constraints, the intended pattern indexes, and exactly 15 seeded patterns, and only then starts Uvicorn. Any mismatch stops the process before it serves traffic, with a fixed message that contains no connection data. See [deployment](deployment.md#migration-gated-start-up).
+On Render the start command is `python -m app.production`, which runs `alembic upgrade head`, then independently verifies the exact revision, the expected tables, the named primary, unique, check and foreign-key constraints, the intended pattern indexes, and exactly 15 seeded patterns, and only then starts Uvicorn. Any mismatch stops the process before it serves traffic, with a fixed message; the cause is written to the service log with any connection secret masked. See [deployment](deployment.md#migration-gated-start-up).

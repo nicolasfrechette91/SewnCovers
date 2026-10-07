@@ -11,10 +11,14 @@ import pytest
 import uvicorn
 from fastapi.testclient import TestClient
 
+import app.accounts.security as security_module
 import app.main as main_module
 import app.persistence.database as database_module
 import app.production as production_module
 from app.main import create_application
+from app.observability import configure_application_logging
+from app.persistence.migrations import migration_head
+from app.persistence.models import Base
 from app.settings import Settings, reset_settings_cache
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -55,8 +59,34 @@ def test_production_command_uses_existing_app_platform_port_and_safe_options(
         "host": "0.0.0.0",
         "port": 49152,
         "reload": False,
+        "proxy_headers": False,
+        "log_config": None,
+        "access_log": False,
+        "server_header": False,
+        "timeout_keep_alive": 130,
+        "timeout_graceful_shutdown": 25,
+        "limit_concurrency": 100,
     }
     reset_settings_cache()
+
+
+def test_uvicorn_limits_fit_the_platform_and_the_hashing_bound() -> None:
+    # Render's proxy keeps idle upstream connections for up to ~120 s and waits
+    # 30 s after SIGTERM; the server must outlast the first and fit the second.
+    assert production_module.TIMEOUT_KEEP_ALIVE_SECONDS > 120
+    assert production_module.TIMEOUT_GRACEFUL_SHUTDOWN_SECONDS < 30
+    # Concurrent password hashing is capped far below the connection backstop.
+    assert (
+        2
+        <= security_module.MAX_CONCURRENT_PASSWORD_HASHES
+        <= 4
+        < production_module.LIMIT_CONCURRENCY
+    )
+    worst_case_hashing_kib = (
+        security_module.MAX_CONCURRENT_PASSWORD_HASHES
+        * security_module.password_hasher.memory_cost
+    )
+    assert worst_case_hashing_kib <= 64 * 1024
 
 
 def test_production_entry_point_blocks_local_development_without_migrating(
@@ -163,6 +193,14 @@ def test_failed_migration_blocks_uvicorn_with_secret_safe_error(
     assert error.value.__cause__ is None
     assert error.value.__context__ is not None
     assert error.value.__suppress_context__ is True
+    # The cause reaches the JSON log with the URL's password masked.
+    logged = json.loads(captured.err.strip().splitlines()[-1])
+    assert logged["level"] == "ERROR"
+    assert logged["message"] == "Production database migration failed"
+    assert (
+        "RuntimeError: postgresql://private-role:[redacted]@private-host.example"
+        in logged["exception"]
+    )
     reset_settings_cache()
 
 
@@ -208,8 +246,16 @@ def test_database_verification_errors_are_secret_safe(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     private_value = "private-password@private-host.example/private-database"
+    configure_application_logging(
+        Settings(
+            _env_file=None,
+            database_url="postgresql://private-role:private-password@private-host"
+            ".example/private-database",
+        )
+    )
 
     def fail_engine_creation() -> None:
+        # Not URL-shaped, so only the configured-secret mask can catch it.
         raise RuntimeError(private_value)
 
     monkeypatch.setattr(
@@ -230,6 +276,21 @@ def test_database_verification_errors_are_secret_safe(
     assert "private-password" not in all_output
     assert error.value.__cause__ is None
     assert error.value.__suppress_context__ is True
+    # The cause is no longer swallowed: the redacted log line names it.
+    logged = json.loads(captured.err.strip().splitlines()[-1])
+    assert logged["message"] == "Production database verification failed"
+    assert "RuntimeError: [redacted]" in logged["exception"]
+
+
+def test_startup_expectations_match_the_migration_scripts_and_models() -> None:
+    # /readiness and /trust/metadata report this derived head, so it can no
+    # longer drift from what production startup verifies.
+    assert migration_head() == production_module.EXPECTED_REVISION
+    assert production_module.EXPECTED_TABLES == set(Base.metadata.tables) | {
+        "alembic_version"
+    }
+    assert set(production_module.EXPECTED_CONSTRAINTS) <= set(Base.metadata.tables)
+    assert "credential_backoffs" in production_module.EXPECTED_CONSTRAINTS
 
 
 @pytest.mark.parametrize("port", ["0", "65536", "not-a-port"])

@@ -94,6 +94,7 @@ async function request<T>(
         ? first.message
         : "The request could not be completed.",
       response.status,
+      first && typeof first.code === "string" ? first.code : "request_failed",
     );
   }
   if (!options.validate(body)) {

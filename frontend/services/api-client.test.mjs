@@ -385,6 +385,123 @@ test("preserves the exact typed backend error contract without retrying validati
   assert.equal(fetchCalls, 1);
 });
 
+const REQUEST_ID = "0123456789abcdef0123456789abcdef";
+
+function envelope(status, code, message, location, { requestId, headers } = {}) {
+  return new Response(
+    JSON.stringify({
+      errors: [{ code, message, location }],
+      ...(requestId === undefined ? {} : { requestId }),
+    }),
+    { headers: { "Content-Type": "application/json", ...headers }, status },
+  );
+}
+
+test("keeps the server request id from an error envelope on the typed error", async () => {
+  const { apiClient, ApiClientError } = await loadClient();
+  globalThis.fetch = async () =>
+    envelope(422, "pattern_unavailable", "Selected pattern is unavailable.", [
+      "body",
+      "patternId",
+    ], { requestId: REQUEST_ID });
+
+  await assert.rejects(apiClient.createDesign(createDesignRequest()), (error) => {
+    assert.equal(error instanceof ApiClientError, true);
+    assert.equal(error.category, "backend-contract");
+    assert.equal(error.requestId, REQUEST_ID);
+    assert.deepEqual(
+      error.errors.map((detail) => detail.code),
+      ["pattern_unavailable"],
+    );
+    return true;
+  });
+});
+
+test("still rejects envelopes with any other extra key or a non-string request id", async () => {
+  const { apiClient, ApiClientError } = await loadClient();
+  for (const extra of [{ requestId: 42 }, { debug: "private" }]) {
+    globalThis.fetch = async () =>
+      jsonResponse(
+        {
+          errors: [
+            {
+              code: "pattern_unavailable",
+              message: "Selected pattern is unavailable.",
+              location: ["body", "patternId"],
+            },
+          ],
+          ...extra,
+        },
+        422,
+      );
+
+    await assert.rejects(
+      apiClient.createDesign(createDesignRequest()),
+      (error) =>
+        error instanceof ApiClientError &&
+        error.category === "http" &&
+        error.errors.length === 0,
+    );
+  }
+});
+
+test("a rate-limited save says what happened and is never retried", async () => {
+  const { apiClient, ApiClientError } = await loadClient();
+  const statuses = [];
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    return envelope(
+      429,
+      "rate_limited",
+      "Too many designs were saved from your network. Try again in 30 seconds.",
+      ["request"],
+      { requestId: REQUEST_ID, headers: { "Retry-After": "30" } },
+    );
+  };
+
+  await assert.rejects(
+    apiClient.createDesign(createDesignRequest(), {
+      onStatus: (status) => statuses.push(status),
+    }),
+    (error) =>
+      error instanceof ApiClientError &&
+      error.category === "backend-contract" &&
+      error.status === 429 &&
+      error.errors[0].code === "rate_limited",
+  );
+  assert.equal(fetchCalls, 1);
+  assert.deepEqual(statuses.at(-1), {
+    category: "backend-contract",
+    message:
+      "Too many designs were saved from your network. Wait a few minutes, then try again.",
+    state: "failure",
+  });
+});
+
+test("an oversized request is reported as too large, not as an unknown failure", async () => {
+  const { apiClient } = await loadClient();
+  const statuses = [];
+  globalThis.fetch = async () =>
+    envelope(
+      413,
+      "payload_too_large",
+      "The request is larger than this endpoint accepts.",
+      ["body"],
+      { requestId: REQUEST_ID },
+    );
+
+  await assert.rejects(
+    apiClient.createDesign(createDesignRequest(), {
+      onStatus: (status) => statuses.push(status),
+    }),
+  );
+  assert.equal(
+    statuses.at(-1).message,
+    "The request was larger than the SewnCovers service accepts.",
+  );
+});
+
 test("distinguishes malformed success payloads from unexpected HTTP failures", async () => {
   const { apiClient, ApiClientError } = await loadClient();
   globalThis.fetch = async () =>

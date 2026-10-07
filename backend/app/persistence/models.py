@@ -55,6 +55,7 @@ UPLOAD_MODERATION_STATES = (
 )
 DERIVATIVE_KINDS = ("tile", "thumbnail")
 ACCOUNT_ROLES = ("customer", "administrator")
+CREDENTIAL_BACKOFF_PURPOSES = ("login", "account_deletion")
 
 
 def _sql_values(values: tuple[str, ...]) -> str:
@@ -339,6 +340,54 @@ class AuthenticatedSession(Base):
         DateTime(timezone=True), nullable=True
     )
     account: Mapped[CustomerAccount] = relationship(back_populates="sessions")
+
+
+class CredentialBackoff(Base):
+    """Failed password attempts per subject and network, as keyed digests only.
+
+    The subject (a normalized email for sign-in, an account id for deletion)
+    and the network are stored as HMAC-SHA-256 digests, never as raw values.
+    There is deliberately no foreign key: sign-in attempts against unknown
+    emails back off exactly like known ones, so the table cannot reveal
+    whether an account exists.
+    """
+
+    __tablename__ = "credential_backoffs"
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "purpose",
+            "subject_digest",
+            "source_digest",
+            name="pk_credential_backoffs",
+        ),
+        CheckConstraint(
+            f"purpose IN ({_sql_values(CREDENTIAL_BACKOFF_PURPOSES)})",
+            name="ck_credential_backoffs_purpose_supported",
+        ),
+        CheckConstraint(
+            "length(subject_digest) = 64",
+            name="ck_credential_backoffs_subject_digest_length",
+        ),
+        CheckConstraint(
+            "length(source_digest) = 64",
+            name="ck_credential_backoffs_source_digest_length",
+        ),
+        CheckConstraint(
+            "failures >= 1", name="ck_credential_backoffs_failures_positive"
+        ),
+        Index("ix_credential_backoffs_updated_at", "updated_at"),
+    )
+
+    purpose: Mapped[str] = mapped_column(String(20), nullable=False)
+    subject_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    failures: Mapped[int] = mapped_column(Integer, nullable=False)
+    retry_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
 
 class SavedProject(Base):

@@ -134,13 +134,41 @@ export const ACKNOWLEDGEMENT_FAILED_CODE = "acknowledgement_failed";
 export class AccountApiError extends Error {
   readonly status: number;
   readonly code: string;
+  /** Seconds from the Retry-After header of a 429 or 503, when sent. */
+  readonly retryAfterSeconds: number | undefined;
+  /** Server request id, also in X-Request-ID; quoted when reporting a problem. */
+  readonly requestId: string | undefined;
 
-  constructor(message: string, status = 0, code = "request_failed") {
+  constructor(
+    message: string,
+    status = 0,
+    code = "request_failed",
+    details: { readonly retryAfterSeconds?: number; readonly requestId?: string } = {},
+  ) {
     super(message);
     this.name = "AccountApiError";
     this.status = status;
     this.code = code;
+    this.retryAfterSeconds = details.retryAfterSeconds;
+    this.requestId = details.requestId;
   }
+}
+
+/** Parse a delay-seconds Retry-After header; dates and junk are ignored. */
+export function retryAfterSeconds(response: Response): number | undefined {
+  const value = response.headers.get("Retry-After")?.trim() ?? "";
+  if (!/^\d{1,6}$/.test(value)) return undefined;
+  const seconds = Number(value);
+  return seconds > 0 ? seconds : undefined;
+}
+
+/** Describe a wait for people, rounding up as the API's own messages do. */
+export function waitPhrase(seconds: number): string {
+  if (seconds < 60) return seconds <= 5 ? "a few seconds" : `${seconds} seconds`;
+  const minutes = Math.ceil(seconds / 60);
+  if (minutes < 60) return minutes === 1 ? "1 minute" : `${minutes} minutes`;
+  const hours = Math.ceil(minutes / 60);
+  return hours === 1 ? "1 hour" : `${hours} hours`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -361,17 +389,26 @@ async function request<T>(
     } catch {
       throw new AccountApiError("The API returned an unreadable response.", response.status, "unreadable_response");
     }
-    if (response.status === 401 && options.token) clearStoredToken();
+    const error = !response.ok && isRecord(body) && Array.isArray(body.errors) && isRecord(body.errors[0])
+      ? body.errors[0]
+      : undefined;
+    const code = error && typeof error.code === "string" ? error.code : "request_failed";
+    // A wrong passphrase re-entered to confirm account deletion is also a 401,
+    // but the session is still valid, so only other 401s end it.
+    if (response.status === 401 && options.token && code !== "authentication_failed") {
+      clearStoredToken();
+    }
     if (!response.ok) {
-      const error = isRecord(body) && Array.isArray(body.errors) && isRecord(body.errors[0])
-        ? body.errors[0]
-        : undefined;
       throw new AccountApiError(
         error && typeof error.message === "string"
           ? error.message
           : "The request could not be completed.",
         response.status,
-        error && typeof error.code === "string" ? error.code : "request_failed",
+        code,
+        {
+          retryAfterSeconds: retryAfterSeconds(response),
+          requestId: isRecord(body) && typeof body.requestId === "string" ? body.requestId : undefined,
+        },
       );
     }
     if (options.empty) return undefined as T;
@@ -559,6 +596,9 @@ export async function performUpload(operation: UploadOperation, file: File): Pro
     headers: operation.method === "PUT" ? operation.headers : undefined,
     body,
   });
+  if (response.status === 413) {
+    throw new AccountApiError("This image is larger than the 10 MB upload limit. Choose a smaller file.", 413, "payload_too_large");
+  }
   if (!response.ok) throw new AccountApiError("The private upload could not be transferred.", response.status);
 }
 

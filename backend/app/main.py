@@ -27,11 +27,21 @@ from app.accounts.schema import (
     SessionResponse,
 )
 from app.assurance.routes import register_assurance_routes
+from app.body_limits import BodyLimit, BodySizeLimitMiddleware
+from app.client_ip import ClientAddressMiddleware
 from app.commerce.routes import register_commerce_routes
 from app.designs.api import create_design, get_design
 from app.designs.schema import DesignResponse
-from app.errors import APIErrorResponse, register_error_handlers
+from app.errors import (
+    APIErrorResponse,
+    UnhandledErrorMiddleware,
+    register_error_handlers,
+)
 from app.health import HealthResponse, read_health
+from app.observability import (
+    RequestContextMiddleware,
+    configure_application_logging,
+)
 from app.patterns.api import list_patterns
 from app.patterns.schema import PatternResponse
 from app.persistence.database import dispose_application_database
@@ -55,6 +65,7 @@ from app.projects.schema import (
     SharedVersionResponse,
     VersionResponse,
 )
+from app.rate_limits import RateLimitPolicy
 from app.settings import Settings, get_settings
 from app.uploads.api import (
     confirm_upload,
@@ -69,11 +80,19 @@ from app.uploads.api import (
     rename_upload,
     retry_upload,
 )
+from app.uploads.processing import MAX_ENCODED_BYTES
 from app.uploads.schema import (
     AssetAccessResponse,
     DeletedUploadResponse,
     UploadIntentResponse,
     UploadStatusResponse,
+)
+
+HSTS_HEADER = "max-age=63072000; includeSubDomains"
+WEBHOOK_BODY_LIMIT = 64_000
+BODY_LIMITS = (
+    BodyLimit("PUT", "/uploads/direct/", MAX_ENCODED_BYTES),
+    BodyLimit("POST", "/commerce/webhooks/", WEBHOOK_BODY_LIMIT),
 )
 
 OPENAPI_TAGS = [
@@ -160,8 +179,9 @@ class ServiceStatusResponse(BaseModel):
 
 
 @asynccontextmanager
-async def application_lifespan(_application: FastAPI) -> AsyncIterator[None]:
-    """Dispose the lazy process engine if database work initialized it."""
+async def application_lifespan(application: FastAPI) -> AsyncIterator[None]:
+    """Configure logging, then dispose the lazy engine if it was initialized."""
+    configure_application_logging(application.state.settings)
     yield
     dispose_application_database()
 
@@ -171,9 +191,15 @@ async def read_root() -> ServiceStatusResponse:
     return ServiceStatusResponse(service="SewnCovers API", status="ready")
 
 
-def create_application(settings: Settings | None = None) -> FastAPI:
-    """Build an application with one independently testable CORS policy."""
-    cors = (settings or get_settings()).cors
+def create_application(
+    settings: Settings | None = None,
+    *,
+    rate_limits: RateLimitPolicy | None = None,
+) -> FastAPI:
+    """Build an application with its own CORS policy and rate-limit state."""
+    settings = settings or get_settings()
+    cors = settings.cors
+    production = settings.environment == "production"
     application = FastAPI(
         title="SewnCovers API",
         summary="Public and account-backed API for the SewnCovers configurator.",
@@ -191,7 +217,15 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         openapi_tags=OPENAPI_TAGS,
         lifespan=application_lifespan,
     )
+    application.state.settings = settings
+    application.state.rate_limits = rate_limits or RateLimitPolicy()
     register_error_handlers(application)
+    # Each add_middleware call wraps the previous ones, so this reads from the
+    # innermost layer out. Outermost: the client address is resolved first,
+    # then the request id is assigned, so every later layer and log line sees
+    # both; errors and size limits sit inside CORS so browsers can read them.
+    application.add_middleware(UnhandledErrorMiddleware)
+    application.add_middleware(BodySizeLimitMiddleware, limits=BODY_LIMITS)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=cors.allowed_origins,
@@ -211,6 +245,9 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
         )
         response.headers["X-Frame-Options"] = "DENY"
+        if production:
+            # Render terminates TLS; browsers only honour this over HTTPS.
+            response.headers["Strict-Transport-Security"] = HSTS_HEADER
         if request.url.path not in {"/docs", "/redoc", "/openapi.json"}:
             response.headers["Content-Security-Policy"] = (
                 "default-src 'none'; frame-ancestors 'none'"
@@ -225,6 +262,13 @@ def create_application(settings: Settings | None = None) -> FastAPI:
             response.headers["Cache-Control"] = "private, no-store, max-age=0"
             response.headers["Pragma"] = "no-cache"
         return response
+
+    application.add_middleware(RequestContextMiddleware)
+    application.add_middleware(
+        ClientAddressMiddleware,
+        header=settings.resolved_client_ip_header,
+        index=settings.client_ip_index,
+    )
 
     application.add_api_route(
         "/",
@@ -318,6 +362,13 @@ def create_application(settings: Settings | None = None) -> FastAPI:
                 "description": "Invalid or unsupported configuration",
                 "model": APIErrorResponse,
             },
+            429: {
+                "description": (
+                    "Too many designs saved from this network (`rate_limited`); "
+                    "`Retry-After` gives the wait in seconds"
+                ),
+                "model": APIErrorResponse,
+            },
             503: {"description": "Storage is unavailable", "model": APIErrorResponse},
             500: {"description": "Unexpected server error", "model": APIErrorResponse},
         },
@@ -347,10 +398,19 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         },
         422: {"description": "Malformed or oversized input", "model": APIErrorResponse},
         429: {
-            "description": "Credential attempts temporarily limited",
+            "description": (
+                "Credential attempts temporarily limited (`credential_throttled`); "
+                "`Retry-After` gives the wait in seconds"
+            ),
             "model": APIErrorResponse,
         },
-        503: {"description": "Storage is unavailable", "model": APIErrorResponse},
+        503: {
+            "description": (
+                "Storage is unavailable, or password checking is at capacity "
+                "(`service_busy`, with `Retry-After`)"
+            ),
+            "model": APIErrorResponse,
+        },
     }
     private_errors = {
         401: {
@@ -606,6 +666,10 @@ def create_application(settings: Settings | None = None) -> FastAPI:
         include_in_schema=True,
         responses={
             404: private_errors[404],
+            413: {
+                "description": "Body larger than the upload limit",
+                "model": APIErrorResponse,
+            },
             422: private_errors[422],
             503: private_errors[503],
         },

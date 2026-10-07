@@ -53,7 +53,8 @@ PRIVATE_REVISION = "20260818_01"
 UPLOAD_REVISION = "20260818_02"
 COMMERCE_REVISION = "20260828_01"
 OPERATIONS_REVISION = "20260829_01"
-REVISION = "20260917_01"
+SOLID_REVISION = "20260917_01"
+REVISION = "20261007_01"
 HEAD_TABLES = {
     "alembic_version",
     "authenticated_sessions",
@@ -61,6 +62,7 @@ HEAD_TABLES = {
     "cart_lines",
     "commerce_quotes",
     "cover_designs",
+    "credential_backoffs",
     "custom_derivatives",
     "custom_uploads",
     "customer_accounts",
@@ -229,43 +231,47 @@ def test_revisions_form_one_descriptive_linear_history_and_one_head() -> None:
     script = ScriptDirectory.from_config(alembic_config())
     revisions = list(script.walk_revisions())
 
-    assert len(revisions) == 9
+    assert len(revisions) == 10
     assert revisions[0].revision == REVISION
-    assert revisions[0].down_revision == OPERATIONS_REVISION
+    assert revisions[0].down_revision == SOLID_REVISION
     assert revisions[0].is_head
-    assert "solid fabric selections" in revisions[0].doc
-    assert revisions[1].revision == OPERATIONS_REVISION
-    assert revisions[1].down_revision == COMMERCE_REVISION
+    assert "credential backoff" in revisions[0].doc
+    assert revisions[1].revision == SOLID_REVISION
+    assert revisions[1].down_revision == OPERATIONS_REVISION
     assert revisions[1].is_head is False
-    assert "Task 10.5 visualization, operations, legal, and trust" in revisions[1].doc
-    assert revisions[2].revision == COMMERCE_REVISION
-    assert revisions[2].down_revision == UPLOAD_REVISION
+    assert "solid fabric selections" in revisions[1].doc
+    assert revisions[2].revision == OPERATIONS_REVISION
+    assert revisions[2].down_revision == COMMERCE_REVISION
     assert revisions[2].is_head is False
-    assert "demonstration commerce" in revisions[2].doc
-    assert revisions[3].revision == UPLOAD_REVISION
-    assert revisions[3].down_revision == PRIVATE_REVISION
+    assert "Task 10.5 visualization, operations, legal, and trust" in revisions[2].doc
+    assert revisions[3].revision == COMMERCE_REVISION
+    assert revisions[3].down_revision == UPLOAD_REVISION
     assert revisions[3].is_head is False
-    assert "private custom-upload processing" in revisions[3].doc
-    assert revisions[4].revision == PRIVATE_REVISION
-    assert revisions[4].down_revision == CONFIG_REVISION
+    assert "demonstration commerce" in revisions[3].doc
+    assert revisions[4].revision == UPLOAD_REVISION
+    assert revisions[4].down_revision == PRIVATE_REVISION
     assert revisions[4].is_head is False
-    assert "private account workspaces" in revisions[4].doc
-    assert revisions[5].revision == CONFIG_REVISION
-    assert revisions[5].down_revision == SEED_REVISION
+    assert "private custom-upload processing" in revisions[4].doc
+    assert revisions[5].revision == PRIVATE_REVISION
+    assert revisions[5].down_revision == CONFIG_REVISION
     assert revisions[5].is_head is False
-    assert "richer specification choices" in revisions[5].doc
-    assert revisions[6].revision == SEED_REVISION
-    assert revisions[6].down_revision == INDEX_REVISION
+    assert "private account workspaces" in revisions[5].doc
+    assert revisions[6].revision == CONFIG_REVISION
+    assert revisions[6].down_revision == SEED_REVISION
     assert revisions[6].is_head is False
-    assert "canonical public pattern catalogue" in revisions[6].doc
-    assert revisions[7].revision == INDEX_REVISION
-    assert revisions[7].down_revision == BASE_REVISION
+    assert "richer specification choices" in revisions[6].doc
+    assert revisions[7].revision == SEED_REVISION
+    assert revisions[7].down_revision == INDEX_REVISION
     assert revisions[7].is_head is False
-    assert "pattern category and activity filter indexes" in revisions[7].doc
-    assert revisions[8].revision == BASE_REVISION
-    assert revisions[8].down_revision is None
+    assert "canonical public pattern catalogue" in revisions[7].doc
+    assert revisions[8].revision == INDEX_REVISION
+    assert revisions[8].down_revision == BASE_REVISION
     assert revisions[8].is_head is False
-    assert "patterns and immutable cover designs" in revisions[8].doc
+    assert "pattern category and activity filter indexes" in revisions[8].doc
+    assert revisions[9].revision == BASE_REVISION
+    assert revisions[9].down_revision is None
+    assert revisions[9].is_head is False
+    assert "patterns and immutable cover designs" in revisions[9].doc
     assert script.get_heads() == [REVISION]
 
 
@@ -538,6 +544,42 @@ def test_upgrade_from_empty_database_creates_exact_schema(
     }
     assert index_definitions(inspector, "cover_designs") == {}
     assert read_pattern_rows(engine) == expected_seed_rows()
+
+    backoff_columns = {
+        column["name"]: column
+        for column in inspector.get_columns("credential_backoffs")
+    }
+    assert set(backoff_columns) == {
+        "purpose",
+        "subject_digest",
+        "source_digest",
+        "failures",
+        "retry_at",
+        "updated_at",
+    }
+    assert backoff_columns["retry_at"]["nullable"] is True
+    assert all(
+        column["nullable"] is False
+        for name, column in backoff_columns.items()
+        if name != "retry_at"
+    )
+    assert inspector.get_pk_constraint("credential_backoffs") == {
+        "constrained_columns": ["purpose", "subject_digest", "source_digest"],
+        "name": "pk_credential_backoffs",
+    }
+    assert constraint_names(
+        inspector, "credential_backoffs", "get_check_constraints"
+    ) == {
+        "ck_credential_backoffs_failures_positive",
+        "ck_credential_backoffs_purpose_supported",
+        "ck_credential_backoffs_source_digest_length",
+        "ck_credential_backoffs_subject_digest_length",
+    }
+    # No foreign key: backoff for unknown emails must look like known ones.
+    assert inspector.get_foreign_keys("credential_backoffs") == []
+    assert index_definitions(inspector, "credential_backoffs") == {
+        "ix_credential_backoffs_updated_at": (("updated_at",), False)
+    }
     engine.dispose()
 
 
@@ -792,6 +834,58 @@ def test_task_index_upgrade_downgrade_upgrade_round_trip_and_current(
     engine.dispose()
 
 
+def test_credential_backoff_revision_round_trips_without_touching_accounts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "backoff-round-trip.sqlite3"
+    engine = upgrade_test_database(monkeypatch, database_path)
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            "INSERT INTO customer_accounts (id, email, password_hash, role, "
+            f"created_at) VALUES ('{'A' * 22}', 'person@example.com', "
+            "'hash', 'customer', '2026-10-07 00:00:00')"
+        )
+        connection.exec_driver_sql(
+            "INSERT INTO credential_backoffs (purpose, subject_digest, "
+            "source_digest, failures, retry_at, updated_at) VALUES "
+            f"('login', '{'a' * 64}', '{'b' * 64}', 6, NULL, "
+            "'2026-10-07 00:00:00')"
+        )
+    engine.dispose()
+
+    command.downgrade(alembic_config(), SOLID_REVISION)
+    engine = create_engine(sqlite_url(database_path))
+    assert set(inspect(engine).get_table_names()) == HEAD_TABLES - {
+        "credential_backoffs"
+    }
+    with engine.connect() as connection:
+        assert connection.exec_driver_sql(
+            "SELECT email FROM customer_accounts"
+        ).scalars().all() == ["person@example.com"]
+    engine.dispose()
+
+    command.upgrade(alembic_config(), "head")
+    engine = create_engine(sqlite_url(database_path))
+    inspector = inspect(engine)
+    assert set(inspector.get_table_names()) == HEAD_TABLES
+    with engine.connect() as connection:
+        # The downgrade forgot in-progress backoff; the upgrade starts empty.
+        assert (
+            connection.exec_driver_sql(
+                "SELECT count(*) FROM credential_backoffs"
+            ).scalar_one()
+            == 0
+        )
+        assert (
+            connection.exec_driver_sql(
+                "SELECT version_num FROM alembic_version"
+            ).scalar_one()
+            == REVISION
+        )
+    engine.dispose()
+
+
 def test_seed_downgrade_removes_only_owned_rows_and_reupgrade_is_repeatable(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -1018,7 +1112,12 @@ def test_offline_postgresql_sql_has_schema_indexes_and_exact_seed_inserts() -> N
     assert category_ddl in ddl
     assert activity_ddl in ddl
     assert ddl.index(category_ddl) < ddl.index(activity_ddl)
-    assert ddl.count("CREATE INDEX") == 30
+    assert ddl.count("CREATE INDEX") == 31
+    assert "CREATE TABLE credential_backoffs" in ddl
+    assert (
+        "CREATE INDEX ix_credential_backoffs_updated_at "
+        "ON credential_backoffs (updated_at);"
+    ) in ddl
     assert "CREATE INDEX ix_patterns_id" not in ddl
     assert "CREATE INDEX ix_cover_designs_public_id" not in ddl
     assert ddl.count("INSERT INTO patterns") == 15

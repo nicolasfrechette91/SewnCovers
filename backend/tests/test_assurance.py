@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
+import app.production as production_module
 from app.accounts.service import AccountService
 from app.assurance.schema import ChecklistUpdateRequest
 from app.assurance.service import AssuranceService, create_paid_order_work
@@ -26,6 +27,7 @@ from app.persistence.models import (
     ProductionWork,
 )
 from app.settings import Settings, reset_settings_cache
+from tests.support import error_envelope
 
 NOW = datetime(2026, 8, 29, 12, 0, tzinfo=UTC)
 CONFIGURATION = {
@@ -263,9 +265,17 @@ def test_paid_order_production_transitions_quality_packet_and_authorization(
         )
     assert outcomes == [200, 409]
 
-    assert (
-        client.get("/admin/production-work", headers=auth(customer)).status_code == 403
-    )
+    denied = client.get("/admin/production-work", headers=auth(customer))
+    assert denied.status_code == 403
+    # An authenticated customer lacks permission; it is not an auth failure.
+    assert error_envelope(denied)["errors"] == [
+        {
+            "code": "permission_denied",
+            "message": "This action requires an administrator account.",
+            "location": ["header", "Authorization"],
+        }
+    ]
+    assert "www-authenticate" not in denied.headers
     queue = client.get("/admin/production-work", headers=auth(administrator))
     assert queue.status_code == 200
     assert queue.json()["total"] == 1
@@ -374,11 +384,19 @@ def test_trust_readiness_headers_health_and_openapi_are_secret_free(
     client, factory = assurance_client
     trust = client.get("/trust/metadata")
     assert trust.status_code == 200
-    assert trust.json()["migrationHead"] == "20260829_01"
+    # Derived from the migration scripts, so it cannot go stale again.
+    assert trust.json()["migrationHead"] == production_module.EXPECTED_REVISION
     assert trust.json()["vulnerabilityContact"].endswith("production use)")
     readiness = client.get("/readiness")
     assert readiness.status_code == 200
     assert readiness.json()["ready"] is False
+    migration_check = next(
+        check for check in readiness.json()["checks"] if check["code"] == "migration"
+    )
+    assert (
+        f"migration head {production_module.EXPECTED_REVISION};"
+        in (migration_check["message"])
+    )
     assert all(
         word not in readiness.text.lower()
         for word in ("stripe_secret", "database_url", "encryption_key")

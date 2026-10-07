@@ -54,8 +54,8 @@ Tests run offline by construction: frontend units use mocked requests and determ
 
 - The live site runs on free tiers. A scheduled ping keeps the API awake during the day; otherwise the first request after idle can take up to a minute.
 - Uploads and commerce cannot be tried on the live site (by design); they run locally in a few steps.
-- Authentication is portfolio-grade: no email verification or recovery, and the credential throttle is per process.
-- The API has no structured logging yet, and backend dependencies are pinned directly but not locked transitively.
+- Authentication is portfolio-grade: no email verification or recovery.
+- Backend dependencies are pinned directly but not locked transitively.
 - The frontend handwrites its API types and validators instead of generating them from the OpenAPI document, which is more code but gives strict runtime checks.
 - Dark mode is token-ready and deliberately not shipped.
 

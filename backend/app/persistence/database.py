@@ -35,6 +35,8 @@ def _configured_url(settings: Settings) -> URL:
     try:
         url = make_url(secret_url)
     except ArgumentError:
+        # The parser's message quotes the whole URL, password included, so
+        # this cause is deliberately dropped rather than chained into logs.
         raise DatabaseConfigurationError(
             "DATABASE_URL must be a valid SQLAlchemy database URL"
         ) from None
@@ -52,13 +54,18 @@ def create_database_engine(
     """Create a configured engine without checking out a database connection."""
     options = dict(engine_options or {})
     options.setdefault("pool_pre_ping", True)
+    # Keep submitted values (emails, hashes) out of SQL error messages and so
+    # out of every log line that records a database failure.
+    options.setdefault("hide_parameters", True)
 
     try:
         return create_engine(_configured_url(settings), **options)
-    except (ArgumentError, ImportError):
+    except (ArgumentError, ImportError) as error:
+        # Engine arguments and a missing driver are named without the URL,
+        # so the cause is chained for the logs.
         raise DatabaseConfigurationError(
             "DATABASE_URL could not configure the database engine"
-        ) from None
+        ) from error
 
 
 def create_session_factory(engine: Engine) -> SessionFactory:

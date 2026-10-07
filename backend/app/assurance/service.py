@@ -26,7 +26,8 @@ from app.assurance.schema import (
     TrustMetadataResponse,
     WorkTransitionRequest,
 )
-from app.errors import APIProblem
+from app.errors import APIProblem, permission_denied
+from app.persistence.migrations import migration_head
 from app.persistence.models import (
     CustomerOrder,
     LegalAcknowledgement,
@@ -76,12 +77,7 @@ def _problem(status: int, message: str, field: str) -> APIProblem:
 
 def _require_admin(actor: AuthenticatedAccount) -> None:
     if actor.account.role != "administrator":
-        raise APIProblem(
-            403,
-            "authentication_required",
-            "Administrator authorization is required.",
-            ("header", "Authorization"),
-        )
+        raise permission_denied()
 
 
 class AssuranceService:
@@ -544,7 +540,7 @@ class AssuranceService:
                     else ""
                 )
             ),
-            migration_head="20260829_01",
+            migration_head=migration_head(),
         )
 
     def readiness(self) -> ReadinessResponse:
@@ -573,8 +569,8 @@ class AssuranceService:
             "migration",
             "information",
             (
-                "Configured startup must verify migration head 20260829_01; this "
-                "read-only report does not mutate or migrate the database."
+                f"Configured startup must verify migration head {migration_head()}; "
+                "this read-only report does not mutate or migrate the database."
             ),
         )
         add(

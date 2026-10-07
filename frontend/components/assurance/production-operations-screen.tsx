@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import { useAuth } from "@/context/auth";
+import { AccountApiError } from "@/services/account-api";
 import {
   assuranceApi,
   type ProductionWork,
@@ -104,10 +105,14 @@ export function ProductionOperationsScreen() {
       );
       setMessage(success);
     } catch (error) {
+      // Only a revision conflict (409) is fixed by reloading; permission,
+      // rate-limit, and availability messages already say what to do.
       setMessage(
-        error instanceof Error
+        error instanceof AccountApiError && error.status === 409
           ? error.message + " Reload the current revision and retry."
-          : "The production action failed.",
+          : error instanceof Error
+            ? error.message
+            : "The production action failed.",
       );
       await load();
     }

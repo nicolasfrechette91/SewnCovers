@@ -10,6 +10,7 @@ from app.designs.api import get_design_service
 from app.designs.schema import CreateDesignRequest
 from app.main import create_application
 from app.settings import Settings
+from tests.support import error_envelope
 
 PRIVATE_DETAIL = "private-user:private-pass@private-host/secret-db"
 
@@ -76,7 +77,7 @@ def test_malformed_json_has_one_body_level_error(client: TestClient) -> None:
     )
 
     assert response.status_code == 422
-    assert response.json() == {
+    assert error_envelope(response) == {
         "errors": [
             {
                 "code": "invalid_json",
@@ -95,7 +96,7 @@ def test_unknown_route_and_wrong_method_use_the_error_contract(
     wrong_method = client.delete("/patterns")
 
     assert missing.status_code == 404
-    assert missing.json() == {
+    assert error_envelope(missing) == {
         "errors": [
             {
                 "code": "resource_not_found",
@@ -121,7 +122,7 @@ def test_unexpected_programming_error_is_safe_and_not_validation(
         response = test_client.get("/unexpected")
 
     assert response.status_code == 500
-    assert response.json() == {
+    assert error_envelope(response) == {
         "errors": [
             {
                 "code": "internal_error",

@@ -91,7 +91,7 @@ macOS and Linux commands, PostgreSQL, and how to switch on commerce and custom u
 
 - **Custom uploads and commerce are switched off in production.** Both are implemented and tested, but the live API answers `503` for them. Uploads need object storage and an image-moderation provider, commerce needs a payment provider, tax and legal review, and none of that is worth operating for a portfolio. Both run locally ([setup](docs/setup.md#3-turn-on-commerce-and-custom-uploads-locally)). Commerce is a fictional CAD sandbox that never contacts a provider.
 - **It is a prototype.** It cannot charge money, ship anything or produce a finished cover, and says so where it matters.
-- **Authentication is portfolio-grade.** No email verification or password recovery, a per-process login throttle, and the session token lives in `sessionStorage`. See [SECURITY.md](SECURITY.md).
+- **Authentication is portfolio-grade.** No email verification or password recovery, and the session token lives in `sessionStorage`. Sign-in attempts are slowed per network and per email with a backoff kept in the database, so it survives restarts ([limits](docs/api.md#limits)). See [SECURITY.md](SECURITY.md).
 - **Free tiers mean cold starts.** The keep-warm ping covers waking hours only, and GitHub can delay or pause scheduled runs ([deployment](docs/deployment.md#free-tier-behaviour)).
 
 ## Repository map

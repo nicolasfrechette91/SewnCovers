@@ -20,6 +20,7 @@ from app.patterns.schema import PatternFilters
 from app.patterns.service import PatternService
 from app.persistence.database import Database, session_scope
 from app.settings import Settings
+from tests.support import error_envelope
 
 CANONICAL_PATTERNS: tuple[dict[str, Any], ...] = (
     {
@@ -314,7 +315,7 @@ def test_malformed_filter_values_are_rejected(
     response = client.get("/patterns", params={name: value})
 
     assert response.status_code == 422
-    assert response.json() == {
+    assert error_envelope(response) == {
         "errors": [
             {
                 "code": "invalid_format",
@@ -329,7 +330,7 @@ def test_unknown_query_parameter_is_rejected(client: TestClient) -> None:
     response = client.get("/patterns", params={"active": "true"})
 
     assert response.status_code == 422
-    assert response.json() == {
+    assert error_envelope(response) == {
         "errors": [
             {
                 "code": "unknown_field",
@@ -475,7 +476,7 @@ def test_database_read_failure_is_safe_rolls_back_and_session_recovers(
             )
 
         assert failed.status_code == 503
-        assert failed.json() == {
+        assert error_envelope(failed) == {
             "errors": [
                 {
                     "code": "storage_unavailable",

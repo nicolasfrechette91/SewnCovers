@@ -17,4 +17,5 @@ Reviewers should be able to use the whole design flow without signing up. Accoun
 
 - No cross-site cookie dependency, and no CSRF surface for the API.
 - The token is readable by script that runs in the page, so a successful XSS would expose it. The Content Security Policy, the absence of third-party scripts and the short lifetime reduce that risk; they do not remove it.
-- Email verification and password recovery are not implemented, and the login throttle is process-local, so this is portfolio-grade authentication.
+- Email verification and password recovery are not implemented, so this is portfolio-grade authentication.
+- Update, 2026-10-07: the process-local login throttle was replaced by per-network limits and a database-backed per-email, per-network backoff that slows repeated failures without letting one network lock an account out for another ([api](../api.md#limits)). Limits keyed by network mean people behind one shared address share a budget.

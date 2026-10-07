@@ -127,6 +127,7 @@ def test_declarative_models_reuse_one_metadata_and_existing_table_contracts() ->
         "cart_lines",
         "commerce_quotes",
         "cover_designs",
+        "credential_backoffs",
         "custom_derivatives",
         "custom_uploads",
         "customer_accounts",

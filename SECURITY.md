@@ -29,11 +29,18 @@ Out of scope: vulnerabilities in GitHub, Render, Neon or other third-party platf
 
 Please keep testing non-destructive: use your own test account with fictional data, do not access or modify other people's data, and stop as soon as you have shown the issue.
 
+## What the API protects
+
+- **Credentials.** Passphrases are hashed with Argon2id, and only a small fixed number of hashes run at once, so a burst of sign-ins is answered with `503` and `Retry-After` instead of exhausting memory. Sign-in, registration and saving designs are limited per network. Failed sign-ins back off per email and per network, so one network's failures never delay another and the account owner is not locked out; the backoff is kept in the database as keyed hashes and survives restarts. A wrong passphrase when confirming account deletion backs off per account. The limits are listed in [docs/api.md](docs/api.md#limits).
+- **Requests.** Bodies are size-limited before they are read, the client address comes only from the entry Render's proxy sets, and production responses carry HSTS alongside the other security headers.
+- **Logs.** Each request gets an id, returned in the `X-Request-ID` header and in error bodies, and written on its log lines. Logs record route templates rather than raw paths, query parameter names but not their values, and a truncated client network rather than an address. Bearer tokens, share tokens, passwords, request bodies and configured secrets are not logged.
+
 ## Known limits of the security model
 
 These are documented design limits, not hidden findings; see [ADR 0004](docs/adr/0004-guest-first-opaque-sessions.md) and [docs/architecture.md](docs/architecture.md#authentication-and-authorization):
 
 - Session tokens are stored in the browser's `sessionStorage` and sent as bearer headers, so script injection into the page could read them.
-- There is no email verification or password recovery, and the credential throttle is per process.
+- There is no email verification or password recovery.
+- Limits are per network, so people behind one shared address (an office, a school or a mobile carrier) share a budget.
 - Share links are bearer links: anyone who has one can read the design it points to.
 - The frontend is hosted on GitHub Pages, which cannot send response headers, so its Content Security Policy is delivered in a `<meta>` tag and allows inline scripts.

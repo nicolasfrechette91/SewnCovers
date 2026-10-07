@@ -8,6 +8,7 @@ import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { useAuth } from "@/context/auth";
 import {
+  AccountApiError,
   accountApi,
   type SessionMetadata,
 } from "@/services/account-api";
@@ -89,7 +90,14 @@ function AuthenticatedAccount() {
       clear();
       requestAnimationFrame(() => document.querySelector<HTMLInputElement>("#login-email")?.focus());
     } catch (caught) {
-      setError(message(caught));
+      // The API's generic credential message mentions an email; here only the
+      // passphrase was entered. Waits (429) and busy (503) messages are shown
+      // as the API words them, including how long to wait.
+      setError(
+        caught instanceof AccountApiError && caught.code === "authentication_failed"
+          ? "That passphrase is incorrect. Check it and try again."
+          : message(caught),
+      );
       requestAnimationFrame(() => passwordRef.current?.focus());
     } finally { setPending(false); }
   };

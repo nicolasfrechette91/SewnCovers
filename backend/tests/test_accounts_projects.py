@@ -13,7 +13,6 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.accounts.security import hash_token, verify_password
-from app.accounts.throttle import AuthenticationThrottle, AuthenticationThrottledError
 from app.main import create_application
 from app.persistence.database import get_session
 from app.persistence.models import (
@@ -24,6 +23,7 @@ from app.persistence.models import (
     ShareGrant,
 )
 from app.settings import Settings, reset_settings_cache
+from tests.support import error_envelope
 
 CONFIGURATION = {
     "shape": "tapered",
@@ -119,7 +119,7 @@ def test_generic_authentication_failures_and_bounded_credentials(
         json={"email": "unknown@example.com", "password": "incorrect passphrase value"},
     )
     assert wrong.status_code == unknown.status_code == 401
-    assert wrong.json() == unknown.json()
+    assert error_envelope(wrong) == error_envelope(unknown)
     oversized = client.post(
         "/auth/login",
         json={"email": "known@example.com", "password": "x" * 129},
@@ -364,20 +364,6 @@ def test_openapi_documents_bearer_auth_without_secret_response_fields() -> None:
     assert "password_hash" not in schemas
     assert "token_hash" not in schemas
     assert "PasswordHasher" not in schemas
-
-
-def test_credential_throttle_expires_without_permanent_lockout() -> None:
-    now = 100.0
-    throttle = AuthenticationThrottle(
-        clock=lambda: now, attempt_limit=2, window_seconds=10
-    )
-    throttle.check_and_record("login:test")
-    throttle.check_and_record("login:test")
-    with pytest.raises(AuthenticationThrottledError) as error:
-        throttle.check_and_record("login:test")
-    assert error.value.retry_after == 11
-    now = 111.0
-    throttle.check_and_record("login:test")
 
 
 def test_concurrent_successful_version_saves_receive_unique_sequential_numbers(

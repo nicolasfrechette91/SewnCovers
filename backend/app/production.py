@@ -1,6 +1,6 @@
 """Migration-gated production Uvicorn process entry point."""
 
-from pathlib import Path
+import logging
 from typing import Any
 
 import uvicorn
@@ -8,11 +8,26 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import inspect, text
 
-from app.persistence.migrations import create_migration_engine
+from app.observability import configure_application_logging
+from app.persistence.migrations import ALEMBIC_CONFIG_PATH, create_migration_engine
 from app.settings import Settings, get_settings
 
-ALEMBIC_CONFIG_PATH = Path(__file__).resolve().parents[1] / "alembic.ini"
-EXPECTED_REVISION = "20260917_01"
+logger = logging.getLogger(__name__)
+
+# Uvicorn's default keep-alive is 5 s, but Render's proxy reuses idle upstream
+# connections for up to about 120 s; a server that closes them first races the
+# proxy into sporadic 502s. Render waits 30 s after SIGTERM by default, so
+# in-flight requests get 25 s to finish before the server stops.
+TIMEOUT_KEEP_ALIVE_SECONDS = 130
+TIMEOUT_GRACEFUL_SHUTDOWN_SECONDS = 25
+# The large per-request allocation, password hashing, is bounded separately
+# (three Argon2 operations, about 57 MiB) and bodies are capped at 64 KiB, so
+# this is only a backstop on connections and in-flight requests. It stays well
+# above the proxy's pooled keep-alive connections and the 40-thread pool that
+# runs handlers, while a flood beyond it costs a few MiB of buffers, not more.
+LIMIT_CONCURRENCY = 100
+
+EXPECTED_REVISION = "20261007_01"
 EXPECTED_PATTERN_COUNT = 15
 EXPECTED_TABLES = {
     "alembic_version",
@@ -21,6 +36,7 @@ EXPECTED_TABLES = {
     "cart_lines",
     "commerce_quotes",
     "cover_designs",
+    "credential_backoffs",
     "customer_accounts",
     "customer_orders",
     "legal_acknowledgements",
@@ -93,6 +109,18 @@ EXPECTED_CONSTRAINTS = {
         },
         "foreign_key": set(),
         "index": set(),
+    },
+    "credential_backoffs": {
+        "primary": {"pk_credential_backoffs"},
+        "unique": set(),
+        "check": {
+            "ck_credential_backoffs_failures_positive",
+            "ck_credential_backoffs_purpose_supported",
+            "ck_credential_backoffs_source_digest_length",
+            "ck_credential_backoffs_subject_digest_length",
+        },
+        "foreign_key": set(),
+        "index": {"ix_credential_backoffs_updated_at"},
     },
     "authenticated_sessions": {
         "primary": {"pk_authenticated_sessions"},
@@ -226,9 +254,15 @@ class ProductionVerificationError(RuntimeError):
 
 def upgrade_database() -> None:
     """Apply every pending forward migration before the server can start."""
+    configuration = Config(str(ALEMBIC_CONFIG_PATH))
+    # Keep the JSON logging configured by main(); alembic.ini's would replace it.
+    configuration.attributes["configure_logging"] = False
     try:
-        command.upgrade(Config(str(ALEMBIC_CONFIG_PATH)), "head")
+        command.upgrade(configuration, "head")
     except Exception:
+        # The cause goes to the redacting logger; the raised error stays
+        # generic because the interpreter prints it, and its cause, unredacted.
+        logger.exception("Production database migration failed")
         raise ProductionMigrationError(
             "Production database migration failed; Uvicorn was not started"
         ) from None
@@ -279,8 +313,9 @@ def verify_database() -> None:
                     "index": _explicit_index_names(inspector.get_indexes(table_name)),
                 }
                 if actual != expected:
-                    raise ValueError("unexpected schema boundary")
+                    raise ValueError(f"unexpected schema boundary in {table_name}")
     except Exception:
+        logger.exception("Production database verification failed")
         raise ProductionVerificationError(
             "Production database verification failed; Uvicorn was not started"
         ) from None
@@ -293,6 +328,7 @@ def main() -> None:
     """Migrate successfully, then run FastAPI on the platform-provided port."""
     settings = get_settings()
     require_production_environment(settings)
+    configure_application_logging(settings)
     upgrade_database()
     verify_database()
     uvicorn.run(
@@ -300,6 +336,17 @@ def main() -> None:
         host="0.0.0.0",
         port=settings.port,
         reload=False,
+        # The application resolves the client address itself (app.client_ip),
+        # so uvicorn must not rewrite it from X-Forwarded-For first.
+        proxy_headers=False,
+        # Logging is already configured; the app writes its own redacted
+        # access log with request ids, so uvicorn's (raw paths) stays off.
+        log_config=None,
+        access_log=False,
+        server_header=False,
+        timeout_keep_alive=TIMEOUT_KEEP_ALIVE_SECONDS,
+        timeout_graceful_shutdown=TIMEOUT_GRACEFUL_SHUTDOWN_SECONDS,
+        limit_concurrency=LIMIT_CONCURRENCY,
     )
 
 

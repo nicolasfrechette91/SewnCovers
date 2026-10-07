@@ -48,8 +48,36 @@ Changing `NEXT_PUBLIC_API_URL` after a build changes nothing; rebuild.
 | Auto-deploy | Off (`autoDeployTrigger: "off"`); deploys come from the GitHub workflow |
 | Non-secret environment | `PYTHON_VERSION=3.13.2`, `ENVIRONMENT=production`, `FRONTEND_ORIGIN=https://nicolasfrechette91.github.io` |
 | Protected environment | `DATABASE_URL`, declared with `sync: false` and set only in Render |
+| Optional environment | `LOG_LEVEL` (default `INFO`), `CLIENT_IP_HEADER` and `CLIENT_IP_INDEX` (see [Client address](#client-address)); none needs setting |
 
 Render supplies `PORT`; the production entry point binds `0.0.0.0` on it. Dependencies are the pinned direct dependencies in `backend/pyproject.toml`; there is no backend lockfile, so transitive versions are resolved at build time.
+
+### Server settings
+
+The entry point runs a single Uvicorn worker sized for the free instance (512 MB):
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| `timeout_keep_alive` | 130 s | Render's proxy reuses idle connections for up to about 120 s; closing them first would race the proxy into sporadic `502`s. |
+| `timeout_graceful_shutdown` | 25 s | Render waits 30 s after `SIGTERM`, so requests in flight can finish. |
+| `limit_concurrency` | 100 | A backstop on connections and in-flight requests. Password hashing, the one large allocation, is bounded separately to three Argon2 operations (about 57 MiB), and JSON bodies are capped at 64 KiB, so even a flood stays within a few MiB of buffers. Beyond the limit Uvicorn answers `503`. |
+| `proxy_headers` | off | The application resolves the client address itself, from one configured source. |
+| `access_log` | off | The application writes its own access line, with the request id and without raw paths. |
+
+### Client address
+
+Render's proxy sets the first entry of `X-Forwarded-For` to the connecting client, so in production that entry is the client address for the per-network limits and the access log; nothing else in the header is used. Outside production the header is ignored. Two settings change the source without a code change:
+
+| Variable | Values | Default |
+| --- | --- | --- |
+| `CLIENT_IP_HEADER` | `x-forwarded-for`, `cf-connecting-ip`, `none` (socket peer) | `x-forwarded-for` in production, `none` elsewhere |
+| `CLIENT_IP_INDEX` | `0` for the first entry, `-N` for the Nth from the right | `0` |
+
+Each access log line records the resolved `client` network and `forwardedEntries`, the number of entries the header had (never the addresses), which is what to look at when checking this after a platform change. `none` makes every request share the proxy's address, so it is only for local use. Changing either variable in Render takes effect on the next deploy ("Save and deploy").
+
+### Logs and request ids
+
+Logs are JSON lines in the service's **Logs** tab in Render. Every response has an `X-Request-ID` header and every error body a `requestId`; search the logs for that value to find the request's access line and any error logged while handling it, with its cause. What is and is not logged is described in [architecture](architecture.md#logs).
 
 ### Deploying a backend change
 
@@ -70,12 +98,12 @@ Concurrent runs cancel the older one; the newer run deploys its own commit. To d
 
 Render's free plan has no pre-deploy command, so the start command owns the sequence ([ADR 0003](adr/0003-migration-gated-production-start.md)):
 
-1. Load settings and require `ENVIRONMENT=production`, the exact Pages origin and a `DATABASE_URL`.
+1. Load settings and require `ENVIRONMENT=production`, the exact Pages origin and a `DATABASE_URL`, then configure JSON logging.
 2. Run `alembic upgrade head`.
-3. Verify the exact revision (`20260917_01`), the expected tables, the named constraints, the intended pattern indexes and exactly 15 seeded patterns.
+3. Verify the exact revision (`20261007_01`), the expected tables, the named constraints, the intended pattern indexes and exactly 15 seeded patterns.
 4. Only then start Uvicorn.
 
-If any step fails the process exits with a fixed message and Render keeps the previous deploy serving. Importing the app, running the tests or running the development server never calls Alembic or opens a connection.
+If any step fails the process exits with a fixed message, the cause is logged with secrets masked, and Render keeps the previous deploy serving. Importing the app, running the tests or running the development server never calls Alembic or opens a connection.
 
 ## Feature flags in production
 
@@ -96,7 +124,7 @@ curl https://sewncovers-api.onrender.com/health
 curl https://sewncovers-api.onrender.com/patterns
 ```
 
-The deploy workflow already checks both. `/health` should return `{"process":"healthy","database":"healthy","commit":"<deployed SHA>"}` and `/patterns` the 15 seeded patterns (the first request may take up to a minute). Then open the [live site](https://nicolasfrechette91.github.io/SewnCovers/configure/), walk to the Pattern stage, and open the demonstration [share link](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg), which should restore a box cushion in the Terrace wave pattern.
+The deploy workflow already checks both. `/health` should return `{"process":"healthy","database":"healthy","commit":"<deployed SHA>"}` and `/patterns` the 15 seeded patterns (the first request may take up to a minute). Both responses carry `X-Request-ID` and `Strict-Transport-Security` headers, and each request appears in Render's log as one JSON `request` line with that id. Then open the [live site](https://nicolasfrechette91.github.io/SewnCovers/configure/), walk to the Pattern stage, and open the demonstration [share link](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg), which should restore a box cushion in the Terrace wave pattern.
 
 ## Troubleshooting
 
@@ -110,4 +138,6 @@ The deploy workflow already checks both. `/health` should return `{"process":"he
 | "Wait for /health to report this commit" times out | Render accepted the deploy but the new instance never became healthy. The error shows the commit still serving; read that deploy's logs in Render. |
 | The Pages smoke check fails after a successful deploy | Check that Pages is set to deploy from GitHub Actions and open the two URLs it names. |
 | The keep-warm workflow stopped running | GitHub disabled it after 60 days without activity; re-enable it in the Actions tab. |
-| The API restarts and never becomes healthy | Read the deploy log in Render: a failed migration or schema verification stops the process before Uvicorn starts. |
+| The API restarts and never becomes healthy | Read the deploy log in Render: a failed migration or schema verification stops the process before Uvicorn starts, and the line before the exit names the cause. |
+| Someone reports an error | Ask for the reference (`requestId`) and search Render's logs for it. |
+| Many visitors get `429` at once | The per-network limits are keyed on the address Render reports. Check that access lines show varied `client` networks; if they all show one, review [Client address](#client-address). |

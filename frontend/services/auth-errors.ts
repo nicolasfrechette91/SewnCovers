@@ -1,4 +1,8 @@
-import { ACKNOWLEDGEMENT_FAILED_CODE, AccountApiError } from "./account-api";
+import {
+  ACKNOWLEDGEMENT_FAILED_CODE,
+  AccountApiError,
+  waitPhrase,
+} from "./account-api";
 
 export type SignInMode = "login" | "register";
 
@@ -39,10 +43,15 @@ export function signInErrorMessage(error: unknown, mode: SignInMode): string {
     case 422:
       return "Check your email address and passphrase (12–128 characters), then try again.";
     case 429:
-      return "Too many attempts. Wait a few minutes before trying again.";
+      return error.retryAfterSeconds === undefined
+        ? "Too many attempts. Wait a few minutes before trying again."
+        : `Too many attempts. Try again in ${waitPhrase(error.retryAfterSeconds)}.`;
+    case 503:
+      return error.code === "service_busy"
+        ? "The SewnCovers service is busy right now. Wait a few seconds and try again."
+        : UNAVAILABLE;
     case 408:
     case 502:
-    case 503:
     case 504:
       return UNAVAILABLE;
     default:

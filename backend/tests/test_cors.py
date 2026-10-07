@@ -280,7 +280,11 @@ def test_unknown_origin_receives_no_permissive_cors_headers(
     )
 
     assert simple_response.status_code == 200
-    assert cors_headers(simple_response.headers) == {}
+    # Starlette lists the exposed headers on every simple response; without an
+    # Allow-Origin match a browser exposes nothing, so this grants no access.
+    assert cors_headers(simple_response.headers) == {
+        "access-control-expose-headers": "Retry-After, X-Request-ID"
+    }
     assert preflight_response.status_code == 400
     assert "access-control-allow-origin" not in preflight_response.headers
     assert "access-control-allow-credentials" not in preflight_response.headers

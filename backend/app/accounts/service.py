@@ -11,6 +11,13 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.accounts.backoff import (
+    ANY_NETWORK,
+    BackoffPurpose,
+    CredentialBackoffActive,
+    CredentialBackoffStore,
+    backoff_key,
+)
 from app.accounts.schema import (
     AccountDeletedResponse,
     AccountExportResponse,
@@ -28,11 +35,6 @@ from app.accounts.security import (
     hash_token,
     token_hash_matches,
     verify_password,
-)
-from app.accounts.throttle import (
-    AuthenticationThrottle,
-    AuthenticationThrottledError,
-    authentication_throttle,
 )
 from app.commerce.encryption import ShippingCipher, ShippingEncryptionError
 from app.errors import APIProblem, authentication_failed, authentication_required
@@ -57,6 +59,7 @@ from app.persistence.models import (
     ShoppingCart,
 )
 from app.persistence.transactions import service_transaction
+from app.rate_limits import too_many_requests
 from app.settings import get_settings
 from app.uploads.storage import ObjectStorageError, get_object_storage
 
@@ -98,19 +101,19 @@ class AccountService:
         clock: Callable[[], datetime] = utc_now,
         token_generator: TokenGenerator = generate_bearer_token,
         id_generator: IdGenerator = generate_resource_id,
-        throttle: AuthenticationThrottle = authentication_throttle,
+        backoff: CredentialBackoffStore | None = None,
     ) -> None:
         self._session = session
         self._clock = clock
         self._token_generator = token_generator
         self._id_generator = id_generator
-        self._throttle = throttle
+        self._backoff = backoff or CredentialBackoffStore(
+            session, backoff_key(get_settings()), clock=clock
+        )
 
-    def register(
-        self, request: CredentialsRequest, *, client_key: str
-    ) -> SessionCreatedResponse:
-        throttle_key = f"register:{client_key}:{request.email}"
-        self._check_throttle(throttle_key)
+    def register(self, request: CredentialsRequest) -> SessionCreatedResponse:
+        # Registration is limited per network by the route; there is no
+        # account yet to back off against.
         existing = self._session.scalar(
             select(CustomerAccount).where(CustomerAccount.email == request.email)
         )
@@ -133,14 +136,14 @@ class AccountService:
                 response = self._create_session(account, now)
         except IntegrityError:
             raise authentication_failed() from None
-        self._throttle.clear(throttle_key)
         return response
 
     def login(
-        self, request: CredentialsRequest, *, client_key: str
+        self, request: CredentialsRequest, *, client_network: str
     ) -> SessionCreatedResponse:
-        throttle_key = f"login:{client_key}:{request.email}"
-        self._check_throttle(throttle_key)
+        # The backoff is keyed on the submitted email, known or not, so its
+        # behaviour cannot reveal whether an account exists.
+        self._check_backoff("login", request.email, client_network)
         account = self._session.scalar(
             select(CustomerAccount).where(CustomerAccount.email == request.email)
         )
@@ -148,12 +151,13 @@ class AccountService:
             _dummy_password_hash() if account is None else account.password_hash
         )
         if not verify_password(password_hash, request.password) or account is None:
+            self._backoff.record_failure("login", request.email, client_network)
             raise authentication_failed()
 
         now = self._clock()
         with service_transaction(self._session):
             response = self._create_session(account, now)
-        self._throttle.clear(throttle_key)
+            self._backoff.clear("login", request.email, client_network)
         return response
 
     def authenticate(self, raw_token: str | None) -> AuthenticatedAccount:
@@ -351,7 +355,10 @@ class AccountService:
     def delete_account(
         self, authenticated: AuthenticatedAccount, password: str
     ) -> AccountDeletedResponse:
+        account_id = authenticated.account.id
+        self._check_backoff("account_deletion", account_id, ANY_NETWORK)
         if not verify_password(authenticated.account.password_hash, password):
+            self._backoff.record_failure("account_deletion", account_id, ANY_NETWORK)
             raise authentication_failed()
         active_order = self._session.scalar(
             select(CustomerOrder.id)
@@ -500,6 +507,8 @@ class AccountService:
                     CustomerAccount.id == authenticated.account.id
                 )
             )
+            self._backoff.clear("account_deletion", account_id)
+            self._backoff.clear("login", authenticated.account.email)
         return AccountDeletedResponse(deleted=True)
 
     def _create_session(
@@ -553,16 +562,18 @@ class AccountService:
             ("service", "account"),
         )
 
-    def _check_throttle(self, key: str) -> None:
+    def _check_backoff(
+        self, purpose: BackoffPurpose, subject: str, network: str
+    ) -> None:
         try:
-            self._throttle.check_and_record(key)
-        except AuthenticationThrottledError as error:
-            raise APIProblem(
-                429,
+            self._backoff.check(purpose, subject, network)
+        except CredentialBackoffActive as active:
+            raise too_many_requests(
                 "credential_throttled",
-                "Too many authentication attempts. Try again later.",
-                ("request",),
-                headers={"Retry-After": str(error.retry_after)},
+                "Too many incorrect passphrase attempts."
+                if purpose == "account_deletion"
+                else "Too many sign-in attempts for this email address.",
+                active.retry_after,
             ) from None
 
     @staticmethod

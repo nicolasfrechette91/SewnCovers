@@ -60,7 +60,10 @@ def register_commerce_routes(application: FastAPI) -> None:
     }
     admin = {
         **private,
-        403: {"description": "Administrator role required", "model": APIErrorResponse},
+        403: {
+            "description": "Administrator role required (`permission_denied`)",
+            "model": APIErrorResponse,
+        },
     }
     routes = [
         (
@@ -213,6 +216,10 @@ def register_commerce_routes(application: FastAPI) -> None:
         responses={
             400: {
                 "description": "Signature or event invalid",
+                "model": APIErrorResponse,
+            },
+            413: {
+                "description": "Event body larger than 64,000 bytes",
                 "model": APIErrorResponse,
             },
             422: {

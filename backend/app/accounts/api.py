@@ -16,8 +16,10 @@ from app.accounts.schema import (
     SessionResponse,
 )
 from app.accounts.service import AccountService, AuthenticatedAccount
+from app.client_ip import network_key
 from app.errors import authentication_required
 from app.persistence.database import DatabaseSession
+from app.rate_limits import LoginRateLimit, RegisterRateLimit
 
 
 class PasswordConfirmationRequest(BaseModel):
@@ -58,24 +60,22 @@ AuthenticatedDependency = Annotated[
 ]
 
 
-def _client_key(request: Request) -> str:
-    return request.client.host if request.client is not None else "unknown"
-
-
 def register(
+    _limit: RegisterRateLimit,
     credentials: CredentialsRequest,
-    request: Request,
     service: AccountServiceDependency,
 ) -> SessionCreatedResponse:
-    return service.register(credentials, client_key=_client_key(request))
+    return service.register(credentials)
 
 
 def login(
+    _limit: LoginRateLimit,
     credentials: CredentialsRequest,
     request: Request,
     service: AccountServiceDependency,
 ) -> SessionCreatedResponse:
-    return service.login(credentials, client_key=_client_key(request))
+    host = request.client.host if request.client is not None else None
+    return service.login(credentials, client_network=network_key(host))
 
 
 def current_account(

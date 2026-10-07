@@ -72,7 +72,9 @@ def _validate_container(data: bytes) -> None:
 
 def _encode_png(image: Image.Image, kind: str) -> DerivativeResult:
     output = io.BytesIO()
-    image.save(output, format="PNG", compress_level=9, optimize=False)
+    # The PNG encoder falls back to the source's embedded ICC profile, which is
+    # uploader-controlled bytes; derivatives carry none and render as sRGB.
+    image.save(output, format="PNG", compress_level=9, optimize=False, icc_profile=None)
     data = output.getvalue()
     return DerivativeResult(
         kind=kind,

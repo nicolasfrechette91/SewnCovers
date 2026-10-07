@@ -58,7 +58,7 @@ from app.commerce.schema import (
 )
 from app.designs.schema import DesignConfiguration
 from app.designs.service import DesignService
-from app.errors import APIProblem
+from app.errors import APIProblem, permission_denied
 from app.patterns.repository import PatternRepository
 from app.persistence.models import (
     AuditEvent,
@@ -1898,12 +1898,7 @@ class CommerceService:
     @staticmethod
     def _require_admin(actor: AuthenticatedAccount) -> None:
         if actor.account.role != "administrator":
-            raise _problem(
-                403,
-                "authentication_required",
-                "Administrator authorization is required.",
-                "Authorization",
-            )
+            raise permission_denied()
 
     def _book_response(self, book: PriceBook) -> PriceBookResponse:
         return PriceBookResponse(

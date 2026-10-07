@@ -13,6 +13,7 @@ from app.designs.schema import (
 from app.designs.service import DesignService
 from app.patterns.repository import PatternRepository
 from app.persistence.database import DatabaseSession
+from app.rate_limits import DesignRateLimit
 
 
 def get_design_service(session: DatabaseSession) -> DesignService:
@@ -29,6 +30,7 @@ PublicDesignIdPath = Annotated[PublicDesignId, Path(description="Opaque public I
 
 
 def create_design(
+    _limit: DesignRateLimit,
     request: CreateDesignRequest,
     response: Response,
     service: DesignServiceDependency,

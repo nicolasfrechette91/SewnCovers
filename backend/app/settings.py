@@ -19,6 +19,8 @@ ModerationProviderName = Literal[
 CommerceMode = Literal["sandbox", "production"]
 CorsMethod = Literal["DELETE", "GET", "PATCH", "POST", "PUT"]
 CorsHeader = Literal["Authorization", "Content-Type"]
+LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
+ClientIpHeader = Literal["x-forwarded-for", "cf-connecting-ip", "none"]
 
 _HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
 
@@ -26,6 +28,8 @@ LOCAL_FRONTEND_ORIGIN = "http://localhost:3000"
 PRODUCTION_FRONTEND_ORIGIN = "https://nicolasfrechette91.github.io"
 CORS_ALLOWED_METHODS: tuple[CorsMethod, ...] = ("DELETE", "GET", "PATCH", "POST", "PUT")
 CORS_ALLOWED_HEADERS: tuple[CorsHeader, ...] = ("Authorization", "Content-Type")
+# Neither is CORS-safelisted, so browser code can read them only when exposed.
+CORS_EXPOSED_HEADERS = ("Retry-After", "X-Request-ID")
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,7 +39,7 @@ class CorsConfiguration:
     allowed_origins: tuple[str, ...]
     allowed_methods: tuple[CorsMethod, ...] = CORS_ALLOWED_METHODS
     allowed_headers: tuple[CorsHeader, ...] = CORS_ALLOWED_HEADERS
-    exposed_headers: tuple[str, ...] = ()
+    exposed_headers: tuple[str, ...] = CORS_EXPOSED_HEADERS
     allow_credentials: Literal[False] = False
     preflight_max_age_seconds: int = 600
 
@@ -106,6 +110,18 @@ class Settings(BaseSettings):
         ge=1,
         le=65535,
         validation_alias="PORT",
+    )
+    log_level: LogLevel = Field(default="INFO", validation_alias="LOG_LEVEL")
+    # Where the client address comes from. Unset means X-Forwarded-For in
+    # production (Render sets its first entry to the connecting client) and the
+    # socket peer everywhere else, where no trusted proxy rewrites the header.
+    client_ip_header: ClientIpHeader | None = Field(
+        default=None, validation_alias="CLIENT_IP_HEADER"
+    )
+    # Which comma-separated entry of that header to use, Python-style: 0 is the
+    # first entry, -N the Nth from the right (for a proxy that only appends).
+    client_ip_index: int = Field(
+        default=0, ge=-8, le=0, validation_alias="CLIENT_IP_INDEX"
     )
     database_url: SecretStr | None = Field(
         default=None,
@@ -220,6 +236,16 @@ class Settings(BaseSettings):
         max_length=254,
         validation_alias="VULNERABILITY_REPORT_CONTACT",
     )
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def normalize_log_level(cls, value: object) -> object:
+        return value.strip().upper() if isinstance(value, str) else value
+
+    @field_validator("client_ip_header", mode="before")
+    @classmethod
+    def normalize_client_ip_header(cls, value: object) -> object:
+        return value.strip().lower() if isinstance(value, str) else value
 
     @field_validator("environment", mode="before")
     @classmethod
@@ -378,6 +404,13 @@ class Settings(BaseSettings):
             candidate = value.strip()
             return candidate or None
         return value
+
+    @property
+    def resolved_client_ip_header(self) -> ClientIpHeader:
+        """Return the configured client-address source or its environment default."""
+        if self.client_ip_header is not None:
+            return self.client_ip_header
+        return "x-forwarded-for" if self.environment == "production" else "none"
 
     @property
     def cors(self) -> CorsConfiguration:

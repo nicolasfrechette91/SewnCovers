@@ -83,13 +83,14 @@ FastAPI with Pydantic v2 and synchronous SQLAlchemy 2 sessions on Psycopg 3, a s
 | Package | Responsibility |
 | --- | --- |
 | `patterns/`, `designs/` | The public catalogue and immutable anonymous designs. |
-| `accounts/` | Registration, login, sessions, Argon2id and token primitives, a process-local credential throttle, export and deletion. |
+| `accounts/` | Registration, login, sessions, Argon2id and token primitives with a bound on concurrent hashing, the database-backed credential backoff, export and deletion. |
 | `projects/` | Private named projects, immutable versions, revocable read-only shares. |
 | `uploads/` | Private custom patterns: intents, strict image processing, moderation, object storage (filesystem or S3), a durable worker. |
 | `commerce/` | Price books, quotes, cart, checkout, payment events, orders, refunds, administration, audit. Includes the deterministic sandbox provider and a configured-only Stripe adapter. |
 | `assurance/` | Versioned legal documents and acknowledgements, production work and quality control, trust metadata and the read-only readiness report. |
 | `persistence/` | Lazy engine and session ownership, ORM models, transaction helpers, migration metadata. |
 | `settings.py`, `errors.py`, `health.py`, `production.py` | Typed settings, the error contract, the health check, the migration-gated production entry point. |
+| `observability.py`, `client_ip.py`, `rate_limits.py`, `body_limits.py` | Request ids and redacted JSON logs, the trusted client address, per-network limits, request body size limits. |
 
 ### Request flow
 
@@ -104,7 +105,7 @@ The engine is created on the first database request. Importing the app, construc
 - Missing, malformed, unknown, expired and revoked credentials all produce the same `401`. A wrong password, an unknown email and a duplicate registration produce one generic body.
 - Every owned read and mutation (projects, versions, shares, uploads, quotes, cart, orders, sessions) filters by the authenticated account; a cross-account or missing resource returns the same non-disclosing `404`. Ids never authorize access.
 - The administrator role exists only in the database, is assigned by an explicit CLI command that writes an audit row, and is checked in the service layer before any administrator operation runs.
-- A process-local rolling limiter allows five credential attempts per five minutes per key. It is a focused safeguard, not distributed abuse protection.
+- Sign-in, registration and design saving are limited per network in memory. Failed sign-ins back off per email and per network in the database (`credential_backoffs`), so the state survives restarts, one network's failures never delay another, and a network with no failures is always checked; a wrong passphrase when confirming account deletion backs off per account. Only a few Argon2 operations run at once, and more answer `503 service_busy`. The numbers are in [api](api.md#limits).
 - Email verification and password recovery are not implemented.
 
 ### Feature flags
@@ -113,12 +114,20 @@ The engine is created on the first database request. Importing the app, construc
 
 ### Browser access and response headers
 
-- **CORS.** Exactly one origin per process, with credentials disabled and a 600 second preflight cache. Local development defaults to `http://localhost:3000`; production refuses to start with anything but `https://nicolasfrechette91.github.io` (the `/SewnCovers/` suffix is a path, not part of an origin). Allowed methods are `DELETE`, `GET`, `PATCH`, `POST` and `PUT`; allowed request headers are `Authorization` and `Content-Type`. CORS is not authentication.
-- **Headers.** Every API response carries `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy`, `X-Frame-Options: DENY` and (except on the documentation pages) `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`. Authenticated, account, admin, asset, `/health` and `/readiness` responses add `Cache-Control: private, no-store`.
+- **CORS.** Exactly one origin per process, with credentials disabled and a 600 second preflight cache. Local development defaults to `http://localhost:3000`; production refuses to start with anything but `https://nicolasfrechette91.github.io` (the `/SewnCovers/` suffix is a path, not part of an origin). Allowed methods are `DELETE`, `GET`, `PATCH`, `POST` and `PUT`; allowed request headers are `Authorization` and `Content-Type`; `Retry-After` and `X-Request-ID` are exposed to browser code. CORS is not authentication.
+- **Headers.** Every API response carries `X-Request-ID`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, a restrictive `Permissions-Policy`, `X-Frame-Options: DENY` and (except on the documentation pages) `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`. In production it also carries `Strict-Transport-Security: max-age=63072000; includeSubDomains`. Authenticated, account, admin, asset, `/health` and `/readiness` responses add `Cache-Control: private, no-store`.
+
+### Middleware order
+
+From the outside in: the trusted client address is resolved, then the request id is assigned and the access log is written, then the security headers, CORS, the body size limit, and a catch-all that turns an unexpected exception into the `500` envelope. Because the last three sit inside CORS, browsers can read `413`, `429` and `500` responses.
+
+### Logs
+
+The API writes one JSON object per line to standard error, at `LOG_LEVEL` (default `INFO`). Each request produces one access line with the method, the matched route template (`/shares/{share_token}`, never the raw path), the status, the duration, query parameter names without values, and the client network truncated to /24 or /48. Every line written while a request is handled carries its `requestId`. Unexpected errors, storage failures and start-up migration or verification failures are logged with their cause. Before any handler sees a record, it is redacted: configured secrets, passwords in connection URLs and bearer tokens are masked, and SQL parameters are never included.
 
 ### Errors
 
-Every failure outside `/health` uses one envelope, `{"errors": [{"code", "message", "location"}]}`, built centrally from validation, domain, routing, database and unexpected failures. Responses never include submitted values, exception text, SQL, constraint names, internal ids, credentials or stack traces; unknown and infrastructure failures return fixed messages, and unexpected programming errors stay `500` rather than being relabelled as validation. The full contract is in [api](api.md#errors).
+Every failure outside `/health` uses one envelope, `{"errors": [{"code", "message", "location"}], "requestId"}`, built centrally from validation, domain, routing, database and unexpected failures. Responses never include submitted values, exception text, SQL, constraint names, internal ids, credentials or stack traces; unknown and infrastructure failures return fixed messages, and unexpected programming errors stay `500` rather than being relabelled as validation. The full contract is in [api](api.md#errors).
 
 ### Rules that exist on both sides
 
