@@ -9,24 +9,24 @@ description = "FastAPI backend for the SewnCovers MVP"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
-    "alembic==1.18.5",
+    "alembic==1.20.0",
     "argon2-cffi==25.1.0",
-    "boto3==1.40.11",
-    "cryptography==50.0.1",
-    "fastapi==0.139.2",
+    "boto3==1.43.107",
+    "cryptography==50.0.2",
+    "fastapi==0.142.2",
     "Pillow==12.3.0",
-    "pydantic-settings==2.14.2",
-    "psycopg[binary]==3.3.4",
-    "SQLAlchemy==2.0.51",
+    "pydantic-settings==2.15.0",
+    "psycopg[binary]==3.3.6",
+    "SQLAlchemy==2.1.2",
     "stripe==15.5.1",
-    "uvicorn==0.51.0",
+    "uvicorn==0.54.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "httpx2==2.7.0",
+    "httpx2==2.13.1",
     "pytest==9.1.1",
-    "ruff==0.15.22",
+    "ruff==0.16.10",
 ]
 
 [tool.pytest.ini_options]
