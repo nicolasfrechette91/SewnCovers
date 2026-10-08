@@ -101,7 +101,7 @@ macOS and Linux commands, PostgreSQL, and how to switch on commerce and custom u
 | `frontend/` | Next.js app: routes, configurator, design system, API clients, tests ([readme](frontend/README.md)) |
 | `backend/` | FastAPI service, Alembic migrations, pytest suite ([readme](backend/README.md)) |
 | `docs/` | Guides, ADRs, design system, case study and screenshots |
-| `.github/` | One reusable CI workflow, the Pages and Render deploys that call it, the keep-warm ping, Dependabot |
+| `.github/` | One reusable CI workflow, the Pages and Render deploys that call it, the keep-warm ping |
 | `render.yaml` | Render service definition (no secrets) |
 | `AGENTS.md`, `SECURITY.md` | Contributor and agent notes; vulnerability reporting |
 
