@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { Button, sectionTitleClasses } from "@/components/ui";
+import { Button, sectionTitleClasses, useDeferredFocus } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
   isInitialConfiguration,
@@ -149,16 +149,20 @@ const REPLACE_COPY: Readonly<Record<ReplaceReason, {
 };
 
 export function DraftReplaceConfirmation({
+  asHeading = true,
   onKeep,
   onReplace,
   reason,
 }: Readonly<{
+  /** False once a stage heading is the page's h1 and follows this panel. */
+  asHeading?: boolean;
   onKeep: () => void;
   onReplace: () => void;
   reason: ReplaceReason;
 }>) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const copy = REPLACE_COPY[reason];
+  const Title = asHeading ? "h2" : "p";
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => headingRef.current?.focus());
@@ -170,7 +174,7 @@ export function DraftReplaceConfirmation({
       aria-labelledby="draft-replace-heading"
       className="print-hidden mt-layout min-w-0 rounded-panel border border-border-strong bg-surface p-card shadow-card"
     >
-      <h2
+      <Title
         id="draft-replace-heading"
         ref={headingRef}
         tabIndex={-1}
@@ -178,7 +182,7 @@ export function DraftReplaceConfirmation({
         className={`${sectionTitleClasses} scroll-mt-layout`}
       >
         Keep your unsaved design?
-      </h2>
+      </Title>
       <p
         id="draft-replace-description"
         className="mt-3 max-w-3xl break-words text-body text-text-muted"
@@ -201,6 +205,20 @@ export function DraftRestoredNotice({
   const [confirming, setConfirming] = useState(false);
   const { dispatch, state } = useConfiguration();
   const { state: auth } = useAuth();
+  const startNewRef = useRef<HTMLButtonElement>(null);
+  const keepDesigningRef = useRef<HTMLButtonElement>(null);
+  const focusLater = useDeferredFocus();
+
+  // Opening the question swaps the button that was pressed, so focus moves to
+  // the safe answer; closing it without starting over returns to the opener.
+  const askToStartOver = () => {
+    setConfirming(true);
+    focusLater(() => keepDesigningRef.current);
+  };
+  const keepDesigning = () => {
+    setConfirming(false);
+    focusLater(() => startNewRef.current);
+  };
 
   // Only a restored draft can hold a custom pattern without its preview.
   useEffect(() => {
@@ -226,7 +244,15 @@ export function DraftRestoredNotice({
   }, [auth, dispatch, state.pattern]);
 
   return (
-    <div className="print-hidden mt-component flex min-w-0 flex-col gap-2 rounded-card border border-dashed border-border-strong bg-surface-subtle px-card py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+    <div
+      className="print-hidden mt-component flex min-w-0 flex-col gap-2 rounded-card border border-dashed border-border-strong bg-surface-subtle px-card py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+      onKeyDown={(event) => {
+        if (confirming && event.key === "Escape") {
+          event.preventDefault();
+          keepDesigning();
+        }
+      }}
+    >
       <p className="min-w-0 break-words text-supporting text-text-muted">
         {confirming
           ? "Clear this design from this browser and start again? Anything saved to My projects stays there."
@@ -238,12 +264,22 @@ export function DraftRestoredNotice({
             <Button size="compact" variant="secondary" onClick={onStartOver}>
               Clear and start again
             </Button>
-            <Button size="compact" variant="ghost" onClick={() => setConfirming(false)}>
+            <Button
+              ref={keepDesigningRef}
+              size="compact"
+              variant="ghost"
+              onClick={keepDesigning}
+            >
               Keep designing
             </Button>
           </>
         ) : (
-          <Button size="compact" variant="ghost" onClick={() => setConfirming(true)}>
+          <Button
+            ref={startNewRef}
+            size="compact"
+            variant="ghost"
+            onClick={askToStartOver}
+          >
             Start a new design
           </Button>
         )}

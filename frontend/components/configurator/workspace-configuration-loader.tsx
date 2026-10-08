@@ -75,9 +75,12 @@ async function restoreState(
 }
 
 export function WorkspaceConfigurationLoader({
+  asHeading = true,
   onDismiss,
   onRestored,
 }: Readonly<{
+  /** False once a stage heading is the page's h1 and follows this panel. */
+  asHeading?: boolean;
   onDismiss?: () => void;
   /** Records where a restored design came from, for the browser draft. */
   onRestored?: (
@@ -92,6 +95,7 @@ export function WorkspaceConfigurationLoader({
   const generation = useRef(0);
   const focusRestored = useRef(false);
   const restoredRef = useRef<HTMLParagraphElement>(null);
+  const Title = asHeading ? "h2" : "p";
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -188,7 +192,7 @@ export function WorkspaceConfigurationLoader({
   if (state.status === "idle") return null;
   return (
     <section aria-labelledby="workspace-load-heading" className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline">
-      <h2 id="workspace-load-heading" tabIndex={-1} className="font-display text-section-title font-heading">{state.status === "signin" ? "Private project version" : "Saved configuration"}</h2>
+      <Title id="workspace-load-heading" tabIndex={-1} className="font-display text-section-title font-heading">{state.status === "signin" ? "Private project version" : "Saved configuration"}</Title>
       {state.status === "loading" ? <LoadingState className="mt-3" label={state.label} /> : null}
       {state.status === "restored" ? <p ref={restoredRef} tabIndex={-1} className="mt-3 text-supporting text-text-muted" role="status" aria-live="polite">{state.label}</p> : null}
       {state.status === "signin" ? (

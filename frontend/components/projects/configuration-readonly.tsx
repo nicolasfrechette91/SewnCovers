@@ -73,7 +73,7 @@ export function ConfigurationReadonly({ configuration }: Readonly<{ configuratio
               {label === "Pattern" && configuration.pattern.kind === "solid" ? (
                 <span
                   aria-hidden="true"
-                  className="inline-block size-4 shrink-0 rounded-pill border border-border-strong"
+                  className="fabric-swatch inline-block size-4 shrink-0 rounded-pill border border-border-strong"
                   data-solid-color={configuration.pattern.color}
                   style={{ backgroundColor: configuration.pattern.color }}
                 />
@@ -85,7 +85,7 @@ export function ConfigurationReadonly({ configuration }: Readonly<{ configuratio
       </dl>
       <figure className="min-w-0">
         <div className="cutting-mat flex aspect-[4/3] items-center justify-center overflow-hidden rounded-card border border-border">
-          {configuration.pattern.kind === "built-in" ? <div className={`prototype-pattern ${artworkClassName ?? ""} h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised`} style={{ "--pattern-scale": configuration.patternScale } as CSSProperties} aria-hidden="true" /> : configuration.pattern.kind === "solid" ? <div className="h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised" style={{ backgroundColor: configuration.pattern.color }} aria-hidden="true" /> : custom && "url" in custom ? <div className="h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised" style={{ backgroundImage: `url("${custom.url}")`, backgroundRepeat: "repeat", backgroundSize: `${Math.round(160 * configuration.patternScale)}px auto` }} aria-hidden="true" /> : <p className="p-4 text-center text-supporting text-text-muted">Custom asset deleted or unavailable.</p>}
+          {configuration.pattern.kind === "built-in" ? <div className={`prototype-pattern ${artworkClassName ?? ""} h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised`} style={{ "--pattern-scale": configuration.patternScale } as CSSProperties} aria-hidden="true" /> : configuration.pattern.kind === "solid" ? <div className="fabric-swatch h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised" style={{ backgroundColor: configuration.pattern.color }} aria-hidden="true" /> : custom && "url" in custom ? <div className="h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised" style={{ backgroundImage: `url("${custom.url}")`, backgroundRepeat: "repeat", backgroundSize: `${Math.round(160 * configuration.patternScale)}px auto` }} aria-hidden="true" /> : <p className="p-4 text-center text-supporting text-text-muted">Custom asset deleted or unavailable.</p>}
         </div>
         <figcaption className="mt-2 text-supporting text-text-muted">Read-only preview of the saved {configuration.shape} design. Use the complete text details for the saved choices.</figcaption>
       </figure>

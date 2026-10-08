@@ -119,7 +119,7 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
   await page.getByRole("button", { name: "Continue to Preview" }).press("Enter");
-  const preview = page.getByRole("figure", { name: "Cushion preview" });
+  const preview = page.getByRole("figure", { name: /^Preview your .+ cushion$/ });
   await expect(preview.getByText(/^My garden repeat on your .+ cushion$/)).toBeVisible();
   await expect(preview.getByText("Your own pattern", { exact: true })).toBeVisible();
   await expect(preview).toContainText("My garden repeat");
@@ -137,10 +137,18 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   await preview.screenshot({ path: testInfo.outputPath("custom-preview.png") });
   await page.getByRole("button", { name: "Change pattern", exact: true }).press("Enter");
 
-  page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain("referenced by 1 saved version");
-    await dialog.accept();
-  });
-  await page.getByRole("button", { name: "Delete" }).first().press("Enter");
+  // Deleting asks inline, in the list item. Focus enters on Cancel, and
+  // Escape puts it back on Delete without deleting anything.
+  const deleteButton = page.getByRole("button", { name: "Delete", exact: true }).first();
+  await deleteButton.press("Enter");
+  const confirmation = page.getByRole("group", { name: /referenced by 1 saved version/ });
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(confirmation).toHaveCount(0);
+  await expect(deleteButton).toBeFocused();
+
+  await deleteButton.press("Enter");
+  await confirmation.getByRole("button", { name: "Delete pattern" }).press("Enter");
   await expect(page.getByText(/Custom pattern deleted.*no longer appear in saved projects or previews/)).toBeVisible();
 });

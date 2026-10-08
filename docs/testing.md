@@ -17,7 +17,7 @@ Every suite runs offline: no test contacts Render, Neon, a payment provider or a
 `npm test` runs two runners in sequence:
 
 1. **Node's built-in test runner** over `config/*.test.mjs` and `services/*.test.mjs` (73 tests). They cover environment validation, base-path and URL construction, the typed API clients (exact response contracts, timeout, retry and cold-start policy, malformed and backend errors, request ids and limit responses), the pattern catalogue, duplicate-safe saving, share-link generation and exact restoration for every shape. The `.mjs` files import the TypeScript sources, so there is no separate build step.
-2. **`tsx` with jsdom and React Testing Library** over `tests/*.test.ts` and `tests/*.test.tsx` (135 tests). They cover the configurator components for all five shapes, measurement and unit behaviour, review and summary output, the draft and sign-in flow, account, project and commerce screens, the landing page, navigation and site metadata, and the design-token guard.
+2. **`tsx` with jsdom and React Testing Library** over `tests/*.test.ts` and `tests/*.test.tsx` (159 tests). They cover the configurator components for all five shapes, measurement and unit behaviour, review and summary output, the draft and sign-in flow, account, project and commerce screens, the landing page, navigation and site metadata, and the design-token guard. Three files guard accessibility: `document-audit.test.tsx` proves the audit that the browser specs run (below) against deliberately broken markup, `accessibility-contracts.test.tsx` holds the component-level contracts (names that start with the visible label, labelled groups instead of navigation landmarks, the cushion figure named by its heading, the `ErrorMessage` props allow-list, swatches in forced-colours mode) and `focus-return.test.tsx` checks that closing an inline question returns focus to its opener, that every way of ending a session lands focus on the sign-in heading, and that a work step button that is replaced hands focus to the work heading.
 
 Assertions prefer accessible roles, names and visible recovery text. Requests are mocked, promises are controlled by the test and timers are deterministic, so races (stale responses, edits during restoration, duplicate saves) are tested directly.
 
@@ -27,7 +27,7 @@ Assertions prefer accessible roles, names and visible recovery text. Requests ar
 
 ## Browser journeys (Playwright)
 
-The 63 tests in `frontend/e2e/` use accessible locators and are offline by construction: the runner builds the real static export with the API origin set to the reserved `http://api.sewncovers.test`, serves `out/` from a single-process loopback server, and blocks every other origin. Playwright intercepts the API origin and answers patterns, designs, accounts, projects, uploads, commerce and operations from memory.
+The 91 tests in `frontend/e2e/` use accessible locators and are offline by construction: the runner builds the real static export with the API origin set to the reserved `http://api.sewncovers.test`, serves `out/` from a single-process loopback server, and blocks every other origin. Playwright intercepts the API origin and answers patterns, designs, accounts, projects, uploads, commerce and operations from memory.
 
 ```powershell
 cd frontend
@@ -50,11 +50,15 @@ Coverage includes:
 - the commerce sandbox from estimate to hosted checkout and administrator review, and the production-operations flow;
 - legal and trust content boundaries;
 - responsive layout at 320 × 568, 768 × 1024 and 1440 × 900 with no horizontal overflow;
-- accessibility: a keyboard walk through all six stages with focus assertions, contrast ratios derived from the computed CSS variables, reduced motion and forced colours.
+- accessibility: a keyboard walk through all six stages with focus assertions, contrast ratios derived from the computed CSS variables (text, borders, error, notice, success and disabled tokens), reduced motion and forced colours, and a focus ring that appears at once (no focused control starts an `outline-color` transition);
+- document structure on every route (as guest, customer and administrator) and every configurator stage and panel (`accessibility-structure.spec.ts`): exactly one h1, no skipped heading levels, no price, email or order reference used as a heading, navigation landmarks that contain links, a name that starts with the visible label whenever a button or link has an `aria-label`, and no `aria-label` on a generic element. The rules are in `e2e/support/document-audit.ts`, which the unit tests also run;
+- focus return (`focus-return.spec.ts`): after Escape, Cancel or confirm, focus is back on the control that opened the shape, start-again, rename, delete, account-deletion, project-deletion, publish and refund questions, the sign-in panels and the menu, or on a sensible neighbour, never on `<body>`. Signing out, signing out everywhere, revoking the current session and deleting the account all land on the sign-in heading, and the production-work step buttons (Approve work and so on), which are replaced by the next step, hand focus to the work heading;
+- forced colours (`forced-colors.spec.ts`): every fabric swatch keeps the customer's colour and gets an outline in the system text colour;
+- reflow (`reflow.spec.ts`): no sideways page scroll at 320 × 256 CSS px, the viewport WCAG 1.4.10 names (400 percent zoom of a 1280 × 1024 window), on every route and stage.
 
 These accessibility checks are hand-written; there is no automated axe audit. The API warm-up tests wait on conditions (the app's idle callback, then a probe request through the mocked API) rather than fixed sleeps.
 
-Everything the runner writes stays under the git-ignored `frontend/.playwright/`: test output and traces in `test-results/`, the reference captures from `solid-color-screenshots.spec.ts` in `artifacts/solid-color/`, and the full-page captures `responsive-layout.spec.ts` takes when `RESPONSIVE_CAPTURE=true`. A run never modifies tracked files.
+Everything the runner writes stays under the git-ignored `frontend/.playwright/`: test output and traces in `test-results/`, and the full-page captures `responsive-layout.spec.ts` takes when `RESPONSIVE_CAPTURE=true`. A run never modifies tracked files.
 
 CI runs the suite in both layouts (see [Continuous integration](#continuous-integration)). When `CI` is set, each test gets one retry, the whole run may take 10 minutes instead of 4, and Playwright also writes GitHub annotations and an HTML report to `.playwright/report/`; a failing job uploads `frontend/.playwright/` as an artifact. Locally there are no retries and the 4-minute limit stands.
 
@@ -88,7 +92,7 @@ python -m pytest --basetemp=C:\t
 ## Static-export and budget checks
 
 - `npm run verify:export` (after `npm run build`) asserts the exported routes, document titles, canonical and Open Graph tags, the social image, local asset and link targets, base-path prefixes, and that exactly the expected API URL is embedded (and the test origin is not). CI runs it for both the root and the GitHub Pages layouts.
-- `npm run verify:performance` (after `npm run build` without `SEWNCOVERS_GITHUB_PAGES`) budgets each route's first-load JavaScript and asserts that the Pattern stage is not in the configurator's initial chunks. See below.
+- `npm run verify:performance` (after `npm run build` without `SEWNCOVERS_GITHUB_PAGES`) budgets each route's first-load JavaScript and asserts that the Pattern stage is not in the configurator's initial chunks. The Pattern-stage check looks for marker strings from that stage (`patternStageMarkers`); each must exist somewhere in the build, so if the copy changes and a marker disappears the check fails instead of going quiet. See below.
 
 ### Performance budgets
 

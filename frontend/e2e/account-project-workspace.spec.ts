@@ -104,7 +104,7 @@ test("account workspace preserves immutable history and revocable sharing", asyn
   await page.locator("#register-password").fill("correct horse battery staple");
   await page.getByRole("checkbox", { name: /account terms version 1/i }).check();
   await page.locator("#register-password").press("Enter");
-  await expect(page.getByRole("heading", { name: "person@example.com" })).toBeVisible();
+  await expect(page.getByText("person@example.com")).toBeVisible();
   expect(await page.evaluate(() => localStorage.length)).toBe(0);
   expect(await page.evaluate(() => Object.keys(sessionStorage).filter((key) => key !== "sewncovers:api-warmup").length)).toBe(1);
 

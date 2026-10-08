@@ -145,7 +145,7 @@ async function installAuthApi(page: Page, onLogin?: () => void) {
   });
 }
 
-// The header also offers guests a "Sign in" link; these tests mean the page's tabs.
+// Other pages offer guests a "Sign in" link in the header; this page leaves it out, so the only "Sign in" link here is the tab.
 function authenticationOptions(page: Page) {
   return page.getByRole("navigation", { name: "Authentication options" });
 }
@@ -242,7 +242,7 @@ test("authentication failures, registration, and duplicate submission recover sa
   await page.getByRole("button", { name: "Sign in" }).click({ noWaitAfter: true });
   await expect(page.getByRole("button", { name: "Signing in…" })).toBeDisabled();
   await page.locator("#login-password").press("Enter");
-  await expect(page.getByRole("heading", { name: "slow@example.invalid" })).toBeVisible();
+  await expect(page.getByText("slow@example.invalid")).toBeVisible();
   expect(loginRequests - beforeSlowRequest).toBe(1);
 
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
@@ -252,7 +252,7 @@ test("authentication failures, registration, and duplicate submission recover sa
   await page.getByLabel("Passphrase").fill(passphrase);
   await page.getByRole("checkbox", { name: /account terms version 1/i }).check();
   await page.getByLabel("Passphrase").press("Enter");
-  await expect(page.getByRole("heading", { name: "new-fixture@example.invalid" })).toBeVisible();
+  await expect(page.getByText("new-fixture@example.invalid")).toBeVisible();
   await expect(page.locator("#register-password")).toHaveCount(0);
 });
 
@@ -280,7 +280,7 @@ test("session verification announces progress before restoring a verified accoun
   });
   await page.goto(accountPath);
   await expect(page.getByRole("status").filter({ hasText: "Restoring your session…" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "fixture@example.invalid" })).toBeVisible();
+  await expect(page.getByText("fixture@example.invalid")).toBeVisible();
 });
 
 test("safe return identifiers restore known destinations and reject redirect attempts", async ({ page }) => {
@@ -312,7 +312,7 @@ test("safe return identifiers restore known destinations and reject redirect att
   ]) {
     await page.goto(`${accountPath}?mode=login&returnTo=${value}`);
     await completeSignIn(page);
-    await expect(page.getByRole("heading", { name: "fixture@example.invalid" })).toBeVisible();
+    await expect(page.getByText("fixture@example.invalid")).toBeVisible();
     expect(new URL(page.url()).origin).toBe(appOrigin);
     expect(new URL(page.url()).pathname).toBe(accountPath);
     await page.evaluate(() => sessionStorage.clear());

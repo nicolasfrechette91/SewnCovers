@@ -98,7 +98,7 @@ test("creating an account on /account POSTs /auth/register once, then records th
   await page.getByRole("checkbox", { name: /account terms version 1/i }).check();
   await page.locator("#register-password").press("Enter");
 
-  await expect(page.getByRole("heading", { name: account.email })).toBeVisible();
+  await expect(page.getByText(account.email)).toBeVisible();
   expect(count(mock, "POST /auth/register")).toBe(1);
   expect(count(mock, "POST /account/acknowledgements")).toBe(1);
   expect(mock.calls.filter((entry) => entry.startsWith("POST /auth/")).length).toBe(1);

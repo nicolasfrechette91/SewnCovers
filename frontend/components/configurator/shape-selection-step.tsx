@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-import { Button } from "@/components/ui";
+import { Button, useDeferredFocus } from "@/components/ui";
 import {
   useConfiguration,
   type CushionShape,
@@ -26,12 +26,20 @@ export function ShapeSelectionStep({
   const supportingTextId = `${generatedId}-supporting-text`;
   const [pendingShape, setPendingShape] = useState<CushionShape | null>(null);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const focusLater = useDeferredFocus();
 
   useEffect(() => {
     if (pendingShape !== null) {
       confirmButtonRef.current?.focus();
     }
   }, [pendingShape]);
+
+  // Closing the panel unmounts the focused button, so focus goes back to the
+  // shape the visitor chose (cancelled or confirmed), never to <body>.
+  const closePendingChange = (shape: CushionShape) => {
+    setPendingShape(null);
+    focusLater(() => document.getElementById(`${generatedId}-${shape}`));
+  };
 
   const selectShape = (shape: CushionShape) => {
     const makesDimensionsEqual = shape === "square" || shape === "round";
@@ -138,7 +146,7 @@ export function ShapeSelectionStep({
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.preventDefault();
-              setPendingShape(null);
+              closePendingChange(pendingShape);
             }
           }}
         >
@@ -158,12 +166,15 @@ export function ShapeSelectionStep({
               ref={confirmButtonRef}
               onClick={() => {
                 dispatch({ type: "setShape", shape: pendingShape });
-                setPendingShape(null);
+                closePendingChange(pendingShape);
               }}
             >
               Use the width for both
             </Button>
-            <Button variant="secondary" onClick={() => setPendingShape(null)}>
+            <Button
+              variant="secondary"
+              onClick={() => closePendingChange(pendingShape)}
+            >
               Keep current shape
             </Button>
           </div>

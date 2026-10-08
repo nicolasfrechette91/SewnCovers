@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
 import { classNames } from "../ui/class-names";
 
@@ -17,8 +17,12 @@ export interface ConfigurationSummaryProps
   title?: ReactNode;
 }
 
+/**
+ * The region is named by its own visible heading (its `title`); pass
+ * `aria-label` only to override that.
+ */
 export function ConfigurationSummary({
-  "aria-label": ariaLabel = "Configuration summary",
+  "aria-label": ariaLabel,
   className,
   emptyMessage = "No configuration details are available yet.",
   items,
@@ -26,6 +30,7 @@ export function ConfigurationSummary({
   title = "Configuration summary",
   ...sectionProps
 }: ConfigurationSummaryProps) {
+  const headingId = useId();
   const itemIds = new Set(items.map((item) => item.id));
   if (itemIds.size !== items.length) {
     throw new RangeError("ConfigurationSummary item IDs must be unique.");
@@ -35,12 +40,16 @@ export function ConfigurationSummary({
     <section
       {...sectionProps}
       aria-label={ariaLabel}
+      aria-labelledby={ariaLabel ? undefined : headingId}
       className={classNames(
         "min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline",
         className,
       )}
     >
-      <h2 className="break-words font-display text-section-title font-heading tracking-heading text-text-primary">
+      <h2
+        id={headingId}
+        className="break-words font-display text-section-title font-heading tracking-heading text-text-primary"
+      >
         {title}
       </h2>
       {items.length === 0 ? (
@@ -62,7 +71,7 @@ export function ConfigurationSummary({
                   <span className="inline-flex items-center gap-2">
                     <span
                       aria-hidden="true"
-                      className="summary-swatch inline-block size-5 rounded-pill border border-border-strong shadow-card"
+                      className="fabric-swatch inline-block size-5 rounded-pill border border-border-strong shadow-card"
                       style={{ backgroundColor: item.swatchColor }}
                     />
                     <span>{item.value}</span>

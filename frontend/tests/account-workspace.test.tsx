@@ -568,8 +568,6 @@ test("builds root-safe bearer share routes without account identifiers", () => {
 
 test("shows every custom upload lifecycle state and selects only approved assets", async () => {
   const originalFetch = globalThis.fetch;
-  const originalConfirm = window.confirm;
-  const originalPrompt = window.prompt;
   const requests: string[] = [];
   const states = ["awaiting_upload", "uploaded", "processing", "awaiting_moderation", "approved", "rejected", "failed", "deleted", "expired"].map(uploadState);
   globalThis.fetch = withUploadAvailability(true, async (input, init) => {
@@ -585,8 +583,6 @@ test("shows every custom upload lifecycle state and selects only approved assets
     if (method === "DELETE") return json({ id: states[4].id, state: "deleted", referencedByVersions: 2 });
     throw new Error(`Unexpected request ${method} ${url}`);
   });
-  window.confirm = () => false;
-  window.prompt = () => "Renamed pattern";
   try {
     render(<AuthProvider><SignInForTest><ConfigurationProvider><YourPatterns /><PatternProbe /></ConfigurationProvider></SignInForTest></AuthProvider>);
     fireEvent.click(await screen.findByRole("button", { name: "Enter test account" }));
@@ -597,13 +593,18 @@ test("shows every custom upload lifecycle state and selects only approved assets
     fireEvent.click(screen.getByRole("radio", { name: "Select custom pattern approved pattern" }));
     await waitFor(() => assert.equal(screen.getByTestId("selected-custom").textContent, "approved pattern"));
     fireEvent.click(screen.getAllByRole("button", { name: "Retry" })[0]);
+    // Renaming asks inline, in the list item, with the label pre-filled.
     fireEvent.click(screen.getAllByRole("button", { name: "Rename" })[4]);
+    const labelField = screen.getByRole("textbox", { name: "New pattern label" }) as HTMLInputElement;
+    assert.equal(labelField.value, "approved pattern");
+    fireEvent.change(labelField, { target: { value: "Renamed pattern" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save label" }));
     await screen.findByText("Renamed pattern");
     assert.ok(requests.some((item) => item.includes("/assets/tile/access")));
     assert.ok(requests.some((item) => item.endsWith("/retry")));
     assert.ok(requests.some((item) => item.startsWith("PATCH")));
   } finally {
-    globalThis.fetch = originalFetch; window.confirm = originalConfirm; window.prompt = originalPrompt;
+    globalThis.fetch = originalFetch;
   }
 });
 

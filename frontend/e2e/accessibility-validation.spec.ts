@@ -212,7 +212,8 @@ test("gates stages and preserves compatible downstream choices when revisiting",
   page,
 }) => {
   await page.goto(configurePath);
-  const progress = page.getByRole("navigation", {
+  // Stages are buttons, so the progress is a labelled group, not a landmark.
+  const progress = page.getByRole("group", {
     name: "Configuration progress",
   });
 
@@ -223,7 +224,7 @@ test("gates stages and preserves compatible downstream choices when revisiting",
     page.getByRole("heading", { name: /Measure your/ }),
   ).toHaveCount(0);
   await expect(
-    progress.getByRole("button", { name: /Return to Pattern/ }),
+    progress.getByRole("button", { name: /^Pattern/ }),
   ).toHaveCount(0);
 
   await page.getByText("Rectangle cushion", { exact: true }).click();
@@ -272,7 +273,7 @@ test("gates stages and preserves compatible downstream choices when revisiting",
   );
   await progress
     .getByRole("button", {
-      name: "Return to Measurements, completed stage 2 of 6",
+      name: "Measurements complete, stage 2 of 6",
     })
     .click();
   await expect(width).toHaveValue("80");
@@ -283,20 +284,20 @@ test("gates stages and preserves compatible downstream choices when revisiting",
   ).toHaveValue("31.5");
   await progress
     .getByRole("button", {
-      name: "Return to Review, completed stage 6 of 6",
+      name: "Review complete, stage 6 of 6",
     })
     .click();
   await expect(
-    page.getByRole("region", { name: "Configuration summary", exact: true }),
+    page.getByRole("region", { name: "Configuration details", exact: true }),
   ).toContainText("31.5 in");
 
   // Review has no edit row; the stage progress is the way back.
   await progress
-    .getByRole("button", { name: "Return to Shape, completed stage 1 of 6" })
+    .getByRole("button", { name: "Shape complete, stage 1 of 6" })
     .click();
   await page.getByText("Tapered / trapezoid cushion", { exact: true }).click();
   await expect(
-    progress.getByRole("button", { name: /Return to Pattern/ }),
+    progress.getByRole("button", { name: /^Pattern/ }),
   ).toHaveCount(0);
   await page
     .getByRole("button", { name: "Continue to Measurements" })
@@ -304,7 +305,7 @@ test("gates stages and preserves compatible downstream choices when revisiting",
   await page.getByRole("textbox", { name: "Back width (in)" }).fill("20");
   await progress
     .getByRole("button", {
-      name: "Return to Pattern, completed stage 4 of 6",
+      name: "Pattern complete, stage 4 of 6",
     })
     .click();
   await expect(page.getByRole("radio", { name: "Fern trail" })).toBeChecked();
@@ -452,10 +453,7 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
     }),
   ).toBeFocused();
   // Print and Download precede the save button; there is no edit row.
-  for (const name of [
-    "Print configuration summary",
-    "Download configuration summary as a plain-text file",
-  ]) {
+  for (const name of ["Print summary", "Download summary (.txt)"]) {
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name, exact: true })).toBeFocused();
   }
@@ -602,12 +600,8 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
     headingSkips: [],
     mainCount: 1,
     missingReferences: [],
-    navigationLabels: [
-      "Primary navigation",
-      "Configuration progress",
-      "Shape stage actions",
-      "Footer navigation",
-    ],
+    // Only real navigation is a landmark; button groups are role="group".
+    navigationLabels: ["Primary navigation", "Footer navigation"],
   });
 
   const tokens = await page.evaluate(() => {
@@ -630,6 +624,12 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
         "--color-notice-surface",
         "--color-notice-border",
         "--color-notice-text",
+        "--color-success-surface",
+        "--color-success-border",
+        "--color-success-text",
+        "--color-control-disabled-surface",
+        "--color-control-disabled-text",
+        "--color-control-disabled-border",
       ].map((name) => [name, read(name)]),
     );
   });
@@ -644,6 +644,12 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
     ["accent-strong", "surface"],
     ["error-text", "error-surface"],
     ["notice-text", "notice-surface"],
+    // Confirmation banners, and the text of a disabled control on its own
+    // fill (disabled controls are exempt from WCAG, but stay readable).
+    ["success-text", "success-surface"],
+    ["success-text", "surface"],
+    ["control-disabled-text", "control-disabled-surface"],
+    ["control-disabled-text", "page"],
   ]) {
     expect(ratio(foreground, background)).toBeGreaterThanOrEqual(4.5);
   }
@@ -653,6 +659,10 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
     ["focus", "page"],
     ["error-border", "error-surface"],
     ["notice-border", "notice-surface"],
+    ["success-border", "success-surface"],
+    ["success-border", "surface"],
+    ["control-disabled-border", "control-disabled-surface"],
+    ["control-disabled-border", "page"],
   ]) {
     expect(ratio(foreground, background)).toBeGreaterThanOrEqual(3);
   }
@@ -691,4 +701,81 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
   await expect
     .poll(() => width.evaluate((element) => getComputedStyle(element).outlineStyle))
     .not.toBe("none");
+});
+
+test("gives headings that script moves focus to the token focus ring", async ({
+  page,
+}) => {
+  // The account page focuses its form heading on arrival, as the restore
+  // question and the sign-in panels do.
+  await page.goto(`${basePath}/account/?mode=register`);
+  const heading = page.getByRole("heading", { name: "Create account" });
+  await expect(heading).toBeFocused();
+
+  const ring = await heading.evaluate((element) => {
+    const probe = document.createElement("i");
+    probe.style.color = "var(--color-focus)";
+    document.body.append(probe);
+    const focusColour = getComputedStyle(probe).color;
+    probe.remove();
+    const style = getComputedStyle(element);
+    return { boxShadow: style.boxShadow, focusColour, outlineStyle: style.outlineStyle };
+  });
+  // --shadow-focus: a surface-coloured inner ring and a focus-coloured outer
+  // ring; the transparent outline keeps a ring in forced-colours mode.
+  expect(ring.boxShadow).not.toBe("none");
+  expect(ring.boxShadow).toContain(ring.focusColour);
+  expect(ring.outlineStyle).toBe("solid");
+});
+
+test("shows the focus ring at once, without fading the outline in", async ({
+  page,
+}) => {
+  // Tailwind's transition-colors (and transition, transition-all) include
+  // outline-color. The ring is drawn with a transparent outline, so if the
+  // outline started from the control's text colour the ring would flash dark
+  // for a moment as it faded in. Tab through each page and require that no
+  // focused control (or the label that draws a hidden input's ring) starts an
+  // outline-color transition.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  for (const route of ["/", "/legal/", "/account/", "/commerce/", "/configure/?design=" + publicId]) {
+    await page.goto(`${basePath}${route}`);
+    await page.getByRole("heading", { level: 1 }).first().waitFor();
+    const flashes: string[] = [];
+    for (let stop = 0; stop < 24; stop += 1) {
+      await page.keyboard.press("Tab");
+      flashes.push(
+        ...(await page.evaluate(() => {
+          const focused = document.activeElement as HTMLElement | null;
+          if (!focused || focused === document.body) return [];
+          const ringDrawers = [focused, focused.nextElementSibling, focused.closest("label")];
+          return ringDrawers
+            .filter((element): element is HTMLElement => element instanceof HTMLElement)
+            .filter((element) =>
+              element
+                .getAnimations()
+                .some(
+                  (animation) =>
+                    animation instanceof CSSTransition &&
+                    animation.transitionProperty === "outline-color",
+                ),
+            )
+            .map((element) => `<${element.tagName.toLowerCase()}> ${(element.textContent ?? "").trim().slice(0, 40)}`);
+        })),
+      );
+    }
+    expect(flashes, route).toEqual([]);
+  }
+
+  // Forced colours: the ring colour is the system one from the start.
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.goto(`${basePath}/`);
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  const animating = await page.evaluate(() =>
+    (document.activeElement as HTMLElement)
+      .getAnimations()
+      .filter((animation) => animation instanceof CSSTransition && animation.transitionProperty === "outline-color").length,
+  );
+  expect(animating).toBe(0);
 });

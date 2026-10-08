@@ -390,7 +390,7 @@ async function captureAll(browser) {
     written.push(
       await capture(page, "shape", {
         height: 900,
-        scrollTo: page.getByRole("navigation", { name: "Configuration progress" }),
+        scrollTo: page.getByRole("group", { name: "Configuration progress" }),
       }),
     );
 

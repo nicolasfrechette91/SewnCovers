@@ -306,14 +306,16 @@ test("communicates staged progress and enables only completed steps for revisiti
     screen.getByText("Pattern").closest("li")?.textContent ?? "",
     /Upcoming/,
   );
+  // Upcoming stages are not buttons; a completed one is named by its visible
+  // label first, then its status and place.
   assert.equal(
-    screen.queryByRole("button", { name: /Return to Pattern/ }),
+    screen.queryByRole("button", { name: /^Pattern/ }),
     null,
   );
 
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Return to Shape, completed stage 1 of 3",
+      name: "Shape complete, stage 1 of 3",
     }),
   );
   assert.deepEqual(selectedSteps, ["shape"]);
@@ -924,7 +926,9 @@ test("renders one clipped cushion model with pattern, measurements, and adjustab
     completeConfiguration,
   );
 
-  const preview = screen.getByRole("figure", { name: "Cushion preview" });
+  // The figure is named by its own visible heading.
+  const preview = screen.getByRole("figure", { name: "Preview your rectangle cushion" });
+  assert.equal(screen.queryByRole("figure", { name: "Cushion preview" }), null);
   assert.match(preview.textContent ?? "", /Fern Trail on your rectangle cushion/);
   assert.ok(screen.getByRole("heading", { level: 1, name: "Preview your rectangle cushion" }));
   // One disclaimer, and no notes about how the model works.

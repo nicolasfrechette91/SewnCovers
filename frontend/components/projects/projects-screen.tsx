@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import { GuestEmptyState } from "@/components/account/guest-empty-state";
@@ -14,6 +14,7 @@ import {
   LoadingState,
   Notice,
   TextLink,
+  useDeferredFocus,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
@@ -74,6 +75,8 @@ function ProjectList({ token }: Readonly<{ token: string }>) {
 }
 
 function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: string }>) {
+  const router = useRouter();
+  const focusLater = useDeferredFocus();
   const [state, setState] = useState<LoadState<{ detail: ProjectDetail; versions: readonly ProjectVersion[] }>>({ status: "loading" });
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
@@ -112,8 +115,8 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
 
   const rename = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setActionError(null); setActionStatus(null);
-    try { await accountApi.renameProject(token, projectId, String(new FormData(event.currentTarget).get("name"))); await load(); setActionStatus("Project renamed."); requestAnimationFrame(() => renameRef.current?.focus()); }
-    catch (error) { setActionError(errorMessage(error)); requestAnimationFrame(() => renameRef.current?.focus()); }
+    try { await accountApi.renameProject(token, projectId, String(new FormData(event.currentTarget).get("name"))); await load(); setActionStatus("Project renamed."); focusLater(() => renameRef.current); }
+    catch (error) { setActionError(errorMessage(error)); focusLater(() => renameRef.current); }
   };
   const createShare = async (version: ProjectVersion) => {
     setActionError(null); setActionStatus(null);
@@ -126,8 +129,21 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
   };
   const removeProject = async () => {
     setActionError(null); setActionStatus(null);
-    try { await accountApi.deleteProject(token, projectId); window.location.assign("./"); }
-    catch (error) { setActionError(errorMessage(error)); setConfirmDelete(false); requestAnimationFrame(() => deleteButtonRef.current?.focus()); }
+    try {
+      await accountApi.deleteProject(token, projectId);
+      // The project's own view is about to unmount, so focus goes to the page.
+      router.push("/projects/");
+      focusLater(() => document.getElementById("main-content"));
+    }
+    catch (error) { setActionError(errorMessage(error)); closeDeleteReview(); }
+  };
+  const openDeleteReview = () => {
+    setConfirmDelete(true);
+    focusLater(() => confirmDeleteButtonRef.current);
+  };
+  const closeDeleteReview = () => {
+    setConfirmDelete(false);
+    focusLater(() => deleteButtonRef.current);
   };
 
   return (
@@ -179,14 +195,14 @@ function ProjectView({ token, projectId }: Readonly<{ token: string; projectId: 
       {detail.activeShares.length ? (
         <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
           <h2 className="font-display text-card-title font-heading tracking-heading text-text-primary">Active read-only shares</h2>
-          <ul className="mt-3 divide-y divide-dashed divide-border-strong">{detail.activeShares.map((grant) => <li key={grant.id} className="flex flex-col gap-2 py-3 last:pb-0 sm:flex-row sm:items-center sm:justify-between"><span className="font-mono text-supporting">Version {grant.versionNumber} · Created {new Date(grant.createdAt).toLocaleString()}</span><Button variant="secondary" size="compact" onClick={async () => { try { setActionError(null); setActionStatus(null); await accountApi.revokeShare(token, projectId, grant.id); setShareUrl(null); await load(); setActionStatus(`Share for version ${grant.versionNumber} revoked.`); requestAnimationFrame(() => actionStatusRef.current?.focus()); } catch (error) { setActionError(errorMessage(error)); } }}>Revoke share</Button></li>)}</ul>
+          <ul className="mt-3 divide-y divide-dashed divide-border-strong">{detail.activeShares.map((grant) => <li key={grant.id} className="flex flex-col gap-2 py-3 last:pb-0 sm:flex-row sm:items-center sm:justify-between"><span className="font-mono text-supporting">Version {grant.versionNumber} · Created {new Date(grant.createdAt).toLocaleString()}</span><Button variant="secondary" size="compact" onClick={async () => { try { setActionError(null); setActionStatus(null); await accountApi.revokeShare(token, projectId, grant.id); setShareUrl(null); await load(); setActionStatus(`Share for version ${grant.versionNumber} revoked.`); focusLater(() => actionStatusRef.current); } catch (error) { setActionError(errorMessage(error)); } }}>Revoke share</Button></li>)}</ul>
         </section>
       ) : null}
 
       <section className="rounded-panel border border-error-border bg-surface p-card">
         <h2 className="font-display text-card-title font-heading tracking-heading text-text-primary">Delete project</h2>
         <p className="mt-2 text-body text-text-muted">This permanently deletes the project, every saved version, and every project share. It does not delete your account or public designs created without an account.</p>
-        {!confirmDelete ? <Button ref={deleteButtonRef} className="mt-3" variant="secondary" onClick={() => { setConfirmDelete(true); requestAnimationFrame(() => confirmDeleteButtonRef.current?.focus()); }}>Review project deletion</Button> : <div className="mt-3 flex flex-wrap gap-3" role="group" aria-label="Confirm project deletion"><Button ref={confirmDeleteButtonRef} onClick={() => void removeProject()}>Permanently delete project</Button><Button variant="secondary" onClick={() => { setConfirmDelete(false); requestAnimationFrame(() => deleteButtonRef.current?.focus()); }}>Cancel</Button></div>}
+        {!confirmDelete ? <Button ref={deleteButtonRef} className="mt-3" variant="secondary" onClick={openDeleteReview}>Review project deletion</Button> : <div className="mt-3 flex flex-wrap gap-3" role="group" aria-label="Confirm project deletion" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); closeDeleteReview(); } }}><Button ref={confirmDeleteButtonRef} onClick={() => void removeProject()}>Permanently delete project</Button><Button variant="secondary" onClick={closeDeleteReview}>Cancel</Button></div>}
       </section>
     </div>
   );

@@ -307,7 +307,7 @@ function PreviewStepContent({
                   {selectedPattern?.solidColor ? (
                     <span
                       aria-hidden="true"
-                      className="inline-block size-3 shrink-0 rounded-pill border border-border-strong forced-color-adjust-none"
+                      className="fabric-swatch inline-block size-3 shrink-0 rounded-pill border border-border-strong"
                       style={{ backgroundColor: selectedPattern.solidColor }}
                     />
                   ) : null}
@@ -420,11 +420,11 @@ function PreviewStepContent({
               </div>
             ) : null}
 
-            {onEdit ? <nav aria-label="Adjust this preview" className="grid gap-3 sm:flex sm:flex-wrap">
+            {onEdit ? <div role="group" aria-label="Adjust this preview" className="grid gap-3 sm:flex sm:flex-wrap">
               <Button variant="secondary" onClick={() => onEdit("measurements")}>Edit measurements</Button>
               <Button variant="secondary" onClick={() => onEdit("details")}>Edit cover details</Button>
               <Button variant="secondary" onClick={() => onEdit("pattern")}>Change pattern</Button>
-            </nav> : null}
+            </div> : null}
           </div>
         )}
         description={

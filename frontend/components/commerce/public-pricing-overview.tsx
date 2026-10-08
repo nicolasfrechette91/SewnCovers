@@ -44,9 +44,10 @@ export function PublicPricingOverview() {
                 <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">Fictional example · not a quote</p>
                 <h3 id={`${example.id}-heading`} className="mt-3 font-display text-card-title font-heading tracking-heading text-text-primary">{example.name}</h3>
                 <p className="mt-4 border-y border-dashed border-border-strong py-3 font-display text-section-title font-heading tabular-nums text-brand">
-                  <data value={(example.amountMinor / 100).toFixed(2)} aria-label={`${formatPublicCad(example.amountMinor)} illustrative price`}>
+                  <data value={(example.amountMinor / 100).toFixed(2)}>
                     {formatPublicCad(example.amountMinor)}
                   </data>
+                  <span className="sr-only"> illustrative price</span>
                 </p>
                 <dl className="mt-4 grid gap-3 text-supporting">
                   <div><dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Shape and size</dt><dd className="mt-0.5 text-text-primary">{example.shapeLabel} · {example.dimensionLabel}</dd></div>

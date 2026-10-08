@@ -10,6 +10,7 @@ import {
   ErrorMessage,
   fieldLabelClasses,
   textLinkClasses,
+  useDeferredFocus,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import type { ConfigurationState } from "@/context/configuration";
@@ -103,6 +104,7 @@ export function PrivateProjectPanel({ configuration, defaultName = "", onSavingC
   const saveButtonRef = useRef<HTMLButtonElement>(null);
   const cartButtonRef = useRef<HTMLButtonElement>(null);
   const returnFocusTo = useRef<PendingAccountActionKind | null>(null);
+  const focusLater = useDeferredFocus();
   const linkedProjectId = link?.projectId ?? null;
   const verified = linked !== null && linked.projectId === linkedProjectId ? linked : null;
   const savedAndUnchanged = verified !== null && verified.currentFingerprint === fingerprint;
@@ -191,7 +193,7 @@ export function PrivateProjectPanel({ configuration, defaultName = "", onSavingC
     if (actionInFlight) return;
     actionInFlight = true;
     setBusy(kind); onSavingChange?.(true); setError(null); setOutcome(null);
-    requestAnimationFrame(() => statusRef.current?.focus());
+    focusLater(() => statusRef.current);
     let saved: SavedProject | null = null;
     try {
       saved = await ensureSaved(sessionToken, projectName);
@@ -200,16 +202,16 @@ export function PrivateProjectPanel({ configuration, defaultName = "", onSavingC
         ? saved.message
         : saved.changed ? `${saved.message} ${cartMessage}` : cartMessage;
       setOutcome({ message, projectId: saved.projectId, cart: kind === "cart" });
-      requestAnimationFrame(() => statusRef.current?.focus());
+      focusLater(() => statusRef.current);
     } catch (caught) {
       if (caught instanceof ProjectNameRequiredError) {
         setError("Enter a project name.");
-        requestAnimationFrame(() => nameRef.current?.focus());
+        focusLater(() => nameRef.current);
       } else {
         const reason = caught instanceof AccountApiError ? caught.message : "The request could not be completed. Try again.";
         setError(saved ? `The demonstration cart could not be updated. ${reason}` : reason);
         if (saved) setOutcome({ message: saved.message, projectId: saved.projectId, cart: false });
-        requestAnimationFrame(() => statusRef.current?.focus());
+        focusLater(() => statusRef.current);
       }
     } finally {
       actionInFlight = false;
@@ -239,7 +241,7 @@ export function PrivateProjectPanel({ configuration, defaultName = "", onSavingC
     const projectName = name.trim() || defaultName.trim();
     if (!link && !projectName) {
       setError("Enter a project name.");
-      requestAnimationFrame(() => nameRef.current?.focus());
+      focusLater(() => nameRef.current);
       return;
     }
     if (token) {

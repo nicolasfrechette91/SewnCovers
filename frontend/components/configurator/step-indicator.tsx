@@ -8,7 +8,7 @@ export interface StepIndicatorStep {
 }
 
 export interface StepIndicatorProps
-  extends Omit<ComponentPropsWithoutRef<"nav">, "aria-label"> {
+  extends Omit<ComponentPropsWithoutRef<"div">, "aria-label" | "role"> {
   "aria-label"?: string;
   completedStepIds?: readonly string[];
   currentStepId?: string;
@@ -27,6 +27,9 @@ type ProgressTrackStyle = CSSProperties & {
  * Stage progress drawn as a tape measure: numbered ticks on a ruler line that
  * fills with brand colour up to the current stage. Labels show from md up and
  * status words from lg up; both stay in each item for assistive technology.
+ * The stages are buttons that change what the page shows, not links to other
+ * pages, so the container is a labelled group rather than a navigation
+ * landmark.
  */
 export function StepIndicator({
   "aria-label": ariaLabel = "Configuration progress",
@@ -37,7 +40,7 @@ export function StepIndicator({
   onStepSelect,
   revisitableStepIds = [],
   steps,
-  ...navProps
+  ...groupProps
 }: StepIndicatorProps) {
   const stepIds = new Set(steps.map((step) => step.id));
   if (stepIds.size !== steps.length) {
@@ -73,8 +76,9 @@ export function StepIndicator({
   };
 
   return (
-    <nav
-      {...navProps}
+    <div
+      {...groupProps}
+      role="group"
       aria-label={ariaLabel}
       className={classNames("min-w-0", className)}
     >
@@ -141,7 +145,7 @@ export function StepIndicator({
                     <button
                       type="button"
                       className="group flex min-w-0 max-w-full flex-col items-center gap-2 rounded-card px-1 pb-1 transition-colors duration-(--duration-fast) hover:[&>span:first-child]:bg-brand-tint motion-reduce:transition-none"
-                      aria-label={`Return to ${step.label}, completed stage ${index + 1} of ${steps.length}`}
+                      aria-label={`${step.label} ${statusLabel.toLowerCase()}, stage ${index + 1} of ${steps.length}`}
                       onClick={() => onStepSelect(step.id)}
                     >
                       {content}
@@ -157,6 +161,6 @@ export function StepIndicator({
           </ol>
         </>
       )}
-    </nav>
+    </div>
   );
 }

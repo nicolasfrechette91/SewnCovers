@@ -54,7 +54,7 @@ test("preview stays synchronized through contextual edits and accessible at all 
   await next("Cover details"); await next("Pattern");
   await page.getByRole("radio", { name: "Fern trail", exact: true }).press("Space");
   await next("Preview");
-  const figure = page.getByRole("figure", { name: "Cushion preview" });
+  const figure = page.getByRole("figure", { name: /^Preview your .+ cushion$/ });
   const model = figure.locator('[data-preview-model="cushion"]');
   const slider = page.getByRole("slider", { name: "Pattern size" });
   await expect(slider).toHaveValue("1");

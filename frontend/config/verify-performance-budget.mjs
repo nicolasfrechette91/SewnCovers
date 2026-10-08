@@ -20,7 +20,7 @@
 // ships without source maps, and differs from the root build only by the
 // base-path strings.
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 
 const frontendUrl = new URL("../", import.meta.url);
@@ -181,8 +181,31 @@ const initialSource = byRoute
   .get("/configure")
   .firstLoadChunkPaths.map((chunkPath) => chunkCache.get(chunkPath).code)
   .join("\n");
-if (/Search built-in patterns/.test(initialSource)) {
-  failures.push("The Pattern stage entered the initial configurator chunks.");
+// The Pattern stage loads on demand. These strings come from its components,
+// so each must exist somewhere in the build (in the stage's own chunk) and
+// must not be in /configure's first-load chunks. A marker found nowhere means
+// the copy changed and this guard could no longer fail, so that fails too.
+const patternStageMarkers = ["Search patterns", "Clear search and filters"];
+const builtChunksUrl = new URL(".next/static/chunks/", frontendUrl);
+const builtSource = readdirSync(builtChunksUrl, { recursive: true })
+  .filter((name) => String(name).endsWith(".js"))
+  .map((name) =>
+    readFileSync(
+      new URL(String(name).replaceAll("\\", "/"), builtChunksUrl),
+      "utf8",
+    ),
+  )
+  .join("\n");
+for (const marker of patternStageMarkers) {
+  if (!builtSource.includes(marker)) {
+    failures.push(
+      `The marker "${marker}" is not in any built chunk, so the Pattern-stage guard is blind. Replace it in patternStageMarkers (config/verify-performance-budget.mjs) with a string from the Pattern stage.`,
+    );
+  } else if (initialSource.includes(marker)) {
+    failures.push(
+      `The Pattern stage entered the initial configurator chunks ("${marker}").`,
+    );
+  }
 }
 
 assert.deepEqual(failures, [], failures.join("\n"));

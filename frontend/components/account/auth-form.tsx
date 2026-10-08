@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { Button, ErrorMessage } from "@/components/ui";
+import { Button, ErrorMessage, useDeferredFocus } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
 import type { AuthenticationMode } from "@/services/auth-navigation";
@@ -88,6 +88,7 @@ export function AuthForm({
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const termsRef = useRef<HTMLInputElement>(null);
+  const focusLater = useDeferredFocus();
   const isRegister = mode === "register";
   const isInline = variant === "inline";
   const id = (field: string) =>
@@ -120,7 +121,7 @@ export function AuthForm({
           ? termsRef.current
           : null;
     if (firstInvalid) {
-      requestAnimationFrame(() => firstInvalid.focus());
+      focusLater(() => firstInvalid);
       return;
     }
 
@@ -145,7 +146,9 @@ export function AuthForm({
       // Only a failure needs the wording, so it loads on demand.
       const { signInErrorMessage } = await import("@/services/auth-errors");
       setError(signInErrorMessage(caught, mode));
-      requestAnimationFrame(() => errorRef.current?.focus());
+      // The wrapper mounts with this error, so focus waits for that render
+      // (an animation frame can come first, under load).
+      focusLater(() => errorRef.current);
     } finally {
       pendingRef.current = false;
       setPending(false);

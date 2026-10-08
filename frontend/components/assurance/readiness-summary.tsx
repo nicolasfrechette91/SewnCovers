@@ -60,7 +60,7 @@ export function ReadinessSummary() {
         <LoadingState label="Running read-only readiness checks…" />
       ) : null}
       {status === "error" ? (
-        <ErrorMessage title="Readiness unavailable">{error}</ErrorMessage>
+        <ErrorMessage heading="Readiness unavailable">{error}</ErrorMessage>
       ) : null}
       {report ? (
         <div className="mt-4 rounded-panel border border-border bg-surface p-card shadow-hairline">

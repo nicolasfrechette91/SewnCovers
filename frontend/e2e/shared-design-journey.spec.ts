@@ -214,7 +214,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
 
     const summary = page.getByRole("region", {
       exact: true,
-      name: "Configuration summary",
+      name: "Configuration details",
     });
     await expect(summary).toContainText("Box / bench");
     await expect(summary).toContainText("72.25 cm");

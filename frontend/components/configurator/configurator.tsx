@@ -377,12 +377,18 @@ export function Configurator({
   };
 
   // "Continue with my configuration" after a link fails: bring back the
-  // stored design if nothing else has been chosen since.
+  // stored design if nothing else has been chosen since. The panel with the
+  // pressed button closes, so focus moves on to the stage heading.
   const restoreAfterDismissedLink = () => {
-    if (!session || !isInitialConfiguration(state)) return;
-    if (restoreStoredDesign(session) !== null) {
-      setGate({ status: "ready", restored: true });
+    let stepId: ConfiguratorStepId = activeStepId;
+    if (session && isInitialConfiguration(state)) {
+      const restoredStepId = restoreStoredDesign(session);
+      if (restoredStepId !== null) {
+        setGate({ status: "ready", restored: true });
+        stepId = restoredStepId;
+      }
     }
+    focusWhenReady(focusTargetIds[stepId]);
   };
 
   const startNewDesign = () => {
@@ -482,7 +488,8 @@ export function Configurator({
       ? configuratorSteps[activeStepIndex + 1]
       : null;
   const stageActions = (
-    <nav
+    <div
+      role="group"
       aria-label={`${activeStep.label} stage actions`}
       className={
         activeStepId === "review"
@@ -525,7 +532,7 @@ export function Configurator({
           </Button>
         ) : null}
       </div>
-    </nav>
+    </div>
   );
 
   let activeStageContent;
@@ -580,7 +587,8 @@ export function Configurator({
   return (
     <>
       {/* The page introduction belongs to the first stage only; from stage 2
-          the stage heading is the page's h1. */}
+          the stage heading is the page's h1. The panels below it keep their
+          h2 on stage 1 and become plain titles after, so no h2 precedes it. */}
       {activeStepId === "shape" ? intro : null}
       <StepIndicator
         className="configurator-progress print-hidden"
@@ -595,6 +603,7 @@ export function Configurator({
 
       {session && gate.status === "confirm" ? (
         <session.DraftReplaceConfirmation
+          asHeading={activeStepId === "shape"}
           reason={gate.reason}
           onKeep={keepStoredDesign}
           onReplace={replaceStoredDesign}
@@ -604,12 +613,14 @@ export function Configurator({
       {gate.status === "link" || gate.status === "ready" ? (
         <>
           <SharedDesignLoader
+            asHeading={activeStepId === "shape"}
             catalogue={catalogueResult}
             onDismiss={restoreAfterDismissedLink}
             onRestored={session?.recordLinkRestore}
             onRetryPatterns={retryPatternCatalogue}
           />
           <WorkspaceConfigurationLoader
+            asHeading={activeStepId === "shape"}
             onDismiss={restoreAfterDismissedLink}
             onRestored={session?.recordLinkRestore}
           />

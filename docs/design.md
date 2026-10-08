@@ -165,7 +165,13 @@ Every selected state has a forced-colours equivalent.
 
 ### Focus
 
-The global `:focus-visible` fallback draws a two-colour ring (2 px surface gap plus 3 px terracotta) on standard interactive or explicitly focusable elements, with a system-colour outline in forced-colours mode.
+The global `:focus-visible` fallback draws a two-colour ring (2 px surface gap plus 3 px terracotta) on standard interactive or explicitly focusable elements, with a system-colour outline in forced-colours mode. Elements that script focuses (stage and panel headings, status messages: `tabindex="-1"`) get the same ring; only `<main>`, the skip link's target, is left to the browser. Focusable controls start with `outline-color: transparent` (`Highlight` in forced colours), the colour the ring's outline has, so a control with `transition-colors` does not fade the outline in from its text colour: Tailwind's `transition-colors` animates `outline-color`.
+
+When an inline question, panel or menu closes, focus returns to the control that opened it (or a sensible neighbour if that control is gone), never to `<body>`. Ending a session on the account page (sign out, sign out everywhere, revoking this session, deleting the account) replaces the whole signed-in view, so the sign-in heading takes focus; a production-work step button that is replaced by the next step hands focus to the work heading. `useDeferredFocus` in `components/ui/` does this once the render that mounts or removes the control has committed.
+
+### Fabric swatches
+
+Anything that paints the customer's own colour (the Plain colour card, the Current selections ticket, the Preview and Review rows, saved projects, the cart) carries `.fabric-swatch`. It sets `forced-color-adjust: none` so high-contrast mode keeps the colour, and outlines it in `CanvasText` there so it stays visible against any background. `tests/accessibility-contracts.test.tsx` fails if a component sets an inline `backgroundColor` without the class.
 
 ## 3. Constraints the tests freeze
 
@@ -193,7 +199,7 @@ Typed primitives live in `frontend/components/ui/` and are exported from the `@/
 | Actions | `Button`, `ButtonLink`, `TextLink` | Share `buttonClasses()`; primary, secondary and ghost variants, default and compact sizes; disabled buttons use a dashed "unavailable" frame. `ButtonLink` wraps `next/link`. |
 | Layout and headers | `PageShell`, `PageHeader`, `SectionHeader`, `Surface`, `StitchDivider` | `Surface` offers default, subtle, page, emphasis and danger tones. |
 | Form controls | `NumberInput`, `UnitSelector`, `Field`, `TextInput`, `Select`, `Textarea`, `Checkbox` | One shared control frame; `NumberInput` takes an optional unit suffix; `UnitSelector` is a segmented control for cm and in. |
-| Status | `Badge`, `Notice`, `ErrorMessage`, `LoadingState`, `EmptyState`, `SpecList` | `Notice` covers prototype, sandbox, info and success tones; `ErrorMessage` keeps assertive alert semantics and takes an optional visible `heading`. |
+| Status | `Badge`, `Notice`, `ErrorMessage`, `LoadingState`, `EmptyState`, `SpecList` | `Notice` covers prototype, sandbox, info and success tones; `ErrorMessage` keeps assertive alert semantics and takes an optional visible `heading`; its props are an allow-list (`children`, `heading`, `className`, `id`, `role`, `aria-live`), so a mistyped `title=` is a type error. |
 
 **Adoption is partial.** Buttons, page headers, notices, error and loading states are used across the app. `Surface`, `SectionHeader`, `SpecList` and the form primitives `Field`, `TextInput`, `Select`, `Textarea` and `Checkbox` are defined and tested but not yet used by any screen; most inputs outside the configurator's measurement controls are still styled by hand with token utilities. The token test still guarantees that those hand-written classes resolve to design tokens.
 
@@ -201,9 +207,11 @@ Typed primitives live in `frontend/components/ui/` and are exported from the `@/
 
 ### Configurator copy and headings
 
-- **One introduction.** The page header (eyebrow, h1 and a one-sentence lede) appears on the Shape stage only, with the stage heading as an h2 inside its legend. From stage 2 the stage heading is the page's only h1, and the tab title names the stage, for example "Measurements (stage 2 of 6) – Configure a cushion | SewnCovers". Focus targets and the live-region stage announcement are unchanged.
+- **One introduction.** The page header (eyebrow, h1 and a one-sentence lede) appears on the Shape stage only, with the stage heading as an h2 inside its legend. From stage 2 the stage heading is the page's only h1, and the "Shared design", "Saved configuration" and "Keep your unsaved design?" panels, which sit above it, stop being headings so no h2 comes before the h1, and the tab title names the stage, for example "Measurements (stage 2 of 6) – Configure a cushion | SewnCovers". Focus targets and the live-region stage announcement are unchanged.
 - **One disclaimer per screen.** The footer's "A portfolio prototype" line is the site-wide note. In the configurator only the Preview stage (its care-label caption) and Review (the prototype notice, which is also printed and downloaded) add one. Stage and option copy describes what a customer gets, never how the app stores or models it.
 - **Help under Continue** appears only when something blocks it.
+- **Data is not a heading.** Prices, subtotals, order references and the account email are text with a label (visible, or visually hidden where the eyebrow above already says it), at the size they had as headings. The order card is named by its reference through `aria-labelledby`; its detail sections are h2 on the orders page and h3 in the administrator view.
+- **Landmarks.** Only real navigation is a `nav`: the primary and footer navigation, the legal contents list, the account links and the sign-in and create-account links. The header's guest "Sign in" link is left out on the account page, where the form's own tab is on screen; two links with that name and different return targets would be ambiguous. Groups of buttons (the stage progress, the stage actions, the preview's edit actions) are `role="group"` with a label.
 - **Colour codes.** A solid colour is shown as a swatch and "Solid colour". The code appears only in the optional "Colour code" field and, as "Custom colour · #B8AFA3" beside the swatch, in the Review table, its printout and the .txt download. The staff-only production specification keeps the code, because it is what gets made.
 - **Spelling** is Canadian in all customer-facing text (colour, centre, centimetre, harbour). Identifiers, CSS tokens, data keys, ids and API fields keep their existing spelling.
 

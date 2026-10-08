@@ -1,12 +1,20 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { classNames } from "./class-names";
 
-export interface ErrorMessageProps
-  extends Omit<ComponentPropsWithoutRef<"div">, "children"> {
+/**
+ * An allow-list rather than the full set of div attributes: `title`, for one,
+ * is a valid attribute that would turn a mistyped `heading` into a tooltip.
+ * Any prop outside this list is a type error.
+ */
+export interface ErrorMessageProps {
+  "aria-live"?: "assertive" | "polite";
   children: ReactNode;
+  className?: string;
   /** Optional visible heading shown above the message. */
   heading?: ReactNode;
+  id?: string;
+  role?: "alert" | "status";
 }
 
 export function ErrorMessage({
@@ -14,12 +22,12 @@ export function ErrorMessage({
   children,
   className,
   heading,
+  id,
   role = "alert",
-  ...alertProps
 }: ErrorMessageProps) {
   return (
     <div
-      {...alertProps}
+      id={id}
       role={role}
       aria-live={ariaLive}
       aria-atomic="true"

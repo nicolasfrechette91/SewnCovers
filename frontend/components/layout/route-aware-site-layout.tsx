@@ -36,7 +36,10 @@ function hasStoredSession(): boolean {
 /**
  * Guests see a quiet "Sign in" link that returns them to this page and none
  * of the links that would only ask them to sign in; a stored or verified
- * session keeps every link, including "Account".
+ * session keeps every link, including "Account". On the account page itself
+ * the sign-in form and its Sign in / Create account links are right there, so
+ * the header link is left out: it would be a second "Sign in" with the same
+ * name and a different return target.
  */
 export function RouteAwareSiteHeader({
   primaryItems,
@@ -53,11 +56,16 @@ export function RouteAwareSiteHeader({
   const signedIn =
     state.status === "authenticated" ||
     (state.status === "initializing" && storedSession);
+  const onAccountPage = isCurrentNavigationPath(pathname, ACCOUNT_HREF);
   const forVisitor = (items?: readonly SiteNavigationItem[]) =>
     signedIn
       ? items
       : items
-          ?.filter((item) => !item.requiresAccount)
+          ?.filter(
+            (item) =>
+              !item.requiresAccount &&
+              !(onAccountPage && item.href === ACCOUNT_HREF),
+          )
           .map((item) =>
             item.href === ACCOUNT_HREF
               ? {

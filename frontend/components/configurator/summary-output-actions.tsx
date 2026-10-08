@@ -53,19 +53,10 @@ export function SummaryOutputActions({
 
   return (
     <div className="review-output-actions print-hidden flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
-      <Button
-        variant="secondary"
-        aria-label="Print configuration summary"
-        onClick={printSummary}
-      >
+      <Button variant="secondary" onClick={printSummary}>
         Print summary
       </Button>
-      <Button
-        aria-label="Download configuration summary as a plain-text file"
-        onClick={downloadSummary}
-      >
-        Download summary (.txt)
-      </Button>
+      <Button onClick={downloadSummary}>Download summary (.txt)</Button>
     </div>
   );
 }

@@ -28,14 +28,21 @@ export interface SharedDesignLoaderProps {
   /** Records where a restored design came from, for the browser draft. */
   onRestored?: (ref: string, configuration: ConfigurationState) => void;
   onRetryPatterns: () => void;
+  /**
+   * False once a stage heading has become the page's h1 (from stage 2 it
+   * follows this panel), so the title is styled text, not an h2 before the h1.
+   */
+  asHeading?: boolean;
 }
 
 export function SharedDesignLoader({
+  asHeading = true,
   catalogue,
   onDismiss,
   onRestored,
   onRetryPatterns,
 }: SharedDesignLoaderProps) {
+  const Title = asHeading ? "h2" : "p";
   const { dispatch, getRevision, state: configuration } =
     useConfiguration();
   const [controller] = useState(
@@ -98,13 +105,13 @@ export function SharedDesignLoader({
       aria-labelledby="shared-design-status-heading"
       className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline"
     >
-      <h2
+      <Title
         id="shared-design-status-heading"
         tabIndex={-1}
         className="font-display text-section-title font-heading tracking-heading text-text-primary"
       >
         Shared design
-      </h2>
+      </Title>
 
       {isLoading ? (
         <LoadingState className="mt-3" label={state.message} />

@@ -98,7 +98,7 @@ test("sandbox quote-to-delivery workflow stays authoritative and role protected"
   await expect(page.getByRole("heading", { name: "Price a saved project version" })).toBeVisible();
   await noOverflow(page);
   await page.getByRole("button", { name: "Preview price" }).press("Enter");
-  await expect(page.getByRole("heading", { name: /Estimated subtotal: \$104.50 CAD/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: /Estimated subtotal: \$104.50 CAD/ })).toBeVisible();
   await page.getByRole("button", { name: "Create quote" }).press("Enter");
   await page.getByRole("button", { name: "Add to cart" }).press("Enter");
   await page.getByRole("button", { name: "Menu" }).press("Enter");
@@ -108,7 +108,7 @@ test("sandbox quote-to-delivery workflow stays authoritative and role protected"
   await page.getByRole("button", { name: "Update" }).press("Enter");
   await expect(page.getByText("$209.00 CAD").first()).toBeVisible();
   await page.getByRole("button", { name: "Continue to hosted sandbox checkout" }).press("Enter");
-  await expect(page.getByRole("heading", { name: "SC-DEMO-ORDER0001" })).toBeVisible();
+  await expect(page.getByText("Order reference: SC-DEMO-ORDER0001")).toBeVisible();
   await expect(page.getByText(/no card fields/i)).toBeVisible();
   await page.getByRole("checkbox", { name: /commerce notice version 1/i }).check();
   await page.getByRole("button", { name: "Submit fictional successful payment" }).press("Enter");

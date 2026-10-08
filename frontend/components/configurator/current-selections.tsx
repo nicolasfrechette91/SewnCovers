@@ -151,7 +151,7 @@ export function CurrentSelections({
               {row.key === "fabric" && fabricSolidColor ? (
                 <span
                   aria-hidden="true"
-                  className="inline-block size-3 shrink-0 rounded-pill border border-border-strong"
+                  className="fabric-swatch inline-block size-3 shrink-0 rounded-pill border border-border-strong"
                   style={{ backgroundColor: fabricSolidColor }}
                 />
               ) : null}

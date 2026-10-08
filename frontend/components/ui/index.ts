@@ -45,3 +45,4 @@ export { Surface, surfaceClasses } from "./surface";
 export type { SurfaceElevation, SurfacePadding, SurfaceProps, SurfaceRadius, SurfaceTone } from "./surface";
 export { UnitSelector } from "./unit-selector";
 export type { MeasurementUnit, UnitSelectorProps } from "./unit-selector";
+export { useDeferredFocus } from "./use-deferred-focus";

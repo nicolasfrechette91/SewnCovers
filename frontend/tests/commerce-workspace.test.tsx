@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
 import React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { AdminScreen, CartScreen } from "../components/commerce";
 import { SignInForCommerce } from "../components/commerce/demo-banner";
@@ -67,11 +67,15 @@ test("labels the cart as a sandbox and changes quantity through a replacement qu
     return json({ errors: [{ code: "missing", message: "Missing" }] }, 404);
   });
   render(<AuthProvider><CartScreen /></AuthProvider>);
-  await screen.findByRole("heading", { name: "$104.50 CAD" });
+  // A price is data, not a heading: it is text with a label.
+  const quoteSubtotal = () => screen.getByText("Quote subtotal:").closest("p")?.textContent;
+  await screen.findByText("Quote subtotal:");
+  assert.equal(quoteSubtotal(), "Quote subtotal: $104.50 CAD");
+  assert.equal(screen.queryByRole("heading", { name: /\$104\.50/ }), null);
   assert.ok(screen.getByText(/Sandbox demonstration/));
   fireEvent.change(screen.getByRole("spinbutton", { name: "Quantity" }), { target: { value: "2" } });
   fireEvent.click(screen.getByRole("button", { name: "Update" }));
-  await screen.findByRole("heading", { name: "$209.00 CAD" });
+  await waitFor(() => assert.equal(quoteSubtotal(), "Quote subtotal: $209.00 CAD"));
   assert.ok(requests.some((request) => request.startsWith("PATCH") && request.includes("/commerce/cart/lines/")));
   assert.equal(screen.getAllByText(/new quote was created/).length, 2);
 });
@@ -211,7 +215,9 @@ test("loads the protected price-book, queue, specification, and audit workflow f
 
 test("renders an authoritative customer financial summary and allowlisted tracking link", () => {
   render(<OrderCard order={order} detail />);
-  assert.ok(screen.getByRole("heading", { name: order.reference }));
+  // The reference is data, not a title: the card is named by it instead.
+  assert.equal(screen.queryByRole("heading", { name: order.reference }), null);
+  assert.ok(screen.getByRole("article", { name: `Order reference: ${order.reference}` }));
   assert.ok(screen.getByText("$131.65 CAD"));
   assert.ok(screen.getByRole("heading", { name: "Manufacturing and fulfilment timeline" }));
   const link = screen.getByRole("link", { name: "Track on carrier website" }) as HTMLAnchorElement;

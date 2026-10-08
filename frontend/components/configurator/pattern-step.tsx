@@ -17,6 +17,7 @@ import {
   LoadingState,
   noticeClasses,
   StitchDivider,
+  useDeferredFocus,
 } from "@/components/ui";
 import {
   DEFAULT_SOLID_COLOR,
@@ -116,6 +117,7 @@ export function PatternStep({
   const supportingTextId = `${generatedId}-supporting-text`;
   const resultCountId = `${generatedId}-result-count`;
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const focusLater = useDeferredFocus();
   const [searchQuery, setSearchQuery] = useState("");
   const solidColor = getSolidColor(state.pattern);
   const [solidColorDraft, setSolidColorDraft] = useState(
@@ -199,9 +201,7 @@ export function PatternStep({
         colorId: ALL_PATTERN_COLORS,
       });
     }
-    requestAnimationFrame(() => {
-      searchInputRef.current?.focus();
-    });
+    focusLater(() => searchInputRef.current);
   };
 
   const updateSearchQuery = (value: string) => {
@@ -302,7 +302,7 @@ export function PatternStep({
             description="One colour all over. Pick any shade."
             preview={
               <span
-                className="cushion-preview-solid block h-3/5 w-4/5 rounded-panel border border-border-strong shadow-card"
+                className="fabric-swatch cushion-preview-solid block h-3/5 w-4/5 rounded-panel border border-border-strong shadow-card"
                 style={{
                   backgroundColor: solidColor ?? DEFAULT_SOLID_COLOR,
                 }}
@@ -400,14 +400,8 @@ export function PatternStep({
           ) : catalogue.phase === "error" ? (
             errorState
           ) : (
-            <div
-              className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card"
-              aria-labelledby={`${generatedId}-empty-catalogue-title`}
-            >
-              <h3
-                id={`${generatedId}-empty-catalogue-title`}
-                className="text-body font-control text-text-primary"
-              >
+            <div className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card">
+              <h3 className="text-body font-control text-text-primary">
                 No patterns are available right now
               </h3>
               <p className="mt-1 break-words text-supporting text-text-muted">
@@ -543,14 +537,8 @@ export function PatternStep({
             ) : catalogue.phase === "error" ? (
               errorState
             ) : matchingPatterns.length === 0 ? (
-              <div
-                className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card"
-                aria-labelledby={`${generatedId}-no-matches-title`}
-              >
-                <h3
-                  id={`${generatedId}-no-matches-title`}
-                  className="text-body font-control text-text-primary"
-                >
+              <div className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card">
+                <h3 className="text-body font-control text-text-primary">
                   No patterns match
                 </h3>
                 <p className="mt-1 break-words text-supporting text-text-muted">

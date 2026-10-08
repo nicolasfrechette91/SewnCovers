@@ -121,9 +121,10 @@ export function SandboxCheckoutScreen() {
           <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
             Fictional hosted checkout
           </p>
-          <h2 className="mt-3 break-words font-display text-section-title font-heading tracking-heading text-text-primary">
+          <p className="mt-3 break-words font-display text-section-title font-heading tracking-heading text-text-primary">
+            <span className="sr-only">Order reference: </span>
             {checkout.orderReference}
-          </h2>
+          </p>
           <p className="mt-2 font-display text-section-title font-heading tabular-nums text-text-primary">
             {"$"}{(checkout.amountMinor / 100).toFixed(2)} CAD estimated
             subtotal

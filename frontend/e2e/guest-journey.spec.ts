@@ -238,7 +238,7 @@ test("signing in at Save keeps the design, saves it once, and links the draft", 
   await expect(page.getByRole("status").filter({ hasText: "Private project created with version 1." })).toBeFocused();
   expect(calls.projectPosts).toEqual([{ name: "Patio bench", configuration: projectConfiguration }]);
   await expect(page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Account" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Configuration summary", exact: true })).toContainText("72.25 cm");
+  await expect(page.getByRole("region", { name: "Configuration details", exact: true })).toContainText("72.25 cm");
 
   // Reloading brings back the same stage and never saves the design again.
   await page.reload();

@@ -1260,12 +1260,41 @@ body {
   margin-top: 0;
 }
 
-/* A swatch shows the customer's own colour, so high-contrast mode keeps it. */
-.summary-swatch {
+/*
+ * A swatch shows the customer's own colour, so high-contrast mode keeps it and
+ * outlines it in the system text colour (see the forced-colors block).
+ */
+.fabric-swatch {
   forced-color-adjust: none;
 }
 
 /* 8. Accessibility --------------------------------------------------------- */
+
+/*
+ * Elements focused by script (stage and panel headings, status messages) have
+ * tabindex="-1" and get the same ring. <main> is left to the browser: the skip
+ * link lands on it, and a ring around the whole page body helps no one.
+ */
+/*
+ * Tailwind's transition-colors (and transition, transition-all) also animate
+ * outline-color. The ring's outline is transparent, but an outline-color left
+ * at its default is the control's text colour, so focusing would fade it in
+ * from dark: a flash before the ring settles. Starting at the colour the
+ * ring uses leaves nothing to animate, whatever transition a control has.
+ */
+:where(
+  a[href],
+  area[href],
+  button,
+  input:not([type="hidden"]),
+  select,
+  textarea,
+  summary,
+  [contenteditable="true"],
+  [tabindex]:not(main)
+) {
+  outline-color: transparent;
+}
 
 :where(
   a[href],
@@ -1276,7 +1305,7 @@ body {
   textarea,
   summary,
   [contenteditable="true"],
-  [tabindex]:not([tabindex="-1"])
+  [tabindex]:not(main)
 ):focus-visible {
   box-shadow: var(--shadow-focus);
   outline: 3px solid transparent;
@@ -1356,10 +1385,28 @@ body {
     textarea,
     summary,
     [contenteditable="true"],
-    [tabindex]:not([tabindex="-1"])
+    [tabindex]:not(main)
+  ) {
+    outline-color: Highlight;
+  }
+
+  :where(
+    a[href],
+    area[href],
+    button,
+    input:not([type="hidden"]),
+    select,
+    textarea,
+    summary,
+    [contenteditable="true"],
+    [tabindex]:not(main)
   ):focus-visible {
     box-shadow: none;
     outline-color: Highlight;
+  }
+
+  .fabric-swatch {
+    border-color: CanvasText;
   }
 
   .unit-selector-input:checked + .unit-selector-label {
@@ -1496,7 +1543,7 @@ body {
   }
 
   /* The chosen colour is part of the printed record, so keep its swatch. */
-  .summary-swatch {
+  .fabric-swatch {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }

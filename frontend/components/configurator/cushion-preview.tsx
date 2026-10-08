@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
 import { classNames } from "../ui/class-names";
 
@@ -18,8 +18,12 @@ export interface CushionPreviewProps
   balanced?: boolean;
 }
 
+/**
+ * The figure is named by its own visible heading; pass `aria-label` only to
+ * override that.
+ */
 export function CushionPreview({
-  "aria-label": ariaLabel = "Cushion preview",
+  "aria-label": ariaLabel,
   className,
   controls,
   description,
@@ -32,17 +36,22 @@ export function CushionPreview({
   ...sectionProps
 }: CushionPreviewProps) {
   const Heading = headingLevel === 1 ? "h1" : "h2";
+  const headingId = useId();
 
   return (
     <figure
       {...sectionProps}
       aria-label={ariaLabel}
+      aria-labelledby={ariaLabel ? undefined : headingId}
       className={classNames(
         "min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline",
         className,
       )}
     >
-      <Heading className="break-words font-display text-section-title font-heading tracking-heading text-text-primary">
+      <Heading
+        id={headingId}
+        className="break-words font-display text-section-title font-heading tracking-heading text-text-primary"
+      >
         {title}
       </Heading>
       {/* The visual and its spec list share a column so they stay together;

@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Button, ErrorMessage, LoadingState } from "@/components/ui";
+import {
+  Button,
+  ErrorMessage,
+  LoadingState,
+  useDeferredFocus,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
 import {
@@ -33,6 +38,7 @@ export function ProductionOperationsScreen() {
   const [message, setMessage] = useState("");
   const [reason, setReason] = useState("");
   const detailHeading = useRef<HTMLHeadingElement>(null);
+  const focusLater = useDeferredFocus();
 
   const load = useCallback(async () => {
     if (
@@ -97,6 +103,18 @@ export function ProductionOperationsScreen() {
     success: string,
   ) => {
     setMessage("");
+    // A step button (Approve work, Start production, ...) is replaced by the
+    // next step's button once the state changes. If the one that was pressed
+    // is gone, focus goes to the work heading, which names what changed.
+    const pressed = document.activeElement;
+    const focusHeadingIfPressedIsGone = () =>
+      focusLater(() =>
+        pressed instanceof HTMLElement &&
+        pressed.isConnected &&
+        document.activeElement === pressed
+          ? null
+          : detailHeading.current,
+      );
     try {
       const work = await action();
       setSelected(work);
@@ -104,6 +122,7 @@ export function ProductionOperationsScreen() {
         current.map((item) => (item.id === work.id ? work : item)),
       );
       setMessage(success);
+      focusHeadingIfPressedIsGone();
     } catch (error) {
       // Only a revision conflict (409) is fixed by reloading; permission,
       // rate-limit, and availability messages already say what to do.
@@ -115,6 +134,7 @@ export function ProductionOperationsScreen() {
             : "The production action failed.",
       );
       await load();
+      focusHeadingIfPressedIsGone();
     }
   };
 
@@ -207,7 +227,7 @@ export function ProductionOperationsScreen() {
           <LoadingState label="Loading production work…" />
         ) : null}
         {status === "error" ? (
-          <ErrorMessage title="Production queue unavailable">
+          <ErrorMessage heading="Production queue unavailable">
             {message}
           </ErrorMessage>
         ) : null}
