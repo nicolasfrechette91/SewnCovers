@@ -56,12 +56,12 @@ const SIGN_IN_COPY = {
   save: {
     titles: { login: "Sign in to save this design", register: "Create an account to save this design" },
     submitLabels: { login: "Sign in and save", register: "Create account and save" },
-    reason: "My projects are private to an account, so saving needs one. Your design stays in this browser meanwhile, and it is saved as soon as you are signed in.",
+    reason: "Projects are kept in your account. Your design stays in this browser and is saved as soon as you sign in.",
   },
   cart: {
     titles: { login: "Sign in to add this design to your cart", register: "Create an account to add it to your cart" },
     submitLabels: { login: "Sign in and add to cart", register: "Create account and add to cart" },
-    reason: "The demonstration cart holds fictional quotes for designs saved to My projects, so it belongs to an account. Once you are signed in, this design is saved and added to the cart.",
+    reason: "The cart belongs to your account. Once you sign in, this design is saved and added to it.",
   },
 } as const;
 
@@ -81,14 +81,19 @@ function linkedFrom(project: ProjectDetail): LinkedProject {
   };
 }
 
-export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<{ configuration: ConfigurationState; onSavingChange: (saving: boolean) => void }>) {
+export function PrivateProjectPanel({ configuration, defaultName = "", onSavingChange }: Readonly<{
+  configuration: ConfigurationState;
+  /** Used when the name is left empty, so saving never stops to ask for one. */
+  defaultName?: string;
+  onSavingChange?: (saving: boolean) => void;
+}>) {
   const { state: auth } = useAuth();
   const draft = useSyncExternalStore(subscribeToDraft, getDraftSnapshot, getServerDraftSnapshot);
   const link = draft?.project ?? null;
   const fingerprint = designFingerprint(configuration);
   const token = auth.status === "authenticated" ? auth.token : null;
   const [linked, setLinked] = useState<LinkedProject | null>(null);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(defaultName);
   const [signInFor, setSignInFor] = useState<PendingAccountActionKind | null>(null);
   const [busy, setBusy] = useState<PendingAccountActionKind | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -185,7 +190,7 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
   const run = async (kind: PendingAccountActionKind, projectName: string, sessionToken: string) => {
     if (actionInFlight) return;
     actionInFlight = true;
-    setBusy(kind); onSavingChange(true); setError(null); setOutcome(null);
+    setBusy(kind); onSavingChange?.(true); setError(null); setOutcome(null);
     requestAnimationFrame(() => statusRef.current?.focus());
     let saved: SavedProject | null = null;
     try {
@@ -208,7 +213,7 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
       }
     } finally {
       actionInFlight = false;
-      setBusy(null); onSavingChange(false);
+      setBusy(null); onSavingChange?.(false);
     }
   };
 
@@ -229,16 +234,19 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
     if (auth.status === "initializing" || busy !== null) return;
     setError(null);
     setOutcome(null);
-    if (!link && !name.trim()) {
+    // An emptied name falls back to the suggested one, so a guest goes
+    // straight to sign-in and the resumed save has a name to use.
+    const projectName = name.trim() || defaultName.trim();
+    if (!link && !projectName) {
       setError("Enter a project name.");
       requestAnimationFrame(() => nameRef.current?.focus());
       return;
     }
     if (token) {
-      void run(kind, name, token);
+      void run(kind, projectName, token);
       return;
     }
-    setPendingAccountAction({ kind, name: name.trim(), fingerprint });
+    setPendingAccountAction({ kind, name: projectName, fingerprint });
     setSignInFor(kind);
   };
 
@@ -257,12 +265,12 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
   };
 
   const heading = !link
-    ? "Save to a private project"
+    ? "Save to My projects"
     : savedAndUnchanged
       ? "Saved to My projects"
       : "Save a new version";
   const description = !link
-    ? "A named project is private in your account. It is separate from the public design link above; other people can view a project version only if you create a read-only share link."
+    ? "Keep this design in your account and come back to it later. Only you can see it unless you share it."
     : savedAndUnchanged && verified
       ? `This design is saved as “${verified.name}”. If you change it, saving adds the next version and leaves earlier versions unchanged.`
       : verified
@@ -277,8 +285,8 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
 
   return (
     <section aria-labelledby="private-project-heading" className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline">
-      <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">Private account workspace</p>
-      <h3 id="private-project-heading" className="mt-3 font-display text-section-title font-heading tracking-heading text-text-primary">{heading}</h3>
+      <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">Your account</p>
+      <h2 id="private-project-heading" className="mt-3 font-display text-section-title font-heading tracking-heading text-text-primary">{heading}</h2>
       <p className="mt-3 max-w-3xl text-body text-text-muted">{description}</p>
       {auth.status === "initializing" ? <p className="mt-3" role="status">Restoring your session…</p> : null}
       <form className="mt-4" noValidate onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); start("save"); }}>
@@ -294,15 +302,16 @@ export function PrivateProjectPanel({ configuration, onSavingChange }: Readonly<
         ) : null}
         {signInFor === null ? (
           <div className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
-            {!savedAndUnchanged ? <Button ref={saveButtonRef} type="submit" disabled={auth.status === "initializing" || busy === "cart"} isLoading={busy === "save"} loadingLabel="Saving private version…">{link ? "Save as new version" : "Create private project"}</Button> : null}
+            {!savedAndUnchanged ? <Button ref={saveButtonRef} type="submit" disabled={auth.status === "initializing" || busy === "cart"} isLoading={busy === "save"} loadingLabel="Saving private version…">{link ? "Save as new version" : "Save to My projects"}</Button> : null}
             <Button ref={cartButtonRef} variant="secondary" disabled={auth.status === "initializing" || busy === "save"} isLoading={busy === "cart"} loadingLabel="Adding to cart…" onClick={() => start("cart")}>{savedAndUnchanged ? "Add to cart" : "Save and add to cart"}</Button>
           </div>
         ) : null}
-        {auth.status === "guest" && signInFor === null ? <p className="mt-3 max-w-3xl text-supporting text-text-muted">Saving and the demonstration cart need an account. You&apos;ll be asked to sign in or create one next; your design stays in this browser either way.</p> : null}
+        {auth.status === "guest" && signInFor === null ? <p className="mt-3 max-w-3xl text-supporting text-text-muted">You&apos;ll be asked to sign in or create an account next. Your design stays in this browser either way.</p> : null}
       </form>
       {auth.status === "guest" && copy ? (
         <InlineSignIn
           idPrefix={`private-${signInFor}`}
+          headingLevel="h3"
           titles={copy.titles}
           reason={<p>{copy.reason}</p>}
           submitLabels={copy.submitLabels}

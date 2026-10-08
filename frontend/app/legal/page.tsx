@@ -33,7 +33,7 @@ const documents = [
     body: [
       "Upload only an image you have permission to use. A configured external moderation provider may process it; automated moderation does not guarantee safety or legality, and approval does not establish copyright ownership.",
       "Private originals are never used as public preview URLs. Approved derivatives use short-lived access. Deleted, expired, rejected, revoked, or unauthorized assets stop rendering in projects and advanced previews.",
-      "After verified payment, a protected production derivative copy may be retained with the immutable order even when the account upload is later deleted. This portfolio behavior requires professional and operational review.",
+      "After verified payment, a protected production derivative copy may be retained with the immutable order even when the account upload is later deleted. This portfolio behaviour requires professional and operational review.",
     ],
   },
   {
@@ -49,8 +49,8 @@ const documents = [
     type: "accessibility",
     title: "Accessibility statement",
     body: [
-      "The repository includes semantic form controls, visible focus, keyboard workflows, status announcements, reduced-motion handling, forced-colors treatment for HTML controls, and responsive checks.",
-      "The illustrative 2D cushion preview has an equivalent textual configuration summary, but forced-colors mode may hide pattern colors and motifs. Automated checks do not establish WCAG conformance.",
+      "The repository includes semantic form controls, visible focus, keyboard workflows, status announcements, reduced-motion handling, high-contrast (forced colours) treatment for HTML controls, and responsive checks.",
+      "The illustrative 2D cushion preview has an equivalent textual configuration summary, but high-contrast mode may hide pattern colours and motifs. Automated checks do not establish WCAG conformance.",
       "Manual screen-reader, browser, touch-device, zoom, and assistive-technology verification remains required before production use.",
     ],
   },

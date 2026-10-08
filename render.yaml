@@ -17,5 +17,9 @@ services:
         value: production
       - key: FRONTEND_ORIGIN
         value: https://nicolasfrechette91.github.io
+      # The connecting client is the third X-Forwarded-For entry from the
+      # right behind Render's proxies (docs/deployment.md, "Client address").
+      - key: CLIENT_IP_INDEX
+        value: "-3"
       - key: DATABASE_URL
         sync: false

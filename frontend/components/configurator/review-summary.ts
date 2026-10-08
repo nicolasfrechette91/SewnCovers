@@ -27,7 +27,7 @@ import {
 } from "@/data/shapes";
 
 export const PROTOTYPE_NOTICE =
-  "SewnCovers is currently a prototype. This summary is not an order, quote, or manufacturing specification. Measurements and pattern choices are for demonstration purposes only. Saving creates only a public prototype configuration link. No purchase, payment, fabrication, delivery, or order submission occurs.";
+  "SewnCovers is a portfolio prototype. This summary isn't an order or a quote, and nothing is made, charged for or shipped.";
 
 export const SUMMARY_DOWNLOAD_FILENAME =
   "sewncovers-configuration-summary.txt";
@@ -185,14 +185,6 @@ function buildSummary(
     }
   });
 
-  if (definition.equalFaceDimensions) {
-    fields.push({
-      id: "equal-face-dimensions",
-      label: "Face relationship",
-      value: `${formatMeasurement(width)} × ${formatMeasurement(height)} ${unit} (equal dimensions)`,
-    });
-  }
-
   fields.push(
     {
       id: "unit",
@@ -206,12 +198,12 @@ function buildSummary(
     },
     {
       id: "fit-preference",
-      label: "Fit preference",
+      label: "Fit",
       value: findCoverOption(fitOptions, fitPreference).name,
     },
     {
       id: "closure-type",
-      label: "Closure / access",
+      label: "Opening",
       value: findCoverOption(closureOptions, closureType).name,
     },
     {
@@ -226,13 +218,15 @@ function buildSummary(
       {
         id: "fabric",
         label: "Fabric",
-        value: "Solid color",
+        value: "Solid colour",
       },
       {
+        // The code is the only exact record of the colour, so the summary,
+        // the printout and the download keep it beside the swatch.
         id: "solid-color",
-        label: "Fabric color",
+        label: "Colour",
         swatchColor: pattern.colors,
-        value: pattern.colors,
+        value: `Custom colour · ${pattern.colors}`,
       },
     );
   } else {
@@ -244,17 +238,17 @@ function buildSummary(
       },
       {
         id: "pattern-category",
-        label: "Pattern category",
+        label: "Pattern style",
         value: pattern.category,
       },
       {
         id: "pattern-colors",
-        label: "Pattern colors",
+        label: "Pattern colours",
         value: pattern.colors,
       },
       {
         id: "pattern-scale",
-        label: "Pattern scale",
+        label: "Pattern size",
         value: formatPatternScale(patternScale),
       },
     );
@@ -320,35 +314,33 @@ export function deriveReviewReadiness(
         kind: "pattern",
         name: state.pattern.label,
         category: "Your uploaded pattern",
-        colors: "Original uploaded colors",
+        colors: "Original uploaded colours",
       };
     }
   } else if (state.pattern?.kind === "solid") {
     selectedPattern = {
       kind: "solid",
-      name: "Solid color",
+      name: "Solid colour",
       category: "Plain fabric",
       colors: state.pattern.color,
     };
   } else if (catalogueResult.status === "loading") {
     issues.push({
       id: "catalogue-loading",
-      message:
-        "Wait for the pattern catalogue to finish loading.",
+      message: "Wait for the patterns to finish loading.",
       section: "pattern",
     });
   } else if (catalogueResult.status === "error") {
     issues.push({
       id: "catalogue-invalid",
       message:
-        "The API pattern catalogue is unavailable, so a selected pattern cannot be verified.",
+        "Patterns couldn't be loaded, so your pattern can't be checked yet.",
       section: "pattern",
     });
   } else if (catalogueResult.status === "empty") {
     issues.push({
       id: "catalogue-empty",
-      message:
-        "The pattern catalogue is empty, so no pattern can be selected.",
+      message: "No patterns are available right now.",
       section: "pattern",
     });
   } else if (state.pattern === null) {
@@ -387,7 +379,7 @@ export function deriveReviewReadiness(
   ) {
     issues.push({
       id: "pattern-scale-invalid",
-      message: "Choose a pattern scale from 0.5× to 2.0×.",
+      message: "Choose a pattern size from 0.5× to 2.0×.",
       section: "patternScale",
     });
   }

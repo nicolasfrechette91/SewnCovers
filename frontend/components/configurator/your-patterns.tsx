@@ -17,7 +17,6 @@ import {
   checkboxClasses,
   controlClasses,
   ErrorMessage,
-  eyebrowClasses,
   fieldLabelClasses,
   LoadingState,
   StitchDivider,
@@ -33,6 +32,7 @@ import {
   type CustomUpload,
 } from "@/services/account-api";
 import { assuranceApi } from "@/services/assurance-api";
+import { useUploadAvailability } from "@/services/upload-availability";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -75,6 +75,9 @@ async function validateImage(
 export function YourPatterns() {
   const { state: auth } = useAuth();
   const { state: configuration, dispatch } = useConfiguration();
+  // Fails closed: only a successful "enabled: true" answer offers uploads.
+  const availability = useUploadAvailability();
+  const uploadsOffered = availability === "enabled";
   const id = useId();
   const fileInput = useRef<HTMLInputElement>(null);
   const statusRef = useRef<HTMLParagraphElement>(null);
@@ -93,7 +96,7 @@ export function YourPatterns() {
   const uploadActionRef = useRef<HTMLButtonElement>(null);
   const returnFocusToUpload = useRef(false);
 
-  // "Continue with built-in patterns" puts focus back on the action that opened sign-in.
+  // "Continue with our patterns" puts focus back on the action that opened sign-in.
   useEffect(() => {
     if (signInOpen || !returnFocusToUpload.current) return;
     returnFocusToUpload.current = false;
@@ -101,7 +104,7 @@ export function YourPatterns() {
   }, [signInOpen]);
 
   const load = useCallback(async () => {
-    if (auth.status !== "authenticated") return;
+    if (auth.status !== "authenticated" || !uploadsOffered) return;
     setPhase("loading");
     try {
       setUploads(await accountApi.listUploads(auth.token));
@@ -111,7 +114,7 @@ export function YourPatterns() {
     } finally {
       setPhase("idle");
     }
-  }, [auth]);
+  }, [auth, uploadsOffered]);
 
   useEffect(() => {
     const timer = globalThis.setTimeout(() => void load(), 0);
@@ -245,16 +248,31 @@ export function YourPatterns() {
     } catch (caught) { setError(caught instanceof AccountApiError ? caught.message : "The custom pattern could not be deleted."); }
   };
 
+  // No answer yet, or no answer at all (failure or timeout): show nothing,
+  // neither the upload nor a claim that uploads are off.
+  if (availability === "checking" || availability === "unknown") return null;
+
+  if (availability === "disabled") {
+    return (
+      <section aria-labelledby={`${id}-heading`} className="mt-layout">
+        <StitchDivider className="mb-component" />
+        <h2 id={`${id}-heading`} className={cardTitleClasses}>Your patterns</h2>
+        <p className="mt-3 max-w-3xl text-supporting text-text-muted">
+          Custom uploads aren&apos;t enabled in this demo.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section aria-labelledby={`${id}-heading`} className="mt-layout">
       <StitchDivider className="mb-component" />
-      <p className={eyebrowClasses}>Private account feature</p>
-      <h3 id={`${id}-heading`} className={`mt-3 ${cardTitleClasses}`}>Your patterns</h3>
+      <h2 id={`${id}-heading`} className={cardTitleClasses}>Your patterns</h2>
       {auth.status === "guest" && !signInOpen ? (
         <div className="mt-3 flex min-w-0 flex-col items-start gap-3">
           <p className="max-w-3xl text-supporting text-text-muted">
-            Uploading your own image needs an account. Built-in patterns and
-            solid colors don&apos;t.
+            Upload your own image to use as a pattern. You&apos;ll need an
+            account.
           </p>
           <Button ref={uploadActionRef} variant="secondary" onClick={() => setSignInOpen(true)}>
             Upload your own pattern
@@ -264,12 +282,13 @@ export function YourPatterns() {
       {auth.status === "guest" && signInOpen ? (
         <InlineSignIn
           idPrefix="upload"
+          headingLevel="h3"
           titles={{ login: "Sign in to upload your own pattern", register: "Create an account to upload your own pattern" }}
-          reason={<p>Uploads stay private to an account: the original image, its processed copies and its moderation status belong to their owner. Your design stays as it is while you sign in.</p>}
+          reason={<p>Your uploads are private to your account. Your design stays as it is while you sign in.</p>}
           submitLabels={{ login: "Sign in", register: "Create account" }}
           sessionNotice={auth.notice}
-          cancelLabel="Continue with built-in patterns"
-          guestNote="Every built-in pattern and solid color stays available without an account."
+          cancelLabel="Continue with our patterns"
+          guestNote="Every pattern and plain colour here works without an account."
           onCancel={() => {
             returnFocusToUpload.current = true;
             setSignInOpen(false);

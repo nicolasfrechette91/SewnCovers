@@ -62,7 +62,7 @@ export function ConfigurationSummary({
                   <span className="inline-flex items-center gap-2">
                     <span
                       aria-hidden="true"
-                      className="inline-block size-5 rounded-pill border border-border-strong shadow-card"
+                      className="summary-swatch inline-block size-5 rounded-pill border border-border-strong shadow-card"
                       style={{ backgroundColor: item.swatchColor }}
                     />
                     <span>{item.value}</span>

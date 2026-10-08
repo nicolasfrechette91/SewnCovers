@@ -1,7 +1,6 @@
-import { useState } from "react";
-
 import { Button, noticeClasses, noticeTitleClasses } from "@/components/ui";
 import type { ConfigurationState } from "@/context/configuration";
+import { getCushionShapeDefinition } from "@/data/shapes";
 import type { SelectedPatternPresentation } from "./preview-step";
 
 import { ConfigurationSummary } from "./configuration-summary";
@@ -138,21 +137,37 @@ export function ReviewEntry({ onReview }: ReviewEntryProps) {
   );
 }
 
+/** "Rectangle cushion, Fern trail": a name to save under without asking. */
+function defaultProjectName(
+  configuration: ConfigurationState,
+  fabric: SelectedPatternPresentation,
+): string {
+  const shape =
+    configuration.shape === null
+      ? "Cushion"
+      : getCushionShapeDefinition(configuration.shape).label;
+  return `${shape}, ${fabric.solidColor ? "Solid colour" : fabric.name}`.slice(
+    0,
+    120,
+  );
+}
+
 interface ReviewScreenProps {
   configuration: ConfigurationState;
-  onEdit: (section: ReviewSection) => void;
   readiness: Extract<ReviewReadiness, { status: "ready" }>;
   selectedPattern: SelectedPatternPresentation;
 }
 
+/**
+ * The specification and the preview image, then output and saving. The stage
+ * progress and "Back to Preview" are the ways back; nothing is repeated here.
+ */
 export function ReviewScreen({
   configuration,
-  onEdit,
   readiness,
   selectedPattern,
 }: ReviewScreenProps) {
   const { summary } = readiness;
-  const [saveIsPending, setSaveIsPending] = useState(false);
 
   return (
     <section
@@ -163,16 +178,16 @@ export function ReviewScreen({
         <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
           Review
         </p>
-        <h2
+        <h1
           id="configuration-review-heading"
           tabIndex={-1}
           className="configurator-edit-target mt-3 scroll-mt-layout break-words font-display text-page-title font-heading tracking-heading text-text-primary"
         >
           SewnCovers configuration summary
-        </h2>
+        </h1>
         <p className="mt-3 max-w-3xl break-words text-body text-text-muted">
-          Review the current prototype design. The text details below are the
-          complete summary; the preview is an illustrative planning aid.
+          Check the details below, then print, download, save or share your
+          design.
         </p>
       </header>
 
@@ -180,12 +195,12 @@ export function ReviewScreen({
         aria-labelledby="configuration-prototype-notice-heading"
         className={noticeClasses("prototype", "prototype-notice mt-component")}
       >
-        <h3
+        <h2
           id="configuration-prototype-notice-heading"
           className={noticeTitleClasses("prototype")}
         >
           Prototype notice
-        </h3>
+        </h2>
         <p className="mt-2 break-words text-body text-notice-text">
           {summary.prototypeNotice}
         </p>
@@ -198,31 +213,7 @@ export function ReviewScreen({
           items={summary.fields}
         />
         <div className="review-preview print-hidden min-w-0">
-          <PreviewStep
-            selectedPattern={selectedPattern}
-            showScaleControls={false}
-          />
-        </div>
-      </div>
-
-      <div className="review-edit-actions print-hidden mt-layout min-w-0 rounded-card border border-dashed border-border-strong bg-surface p-card">
-        <h3 className="text-subhead font-control text-text-primary">
-          Edit this configuration
-        </h3>
-        <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {editActionOrder.map((section) => (
-            <Button
-              key={section}
-              variant="secondary"
-              disabled={saveIsPending}
-              aria-describedby={
-                saveIsPending ? "configuration-save-status" : undefined
-              }
-              onClick={() => onEdit(section)}
-            >
-              {editActionLabels[section]}
-            </Button>
-          ))}
+          <PreviewStep selectedPattern={selectedPattern} variant="summary" />
         </div>
       </div>
 
@@ -230,13 +221,10 @@ export function ReviewScreen({
         <SummaryOutputActions summary={summary} />
       </div>
 
-      <SaveSharePanel
-        configuration={configuration}
-        onSavingChange={setSaveIsPending}
-      />
+      <SaveSharePanel configuration={configuration} />
       <PrivateProjectPanel
         configuration={configuration}
-        onSavingChange={setSaveIsPending}
+        defaultName={defaultProjectName(configuration, selectedPattern)}
       />
     </section>
   );

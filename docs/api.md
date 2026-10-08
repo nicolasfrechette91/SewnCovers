@@ -32,6 +32,8 @@ The API has 66 paths (OpenAPI version 0.4.0). Groups, access rules and availabil
 
 With a flag off, its routes return `503` with code `storage_unavailable` and a fixed "not enabled in this environment" message. See [setup](setup.md#3-turn-on-commerce-and-custom-uploads-locally) to switch them on locally.
 
+`GET /uploads/availability` is the exception: it is public, needs no account, touches neither storage nor the database, and always answers `200` with `{"enabled": true}` or `{"enabled": false}`. The configurator asks it once per tab when the Pattern stage opens and fails closed: only a successful `{"enabled": true}` shows the upload option and its sign-in. While the answer is pending, or if the request fails or times out, nothing upload-related is shown; `{"enabled": false}` shows one line saying custom uploads aren't enabled in this demo.
+
 ## Public contract: patterns and designs
 
 ### `GET /patterns`

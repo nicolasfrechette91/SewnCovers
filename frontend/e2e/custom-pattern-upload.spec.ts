@@ -61,6 +61,8 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
     if (path === "/account/sessions") return json(route, [{ id: 1, createdAt: "2026-08-18T09:00:00Z", expiresAt, revokedAt: null, current: true }]);
     if (path === "/account/acknowledgements" && request.method() === "POST") return json(route, { id: 1, documentType: "uploads", documentVersion: 1, purpose: "upload_rights", acknowledgedAt: "2026-08-18T12:00:01Z" }, 201);
     if (path === "/patterns") return json(route, []);
+    // This journey needs uploads, so they are on here.
+    if (path === "/uploads/availability") return json(route, { enabled: true });
     if (path === "/uploads" && request.method() === "GET") {
       const lifecycle = [
         status("awaiting_moderation", "M"),
@@ -118,7 +120,8 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
 
   await page.getByRole("button", { name: "Continue to Preview" }).press("Enter");
   const preview = page.getByRole("figure", { name: "Cushion preview" });
-  await expect(preview.getByText("Custom pattern · Selected and shown")).toBeVisible();
+  await expect(preview.getByText(/^My garden repeat on your .+ cushion$/)).toBeVisible();
+  await expect(preview.getByText("Your own pattern", { exact: true })).toBeVisible();
   await expect(preview).toContainText("My garden repeat");
   expect(await preview.innerText()).not.toMatch(new RegExp(`${uploadId}|${accessToken}|https?://|garden\\.png`));
   const tileCount = tileRequests;

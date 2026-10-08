@@ -18,7 +18,7 @@ function fabricSummary(configuration: Readonly<Record<string, unknown>>) {
     ? configuration.pattern as Record<string, unknown>
     : {};
   if (pattern.kind === "solid" && typeof pattern.color === "string") {
-    return { color: pattern.color, label: `Solid color · ${pattern.color}` };
+    return { color: pattern.color, label: "Solid colour" };
   }
   if (pattern.kind === "built-in" && typeof pattern.patternId === "string") {
     return { color: null, label: pattern.patternId };

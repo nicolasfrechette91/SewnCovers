@@ -17,7 +17,10 @@ test("exports canonical and social metadata for every indexable route", async ({
 
   for (const [route, title] of routes) {
     await page.goto(`${basePath}${route}`);
-    await expect(page).toHaveTitle(title);
+    // The configurator adds its current stage to the exported title.
+    await expect(page).toHaveTitle(
+      route === "/configure/" ? `Shape (stage 1 of 6) – ${title}` : title,
+    );
     await expect(page.locator('meta[name="description"]')).toHaveAttribute(
       "content",
       /.+/,

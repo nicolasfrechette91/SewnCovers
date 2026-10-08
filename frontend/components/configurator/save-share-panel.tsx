@@ -23,7 +23,7 @@ type CopyState = "copying" | "error" | "idle" | "success";
 interface SaveSharePanelProps {
   configuration: ConfigurationState;
   controllerFactory?: () => DesignSaveController;
-  onSavingChange: (saving: boolean) => void;
+  onSavingChange?: (saving: boolean) => void;
 }
 
 function createShareUrl(publicId: string): string {
@@ -75,10 +75,10 @@ export function SaveSharePanel({
   }, [configuration, savedPublicId]);
 
   const saveDesign = () => {
-    onSavingChange(true);
+    onSavingChange?.(true);
     void controller
       .submit(configuration)
-      .finally(() => onSavingChange(false));
+      .finally(() => onSavingChange?.(false));
   };
 
   const copyShareLink = async () => {
@@ -114,23 +114,22 @@ export function SaveSharePanel({
       <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
         Save and share
       </p>
-      <h3
+      <h2
         id="configuration-save-share-heading"
         className="mt-3 break-words font-display text-section-title font-heading tracking-heading text-text-primary"
       >
         Create a public link
-      </h3>
+      </h2>
       <p className="mt-3 max-w-3xl break-words text-body text-text-muted">
-        Saving creates a public, read-only copy of the reviewed design. Anyone
-        with the link can view it. This does not place an order or change your
-        current design.
+        Get a link to this design. Anyone with the link can view it, and a
+        saved design can&apos;t be changed.
       </p>
 
       {customPatternSelected ? (
         <p className="mt-component rounded-card border border-border bg-surface-subtle px-5 py-4 text-supporting text-text-primary">
-          Public guest links support built-in patterns only. To share a custom
-          pattern, save this design to a private project and create a read-only
-          project link that you can revoke later.
+          Public links work with our patterns and plain colours. To share a
+          design that uses your own image, save it to a project and share it
+          from there.
         </p>
       ) : null}
 
@@ -165,10 +164,7 @@ export function SaveSharePanel({
         <div className="mt-component">
           <ErrorMessage>
             <p>{saveState.message}</p>
-            <p className="mt-1">
-              Your configuration is still here. No automatic retry was
-              attempted.
-            </p>
+            <p className="mt-1">Your design is still here.</p>
           </ErrorMessage>
           <Button className="mt-3" onClick={saveDesign}>
             Try saving again
@@ -206,8 +202,8 @@ export function SaveSharePanel({
             id="configuration-share-url-help"
             className="mt-2 break-words text-supporting text-text-muted"
           >
-            Anyone with this link can view the saved design. It does not reveal
-            a private project or account.
+            Anyone with this link can view this design. It doesn&apos;t show
+            your account or projects.
           </p>
           <Button
             className="mt-3"
@@ -235,8 +231,8 @@ export function SaveSharePanel({
             ) : null}
             {copyState === "error" ? (
               <ErrorMessage aria-live="assertive">
-                Copying is unavailable. The share URL is selected so you can
-                copy it manually.
+                Couldn&apos;t copy the link. It&apos;s selected, so you can copy
+                it yourself.
               </ErrorMessage>
             ) : null}
           </div>

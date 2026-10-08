@@ -54,24 +54,25 @@ test("captures the solid-fabric selection and live previews", async ({
     .getByRole("button", { name: "Continue to Cover details" })
     .click();
   await page.getByRole("button", { name: "Continue to Pattern" }).click();
-  await expect(page.getByRole("radio", { name: "Solid color" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Solid colour" })).toBeVisible();
 
   await page.screenshot({
     path: path.join(screenshotDirectory, "01-solid-color-option.png"),
   });
 
-  await page.getByRole("radio", { name: "Solid color" }).focus();
+  await page.getByRole("radio", { name: "Solid colour" }).focus();
   await page.keyboard.press("Space");
   await expect(
-    page.getByRole("heading", { name: "Choose your fabric color" }),
+    page.getByRole("heading", { name: "Pick your colour" }),
   ).toBeVisible();
   await page.screenshot({
     path: path.join(screenshotDirectory, "02-color-picker-open.png"),
   });
 
-  const hex = page.getByRole("textbox", { name: "Hexadecimal color" });
+  const hex = page.getByRole("textbox", { name: "Colour code" });
+  // At this width the live preview sits in the side column.
   const livePreview = page.getByRole("figure", {
-    name: /Live cushion preview/,
+    name: "Solid colour on your square cushion",
   });
   await hex.fill("#F5F2EB");
   await expect(hex).toHaveValue("#F5F2EB");

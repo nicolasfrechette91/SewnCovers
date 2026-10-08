@@ -27,7 +27,7 @@ TIMEOUT_GRACEFUL_SHUTDOWN_SECONDS = 25
 # runs handlers, while a flood beyond it costs a few MiB of buffers, not more.
 LIMIT_CONCURRENCY = 100
 
-EXPECTED_REVISION = "20261007_01"
+EXPECTED_REVISION = "20261007_02"
 EXPECTED_PATTERN_COUNT = 15
 EXPECTED_TABLES = {
     "alembic_version",
@@ -329,6 +329,17 @@ def main() -> None:
     settings = get_settings()
     require_production_environment(settings)
     configure_application_logging(settings)
+    # Which header entry the rate limits and access log treat as the client;
+    # the settings only, never an address.
+    logger.info(
+        "Client address source",
+        extra={
+            "fields": {
+                "clientIpHeader": settings.resolved_client_ip_header,
+                "clientIpIndex": settings.resolved_client_ip_index,
+            }
+        },
+    )
     upgrade_database()
     verify_database()
     uvicorn.run(

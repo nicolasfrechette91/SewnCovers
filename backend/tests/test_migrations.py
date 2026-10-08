@@ -29,6 +29,9 @@ from sqlalchemy.engine import Engine
 
 import app.persistence.database as database_module
 import app.persistence.migrations as migrations_module
+from app.designs.api import get_design_service
+from app.designs.repository import DesignRepository
+from app.designs.service import DesignService
 from app.main import create_application
 from app.patterns.api import get_pattern_service
 from app.patterns.repository import PatternRepository, patterns_table
@@ -40,7 +43,7 @@ from app.persistence.migrations import (
 )
 from app.persistence.models import Base, CoverDesign
 from app.settings import Settings, reset_settings_cache
-from tests.test_patterns import CANONICAL_PATTERNS, expected_response
+from tests.test_patterns import CANONICAL_PATTERNS, SEEDED_PATTERNS, expected_response
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 FRONTEND_CATALOGUE = BACKEND_ROOT.parent / "frontend" / "data" / "patterns.ts"
@@ -54,7 +57,8 @@ UPLOAD_REVISION = "20260818_02"
 COMMERCE_REVISION = "20260828_01"
 OPERATIONS_REVISION = "20260829_01"
 SOLID_REVISION = "20260917_01"
-REVISION = "20261007_01"
+BACKOFF_REVISION = "20261007_01"
+REVISION = "20261007_02"
 HEAD_TABLES = {
     "alembic_version",
     "authenticated_sessions",
@@ -174,15 +178,23 @@ def index_definitions(
     }
 
 
-def expected_seed_rows() -> tuple[dict[str, object], ...]:
+def expected_seed_rows(
+    patterns: tuple[dict[str, object], ...] = SEEDED_PATTERNS,
+) -> tuple[dict[str, object], ...]:
+    """Pattern rows as the seed revision inserts them (or as renamed later)."""
     return tuple(
         {
             **pattern,
             "is_active": True,
             "display_order": display_order,
         }
-        for display_order, pattern in enumerate(CANONICAL_PATTERNS)
+        for display_order, pattern in enumerate(patterns)
     )
+
+
+def expected_head_rows() -> tuple[dict[str, object], ...]:
+    """Pattern rows at the head revision, after 20261007_02 renamed four."""
+    return expected_seed_rows(CANONICAL_PATTERNS)
 
 
 def read_pattern_rows(engine: Engine) -> tuple[dict[str, object], ...]:
@@ -231,47 +243,33 @@ def test_revisions_form_one_descriptive_linear_history_and_one_head() -> None:
     script = ScriptDirectory.from_config(alembic_config())
     revisions = list(script.walk_revisions())
 
-    assert len(revisions) == 10
-    assert revisions[0].revision == REVISION
-    assert revisions[0].down_revision == SOLID_REVISION
-    assert revisions[0].is_head
-    assert "credential backoff" in revisions[0].doc
-    assert revisions[1].revision == SOLID_REVISION
-    assert revisions[1].down_revision == OPERATIONS_REVISION
-    assert revisions[1].is_head is False
-    assert "solid fabric selections" in revisions[1].doc
-    assert revisions[2].revision == OPERATIONS_REVISION
-    assert revisions[2].down_revision == COMMERCE_REVISION
-    assert revisions[2].is_head is False
-    assert "Task 10.5 visualization, operations, legal, and trust" in revisions[2].doc
-    assert revisions[3].revision == COMMERCE_REVISION
-    assert revisions[3].down_revision == UPLOAD_REVISION
-    assert revisions[3].is_head is False
-    assert "demonstration commerce" in revisions[3].doc
-    assert revisions[4].revision == UPLOAD_REVISION
-    assert revisions[4].down_revision == PRIVATE_REVISION
-    assert revisions[4].is_head is False
-    assert "private custom-upload processing" in revisions[4].doc
-    assert revisions[5].revision == PRIVATE_REVISION
-    assert revisions[5].down_revision == CONFIG_REVISION
-    assert revisions[5].is_head is False
-    assert "private account workspaces" in revisions[5].doc
-    assert revisions[6].revision == CONFIG_REVISION
-    assert revisions[6].down_revision == SEED_REVISION
-    assert revisions[6].is_head is False
-    assert "richer specification choices" in revisions[6].doc
-    assert revisions[7].revision == SEED_REVISION
-    assert revisions[7].down_revision == INDEX_REVISION
-    assert revisions[7].is_head is False
-    assert "canonical public pattern catalogue" in revisions[7].doc
-    assert revisions[8].revision == INDEX_REVISION
-    assert revisions[8].down_revision == BASE_REVISION
-    assert revisions[8].is_head is False
-    assert "pattern category and activity filter indexes" in revisions[8].doc
-    assert revisions[9].revision == BASE_REVISION
-    assert revisions[9].down_revision is None
-    assert revisions[9].is_head is False
-    assert "patterns and immutable cover designs" in revisions[9].doc
+    assert len(revisions) == 11
+    expected = (
+        (REVISION, BACKOFF_REVISION, "real names and use Canadian spelling"),
+        (BACKOFF_REVISION, SOLID_REVISION, "credential backoff"),
+        (SOLID_REVISION, OPERATIONS_REVISION, "solid fabric selections"),
+        (
+            OPERATIONS_REVISION,
+            COMMERCE_REVISION,
+            "Task 10.5 visualization, operations, legal, and trust",
+        ),
+        (COMMERCE_REVISION, UPLOAD_REVISION, "demonstration commerce"),
+        (UPLOAD_REVISION, PRIVATE_REVISION, "private custom-upload processing"),
+        (PRIVATE_REVISION, CONFIG_REVISION, "private account workspaces"),
+        (CONFIG_REVISION, SEED_REVISION, "richer specification choices"),
+        (SEED_REVISION, INDEX_REVISION, "canonical public pattern catalogue"),
+        (
+            INDEX_REVISION,
+            BASE_REVISION,
+            "pattern category and activity filter indexes",
+        ),
+        (BASE_REVISION, None, "patterns and immutable cover designs"),
+    )
+    for index, (revision, down_revision, description) in enumerate(expected):
+        assert revisions[index].revision == revision
+        assert revisions[index].down_revision == down_revision
+        assert revisions[index].is_head is (index == 0)
+        assert description in revisions[index].doc
     assert script.get_heads() == [REVISION]
 
 
@@ -355,7 +353,7 @@ def test_seed_revision_matches_task_4_5_catalogue_and_frontend_artwork() -> None
     frontend_artwork = read_frontend_artwork_registry()
 
     assert 12 <= len(seed_rows) <= 20
-    assert len(seed_rows) == len(CANONICAL_PATTERNS) == len(frontend_artwork) == 15
+    assert len(seed_rows) == len(SEEDED_PATTERNS) == len(frontend_artwork) == 15
     assert (
         tuple(
             {
@@ -371,7 +369,7 @@ def test_seed_revision_matches_task_4_5_catalogue_and_frontend_artwork() -> None
             }
             for row in seed_rows
         )
-        == CANONICAL_PATTERNS
+        == SEEDED_PATTERNS
     )
     assert frontend_artwork == {
         row["id"]: row["preview_class_name"] for row in CANONICAL_PATTERNS
@@ -543,7 +541,7 @@ def test_upgrade_from_empty_database_creates_exact_schema(
         "ix_patterns_is_active": (("is_active",), False),
     }
     assert index_definitions(inspector, "cover_designs") == {}
-    assert read_pattern_rows(engine) == expected_seed_rows()
+    assert read_pattern_rows(engine) == expected_head_rows()
 
     backoff_columns = {
         column["name"]: column
@@ -886,6 +884,137 @@ def test_credential_backoff_revision_round_trips_without_touching_accounts(
     engine.dispose()
 
 
+def test_pattern_rename_keeps_ids_so_existing_designs_show_new_names(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "pattern-rename.sqlite3"
+    database_url = configure_test_database(monkeypatch, database_path)
+    command.upgrade(alembic_config(), BACKOFF_REVISION)
+
+    public_id = "R" * 22
+    project_configuration = {"patternId": "prototype-botanical", "shape": "square"}
+    engine = create_engine(database_url)
+    assert read_pattern_rows(engine) == expected_seed_rows()
+    with engine.begin() as connection:
+        # A public share link and a private project version saved before the
+        # rename, both pointing at a sample pattern by id.
+        connection.execute(
+            CoverDesign.__table__.insert(),
+            {
+                "public_id": public_id,
+                "shape": "square",
+                "width": "40.00",
+                "height": "40.00",
+                "thickness": "8.00",
+                "unit": "cm",
+                "pattern_id": "prototype-botanical",
+                "pattern_scale": "1.3",
+            },
+        )
+        connection.exec_driver_sql(
+            "INSERT INTO customer_accounts (id, email, password_hash, role, "
+            f"created_at) VALUES ('{'A' * 22}', 'person@example.com', "
+            "'hash', 'customer', '2026-10-07 00:00:00')"
+        )
+        connection.exec_driver_sql(
+            "INSERT INTO saved_projects (id, account_id, name, "
+            "next_version_number, created_at, updated_at) VALUES "
+            f"('{'P' * 22}', '{'A' * 22}', 'Porch', 2, "
+            "'2026-10-07 00:00:00', '2026-10-07 00:00:00')"
+        )
+        connection.execute(
+            Base.metadata.tables["project_versions"].insert(),
+            {
+                "id": "V" * 22,
+                "project_id": "P" * 22,
+                "account_id": "A" * 22,
+                "version_number": 1,
+                "configuration": project_configuration,
+            },
+        )
+    engine.dispose()
+
+    command.upgrade(alembic_config(), REVISION)
+    engine = create_engine(database_url)
+    head_rows = read_pattern_rows(engine)
+    assert head_rows == expected_head_rows()
+    # Only names and descriptions changed: ids, artwork, tags and order did not.
+    for seeded, renamed in zip(expected_seed_rows(), head_rows, strict=True):
+        assert {
+            key: value
+            for key, value in seeded.items()
+            if key not in {"name", "description"}
+        } == {
+            key: value
+            for key, value in renamed.items()
+            if key not in {"name", "description"}
+        }
+    with engine.connect() as connection:
+        assert (
+            connection.exec_driver_sql(
+                "SELECT pattern_id FROM cover_designs WHERE public_id = ?",
+                (public_id,),
+            ).scalar_one()
+            == "prototype-botanical"
+        )
+        assert (
+            connection.execute(
+                select(Base.metadata.tables["project_versions"].c.configuration)
+            ).scalar_one()
+            == project_configuration
+        )
+    engine.dispose()
+
+    settings = Settings(
+        _env_file=None,
+        database_url=database_url,
+        environment="test",
+    )
+    database = Database(settings_provider=lambda: settings)
+    application = create_application(settings)
+
+    def provide_pattern_service() -> Iterator[PatternService]:
+        with session_scope(database) as session:
+            yield PatternService(session, PatternRepository(session))
+
+    def provide_design_service() -> Iterator[DesignService]:
+        with session_scope(database) as session:
+            yield DesignService(
+                session,
+                DesignRepository(session),
+                PatternRepository(session),
+            )
+
+    application.dependency_overrides[get_pattern_service] = provide_pattern_service
+    application.dependency_overrides[get_design_service] = provide_design_service
+    with TestClient(application) as client:
+        design = client.get(f"/designs/{public_id}")
+        assert design.status_code == 200
+        assert design.json()["patternId"] == "prototype-botanical"
+        names = {
+            pattern["id"]: pattern["name"] for pattern in client.get("/patterns").json()
+        }
+        assert names[design.json()["patternId"]] == "Seed scatter"
+        assert names["prototype-geometric"] == "Harlequin"
+        assert names["prototype-woven"] == "Fine weave"
+        assert names["harbor-stripe"] == "Harbour stripe"
+    database.dispose()
+
+    command.downgrade(alembic_config(), BACKOFF_REVISION)
+    engine = create_engine(database_url)
+    assert read_pattern_rows(engine) == expected_seed_rows()
+    with engine.connect() as connection:
+        assert (
+            connection.exec_driver_sql(
+                "SELECT pattern_id FROM cover_designs WHERE public_id = ?",
+                (public_id,),
+            ).scalar_one()
+            == "prototype-botanical"
+        )
+    engine.dispose()
+
+
 def test_seed_downgrade_removes_only_owned_rows_and_reupgrade_is_repeatable(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -1121,6 +1250,9 @@ def test_offline_postgresql_sql_has_schema_indexes_and_exact_seed_inserts() -> N
     assert "CREATE INDEX ix_patterns_id" not in ddl
     assert "CREATE INDEX ix_cover_designs_public_id" not in ddl
     assert ddl.count("INSERT INTO patterns") == 15
+    assert ddl.count("UPDATE patterns SET") == 4
+    for renamed in ("Seed scatter", "Harlequin", "Harbour stripe", "Fine weave"):
+        assert f"'{renamed}'" in ddl
     assert "'prototype-botanical'" in ddl
     assert "'confetti-grid'" in ddl
     assert '\'["ivory","green","gold","rose"]\'' in ddl

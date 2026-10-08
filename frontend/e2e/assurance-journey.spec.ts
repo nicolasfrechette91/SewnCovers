@@ -34,16 +34,16 @@ test("preview and legal content stay keyboard-accessible", async ({
     }
     if (path === "/patterns") {
       const records = [
-        ["prototype-botanical", "Botanical sample", "botanical"],
+        ["prototype-botanical", "Seed scatter", "botanical"],
         ["fern-trail", "Fern trail", "botanical"],
         ["meadow-sprig", "Meadow sprig", "botanical"],
-        ["prototype-geometric", "Geometric sample", "geometric"],
+        ["prototype-geometric", "Harlequin", "geometric"],
         ["diamond-path", "Diamond path", "geometric"],
         ["arch-grid", "Arch grid", "geometric"],
-        ["harbor-stripe", "Harbor stripe", "striped"],
+        ["harbor-stripe", "Harbour stripe", "striped"],
         ["orchard-stripe", "Orchard stripe", "striped"],
         ["ribbon-stripe", "Ribbon stripe", "striped"],
-        ["prototype-woven", "Woven sample", "woven"],
+        ["prototype-woven", "Fine weave", "woven"],
         ["basket-check", "Basket check", "woven"],
         ["linen-crosshatch", "Linen crosshatch", "woven"],
       ] as const;
@@ -74,7 +74,7 @@ test("preview and legal content stay keyboard-accessible", async ({
     .getByRole("button", { name: "Continue to Pattern" })
     .press("Enter");
   await expect(page.locator("#configuration-pattern-edit-target")).toBeFocused();
-  await page.getByRole("radio", { name: "Botanical sample" }).press("Space");
+  await page.getByRole("radio", { name: "Seed scatter" }).press("Space");
   await page
     .getByRole("button", { name: "Continue to Preview" })
     .press("Enter");

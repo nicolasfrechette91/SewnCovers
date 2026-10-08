@@ -24,7 +24,10 @@ test("keeps guest pages task-focused while preserving prototype and account disc
   await page.goto(`${basePath}/configure/`);
   await expect(page.getByRole("heading", { name: "Build your custom cover design." })).toBeVisible();
   await expect(page.getByRole("group", { name: "Choose your cushion shape" })).toBeVisible();
-  await expect(page.getByText(/Previews are illustrative and are not manufacturing specifications/i)).toBeVisible();
+  // One prototype statement per page: on the configurator's first stage it is
+  // the footer's, and the page itself adds none.
+  await expect(page.getByRole("contentinfo").getByText("A portfolio prototype for custom cushion covers.")).toBeVisible();
+  await expect(page.getByRole("main").getByText(/prototype|manufacturing specification/i)).toHaveCount(0);
   await expectCustomerLanguage(page);
 
   await page.goto(`${basePath}/projects/`);

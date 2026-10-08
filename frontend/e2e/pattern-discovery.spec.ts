@@ -14,16 +14,16 @@ const configurePath = `${basePath}/configure/`;
 const publicId = "PatternDiscoveryDemo01";
 
 const patternRecords = [
-  ["prototype-botanical", "Botanical sample", "An organic, leaf-inspired prototype direction.", "botanical", ["ivory", "green", "terracotta"]],
+  ["prototype-botanical", "Seed scatter", "Green and terracotta seeds scattered over a light ground.", "botanical", ["ivory", "green", "terracotta"]],
   ["fern-trail", "Fern trail", "Layered fronds arranged along a gentle diagonal trail.", "botanical", ["ivory", "green"]],
   ["meadow-sprig", "Meadow sprig", "Small branching sprigs scattered across an open ground.", "botanical", ["ivory", "blue", "gold"]],
-  ["prototype-geometric", "Geometric sample", "A warm, structured prototype direction.", "geometric", ["ivory", "green", "terracotta"]],
+  ["prototype-geometric", "Harlequin", "Green and terracotta triangles in a bold harlequin check.", "geometric", ["ivory", "green", "terracotta"]],
   ["diamond-path", "Diamond path", "Nested diamonds repeat in crisp offset rows.", "geometric", ["ivory", "blue", "charcoal"]],
   ["arch-grid", "Arch grid", "Rounded arches alternate within a compact tiled grid.", "geometric", ["ivory", "terracotta", "gold"]],
-  ["harbor-stripe", "Harbor stripe", "Broad blue bands alternate with fine light pinstripes.", "striped", ["ivory", "blue"]],
+  ["harbor-stripe", "Harbour stripe", "Broad blue bands alternate with fine light pinstripes.", "striped", ["ivory", "blue"]],
   ["orchard-stripe", "Orchard stripe", "Uneven green and gold lines form a relaxed rhythm.", "striped", ["ivory", "green", "gold"]],
   ["ribbon-stripe", "Ribbon stripe", "Slim rose bands cross wider terracotta ribbons.", "striped", ["ivory", "terracotta", "rose"]],
-  ["prototype-woven", "Woven sample", "A quiet, small-scale prototype direction.", "woven", ["ivory", "charcoal"]],
+  ["prototype-woven", "Fine weave", "A fine, quiet grid of crossing threads.", "woven", ["ivory", "charcoal"]],
   ["basket-check", "Basket check", "Alternating blocks suggest an oversized basket weave.", "woven", ["ivory", "blue", "charcoal"]],
   ["linen-crosshatch", "Linen crosshatch", "Fine crossing lines create a loose textured grid.", "woven", ["ivory", "gold"]],
   ["terrace-wave", "Terrace wave", "Layered waves move in alternating cool bands.", "abstract", ["ivory", "green", "blue"]],
@@ -99,6 +99,15 @@ async function mockApi(context: BrowserContext, patternQueries: string[]) {
 
     if (
       request.method() === "GET" &&
+      url.pathname === "/uploads/availability"
+    ) {
+      // As in production: custom uploads are off.
+      await fulfillJson(route, { enabled: false });
+      return;
+    }
+
+    if (
+      request.method() === "GET" &&
       url.pathname === `/designs/${publicId}`
     ) {
       await fulfillJson(route, { ...savedDesign, publicId });
@@ -118,11 +127,11 @@ async function reachPatternStage(page: Page) {
     .click();
   await page.getByRole("button", { name: "Continue to Pattern" }).click();
   await expect(
-    page.getByRole("searchbox", { name: "Search built-in patterns" }),
+    page.getByRole("searchbox", { name: "Search patterns" }),
   ).toBeVisible();
 }
 
-test("discovers built-in patterns progressively without losing selection", async ({
+test("shows every built-in pattern and narrows them without losing selection", async ({
   context,
   page,
 }) => {
@@ -140,29 +149,31 @@ test("discovers built-in patterns progressively without losing selection", async
   ).toBeVisible();
   await reachPatternStage(page);
 
-  await expect(page.locator(".pattern-card-input")).toHaveCount(7);
-  await expect(page.getByText("Showing 6 of 15 patterns.")).toBeVisible();
-  await expect(
-    page.getByRole("heading", {
-      name: "Selected pattern outside the initial results",
-    }),
-  ).toBeVisible();
+  // All fifteen patterns and the solid colour, nothing behind a button.
+  const count = page.locator('[id$="-result-count"]');
+  await expect(page.locator(".pattern-card-input")).toHaveCount(16);
+  await expect(count).toHaveText("15 patterns");
+  await expect(count).toHaveAttribute("role", "status");
+  await expect(page.getByText(/^15 patterns$/)).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /Show all|Show fewer/ })).toHaveCount(0);
+  await expect(page.getByRole("radio", { name: "Terrace wave" })).toBeChecked();
   await expect(
     page.getByRole("button", { name: "Continue to Preview" }),
   ).toBeEnabled();
-  await expect(page.getByRole("region", { name: "Your patterns" })).toBeVisible();
+  // Uploads are off here, as in production: one line, no upload or sign-in.
+  const yourPatterns = page.getByRole("region", { name: "Your patterns" });
+  await expect(yourPatterns).toContainText("Custom uploads aren't enabled in this demo.");
+  await expect(page.getByRole("button", { name: "Upload your own pattern" })).toHaveCount(0);
   const initialMediaRequests = [...mediaRequests];
 
   const search = page.getByRole("searchbox", {
-    name: "Search built-in patterns",
+    name: "Search patterns",
   });
   await search.fill("  TERRACE  ");
   await expect(page.locator(".pattern-card-input")).toHaveCount(2);
   await expect(page.getByRole("radio", { name: "Terrace wave" })).toBeChecked();
   expect(mediaRequests).toEqual(initialMediaRequests);
-  await expect(
-    page.locator('[id$="-result-count"]'),
-  ).toHaveText("1 of 15 patterns match. Showing all matches.");
+  await expect(count).toHaveText("1 of 15 patterns match");
 
   await search.fill("cool bands");
   await expect(page.getByRole("radio", { name: "Terrace wave" })).toBeVisible();
@@ -173,40 +184,28 @@ test("discovers built-in patterns progressively without losing selection", async
   await search.fill("");
 
   await page
-    .getByRole("group", { name: "Filter by category" })
+    .getByRole("group", { name: "Filter by style" })
     .getByText("Geometric", { exact: true })
     .click();
   await expect(page.locator(".pattern-card-input")).toHaveCount(4);
   await page
-    .getByRole("group", { name: "Filter by color" })
+    .getByRole("group", { name: "Filter by colour" })
     .getByText("Blue", { exact: true })
     .click();
   await expect(page.locator(".pattern-card-input")).toHaveCount(2);
   await search.fill("nested");
   await expect(page.getByRole("radio", { name: "Diamond path" })).toBeVisible();
-  await expect(
-    page.locator('p:not([role="status"])', {
-      hasText: "1 of 15 patterns match. Showing all matches.",
-    }),
-  ).toBeVisible();
+  await expect(count).toHaveText("1 of 15 patterns match");
+  await expect(page.getByText("1 of 15 patterns match")).toHaveCount(1);
 
   await page
     .getByRole("button", { name: "Clear search and filters", exact: true })
     .first()
     .click();
   await expect(search).toHaveValue("");
-  await expect(page.getByRole("radio", { name: "All categories" })).toBeChecked();
-  await expect(page.getByRole("radio", { name: "All colors" })).toBeChecked();
-  await expect(page.locator(".pattern-card-input")).toHaveCount(7);
-
-  const showAll = page.getByRole("button", {
-    name: "Show all 15 patterns (9 more)",
-  });
-  await showAll.focus();
-  await page.keyboard.press("Enter");
+  await expect(page.getByRole("radio", { name: "All styles" })).toBeChecked();
+  await expect(page.getByRole("radio", { name: "All colours" })).toBeChecked();
   await expect(page.locator(".pattern-card-input")).toHaveCount(16);
-  await expect(page.getByRole("button", { name: "Show fewer patterns" })).toBeFocused();
-  await expect(page.getByRole("radio", { name: "Terrace wave" })).toBeChecked();
 
   await page.getByRole("radio", { name: "Pebble drift" }).focus();
   await page.keyboard.press("Space");
@@ -215,31 +214,20 @@ test("discovers built-in patterns progressively without losing selection", async
 
   await search.fill("does not exist");
   await expect(
-    page.getByRole("heading", {
-      name: "No patterns match your search and filters",
-    }),
+    page.getByRole("heading", { name: "No patterns match" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", {
-      name: "Selected pattern hidden by discovery criteria",
-    }),
+    page.getByRole("heading", { name: "Your pattern is hidden by the filters" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Continue to Preview" }),
   ).toBeEnabled();
 
-  await page
-    .getByRole("button", { name: "Clear search and filters", exact: true })
-    .last()
-    .click();
+  await page.getByRole("button", { name: "Show my pattern" }).click();
+  await expect(search).toHaveValue("");
   await page.getByRole("button", { name: "Back to Cover details" }).click();
   await page.getByRole("button", { name: "Continue to Pattern" }).click();
-  await expect(
-    page.getByRole("heading", {
-      name: "Selected pattern outside the initial results",
-    }),
-  ).toBeVisible();
-  await expect(page.getByText(/Pebble drift remains selected/)).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Pebble drift" })).toBeChecked();
   await expect(
     page.getByRole("button", { name: "Continue to Preview" }),
   ).toBeEnabled();
@@ -281,7 +269,7 @@ test("keeps Continue validation and native selection semantics", async ({
   await expect(page.getByRole("radio", { name: "Fern trail" })).not.toBeChecked();
 });
 
-test("selects, edits, previews, and preserves a solid fabric color", async ({
+test("selects, edits, previews, and preserves a solid fabric colour", async ({
   context,
   page,
 }) => {
@@ -299,14 +287,16 @@ test("selects, edits, previews, and preserves a solid fabric color", async ({
     .click();
   await page.getByRole("button", { name: "Continue to Pattern" }).click();
 
-  const solid = page.getByRole("radio", { name: "Solid color" });
+  const solid = page.getByRole("radio", { name: "Solid colour" });
   await expect(solid).toBeVisible();
   await expect(page.locator(".pattern-card-input").first()).toHaveAttribute(
     "value",
     "solid-color",
   );
+  // The card shows a swatch, not a colour code.
+  await expect(page.locator(".pattern-card-label").first()).not.toContainText("#");
   const search = page.getByRole("searchbox", {
-    name: "Search built-in patterns",
+    name: "Search patterns",
   });
   await search.fill("no printed pattern matches this");
   await expect(solid).toBeVisible();
@@ -314,32 +304,38 @@ test("selects, edits, previews, and preserves a solid fabric color", async ({
   await page.keyboard.press("Space");
   await expect(solid).toBeChecked();
   await expect(
-    page.getByRole("heading", { name: "Choose your fabric color" }),
+    page.getByRole("heading", { name: "Pick your colour" }),
   ).toBeVisible();
 
-  const hex = page.getByRole("textbox", { name: "Hexadecimal color" });
+  const hex = page.getByRole("textbox", { name: "Colour code" });
   await expect(hex).toHaveValue("#B8AFA3");
   await hex.fill("#12");
   await expect(
     page.getByRole("alert").filter({
-      hasText: "six-digit hexadecimal color",
+      hasText: "six-digit colour code",
     }),
   ).toBeVisible();
   await hex.fill("f5f2eb");
   await expect(hex).toHaveValue("#F5F2EB");
-  await expect(page.getByText("Live cushion preview · Solid color #F5F2EB"))
-    .toBeVisible();
-  await expect(page.locator('svg[data-fabric-kind="solid"]')).toBeVisible();
+  // One live preview, and it names the fabric without its code.
+  const livePreview = page.locator(".fabric-preview").filter({ visible: true });
+  await expect(livePreview).toHaveCount(1);
+  await expect(livePreview).toContainText("Solid colour on your square cushion");
+  await expect(livePreview).not.toContainText("#");
+  await expect(livePreview.locator('svg[data-fabric-kind="solid"]')).toBeVisible();
 
-  const nativePicker = page.getByLabel("Fabric color picker");
+  const nativePicker = page.getByLabel("Colour", { exact: true });
   await nativePicker.fill("#111827");
   await expect(hex).toHaveValue("#111827");
-  await expect(page.getByText("Live cushion preview · Solid color #111827"))
-    .toBeVisible();
+  await expect(
+    livePreview.locator(".cushion-preview-solid"),
+  ).toHaveCSS("background-color", "rgb(17, 24, 39)");
 
   await page.getByRole("button", { name: "Continue to Preview" }).click();
   await expect(page.locator('svg[data-fabric-kind="solid"]')).toBeVisible();
-  await expect(page.getByText(/Solid color · #111827/)).toBeVisible();
+  const preview = page.getByRole("region", { name: "Square cushion preview" });
+  await expect(preview).toContainText("Solid colour on your square cushion");
+  await expect(preview).not.toContainText("#111827");
   await page.getByRole("button", { name: "Back to Pattern" }).click();
   await expect(solid).toBeChecked();
   await expect(hex).toHaveValue("#111827");
@@ -348,6 +344,7 @@ test("selects, edits, previews, and preserves a solid fabric color", async ({
   await page.getByRole("radio", { name: "Fern trail" }).focus();
   await page.keyboard.press("Space");
   await expect(solid).not.toBeChecked();
+  await expect(livePreview).toContainText("Fern trail on your square cushion, pattern size 1.0×");
   await solid.focus();
   await page.keyboard.press("Space");
   await expect(hex).toHaveValue("#111827");

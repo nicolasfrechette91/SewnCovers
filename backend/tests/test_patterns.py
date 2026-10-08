@@ -22,11 +22,12 @@ from app.persistence.database import Database, session_scope
 from app.settings import Settings
 from tests.support import error_envelope
 
+# The catalogue the API serves at the migration head.
 CANONICAL_PATTERNS: tuple[dict[str, Any], ...] = (
     {
         "id": "prototype-botanical",
-        "name": "Botanical sample",
-        "description": "An organic, leaf-inspired prototype direction.",
+        "name": "Seed scatter",
+        "description": "Green and terracotta seeds scattered over a light ground.",
         "category_id": "botanical",
         "color_ids": ["ivory", "green", "terracotta"],
         "preview_class_name": "prototype-pattern-botanical",
@@ -49,8 +50,8 @@ CANONICAL_PATTERNS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "prototype-geometric",
-        "name": "Geometric sample",
-        "description": "A warm, structured prototype direction.",
+        "name": "Harlequin",
+        "description": "Green and terracotta triangles in a bold harlequin check.",
         "category_id": "geometric",
         "color_ids": ["ivory", "green", "terracotta"],
         "preview_class_name": "prototype-pattern-geometric",
@@ -73,7 +74,7 @@ CANONICAL_PATTERNS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "harbor-stripe",
-        "name": "Harbor stripe",
+        "name": "Harbour stripe",
         "description": "Broad blue bands alternate with fine light pinstripes.",
         "category_id": "striped",
         "color_ids": ["ivory", "blue"],
@@ -97,8 +98,8 @@ CANONICAL_PATTERNS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "prototype-woven",
-        "name": "Woven sample",
-        "description": "A quiet, small-scale prototype direction.",
+        "name": "Fine weave",
+        "description": "A fine, quiet grid of crossing threads.",
         "category_id": "woven",
         "color_ids": ["ivory", "charcoal"],
         "preview_class_name": "prototype-pattern-woven",
@@ -143,6 +144,37 @@ CANONICAL_PATTERNS: tuple[dict[str, Any], ...] = (
         "color_ids": ["ivory", "green", "gold", "rose"],
         "preview_class_name": "pattern-confetti-grid",
     },
+)
+
+# Revision 20261007_02 renamed these; the seed revision still inserts the
+# original text, so seed-level tests compare against SEEDED_PATTERNS.
+SEEDED_TEXT: dict[str, tuple[str, str]] = {
+    "prototype-botanical": (
+        "Botanical sample",
+        "An organic, leaf-inspired prototype direction.",
+    ),
+    "prototype-geometric": (
+        "Geometric sample",
+        "A warm, structured prototype direction.",
+    ),
+    "harbor-stripe": (
+        "Harbor stripe",
+        "Broad blue bands alternate with fine light pinstripes.",
+    ),
+    "prototype-woven": (
+        "Woven sample",
+        "A quiet, small-scale prototype direction.",
+    ),
+}
+SEEDED_PATTERNS: tuple[dict[str, Any], ...] = tuple(
+    {
+        **pattern,
+        "name": SEEDED_TEXT[pattern["id"]][0],
+        "description": SEEDED_TEXT[pattern["id"]][1],
+    }
+    if pattern["id"] in SEEDED_TEXT
+    else pattern
+    for pattern in CANONICAL_PATTERNS
 )
 
 

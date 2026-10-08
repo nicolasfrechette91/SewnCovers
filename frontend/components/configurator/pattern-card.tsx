@@ -84,9 +84,10 @@ export function PatternCard({
       />
       <label
         htmlFor={id}
-        className="pattern-card-label choice-card flex min-h-32 min-w-0 flex-row overflow-hidden peer-disabled:opacity-75 sm:min-h-44 sm:flex-col"
+        className="pattern-card-label choice-card flex min-h-32 min-w-0 flex-row overflow-hidden peer-disabled:opacity-75 min-[360px]:flex-col sm:min-h-44"
       >
-        <span className="relative flex w-2/5 shrink-0 items-center justify-center overflow-hidden bg-surface-subtle p-3 sm:aspect-[4/3] sm:min-h-24 sm:w-auto sm:p-control-x sm:pb-5 sm:pinked-edge">
+        {/* Two cards per row on phones, so the swatch is shorter there. */}
+        <span className="relative flex w-2/5 shrink-0 items-center justify-center overflow-hidden bg-surface-subtle p-3 min-[360px]:aspect-[3/2] min-[360px]:w-auto min-[360px]:pb-5 min-[360px]:pinked-edge sm:aspect-[4/3] sm:min-h-24 sm:p-control-x">
           <span
             aria-hidden={previewDecorative || undefined}
             className="flex size-full min-w-0 items-center justify-center overflow-hidden"
@@ -128,12 +129,13 @@ export function PatternCard({
                 {patternCategory}
               </span>
             ) : null}
+            {/* Phones keep the colours for screen readers; the swatch shows them. */}
             {patternColors ? (
               <span
                 id={colorsId}
-                className="mt-1 block break-words text-supporting text-text-muted"
+                className="sr-only mt-1 break-words text-supporting text-text-muted sm:not-sr-only sm:block"
               >
-                Colors: {patternColors}
+                Colours: {patternColors}
               </span>
             ) : null}
             {description ? (

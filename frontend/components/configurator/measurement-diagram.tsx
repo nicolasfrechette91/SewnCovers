@@ -270,14 +270,14 @@ export function MeasurementDiagram({
   const definition = getCushionShapeDefinition(shape);
   const captions: Readonly<Record<CushionShape, string>> = {
     square:
-      "Measure Width across the square face and Thickness across the side profile. Height uses the same committed value as Width.",
+      "Measure the width across the face and the thickness at the side. Height matches the width.",
     rectangle:
-      "Measure Width and Height independently across the rectangular face, then measure Thickness across the side profile.",
-    box: "Measure Width from side to side and Depth from front to back across the top, then measure Thickness across the side profile.",
+      "Measure the width and height across the face, then the thickness at the side.",
+    box: "Measure the width side to side and the depth front to back, then the thickness at the side.",
     round:
-      "Measure Diameter through the centre at the widest point, then measure Thickness across the side profile.",
+      "Measure the diameter through the centre at the widest point, then the thickness at the side.",
     tapered:
-      "Measure the front and back edges separately, Depth through the centre, and Thickness across the side profile.",
+      "Measure the front and back edges separately, the depth through the centre and the thickness at the side.",
   };
 
   return (

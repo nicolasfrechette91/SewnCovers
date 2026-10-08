@@ -1,7 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { Button } from "@/components/ui";
 import {
@@ -24,10 +30,7 @@ import { usePatternCatalogue } from "@/services/use-pattern-catalogue";
 
 import { CurrentSelections } from "./current-selections";
 import type { SelectedPatternPresentation } from "./preview-step";
-import {
-  deriveReviewReadiness,
-  type ReviewSection,
-} from "./review-summary";
+import { deriveReviewReadiness } from "./review-summary";
 import { ShapeSelectionStep } from "./shape-selection-step";
 import { SharedDesignLoader } from "./shared-design-loader";
 import {
@@ -67,6 +70,11 @@ const ReviewScreen = dynamic(
   () => import("./review-step").then((loaded) => loaded.ReviewScreen),
   { loading: StageLoading },
 );
+// The Pattern stage's live preview in the side column; the stage chunk
+// already carries the cushion model, so this stays out of the first load.
+const FabricPreview = dynamic(() =>
+  import("./fabric-preview").then((loaded) => loaded.FabricPreview),
+);
 
 const configuratorSteps = [
   { id: "shape", label: "Shape" },
@@ -87,14 +95,6 @@ const focusTargetIds = {
   review: "configuration-review-heading",
   shape: "configuration-shape-edit-target",
 } as const satisfies Readonly<Record<ConfiguratorStepId, string>>;
-
-const reviewSectionSteps = {
-  coverDetails: "details",
-  measurements: "measurements",
-  pattern: "pattern",
-  patternScale: "preview",
-  shape: "shape",
-} as const satisfies Readonly<Record<ReviewSection, ConfiguratorStepId>>;
 
 function getStepIndex(stepId: ConfiguratorStepId): number {
   return configuratorSteps.findIndex((step) => step.id === stepId);
@@ -138,7 +138,17 @@ type DraftGate =
   | { readonly status: "link" }
   | { readonly status: "ready"; readonly restored: boolean };
 
-export function Configurator() {
+export interface ConfiguratorProps {
+  /** The page's own title, which each stage's tab title extends. */
+  documentTitle?: string;
+  /** The page introduction, shown on the first stage only. */
+  intro?: ReactNode;
+}
+
+export function Configurator({
+  documentTitle,
+  intro,
+}: ConfiguratorProps = {}) {
   const { dispatch, state } = useConfiguration();
   const {
     retry: retryPatternCatalogue,
@@ -177,7 +187,7 @@ export function Configurator() {
         : null
       : state.pattern?.kind === "solid"
         ? {
-            name: "Solid color",
+            name: "Solid colour",
             previewClassName: "",
             solidColor: state.pattern.color,
           }
@@ -243,6 +253,33 @@ export function Configurator() {
   useEffect(() => {
     latestState.current = state;
   }, [state]);
+
+  // The heading changes with the stage, so the tab title names it too. Next
+  // can write the page's metadata title after this runs (after hydration, or
+  // when a navigation lands here), so the stage title is re-applied when the
+  // head changes. It only ever edits the page's own <title>, never adds one,
+  // and stops after a few attempts so it cannot fight the router. As a layout
+  // effect, the observer disconnects in the commit that leaves the page.
+  useLayoutEffect(() => {
+    if (!documentTitle) return;
+    const title = `${activeStep.label} (stage ${activeStepIndex + 1} of ${configuratorSteps.length}) – ${documentTitle}`;
+    let attempts = 10;
+    const applyTitle = () => {
+      if (attempts === 0 || document.querySelector("title") === null) return;
+      if (document.title !== title) {
+        attempts -= 1;
+        document.title = title;
+      }
+    };
+    applyTitle();
+    const observer = new MutationObserver(applyTitle);
+    observer.observe(document.head, {
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+    return () => observer.disconnect();
+  }, [activeStep.label, activeStepIndex, documentTitle]);
 
   // Brings back the design kept in this browser, at the stage it was left on.
   // Returns the stage, or null when there is nothing worth restoring.
@@ -414,10 +451,6 @@ export function Configurator() {
     navigateToStep(configuratorSteps[activeStepIndex - 1].id);
   };
 
-  const editSection = (section: ReviewSection) => {
-    navigateToStep(reviewSectionSteps[section]);
-  };
-
   const canContinue =
     activeStepId === "shape"
       ? state.shape !== null
@@ -428,17 +461,18 @@ export function Configurator() {
           : activeStepId === "preview"
             ? reviewReadiness.status === "ready"
             : true;
+  // Said only when something blocks Continue.
   const continueHelp =
     activeStepId === "shape" && state.shape === null
       ? "Choose a cushion shape to continue."
       : activeStepId === "measurements" && !measurementsAreValid
-        ? "Enter every required measurement within the displayed range to continue."
+        ? "Enter each measurement within the range shown to continue."
         : activeStepId === "pattern" && patternIssue !== undefined
           ? patternIssue.message
           : activeStepId === "preview" && reviewReadiness.status === "incomplete"
             ? reviewReadiness.issues[0]?.message ??
               "Complete the preview choices to continue."
-            : "Your current choices will be preserved and remain editable.";
+            : "";
   const previousStep =
     activeStepIndex > 0
       ? configuratorSteps[activeStepIndex - 1]
@@ -463,8 +497,8 @@ export function Configurator() {
         <p
           id="configuration-stage-action-help"
           className={
-            canContinue
-              ? "mt-4 break-words text-supporting text-text-muted"
+            continueHelp === ""
+              ? "sr-only"
               : "mt-4 break-words text-supporting font-emphasis text-accent-strong"
           }
         >
@@ -482,7 +516,9 @@ export function Configurator() {
         {nextStep !== null ? (
           <Button
             disabled={!canContinue}
-            aria-describedby="configuration-stage-action-help"
+            aria-describedby={
+              continueHelp === "" ? undefined : "configuration-stage-action-help"
+            }
             onClick={continueToNextStep}
           >
             Continue to {nextStep.label}
@@ -514,6 +550,7 @@ export function Configurator() {
         focusTargetId={focusTargetIds.pattern}
         onFiltersChange={setPatternFilters}
         onRetry={retryPatternCatalogue}
+        selectedFabric={selectedPattern}
       />
     );
   } else if (activeStepId === "preview") {
@@ -531,7 +568,6 @@ export function Configurator() {
           configuration={state}
           readiness={reviewReadiness}
           selectedPattern={selectedPattern}
-          onEdit={editSection}
         />
       ) : null;
   }
@@ -543,6 +579,9 @@ export function Configurator() {
 
   return (
     <>
+      {/* The page introduction belongs to the first stage only; from stage 2
+          the stage heading is the page's h1. */}
+      {activeStepId === "shape" ? intro : null}
       <StepIndicator
         className="configurator-progress print-hidden"
         completedStepIds={completedStepIds}
@@ -598,12 +637,20 @@ export function Configurator() {
         }
       >
         {showSelections ? (
-          <CurrentSelections
-            className="lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1"
-            fabricName={selectedPattern?.name ?? null}
-            fabricSolidColor={selectedPattern?.solidColor ?? null}
-            stage={activeStepId}
-          />
+          <div className="min-w-0 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1">
+            <CurrentSelections
+              fabricName={selectedPattern?.name ?? null}
+              fabricSolidColor={selectedPattern?.solidColor ?? null}
+              stage={activeStepId}
+            />
+            {/* Below lg the Pattern stage shows its own copy under its intro. */}
+            {activeStepId === "pattern" && state.shape !== null ? (
+              <FabricPreview
+                className="mt-4 hidden lg:block"
+                fabric={selectedPattern}
+              />
+            ) : null}
+          </div>
         ) : null}
         <div className="configurator-active-stage min-w-0 lg:col-start-1 lg:row-start-1">
           {activeStepId === "review" ? stageActions : null}

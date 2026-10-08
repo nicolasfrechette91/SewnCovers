@@ -18,6 +18,7 @@ from app.uploads.schema import (
     DeletedUploadResponse,
     RenameUploadRequest,
     ResourceId,
+    UploadAvailabilityResponse,
     UploadIntentResponse,
     UploadStatusResponse,
 )
@@ -52,6 +53,11 @@ def get_upload_service(
 
 
 UploadServiceDependency = Annotated[UploadService, Depends(get_upload_service)]
+
+
+def read_upload_availability() -> UploadAvailabilityResponse:
+    """Report the uploads flag; public, and touches neither storage nor the database."""
+    return UploadAvailabilityResponse(enabled=get_settings().custom_uploads_enabled)
 
 
 def create_upload_intent(

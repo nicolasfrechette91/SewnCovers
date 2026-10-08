@@ -20,10 +20,8 @@ import {
   type CushionShape,
 } from "@/context/configuration";
 import {
-  closureOptions,
   findCoverOption,
   fitOptions,
-  materialOptions,
   seamOptions,
 } from "@/data/cover-options";
 import {
@@ -99,7 +97,11 @@ export interface PreviewStepProps {
   onEdit?: (stage: "measurements" | "details" | "pattern") => void;
   focusTargetId?: string;
   selectedPattern: SelectedPatternPresentation | null;
-  showScaleControls?: boolean;
+  /**
+   * "stage" is the full Preview stage; "summary" is the image and caption
+   * only, for Review.
+   */
+  variant?: "stage" | "summary";
 }
 
 export function PreviewStep(props: PreviewStepProps) {
@@ -112,7 +114,7 @@ function PreviewStepContent({
   onEdit,
   focusTargetId,
   selectedPattern,
-  showScaleControls = true,
+  variant = "stage",
 }: PreviewStepProps) {
   const { state, dispatch } = useConfiguration();
   const [failedPatternUrl, setFailedPatternUrl] = useState<string | null>(null);
@@ -177,11 +179,6 @@ function PreviewStepContent({
 
   const shape = state.shape;
   const definition = getCushionShapeDefinition(shape);
-  const fitCharacter = state.fitPreference === "close"
-    ? "A neater, crisper profile"
-    : state.fitPreference === "relaxed"
-      ? "A softer, more relaxed profile"
-      : "A balanced profile";
   const measurementValues = {
     backWidth: state.backWidth,
     height: state.height,
@@ -220,16 +217,40 @@ function PreviewStepContent({
     });
   };
 
+  const isSummary = variant === "summary";
+  const patternFailed = Boolean(
+    failedPatternUrl && failedPatternUrl === selectedPattern?.previewUrl,
+  );
+  const statusText = patternFailed
+    ? "Your pattern couldn't be shown, so the cushion is plain. Your measurements are saved."
+    : previewIsComplete
+      ? `${selectedPattern?.solidColor ? "Solid colour" : selectedPattern?.name} on your ${definition.name.toLowerCase()} cushion`
+      : patternIsLoading
+        ? "Loading your pattern…"
+        : "No fabric shown yet";
+  // Observe failure of the same authorized derivative used by the face.
+  // No new grant, original, or fallback URL is requested.
+  const patternProbe =
+    selectedPattern?.previewUrl && patternObjectUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img key={patternObjectUrl} hidden alt="" src={patternObjectUrl} onLoad={() => setLoadedPatternUrl(selectedPattern.previewUrl!)} onError={() => setFailedPatternUrl(selectedPattern.previewUrl!)} />
+    ) : null;
+
   return (
     <section
       aria-label={`${definition.name} cushion preview`}
       className="@container scroll-mt-layout"
     >
       <CushionPreview
-        balanced
-        title={`Preview your ${definition.name.toLowerCase()} cushion`}
-        emptyMessage={failedPatternUrl && failedPatternUrl === selectedPattern?.previewUrl
-          ? "The selected pattern could not be displayed. Change pattern to choose an available pattern. Your measurements remain saved."
+        balanced={!isSummary}
+        headingLevel={isSummary ? 2 : 1}
+        title={
+          isSummary
+            ? "Preview"
+            : `Preview your ${definition.name.toLowerCase()} cushion`
+        }
+        emptyMessage={patternFailed
+          ? "Your pattern couldn't be shown. Choose another pattern; your measurements are saved."
           : patternIsLoading ? "Loading your selected pattern…"
           : getEmptyMessage(
           shape,
@@ -253,34 +274,21 @@ function PreviewStepContent({
               backWidth={state.backWidth}
               thickness={state.thickness}
             />
-            <span className="cushion-preview-label">Illustrative preview</span>
           </div>
         }
-        details={
+        details={isSummary ? patternProbe : (
           <>
-            <h3 className="text-subhead font-control text-text-primary">Currently previewing</h3>
-            <p role="status" className="mt-2 text-supporting text-text-muted">
-              {failedPatternUrl && failedPatternUrl === selectedPattern?.previewUrl
-                ? "The selected pattern could not be displayed. Neutral cushion shown; your measurements remain saved."
-                : previewIsComplete
-                  ? "Selected fabric shown on the cushion"
-                  : patternIsLoading
-                    ? "Loading your selected pattern… Neutral cushion shown."
-                    : "Neutral cushion shown"}
+            <p role="status" className="text-supporting text-text-muted">
+              {statusText}
             </p>
-            {selectedPattern?.previewUrl && patternObjectUrl ? (
-              // Observe failure of the same authorized derivative used by the face.
-              // No new grant, original, or fallback URL is requested.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={patternObjectUrl} hidden alt="" src={patternObjectUrl} onLoad={() => setLoadedPatternUrl(selectedPattern.previewUrl!)} onError={() => setFailedPatternUrl(selectedPattern.previewUrl!)} />
-            ) : null}
+            {patternProbe}
             <dl className="mt-4 grid min-w-0 grid-cols-2 gap-x-component gap-y-4 border-y border-dashed border-border-strong py-4 @xl:grid-cols-3">
               <div className="min-w-0">
                 <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Shape</dt>
                 <dd className="mt-1 break-words text-text-primary">{definition.name}</dd>
               </div>
               <div className="min-w-0">
-                <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Fit preference</dt>
+                <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Fit</dt>
                 <dd className="mt-1 break-words text-text-primary">
                   {findCoverOption(fitOptions, state.fitPreference).name}
                 </dd>
@@ -295,12 +303,22 @@ function PreviewStepContent({
                 <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
                   Fabric
                 </dt>
-                <dd className="mt-1 break-words text-text-primary">
-                  {selectedPattern?.name ??
-                    (state.pattern === null
-                      ? "Not selected"
-                      : "Selected pattern unavailable")}
-                  {state.pattern ? <span className="block text-supporting">{state.pattern.kind === "custom" ? "Custom pattern" : state.pattern.kind === "solid" ? `Solid color · ${state.pattern.color}` : "Built-in pattern"} · {previewIsComplete ? "Selected and shown" : patternIsLoading ? "Selected; loading preview" : "Selected; preview unavailable"}</span> : null}
+                <dd className="mt-1 flex min-w-0 items-center gap-2 break-words text-text-primary">
+                  {selectedPattern?.solidColor ? (
+                    <span
+                      aria-hidden="true"
+                      className="inline-block size-3 shrink-0 rounded-pill border border-border-strong forced-color-adjust-none"
+                      style={{ backgroundColor: selectedPattern.solidColor }}
+                    />
+                  ) : null}
+                  <span className="min-w-0">
+                    {selectedPattern?.name ??
+                      (state.pattern === null
+                        ? "Not selected"
+                        : "No longer available")}
+                    {state.pattern?.kind === "custom" ? <span className="block text-supporting">Your own pattern</span> : null}
+                    {state.pattern && !previewIsComplete ? <span className="block text-supporting">{patternIsLoading ? "Loading preview…" : "Preview unavailable"}</span> : null}
+                  </span>
                 </dd>
               </div>
               {dimensionDetails.map((detail) => (
@@ -311,19 +329,21 @@ function PreviewStepContent({
                   <dd className="mt-1 break-words text-text-primary">{detail.value}</dd>
                 </div>
               ))}
-              <div className="min-w-0">
-                <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                  Pattern scale
-                </dt>
-                <dd className="mt-1 break-words text-text-primary">{formattedScale}</dd>
-              </div>
+              {selectedPattern?.solidColor ? null : (
+                <div className="min-w-0">
+                  <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
+                    Pattern size
+                  </dt>
+                  <dd className="mt-1 break-words text-text-primary">{formattedScale}</dd>
+                </div>
+              )}
             </dl>
-            <p className="mt-3 hidden forced-colors:block">High-contrast settings may hide pattern colors and motifs. Use the selected pattern name and scale above as your text alternative.</p>
+            <p className="mt-3 hidden forced-colors:block">High-contrast mode may hide the pattern. Its name and size are listed above.</p>
           </>
-        }
-        controls={
+        )}
+        controls={isSummary ? undefined : (
           <div className="flex min-w-0 flex-col gap-component">
-            {selectedPattern && !selectedPattern.solidColor && showScaleControls ? (
+            {selectedPattern && !selectedPattern.solidColor ? (
               <div className="rounded-card border border-border bg-surface-subtle p-4 sm:p-5">
                 <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
                   <label
@@ -393,25 +413,12 @@ function PreviewStepContent({
                   id={scaleDescriptionId}
                   className="mt-2 break-words text-supporting text-text-muted"
                 >
-                  Adjust from {PATTERN_SCALE_MIN.toFixed(1)}× to{" "}
-                  {PATTERN_SCALE_MAX.toFixed(1)}× with the slider or buttons.
-                  Smaller values show finer motifs; larger values show bolder motifs.
-                  1.0× is the default visual scale, not actual fabric size.
-                  Pattern size changes the preview motif only, not entered cushion dimensions or demonstration pricing.
+                  From {PATTERN_SCALE_MIN.toFixed(1)}× (smaller motifs) to{" "}
+                  {PATTERN_SCALE_MAX.toFixed(1)}× (bolder motifs). 1.0× is the
+                  standard size.
                 </p>
               </div>
             ) : null}
-            <div className="space-y-4">
-              <div><h3 className="text-label font-control text-text-primary">How fit is represented</h3>
-                <p>{fitCharacter}. Fit is recorded with your design but intentionally does not reshape this reusable cushion model or alter the entered measurements. No fit allowances are calculated. Fit can affect fictional demonstration pricing.</p>
-              </div>
-              <div><h3 className="text-label font-control text-text-primary">Shown in this preview</h3>
-                <p>{patternCanBeShown ? `${selectedPattern?.solidColor ? "The selected solid fabric color" : "The selected pattern and motif scale"} on a ${definition.name.toLowerCase()} cushion outline proportioned from your measurements, with ${state.seamStyle === "piped" ? "a piped seam" : "a plain seam"}, highlights, and shadows.` : "A neutral cushion model. Choose an available fabric option to apply it without changing the model’s size or silhouette."}</p>
-              </div>
-              <div><h3 className="text-label font-control text-text-primary">Recorded in your design</h3>
-                <p>Material: {findCoverOption(materialOptions, state.materialId).name}. Fabric feel and drape are not simulated. Closure / access: {findCoverOption(closureOptions, state.closureType).name}; not visible from this view. Construction details and fit are recorded without changing the reusable model.</p>
-              </div>
-            </div>
 
             {onEdit ? <nav aria-label="Adjust this preview" className="grid gap-3 sm:flex sm:flex-wrap">
               <Button variant="secondary" onClick={() => onEdit("measurements")}>Edit measurements</Button>
@@ -419,9 +426,13 @@ function PreviewStepContent({
               <Button variant="secondary" onClick={() => onEdit("pattern")}>Change pattern</Button>
             </nav> : null}
           </div>
-        }
+        )}
         description={
-          <p className={noticeClasses("prototype")}>Illustrative preview only, not a manufacturing specification. It does not calculate seam allowances or cutting instructions, and cannot guarantee color, texture, scale, fit, or finished appearance. Not every saved setting is visually represented.</p>
+          isSummary ? (
+            <p>{statusText}</p>
+          ) : (
+            <p className={noticeClasses("prototype")}>Illustrative preview. The finished cover&apos;s colour, pattern size and fit may differ.</p>
+          )
         }
       />
     </section>

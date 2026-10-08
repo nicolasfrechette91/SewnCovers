@@ -1137,8 +1137,6 @@ body {
   min-height: 12rem;
   align-items: center;
   justify-content: center;
-  /* Keeps the silhouette clear of the "Illustrative preview" tag. */
-  padding-bottom: 1.75rem;
   isolation: isolate;
 }
 
@@ -1236,21 +1234,6 @@ body {
   stroke-width: 1.5;
 }
 
-.cushion-preview-label {
-  position: absolute;
-  right: 0.5rem;
-  bottom: 0.35rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control-small);
-  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
-  padding: 0.25rem 0.5rem;
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--text-eyebrow);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-}
-
 @media (max-width: 40rem) {
   .cushion-preview-product-stage {
     min-height: 10rem;
@@ -1275,6 +1258,11 @@ body {
 
 .review-preview > section {
   margin-top: 0;
+}
+
+/* A swatch shows the customer's own colour, so high-contrast mode keeps it. */
+.summary-swatch {
+  forced-color-adjust: none;
 }
 
 /* 8. Accessibility --------------------------------------------------------- */
@@ -1503,8 +1491,14 @@ body {
     color: #000 !important;
   }
 
-  .configuration-review-screen :where(h2, h3, p, dt, dd) {
+  .configuration-review-screen :where(h1, h2, h3, p, dt, dd) {
     color: #000 !important;
+  }
+
+  /* The chosen colour is part of the printed record, so keep its swatch. */
+  .summary-swatch {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 
   .configuration-review-title,

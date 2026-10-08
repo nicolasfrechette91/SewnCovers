@@ -33,6 +33,7 @@ import {
   reloadDraftFromStorage,
   writeDraft,
 } from "../services/configurator-draft";
+import { resetUploadAvailability } from "../services/upload-availability";
 
 const configuration: CreateDesignRequest = {
   shape: "tapered",
@@ -64,6 +65,7 @@ const projectConfiguration: ProjectConfigurationRequest = {
 
 afterEach(() => {
   cleanup();
+  resetUploadAvailability();
   window.sessionStorage.clear();
   window.localStorage.clear();
   reloadDraftFromStorage();
@@ -86,6 +88,16 @@ function SignInForTest({ children }: Readonly<{ children: React.ReactNode }>) {
 
 function json(value: unknown, status = 200): Response {
   return new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
+}
+
+// Answers the Pattern stage's upload-availability question, then defers to
+// the test's own API double.
+function withUploadAvailability(enabled: boolean, next?: typeof fetch): typeof fetch {
+  return async (input, init) => {
+    if (String(input).endsWith("/uploads/availability")) return json({ enabled });
+    if (next) return next(input, init);
+    throw new Error(`Unexpected request ${String(input)}`);
+  };
 }
 
 function uploadState(state: string, index: number) {
@@ -271,22 +283,31 @@ async function signInInline(button: string) {
 }
 
 test("offers private saving to guests as an optional inline step", async () => {
-  render(<AuthProvider><PrivateProjectPanel configuration={configurationState} onSavingChange={() => undefined} /></AuthProvider>);
-  await screen.findByRole("heading", { name: "Save to a private project" });
-  assert.ok(screen.getByText(/separate from the public design link/));
-  await screen.findByText(/need an account/);
+  const suggested = "Tapered / trapezoid cushion, Terrace wave";
+  render(<AuthProvider><PrivateProjectPanel configuration={configurationState} defaultName={suggested} /></AuthProvider>);
+  await screen.findByRole("heading", { name: "Save to My projects" });
+  assert.ok(screen.getByText(/Only you can see it unless you share it/));
+  await screen.findByText(/asked to sign in or create an account next/);
   assert.equal(screen.queryByRole("link", { name: /sign in/i }), null);
+  assert.equal((screen.getByLabelText("Project name") as HTMLInputElement).value, suggested);
 
-  fireEvent.click(screen.getByRole("button", { name: "Create private project" }));
-  assert.ok(screen.getByText("Enter a project name."));
-  await waitFor(() => assert.equal(document.activeElement, screen.getByLabelText("Project name")));
+  // A guest goes straight to sign-in; no name has to be typed first.
+  fireEvent.click(screen.getByRole("button", { name: "Save and add to cart" }));
+  const cartHeading = await screen.findByRole("heading", { name: "Sign in to add this design to your cart" });
+  await waitFor(() => assert.equal(document.activeElement, cartHeading));
+  assert.equal(screen.queryByText("Enter a project name."), null);
+  assert.equal(JSON.parse(window.sessionStorage.getItem("sewncovers.pending-account-action") ?? "{}").name, suggested);
+  fireEvent.click(screen.getByRole("button", { name: "Continue as guest" }));
+  const cart = await screen.findByRole("button", { name: "Save and add to cart" });
+  await waitFor(() => assert.equal(document.activeElement, cart));
 
-  fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Patio bench" } });
-  fireEvent.click(screen.getByRole("button", { name: "Create private project" }));
+  // An emptied name falls back to the suggestion instead of stopping.
+  fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "  " } });
+  fireEvent.click(screen.getByRole("button", { name: "Save to My projects" }));
   const heading = await screen.findByRole("heading", { name: "Sign in to save this design" });
   await waitFor(() => assert.equal(document.activeElement, heading));
-  assert.ok(screen.getByText(/My projects are private to an account/));
-  assert.ok(window.sessionStorage.getItem("sewncovers.pending-account-action"));
+  assert.ok(screen.getByText(/Projects are kept in your account/));
+  assert.equal(JSON.parse(window.sessionStorage.getItem("sewncovers.pending-account-action") ?? "{}").name, suggested);
 
   fireEvent.click(screen.getByRole("button", { name: "Create an account instead" }));
   await screen.findByRole("heading", { name: "Create an account to save this design" });
@@ -294,9 +315,17 @@ test("offers private saving to guests as an optional inline step", async () => {
   assert.ok(screen.getByRole("button", { name: "Create account and save" }));
 
   fireEvent.click(screen.getByRole("button", { name: "Continue as guest" }));
-  const save = await screen.findByRole("button", { name: "Create private project" });
+  const save = await screen.findByRole("button", { name: "Save to My projects" });
   await waitFor(() => assert.equal(document.activeElement, save));
   assert.equal(window.sessionStorage.getItem("sewncovers.pending-account-action"), null);
+});
+
+test("still asks for a name when there is nothing to suggest", async () => {
+  render(<AuthProvider><PrivateProjectPanel configuration={configurationState} /></AuthProvider>);
+  await screen.findByText(/asked to sign in or create an account next/);
+  fireEvent.click(screen.getByRole("button", { name: "Save to My projects" }));
+  assert.ok(screen.getByText("Enter a project name."));
+  await waitFor(() => assert.equal(document.activeElement, screen.getByLabelText("Project name")));
 });
 
 test("signs in at save, saves the design once, and links the draft to the project", async () => {
@@ -323,7 +352,7 @@ test("signs in at save, saves the design once, and links the draft to the projec
   try {
     const view = render(<AuthProvider><PrivateProjectPanel configuration={configurationState} onSavingChange={() => undefined} /></AuthProvider>);
     fireEvent.change(await screen.findByLabelText("Project name"), { target: { value: "Patio bench" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create private project" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save to My projects" }));
     await signInInline("Sign in and save");
 
     const status = await screen.findByText("Private project created with version 1.");
@@ -340,7 +369,7 @@ test("signs in at save, saves the design once, and links the draft to the projec
     await screen.findByText(/This design matches version 1, the current version/);
     assert.ok(screen.getByRole("heading", { name: "Saved to My projects" }));
     assert.ok(screen.getByText(/This design is saved as “Patio bench”/));
-    assert.equal(screen.queryByRole("button", { name: /Create private project|Save as new version/ }), null);
+    assert.equal(screen.queryByRole("button", { name: /Save to My projects|Save as new version/ }), null);
     assert.equal(projectPosts, 1);
   } finally {
     globalThis.fetch = originalFetch;
@@ -393,19 +422,114 @@ test("adds a design to the cart once after sign-in, even when asked again", asyn
 });
 
 test("offers private custom patterns to guests as an optional inline step", async () => {
-  render(<AuthProvider><ConfigurationProvider><YourPatterns /></ConfigurationProvider></AuthProvider>);
-  const upload = await screen.findByRole("button", { name: "Upload your own pattern" });
-  assert.ok(screen.getByRole("heading", { name: "Your patterns" }));
-  assert.ok(screen.getByText(/Uploading your own image needs an account/));
-  assert.equal(screen.queryByRole("link", { name: /sign in/i }), null);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = withUploadAvailability(true);
+  try {
+    render(<AuthProvider><ConfigurationProvider><YourPatterns /></ConfigurationProvider></AuthProvider>);
+    const upload = await screen.findByRole("button", { name: "Upload your own pattern" });
+    assert.ok(screen.getByRole("heading", { level: 2, name: "Your patterns" }));
+    assert.ok(screen.getByText(/Upload your own image to use as a pattern/));
+    assert.equal(screen.queryByRole("link", { name: /sign in/i }), null);
 
-  fireEvent.click(upload);
-  await screen.findByRole("heading", { name: "Sign in to upload your own pattern" });
-  assert.ok(screen.getByText(/Uploads stay private to an account/));
-  fireEvent.click(screen.getByRole("button", { name: "Continue with built-in patterns" }));
-  const reopened = await screen.findByRole("button", { name: "Upload your own pattern" });
-  await waitFor(() => assert.equal(document.activeElement, reopened));
+    fireEvent.click(upload);
+    await screen.findByRole("heading", { level: 3, name: "Sign in to upload your own pattern" });
+    assert.ok(screen.getByText(/Your uploads are private to your account/));
+    fireEvent.click(screen.getByRole("button", { name: "Continue with our patterns" }));
+    const reopened = await screen.findByRole("button", { name: "Upload your own pattern" });
+    await waitFor(() => assert.equal(document.activeElement, reopened));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
+
+test("does not offer uploads, or their sign-in, when uploads are disabled", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: string[] = [];
+  globalThis.fetch = withUploadAvailability(false, async (input, init) => {
+    const url = String(input);
+    requests.push(`${init?.method ?? "GET"} ${url}`);
+    if (url.endsWith("/auth/login")) return json({ account: { email: "patterns@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" }, token: "S".repeat(43), expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
+    if (url.endsWith("/account")) return json({ email: "patterns@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" });
+    if (url.endsWith("/account/sessions")) return json([]);
+    throw new Error(`Unexpected request ${url}`);
+  });
+  try {
+    const guest = render(<AuthProvider><ConfigurationProvider><YourPatterns /></ConfigurationProvider></AuthProvider>);
+    await screen.findByText("Custom uploads aren't enabled in this demo.");
+    assert.ok(screen.getByRole("heading", { level: 2, name: "Your patterns" }));
+    assert.equal(screen.queryByRole("button", { name: "Upload your own pattern" }), null);
+    assert.equal(screen.queryByRole("heading", { name: /Sign in to upload/ }), null);
+    guest.unmount();
+
+    render(<AuthProvider><SignInForTest><ConfigurationProvider><YourPatterns /></ConfigurationProvider></SignInForTest></AuthProvider>);
+    fireEvent.click(await screen.findByRole("button", { name: "Enter test account" }));
+    await screen.findByText("Custom uploads aren't enabled in this demo.");
+    assert.equal(screen.queryByLabelText("Choose a pattern image"), null);
+    // Signed in, the upload list is not even requested.
+    assert.equal(requests.some((request) => request.endsWith("/uploads")), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+// Nothing upload-related is on screen: no upload, no sign-in, no "off" claim.
+function expectNoUploadOffer() {
+  assert.equal(screen.queryByRole("button", { name: "Upload your own pattern" }), null);
+  assert.equal(screen.queryByRole("heading", { name: /upload your own pattern/i }), null);
+  assert.equal(screen.queryByRole("heading", { name: "Your patterns" }), null);
+  assert.equal(screen.queryByText(/Custom uploads aren't enabled/), null);
+}
+
+test("offers nothing while availability is still unanswered, then follows the answer", async () => {
+  const originalFetch = globalThis.fetch;
+  let answer!: (response: Response) => void;
+  let asked = 0;
+  globalThis.fetch = async (input) => {
+    if (String(input).endsWith("/uploads/availability")) {
+      asked += 1;
+      return new Promise<Response>((resolve) => { answer = resolve; });
+    }
+    throw new Error(`Unexpected request ${String(input)}`);
+  };
+  try {
+    render(<AuthProvider><ConfigurationProvider><YourPatterns /></ConfigurationProvider></AuthProvider>);
+    await waitFor(() => assert.equal(asked, 1));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 200)); });
+    expectNoUploadOffer();
+
+    await act(async () => { answer(json({ enabled: true })); });
+    assert.ok(await screen.findByRole("button", { name: "Upload your own pattern" }));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+for (const [failure, respond] of [
+  ["an error response", () => json({ errors: [{ code: "service_unavailable", message: "Unavailable.", location: ["service"] }] }, 503)],
+  ["a network failure", () => { throw new TypeError("Failed to fetch"); }],
+  ["a malformed answer", () => json({ enabled: "yes" })],
+] as const) {
+  test(`fails closed when availability ends in ${failure}`, async () => {
+    const originalFetch = globalThis.fetch;
+    let asked = 0;
+    globalThis.fetch = async (input) => {
+      if (String(input).endsWith("/uploads/availability")) {
+        asked += 1;
+        return respond();
+      }
+      throw new Error(`Unexpected request ${String(input)}`);
+    };
+    try {
+      render(<AuthProvider><ConfigurationProvider><YourPatterns /></ConfigurationProvider></AuthProvider>);
+      await waitFor(() => assert.ok(asked >= 1));
+      // Let the client finish any retries and settle on its answer.
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 2_000)); });
+      expectNoUploadOffer();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+}
 
 test("shows every Task 10.1 field in a read-only version summary", () => {
   render(<AuthProvider><ConfigurationReadonly configuration={projectConfiguration} /></AuthProvider>);
@@ -417,7 +541,7 @@ test("shows every Task 10.1 field in a read-only version summary", () => {
   assert.ok(screen.getByText(/Read-only preview/));
 });
 
-test("shows a saved solid fabric with a bordered swatch and hexadecimal text", () => {
+test("shows a saved solid fabric as a swatch, without the colour code", () => {
   render(
     <AuthProvider>
       <ConfigurationReadonly
@@ -428,7 +552,8 @@ test("shows a saved solid fabric with a bordered swatch and hexadecimal text", (
       />
     </AuthProvider>,
   );
-  assert.ok(screen.getByText("Solid color · #F5F2EB"));
+  assert.ok(screen.getAllByText("Solid colour").length > 0);
+  assert.equal(document.body.textContent?.includes("#F5F2EB"), false);
   assert.ok(document.querySelector('[data-solid-color="#F5F2EB"]'));
 });
 
@@ -447,7 +572,7 @@ test("shows every custom upload lifecycle state and selects only approved assets
   const originalPrompt = window.prompt;
   const requests: string[] = [];
   const states = ["awaiting_upload", "uploaded", "processing", "awaiting_moderation", "approved", "rejected", "failed", "deleted", "expired"].map(uploadState);
-  globalThis.fetch = async (input, init) => {
+  globalThis.fetch = withUploadAvailability(true, async (input, init) => {
     const url = String(input); const method = init?.method ?? "GET"; requests.push(`${method} ${url}`);
     if (url.endsWith("/auth/login")) return json({ account: { email: "patterns@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" }, token: "S".repeat(43), expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
     if (url.endsWith("/account/sessions")) return json([{ id: 1, createdAt: "2026-08-18T00:00:00Z", expiresAt: "2099-08-18T00:00:00Z", revokedAt: null, current: true }]);
@@ -459,7 +584,7 @@ test("shows every custom upload lifecycle state and selects only approved assets
     if (method === "PATCH") return json({ ...states[4], label: "Renamed pattern" });
     if (method === "DELETE") return json({ id: states[4].id, state: "deleted", referencedByVersions: 2 });
     throw new Error(`Unexpected request ${method} ${url}`);
-  };
+  });
   window.confirm = () => false;
   window.prompt = () => "Renamed pattern";
   try {
@@ -494,14 +619,14 @@ test("validates the accessible file control and shows a local repeat preview", a
   Object.defineProperty(globalThis, "Image", { configurable: true, value: PreviewImage });
   Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:local-pattern" });
   Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: () => undefined });
-  globalThis.fetch = async (input) => {
+  globalThis.fetch = withUploadAvailability(true, async (input) => {
     const url = String(input);
     if (url.endsWith("/auth/login")) return json({ account: { email: "preview@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" }, token: "Q".repeat(43), expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
     if (url.endsWith("/account")) return json({ email: "preview@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" });
     if (url.endsWith("/account/sessions")) return json([]);
     if (url.endsWith("/uploads")) return json([]);
     throw new Error(`Unexpected request GET ${url}`);
-  };
+  });
   try {
     render(<AuthProvider><SignInForTest><ConfigurationProvider><YourPatterns /></ConfigurationProvider></SignInForTest></AuthProvider>);
     fireEvent.click(await screen.findByRole("button", { name: "Enter test account" }));
@@ -536,12 +661,12 @@ test("revokes a temporary upload URL when image decoding fails", async () => {
   Object.defineProperty(globalThis, "Image", { configurable: true, value: FailedPreviewImage });
   Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => "blob:failed-pattern" });
   Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: (url: string) => revoked.push(url) });
-  globalThis.fetch = async (input) => {
+  globalThis.fetch = withUploadAvailability(true, async (input) => {
     const url = String(input);
     if (url.endsWith("/auth/login")) return json({ account: { email: "preview@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" }, token: "Q".repeat(43), expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
     if (url.endsWith("/uploads")) return json([]);
     throw new Error(`Unexpected request GET ${url}`);
-  };
+  });
   try {
     render(<AuthProvider><SignInForTest><ConfigurationProvider><YourPatterns /></ConfigurationProvider></SignInForTest></AuthProvider>);
     fireEvent.click(await screen.findByRole("button", { name: "Enter test account" }));
@@ -580,12 +705,12 @@ test("revokes replaced, stale, and unmounted upload previews exactly once", asyn
   Object.defineProperty(globalThis, "Image", { configurable: true, value: PendingPreviewImage });
   Object.defineProperty(URL, "createObjectURL", { configurable: true, value: () => `blob:pattern-${++urlSequence}` });
   Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: (url: string) => revoked.push(url) });
-  globalThis.fetch = async (input) => {
+  globalThis.fetch = withUploadAvailability(true, async (input) => {
     const url = String(input);
     if (url.endsWith("/auth/login")) return json({ account: { email: "preview@example.com", createdAt: "2026-08-18T00:00:00Z", role: "customer" }, token: "Q".repeat(43), expiresAt: new Date(Date.now() + 3_600_000).toISOString() });
     if (url.endsWith("/uploads")) return json([]);
     throw new Error(`Unexpected request GET ${url}`);
-  };
+  });
   try {
     const view = render(<AuthProvider><SignInForTest><ConfigurationProvider><YourPatterns /></ConfigurationProvider></SignInForTest></AuthProvider>);
     fireEvent.click(await screen.findByRole("button", { name: "Enter test account" }));

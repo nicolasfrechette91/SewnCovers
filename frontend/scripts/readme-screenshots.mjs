@@ -42,18 +42,19 @@ const check = (radio) => expect(radio).toBeChecked();
 const sizeBudget = { perImageBytes: 150 * 1024, totalBytes: 600 * 1024 };
 
 // The exact catalogue the production API serves, from
-// backend/migrations/versions/20260729_01_seed_canonical_patterns.py.
+// backend/migrations/versions/20260729_01_seed_canonical_patterns.py, with
+// the names revision 20261007_02 gave four of them.
 const patterns = [
-  ["prototype-botanical", "Botanical sample", "An organic, leaf-inspired prototype direction.", "botanical", ["ivory", "green", "terracotta"], "prototype-pattern-botanical"],
+  ["prototype-botanical", "Seed scatter", "Green and terracotta seeds scattered over a light ground.", "botanical", ["ivory", "green", "terracotta"], "prototype-pattern-botanical"],
   ["fern-trail", "Fern trail", "Layered fronds arranged along a gentle diagonal trail.", "botanical", ["ivory", "green"], "pattern-fern-trail"],
   ["meadow-sprig", "Meadow sprig", "Small branching sprigs scattered across an open ground.", "botanical", ["ivory", "blue", "gold"], "pattern-meadow-sprig"],
-  ["prototype-geometric", "Geometric sample", "A warm, structured prototype direction.", "geometric", ["ivory", "green", "terracotta"], "prototype-pattern-geometric"],
+  ["prototype-geometric", "Harlequin", "Green and terracotta triangles in a bold harlequin check.", "geometric", ["ivory", "green", "terracotta"], "prototype-pattern-geometric"],
   ["diamond-path", "Diamond path", "Nested diamonds repeat in crisp offset rows.", "geometric", ["ivory", "blue", "charcoal"], "pattern-diamond-path"],
   ["arch-grid", "Arch grid", "Rounded arches alternate within a compact tiled grid.", "geometric", ["ivory", "terracotta", "gold"], "pattern-arch-grid"],
-  ["harbor-stripe", "Harbor stripe", "Broad blue bands alternate with fine light pinstripes.", "striped", ["ivory", "blue"], "pattern-harbor-stripe"],
+  ["harbor-stripe", "Harbour stripe", "Broad blue bands alternate with fine light pinstripes.", "striped", ["ivory", "blue"], "pattern-harbor-stripe"],
   ["orchard-stripe", "Orchard stripe", "Uneven green and gold lines form a relaxed rhythm.", "striped", ["ivory", "green", "gold"], "pattern-orchard-stripe"],
   ["ribbon-stripe", "Ribbon stripe", "Slim rose bands cross wider terracotta ribbons.", "striped", ["ivory", "terracotta", "rose"], "pattern-ribbon-stripe"],
-  ["prototype-woven", "Woven sample", "A quiet, small-scale prototype direction.", "woven", ["ivory", "charcoal"], "prototype-pattern-woven"],
+  ["prototype-woven", "Fine weave", "A fine, quiet grid of crossing threads.", "woven", ["ivory", "charcoal"], "prototype-pattern-woven"],
   ["basket-check", "Basket check", "Alternating blocks suggest an oversized basket weave.", "woven", ["ivory", "blue", "charcoal"], "pattern-basket-check"],
   ["linen-crosshatch", "Linen crosshatch", "Fine crossing lines create a loose textured grid.", "woven", ["ivory", "gold"], "pattern-linen-crosshatch"],
   ["terrace-wave", "Terrace wave", "Layered waves move in alternating cool bands.", "abstract", ["ivory", "green", "blue"], "pattern-terrace-wave"],
@@ -212,6 +213,9 @@ async function isolateContext(context, problems) {
       await json({ database: "healthy", process: "healthy" });
     } else if (request.method() === "GET" && pathname === "/patterns") {
       await json(patterns);
+    } else if (request.method() === "GET" && pathname === "/uploads/availability") {
+      // As in production: custom uploads are off.
+      await json({ enabled: false });
     } else {
       problems.push(`unexpected API call ${request.method()} ${pathname}`);
       await json({ errors: [] }, 404);
@@ -221,7 +225,7 @@ async function isolateContext(context, problems) {
 
 // Text that would mean a transient or failed state ended up in a capture.
 const transientText =
-  /\bLoading\b|Connecting to|unavailable|could not be|Neutral cushion shown|Picked up where/i;
+  /\bLoading\b|Connecting to|unavailable|could not be|couldn't be|No fabric shown yet|Picked up where/i;
 
 async function settle(page, name) {
   await page.evaluate(async () => {
@@ -416,15 +420,15 @@ async function captureAll(browser) {
     // focus to each new stage; wait for that so it cannot scroll a capture.
     log("pattern stage");
     await expect(
-      page.getByText("Choose fabric color or pattern", { exact: true }),
+      page.getByRole("heading", { level: 1, name: "Choose a colour or pattern" }),
     ).toBeFocused();
-    await page.getByText("Showing 6 of 15 patterns.").waitFor();
+    await page.getByText("15 patterns", { exact: true }).waitFor();
     await page.getByText(design.pattern, { exact: true }).click();
     await check(page.getByRole("radio", { name: design.pattern }));
     written.push(
       await capture(page, "pattern", {
         height: 960,
-        scrollTo: page.getByRole("heading", { name: "Built-in patterns" }),
+        scrollTo: page.getByRole("heading", { exact: true, name: "Patterns" }),
       }),
     );
 
@@ -432,7 +436,7 @@ async function captureAll(browser) {
     log("preview stage");
     await page.getByRole("button", { name: "Continue to Preview" }).click();
     await expect(page.getByRole("slider", { name: "Pattern size" })).toBeFocused();
-    await page.getByText("Selected fabric shown on the cushion").waitFor();
+    await page.getByText("Fern trail on your rectangle cushion").first().waitFor();
     written.push(
       await capture(page, "preview", {
         scrollTo: page.getByRole("heading", {
@@ -445,11 +449,11 @@ async function captureAll(browser) {
     log("review stage");
     await page.getByRole("button", { name: "Continue to Review" }).click();
     const reviewTitle = page.getByRole("heading", {
-      level: 2,
+      level: 1,
       name: "SewnCovers configuration summary",
     });
     await expect(reviewTitle).toBeFocused();
-    await page.getByText("Selected fabric shown on the cushion").waitFor();
+    await page.getByText("Fern trail on your rectangle cushion").waitFor();
     written.push(
       await capture(page, "review", {
         height: 900,

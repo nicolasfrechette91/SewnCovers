@@ -115,6 +115,14 @@ class AssetAccessResponse(BaseModel):
     content_type: Literal["image/png"] = Field(alias="contentType")
 
 
+class UploadAvailabilityResponse(BaseModel):
+    """Whether this deployment accepts custom pattern uploads at all."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    enabled: bool
+
+
 class DeletedUploadResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
 

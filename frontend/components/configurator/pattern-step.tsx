@@ -3,7 +3,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { PatternCard } from "@/components/configurator/pattern-card";
-import { CushionModel } from "@/components/configurator/cushion-model";
 import {
   PatternFilter,
   type PatternFilterOption,
@@ -40,13 +39,16 @@ import {
   type PatternFilters,
 } from "@/data/patterns";
 import type { PatternCatalogueState } from "@/services/pattern-catalogue";
+
+import { FabricPreview } from "./fabric-preview";
+import type { SelectedPatternPresentation } from "./preview-step";
 import { YourPatterns } from "./your-patterns";
 
 const categoryFilterOptions: readonly PatternFilterOption<PatternCategoryFilter>[] =
   [
     {
       value: ALL_PATTERN_CATEGORIES,
-      label: "All categories",
+      label: "All styles",
     },
     ...patternCategories.map((category) => ({
       value: category.id,
@@ -58,7 +60,7 @@ const colorFilterOptions: readonly PatternFilterOption<PatternColorFilter>[] =
   [
     {
       value: ALL_PATTERN_COLORS,
-      label: "All colors",
+      label: "All colours",
     },
     ...patternColors.map((color) => ({
       value: color.id,
@@ -66,7 +68,10 @@ const colorFilterOptions: readonly PatternFilterOption<PatternColorFilter>[] =
     })),
   ];
 
-export const INITIAL_PATTERN_RESULT_LIMIT = 6;
+// Two columns from 360 px keep all fifteen patterns within easy reach on a
+// phone; one column below that keeps the cards readable at 320 px.
+const patternGridClasses =
+  "grid min-w-0 gap-3 min-[360px]:grid-cols-2 sm:gap-4 xl:grid-cols-3";
 
 function normalizePatternSearch(value: string): string {
   return value.trim().toLocaleLowerCase();
@@ -95,6 +100,8 @@ export interface PatternStepProps {
   focusTargetId?: string;
   onFiltersChange: (filters: PatternFilters) => void;
   onRetry: () => void;
+  /** The chosen fabric as the live preview draws it; null before a choice. */
+  selectedFabric?: SelectedPatternPresentation | null;
 }
 
 export function PatternStep({
@@ -102,17 +109,14 @@ export function PatternStep({
   focusTargetId,
   onFiltersChange,
   onRetry,
+  selectedFabric = null,
 }: PatternStepProps) {
   const { state, dispatch } = useConfiguration();
   const generatedId = useId();
   const supportingTextId = `${generatedId}-supporting-text`;
   const resultCountId = `${generatedId}-result-count`;
-  const resultAnnouncementId = `${generatedId}-result-announcement`;
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAllMatchingPatterns, setShowAllMatchingPatterns] =
-    useState(false);
-  const [resultAnnouncement, setResultAnnouncement] = useState("");
   const solidColor = getSolidColor(state.pattern);
   const [solidColorDraft, setSolidColorDraft] = useState(
     solidColor ?? DEFAULT_SOLID_COLOR,
@@ -133,13 +137,6 @@ export function PatternStep({
       ),
     [catalogue.visiblePatterns, normalizedSearchQuery],
   );
-  const displayedPatterns = showAllMatchingPatterns
-    ? matchingPatterns
-    : matchingPatterns.slice(0, INITIAL_PATTERN_RESULT_LIMIT);
-  const undisclosedPatternCount =
-    matchingPatterns.length - displayedPatterns.length;
-  const canTogglePatternDisclosure =
-    matchingPatterns.length > INITIAL_PATTERN_RESULT_LIMIT;
   const builtInPatternId = getBuiltInPatternId(state.pattern);
   const selectedPattern = getPatternById(
     catalogue.allPatterns,
@@ -150,36 +147,29 @@ export function PatternStep({
   const selectedPatternMatchesCriteria =
     selectedPattern !== null &&
     matchingPatterns.some((pattern) => pattern.id === selectedPattern.id);
-  const selectedPatternIsDisplayed =
-    selectedPattern !== null &&
-    displayedPatterns.some((pattern) => pattern.id === selectedPattern.id);
   const selectedPatternIsHiddenByCriteria =
     selectedPattern !== null &&
     catalogueIsSettled &&
     !selectedPatternMatchesCriteria;
-  const selectedPatternIsUndisclosed =
-    selectedPattern !== null &&
-    catalogueIsSettled &&
-    selectedPatternMatchesCriteria &&
-    !selectedPatternIsDisplayed;
   const selectedPatternIsUnavailable =
     hasCompleteCatalogue &&
     builtInPatternId !== null &&
     selectedPattern === null;
 
+  // Every pattern is always shown; the count changes only with the search
+  // and filters. One line is both the visible count and the live status.
   const resultCountMessage =
     catalogue.phase === "loading"
       ? catalogue.message
       : catalogue.phase === "error"
-        ? "Pattern results could not be loaded."
+        ? "Patterns couldn't be loaded."
         : discoveryCriteriaAreActive
-          ? displayedPatterns.length === matchingPatterns.length
-            ? `${matchingPatterns.length} of ${catalogue.allPatterns.length} patterns match. Showing all matches.`
-            : `${matchingPatterns.length} of ${catalogue.allPatterns.length} patterns match. Showing ${displayedPatterns.length}.`
-          : displayedPatterns.length === catalogue.allPatterns.length
-            ? `Showing all ${catalogue.allPatterns.length} patterns.`
-            : `Showing ${displayedPatterns.length} of ${catalogue.allPatterns.length} patterns.`;
+          ? `${matchingPatterns.length} of ${catalogue.allPatterns.length} patterns match`
+          : `${catalogue.allPatterns.length} patterns`;
+  const [resultAnnouncement, setResultAnnouncement] =
+    useState(resultCountMessage);
 
+  // Settles after typing pauses, so each keystroke isn't announced.
   useEffect(() => {
     const timer = globalThis.setTimeout(() => {
       setResultAnnouncement(resultCountMessage);
@@ -203,7 +193,6 @@ export function PatternStep({
 
   const clearDiscoveryCriteria = () => {
     setSearchQuery("");
-    setShowAllMatchingPatterns(false);
     if (filtersAreActive) {
       onFiltersChange({
         categoryId: ALL_PATTERN_CATEGORIES,
@@ -217,11 +206,9 @@ export function PatternStep({
 
   const updateSearchQuery = (value: string) => {
     setSearchQuery(value);
-    setShowAllMatchingPatterns(false);
   };
 
   const updateFilters = (filters: PatternFilters) => {
-    setShowAllMatchingPatterns(false);
     onFiltersChange(filters);
   };
 
@@ -238,9 +225,7 @@ export function PatternStep({
     setSolidColorDraft(value);
     const normalized = normalizeHexColor(value);
     if (normalized === null) {
-      setSolidColorError(
-        "Enter a six-digit hexadecimal color, such as #B8AFA3.",
-      );
+      setSolidColorError("Enter a six-digit colour code, such as #B8AFA3.");
       return;
     }
     setSolidColorError(null);
@@ -258,20 +243,14 @@ export function PatternStep({
     }
   };
 
+  // The catalogue's contract issues are for developers, not customers.
   const errorState = (
     <ErrorMessage className="mt-component">
       <div>
         <h3 className="text-body font-control">
-          Pattern catalogue unavailable
+          Patterns couldn&apos;t be loaded
         </h3>
         <p className="mt-1">{catalogue.message}</p>
-        {catalogue.issues.length > 0 ? (
-          <ul className="mt-2 list-disc pl-5">
-            {catalogue.issues.map((issue) => (
-              <li key={issue}>{issue}</li>
-            ))}
-          </ul>
-        ) : null}
         <Button className="mt-3" variant="secondary" onClick={onRetry}>
           Try loading patterns again
         </Button>
@@ -288,39 +267,39 @@ export function PatternStep({
         aria-describedby={supportingTextId}
         className="fieldset-panel min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline"
       >
-        <legend
-          id={focusTargetId}
-          tabIndex={focusTargetId ? -1 : undefined}
-          className="configurator-edit-target max-w-full scroll-mt-layout pb-2 font-display text-section-title font-heading tracking-heading text-text-primary"
-        >
-          Choose fabric color or pattern
+        <legend className="max-w-full pb-2">
+          <h1
+            id={focusTargetId}
+            tabIndex={focusTargetId ? -1 : undefined}
+            className="configurator-edit-target scroll-mt-layout font-display text-section-title font-heading tracking-heading text-text-primary"
+          >
+            Choose a colour or pattern
+          </h1>
         </legend>
         <p
           id={supportingTextId}
           className="mt-2 max-w-3xl break-words text-body text-text-muted"
         >
-          This choice is required. Choose a plain fabric color, one of your
-          private patterns, or a built-in pattern. Pattern scale can be
-          adjusted in the preview when a printed pattern is selected.
+          Pick a plain colour or one of our patterns. You can change the
+          pattern size on the next step.
         </p>
+        {/* From lg this preview sits in the side column instead. */}
+        <FabricPreview
+          className="mt-component lg:hidden"
+          fabric={selectedFabric}
+        />
 
         <StitchDivider className="mt-component" />
-        <h3 className={`mt-component ${cardTitleClasses}`}>Plain fabric</h3>
-        <p className="mt-2 max-w-3xl break-words text-supporting text-text-muted">
-          Solid color stays available independently of pattern search and
-          filters.
-        </p>
-        <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <h2 className={`mt-component ${cardTitleClasses}`}>Plain colour</h2>
+        <div className={`mt-4 ${patternGridClasses}`}>
           <PatternCard
             id={`${generatedId}-solid-color`}
             name="solid-fabric-choice"
             value="solid-color"
             required
             checked={solidColor !== null}
-            patternName="Solid color"
-            patternCategory="Plain fabric"
-            patternColors={solidColor ?? DEFAULT_SOLID_COLOR}
-            description="Use one continuous fabric color across the cushion."
+            patternName="Solid colour"
+            description="One colour all over. Pick any shade."
             preview={
               <span
                 className="cushion-preview-solid block h-3/5 w-4/5 rounded-panel border border-border-strong shadow-card"
@@ -338,19 +317,19 @@ export function PatternStep({
             role="group"
             aria-labelledby={`${generatedId}-solid-color-heading`}
           >
-            <h4
+            <h3
               id={`${generatedId}-solid-color-heading`}
               className="text-subhead font-control text-text-primary"
             >
-              Choose your fabric color
-            </h4>
+              Pick your colour
+            </h3>
             <div className="mt-3 grid min-w-0 gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-end">
               <div>
                 <label
                   htmlFor={`${generatedId}-native-color`}
                   className={`block ${fieldLabelClasses}`}
                 >
-                  Fabric color picker
+                  Colour
                 </label>
                 <input
                   id={`${generatedId}-native-color`}
@@ -367,7 +346,7 @@ export function PatternStep({
                   htmlFor={`${generatedId}-hex-color`}
                   className={`block ${fieldLabelClasses}`}
                 >
-                  Hexadecimal color
+                  Colour code
                 </label>
                 <input
                   id={`${generatedId}-hex-color`}
@@ -391,8 +370,7 @@ export function PatternStep({
               id={`${generatedId}-hex-help`}
               className="mt-2 text-supporting text-text-muted"
             >
-              Enter six hexadecimal digits. The saved value is normalized to
-              uppercase, including the leading #.
+              For an exact shade, type its six-digit code, such as #B8AFA3.
             </p>
             {solidColorError ? (
               <p
@@ -403,26 +381,8 @@ export function PatternStep({
                 {solidColorError}
               </p>
             ) : null}
-            <figure className="cutting-mat mt-4 rounded-card border border-border p-3">
-              <div aria-hidden="true" className="mx-auto max-w-xl">
-                <CushionModel
-                  patternName="Solid color"
-                  patternScale={state.patternScale}
-                  seamStyle={state.seamStyle}
-                  solidColor={solidColor}
-                  shape={state.shape}
-                  width={state.width}
-                  height={state.height}
-                  backWidth={state.backWidth}
-                  thickness={state.thickness}
-                />
-              </div>
-              <figcaption className="text-center font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                Live cushion preview · Solid color {solidColor}
-              </figcaption>
-            </figure>
             <p className="sr-only" role="status" aria-live="polite">
-              Solid fabric color {solidColor} selected.
+              Solid colour selected.
             </p>
           </div>
         ) : null}
@@ -430,13 +390,7 @@ export function PatternStep({
         <YourPatterns />
 
         <StitchDivider className="mt-layout" />
-        <h3 className={`mt-component ${cardTitleClasses}`}>
-          Built-in patterns
-        </h3>
-        <p className="mt-2 max-w-3xl break-words text-supporting text-text-muted">
-          Search and filters apply only to built-in patterns. Solid color and
-          your private patterns remain available above.
-        </p>
+        <h2 className={`mt-component ${cardTitleClasses}`}>Patterns</h2>
 
         {!hasCompleteCatalogue ? (
           catalogue.phase === "loading" ? (
@@ -454,11 +408,11 @@ export function PatternStep({
                 id={`${generatedId}-empty-catalogue-title`}
                 className="text-body font-control text-text-primary"
               >
-                No built-in patterns are available
+                No patterns are available right now
               </h3>
               <p className="mt-1 break-words text-supporting text-text-muted">
-                The API returned an empty catalogue. Solid fabric remains
-                available, and your current configuration has been preserved.
+                You can still choose a plain colour. Your other choices
+                haven&apos;t changed.
               </p>
               <Button
                 className="mt-3"
@@ -477,7 +431,7 @@ export function PatternStep({
                   htmlFor={`${generatedId}-pattern-search`}
                   className={`block ${fieldLabelClasses}`}
                 >
-                  Search built-in patterns
+                  Search patterns
                 </label>
                 <input
                   ref={searchInputRef}
@@ -486,7 +440,7 @@ export function PatternStep({
                   value={searchQuery}
                   aria-describedby={resultCountId}
                   className={`mt-2 ${controlClasses}`}
-                  placeholder="Name, description, category, or color"
+                  placeholder="For example, stripe or green"
                   onChange={(event) =>
                     updateSearchQuery(event.currentTarget.value)
                   }
@@ -495,7 +449,7 @@ export function PatternStep({
               <div className="grid min-w-0 gap-component lg:grid-cols-2">
                 <PatternFilter
                   className="mt-component"
-                  legend="Filter by category"
+                  legend="Filter by style"
                   name={`${generatedId}-pattern-category`}
                   options={categoryFilterOptions}
                   value={categoryId}
@@ -508,7 +462,7 @@ export function PatternStep({
                 />
                 <PatternFilter
                   className="mt-component"
-                  legend="Filter by color"
+                  legend="Filter by colour"
                   name={`${generatedId}-pattern-color`}
                   options={colorFilterOptions}
                   value={colorId}
@@ -524,8 +478,11 @@ export function PatternStep({
                 <p
                   id={resultCountId}
                   className="min-w-0 break-words font-mono text-supporting text-text-muted"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
                 >
-                  {resultCountMessage}
+                  {resultAnnouncement}
                 </p>
                 <Button
                   variant="secondary"
@@ -536,15 +493,6 @@ export function PatternStep({
                   Clear search and filters
                 </Button>
               </div>
-              <p
-                id={resultAnnouncementId}
-                className="sr-only"
-                role="status"
-                aria-live="polite"
-                aria-atomic="true"
-              >
-                {resultAnnouncement}
-              </p>
             </div>
 
             {selectedPatternIsHiddenByCriteria ? (
@@ -555,32 +503,18 @@ export function PatternStep({
                 aria-atomic="true"
               >
                 <h3 className="text-body font-control text-text-primary">
-                  Selected pattern hidden by discovery criteria
+                  Your pattern is hidden by the filters
                 </h3>
                 <p className="mt-1 break-words text-supporting text-text-muted">
-                  {selectedPattern.name} remains selected for your
-                  configuration and preview.
+                  {selectedPattern.name} is still selected.
                 </p>
                 <Button
                   className="mt-3"
                   variant="secondary"
                   onClick={clearDiscoveryCriteria}
                 >
-                  Clear search and filters to show selected pattern
+                  Show my pattern
                 </Button>
-              </div>
-            ) : null}
-
-            {selectedPatternIsUndisclosed ? (
-              <div className={noticeClasses("info", "mt-component")}>
-                <h3 className="text-body font-control text-text-primary">
-                  Selected pattern outside the initial results
-                </h3>
-                <p className="mt-1 break-words text-supporting text-text-muted">
-                  {selectedPattern.name} remains selected for your
-                  configuration and preview. Show all matching patterns to
-                  return to its card.
-                </p>
               </div>
             ) : null}
 
@@ -592,13 +526,11 @@ export function PatternStep({
               >
                 <div>
                   <h3 className="text-body font-control">
-                    Selected pattern unavailable
+                    Your pattern is no longer available
                   </h3>
                   <p className="mt-1">
-                    The current pattern identifier does not match the API
-                    catalogue. Your other configuration choices remain
-                    unchanged; choose any available pattern below to replace
-                    it.
+                    Choose another one below. Your other choices haven&apos;t
+                    changed.
                   </p>
                 </div>
               </ErrorMessage>
@@ -619,12 +551,11 @@ export function PatternStep({
                   id={`${generatedId}-no-matches-title`}
                   className="text-body font-control text-text-primary"
                 >
-                  No patterns match your search and filters
+                  No patterns match
                 </h3>
                 <p className="mt-1 break-words text-supporting text-text-muted">
-                  Your current fabric selection has not changed. Solid fabric
-                  remains available above. Clear the current discovery
-                  criteria to show the complete pattern catalogue.
+                  Try another search, or clear the search and filters to see
+                  every pattern.
                 </p>
                 <Button
                   className="mt-3"
@@ -638,9 +569,9 @@ export function PatternStep({
               <div
                 id={`${generatedId}-pattern-results`}
                 aria-describedby={resultCountId}
-                className="mt-component grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3"
+                className={`mt-component ${patternGridClasses}`}
               >
-                {displayedPatterns.map((pattern) => {
+                {matchingPatterns.map((pattern) => {
                   const optionId = `${generatedId}-${pattern.id}`;
                   const colorLabels = getPatternColorLabels(
                     pattern.colorIds,
@@ -676,23 +607,6 @@ export function PatternStep({
                 })}
               </div>
             )}
-
-            {catalogueIsSettled && canTogglePatternDisclosure ? (
-              <div className="mt-component flex min-w-0 flex-wrap items-center gap-3">
-                <Button
-                  variant="secondary"
-                  aria-controls={`${generatedId}-pattern-results`}
-                  aria-expanded={showAllMatchingPatterns}
-                  onClick={() =>
-                    setShowAllMatchingPatterns((current) => !current)
-                  }
-                >
-                  {showAllMatchingPatterns
-                    ? "Show fewer patterns"
-                    : `Show all ${matchingPatterns.length} patterns (${undisclosedPatternCount} more)`}
-                </Button>
-              </div>
-            ) : null}
           </>
         )}
       </fieldset>

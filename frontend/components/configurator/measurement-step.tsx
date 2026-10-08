@@ -40,7 +40,7 @@ function getValidationMessage(
     case "required":
       return `Enter a ${label.toLowerCase()}.`;
     case "incomplete":
-      return `Finish entering the ${label.toLowerCase()} after the decimal separator.`;
+      return `Add a digit after the decimal point in the ${label.toLowerCase()}.`;
     case "invalid":
       return `Enter ${label.toLowerCase()} as a number, such as 45 or 45.5.`;
     case "precision":
@@ -49,7 +49,7 @@ function getValidationMessage(
       return `${label} must be greater than zero.`;
     case "belowMinimum":
     case "aboveMaximum":
-      return `${label} must be between ${visibleRange}.`;
+      return `${label} must be ${visibleRange}.`;
   }
 }
 
@@ -190,7 +190,7 @@ function ShapeMeasurementForm({
       parsedDraft.value !== null &&
       width !== null &&
       parsedDraft.value >= width
-        ? "Back width must be smaller than front width for this tapered shape."
+        ? "Back width must be smaller than front width."
         : null;
     const visibleError = errors[field] ?? relationshipError;
 
@@ -231,17 +231,18 @@ function ShapeMeasurementForm({
 
   return (
     <fieldset className="fieldset-panel min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline">
-      <legend
-        id={focusTargetId}
-        tabIndex={focusTargetId ? -1 : undefined}
-        className="configurator-edit-target max-w-full scroll-mt-layout pb-2 font-display text-section-title font-heading tracking-heading text-text-primary"
-      >
-        Measure your {definition.name.toLowerCase()} cushion
+      {/* From stage 2 the stage heading is the page's h1. */}
+      <legend className="max-w-full pb-2">
+        <h1
+          id={focusTargetId}
+          tabIndex={focusTargetId ? -1 : undefined}
+          className="configurator-edit-target scroll-mt-layout font-display text-section-title font-heading tracking-heading text-text-primary"
+        >
+          Measure your {definition.name.toLowerCase()} cushion
+        </h1>
       </legend>
       <p className="mt-2 max-w-3xl break-words text-body text-text-muted">
-        Use one unit for every measurement. Values are committed only when
-        complete, finite, within the documented range, and no more than two
-        decimal places.
+        Measure the cushion itself, not its current cover.
       </p>
 
       <div className="mt-component grid min-w-0 gap-layout xl:grid-cols-[minmax(0,1fr)_minmax(16rem,0.8fr)] xl:items-start">
@@ -256,8 +257,7 @@ function ShapeMeasurementForm({
             id={unitDescriptionId}
             className="mt-2 text-supporting text-text-muted"
           >
-            Changing units converts every committed measurement using 1 inch
-            = 2.54 centimetres.
+            Switching units converts the measurements you&apos;ve entered.
           </p>
 
           <div className="mt-component grid min-w-0 gap-component sm:grid-cols-2">
@@ -272,10 +272,9 @@ function ShapeMeasurementForm({
             </summary>
             <ul className="mt-2 list-disc space-y-2 pl-5 text-supporting text-text-muted">
               <li>Use the same tape and unit for every dimension.</li>
-              <li>Measure the cushion itself, not the existing cover.</li>
               <li>
-                Keep the tape straight and record the fullest point without
-                adding an allowance.
+                Keep the tape straight and measure at the fullest point.
+                Don&apos;t add extra for seams.
               </li>
             </ul>
           </details>

@@ -10,16 +10,16 @@ const configurePath = `${basePath}/configure/`;
 const publicId = "AbCdEfGhIjKlMnOpQrStUv";
 
 const patternRecords = [
-  ["prototype-botanical", "Botanical sample", "botanical", ["ivory", "green"]],
+  ["prototype-botanical", "Seed scatter", "botanical", ["ivory", "green"]],
   ["fern-trail", "Fern trail", "botanical", ["ivory", "green"]],
   ["meadow-sprig", "Meadow sprig", "botanical", ["ivory", "blue", "gold"]],
-  ["prototype-geometric", "Geometric sample", "geometric", ["ivory", "terracotta"]],
+  ["prototype-geometric", "Harlequin", "geometric", ["ivory", "terracotta"]],
   ["diamond-path", "Diamond path", "geometric", ["ivory", "blue", "charcoal"]],
   ["arch-grid", "Arch grid", "geometric", ["ivory", "terracotta", "gold"]],
-  ["harbor-stripe", "Harbor stripe", "striped", ["ivory", "blue"]],
+  ["harbor-stripe", "Harbour stripe", "striped", ["ivory", "blue"]],
   ["orchard-stripe", "Orchard stripe", "striped", ["ivory", "green", "gold"]],
   ["ribbon-stripe", "Ribbon stripe", "striped", ["ivory", "terracotta", "rose"]],
-  ["prototype-woven", "Woven sample", "woven", ["ivory", "charcoal"]],
+  ["prototype-woven", "Fine weave", "woven", ["ivory", "charcoal"]],
   ["basket-check", "Basket check", "woven", ["ivory", "blue", "charcoal"]],
   ["linen-crosshatch", "Linen crosshatch", "woven", ["ivory", "gold"]],
 ] as const;
@@ -111,6 +111,12 @@ test("restores the exact shared design after a duplicate-safe save", async ({
       return;
     }
 
+    if (request.method() === "GET" && url.pathname === "/uploads/availability") {
+      // As in production: custom uploads are off.
+      await fulfillJson(route, { enabled: false });
+      return;
+    }
+
     if (request.method() === "POST" && url.pathname === "/designs") {
       requests.posts += 1;
       postedDesign = request.postDataJSON();
@@ -167,7 +173,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await page
       .getByRole("button", { name: "Continue to Pattern" })
       .click();
-    await expect(page.getByText("Showing 6 of 12 patterns.")).toBeVisible();
+    await expect(page.getByText("12 patterns", { exact: true })).toBeVisible();
   });
 
   await test.step("select a pattern and verify the live preview", async () => {
@@ -187,7 +193,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     const preview = page.getByRole("region", {
       name: "Box / bench cushion preview",
     });
-    await expect(preview).toContainText("Selected fabric shown on the cushion");
+    await expect(preview).toContainText("Fern trail on your box / bench cushion");
     await expect(preview).toContainText("Fern trail");
     await expect(preview).toContainText("72.25 cm");
     await expect(preview).toContainText("48.5 cm");
@@ -201,7 +207,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
       .click();
     await expect(
       page.getByRole("heading", {
-        level: 2,
+        level: 1,
         name: "SewnCovers configuration summary",
       }),
     ).toBeFocused();
@@ -319,7 +325,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     const restoredPreview = restoredPage.getByRole("region", {
       name: "Box / bench cushion preview",
     });
-    await expect(restoredPreview).toContainText("Selected fabric shown on the cushion");
+    await expect(restoredPreview).toContainText("Fern trail on your box / bench cushion");
     await expect(restoredPreview).toContainText("Fern trail");
     await expect(restoredPreview).toContainText("72.25 cm");
     await expect(restoredPreview).toContainText("48.5 cm");

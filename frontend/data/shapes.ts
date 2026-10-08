@@ -24,7 +24,7 @@ export const cushionShapeDefinitions = [
     id: "square",
     name: "Square",
     label: "Square cushion",
-    description: "A cushion with a face that is as wide as it is tall.",
+    description: "Width and height are the same, like most throw cushions.",
     measurementFields: [
       {
         field: "width",
@@ -45,8 +45,7 @@ export const cushionShapeDefinitions = [
     id: "rectangle",
     name: "Rectangle",
     label: "Rectangle cushion",
-    description:
-      "A cushion with independently measured width and height.",
+    description: "Longer on one side, like lumbar or sofa-back cushions.",
     measurementFields: [
       { field: "width", label: "Width", tip: "Measure from side to side across the face.", example: { cm: "80", in: "31.5" } },
       { field: "height", label: "Height", tip: "Measure from top to bottom across the face.", example: { cm: "50", in: "19.7" } },
@@ -59,7 +58,7 @@ export const cushionShapeDefinitions = [
     name: "Box / bench",
     label: "Box / bench cushion",
     description:
-      "A cushion measured across its top by width and depth, plus thickness.",
+      "Thick, with straight sides, like seat cushions and bench pads.",
     measurementFields: [
       { field: "width", label: "Width", tip: "Measure from side to side across the top.", example: { cm: "180", in: "70.85" } },
       { field: "height", label: "Depth", tip: "Measure from front to back across the top.", example: { cm: "60", in: "23.6" } },
@@ -71,7 +70,7 @@ export const cushionShapeDefinitions = [
     id: "round",
     name: "Round",
     label: "Round cushion",
-    description: "A circular cushion measured across its widest point.",
+    description: "A circle, like chair pads and floor cushions.",
     measurementFields: [
       { field: "width", label: "Diameter", tip: "Measure through the centre from edge to edge at the widest point.", example: { cm: "50", in: "19.7" } },
       { field: "thickness", label: "Thickness", tip: "Measure straight across the side profile at its fullest point.", example: { cm: "8", in: "3.15" } },
@@ -82,7 +81,7 @@ export const cushionShapeDefinitions = [
     id: "tapered",
     name: "Tapered / trapezoid",
     label: "Tapered / trapezoid cushion",
-    description: "A four-sided cushion with different front and back widths.",
+    description: "Wider at the front than the back, like many chair seats.",
     measurementFields: [
       { field: "width", label: "Front width", tip: "Measure the wider front edge from corner to corner.", example: { cm: "80", in: "31.5" } },
       { field: "backWidth", label: "Back width", tip: "Measure the opposite back edge from corner to corner.", example: { cm: "65", in: "25.6" } },

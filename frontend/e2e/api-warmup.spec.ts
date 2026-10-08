@@ -129,7 +129,7 @@ async function reachPatternStep(page: Page) {
   await page.getByRole("button", { name: "Continue to Cover details" }).click();
   await page.getByRole("button", { name: "Continue to Pattern" }).click();
   await expect(
-    page.getByRole("heading", { name: "Built-in patterns" }),
+    page.getByRole("heading", { name: "Patterns", exact: true }),
   ).toBeVisible();
 }
 
@@ -156,7 +156,7 @@ async function settleWarmup(page: Page) {
 }
 
 const builtInPatternsReady = (page: Page) =>
-  page.getByText("Showing 6 of 15 patterns.").first();
+  page.getByText("15 patterns", { exact: true }).first();
 const unavailableNotice = (page: Page) =>
   page.getByText(/catalogue unavailable|could not be reached/i);
 

@@ -79,7 +79,7 @@ export function SiteFooter({
         ) : null}
 
         <p className="break-words font-mono text-eyebrow tracking-eyebrow text-text-muted uppercase">
-          © {year} SewnCovers.{showPrototypeNote ? " Portfolio prototype." : null}
+          © {year} SewnCovers.
         </p>
       </div>
     </footer>

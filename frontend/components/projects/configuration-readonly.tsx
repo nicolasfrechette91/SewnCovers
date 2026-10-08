@@ -48,7 +48,7 @@ export function ConfigurationReadonly({ configuration }: Readonly<{ configuratio
   const patternLabel = configuration.pattern.kind === "built-in"
     ? configuration.pattern.patternId
     : configuration.pattern.kind === "solid"
-      ? `Solid color · ${configuration.pattern.color}`
+      ? "Solid colour"
       : custom && "label" in custom ? custom.label : custom && "deleted" in custom ? "Custom asset deleted" : "Loading custom pattern…";
   const fields = [
     ["Shape", configuration.shape],

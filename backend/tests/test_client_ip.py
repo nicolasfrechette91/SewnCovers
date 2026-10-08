@@ -14,6 +14,14 @@ from app.observability import client_network_label
 from app.settings import PRODUCTION_FRONTEND_ORIGIN, Settings
 
 DESIGN_LIMIT = 20
+# What Render's proxies append after the connecting client.
+RENDER_HOPS = "192.0.2.10, 192.0.2.20"
+
+
+def via_render(client_address: str, *sent_by_client: str) -> dict[str, str]:
+    """An X-Forwarded-For header as Render delivers it."""
+    entries = [*sent_by_client, client_address, RENDER_HOPS]
+    return {"X-Forwarded-For": ", ".join(entries)}
 
 
 class UnusedDesignService:
@@ -75,14 +83,15 @@ def test_network_keys_group_ipv6_by_slash_64_and_keep_ipv4_exact() -> None:
     assert client_network_label("2001:db8:1:2::1") == "2001:db8:1::/48"
 
 
-def test_production_keys_on_the_first_entry_so_appended_entries_cannot_rotate() -> None:
-    # Render sets the first entry; anything a client sends lands after it.
+def test_production_keys_on_the_third_entry_from_the_right() -> None:
+    # Render appends the client and two proxy hops; entries the client sent
+    # itself stay in front and are ignored.
     with TestClient(application()) as client:
         statuses = [
-            save_attempt(client, **{"X-Forwarded-For": f"198.51.100.7, 203.0.113.{i}"})
+            save_attempt(client, **via_render("198.51.100.7", f"203.0.113.{i}"))
             for i in range(DESIGN_LIMIT + 1)
         ]
-        other_network = save_attempt(client, **{"X-Forwarded-For": "198.51.100.8"})
+        other_network = save_attempt(client, **via_render("198.51.100.8"))
 
     assert statuses[:DESIGN_LIMIT] == [422] * DESIGN_LIMIT
     assert statuses[DESIGN_LIMIT] == 429
@@ -94,8 +103,8 @@ def test_other_client_address_headers_are_ignored() -> None:
         statuses = [
             save_attempt(
                 client,
+                **via_render("198.51.100.7"),
                 **{
-                    "X-Forwarded-For": "198.51.100.7",
                     "X-Real-IP": f"203.0.113.{i}",
                     "CF-Connecting-IP": f"192.0.2.{i}",
                     "Forwarded": f"for=203.0.113.{i}",
@@ -119,11 +128,14 @@ def test_outside_production_forwarded_headers_are_not_trusted() -> None:
     assert statuses[DESIGN_LIMIT] == 429
 
 
-def test_malformed_first_entries_fall_back_to_the_socket_peer() -> None:
+def test_malformed_or_short_headers_fall_back_to_the_socket_peer() -> None:
     with TestClient(application()) as client:
         statuses = [
-            save_attempt(client, **{"X-Forwarded-For": f"spoofed-{i}, 198.51.100.{i}"})
-            for i in range(DESIGN_LIMIT + 1)
+            save_attempt(client, **via_render(f"spoofed-{i}"))
+            for i in range(DESIGN_LIMIT // 2)
+        ] + [
+            save_attempt(client, **{"X-Forwarded-For": f"198.51.100.{i}"})
+            for i in range(DESIGN_LIMIT // 2 + 1)
         ]
 
     assert statuses[DESIGN_LIMIT] == 429
@@ -132,10 +144,10 @@ def test_malformed_first_entries_fall_back_to_the_socket_peer() -> None:
 def test_ipv6_clients_share_a_budget_across_their_slash_64() -> None:
     with TestClient(application()) as client:
         statuses = [
-            save_attempt(client, **{"X-Forwarded-For": f"2001:db8:1:2::{i:x}"})
+            save_attempt(client, **via_render(f"2001:db8:1:2::{i:x}"))
             for i in range(1, DESIGN_LIMIT + 2)
         ]
-        neighbour = save_attempt(client, **{"X-Forwarded-For": "2001:db8:1:3::1"})
+        neighbour = save_attempt(client, **via_render("2001:db8:1:3::1"))
 
     assert statuses[DESIGN_LIMIT] == 429
     assert neighbour == 422
@@ -157,11 +169,11 @@ def test_access_log_records_the_resolved_network_and_entry_count(
 ) -> None:
     caplog.set_level(logging.INFO, logger="app.access")
     with TestClient(application()) as client:
-        save_attempt(client, **{"X-Forwarded-For": "198.51.100.7, 203.0.113.9"})
+        save_attempt(client, **via_render("198.51.100.7", "203.0.113.9"))
 
     [access] = [record for record in caplog.records if record.name == "app.access"]
     assert access.fields["client"] == "198.51.100.0/24"
-    assert access.fields["forwardedEntries"] == 2
+    assert access.fields["forwardedEntries"] == 4
     assert "198.51.100.7" not in str(access.fields)
     assert "203.0.113.9" not in str(access.fields)
 
@@ -186,3 +198,40 @@ def test_client_ip_settings_default_by_environment_and_validate() -> None:
         Settings(_env_file=None, client_ip_header="x-real-ip")
     with pytest.raises(ValueError):
         Settings(_env_file=None, client_ip_index=1)
+
+
+def test_client_ip_index_defaults_to_render_depth_only_for_production_xff() -> None:
+    production = {
+        "_env_file": None,
+        "environment": "production",
+        "frontend_origin": PRODUCTION_FRONTEND_ORIGIN,
+    }
+    assert Settings(**production).resolved_client_ip_index == -3
+    assert Settings(**production, client_ip_index="").resolved_client_ip_index == -3
+    # An explicit value always wins, including 0.
+    assert Settings(**production, client_ip_index=0).resolved_client_ip_index == 0
+    assert Settings(**production, client_ip_index="-1").resolved_client_ip_index == -1
+    # A single-value header has no proxy chain to count from.
+    assert (
+        Settings(
+            **production, client_ip_header="cf-connecting-ip"
+        ).resolved_client_ip_index
+        == 0
+    )
+    assert Settings(_env_file=None).resolved_client_ip_index == 0
+    assert (
+        Settings(
+            _env_file=None, client_ip_header="x-forwarded-for"
+        ).resolved_client_ip_index
+        == 0
+    )
+
+
+def test_explicit_first_entry_setting_still_works_in_production() -> None:
+    with TestClient(application(client_ip_index=0)) as client:
+        statuses = [
+            save_attempt(client, **{"X-Forwarded-For": f"198.51.100.7, 203.0.113.{i}"})
+            for i in range(DESIGN_LIMIT + 1)
+        ]
+
+    assert statuses[DESIGN_LIMIT] == 429

@@ -45,7 +45,8 @@ Alembic owns every schema and controlled data change. The history is linear, eve
 | `20260828_01` | Adds price books, quotes, cart, payments, immutable orders, fulfilment and audit history. |
 | `20260829_01` | Adds legal versions and acknowledgements and production work, checklists, issues, history and packets. |
 | `20260917_01` | Adds first-class solid fabric selections: `solid_color`, a nullable `pattern_id` and the one-of constraint. |
-| `20261007_01` **(head)** | Adds `credential_backoffs`, the database-backed sign-in and account-deletion backoff. It holds only keyed hashes of the email or account and of the network, a failure count and timestamps, has no foreign key (so unknown emails look like known ones), and rows expire after 24 hours. The downgrade drops it. |
+| `20261007_01` | Adds `credential_backoffs`, the database-backed sign-in and account-deletion backoff. It holds only keyed hashes of the email or account and of the network, a failure count and timestamps, has no foreign key (so unknown emails look like known ones), and rows expire after 24 hours. The downgrade drops it. |
+| `20261007_02` **(head)** | Renames the three sample patterns (Seed scatter, Harlequin, Fine weave) and spells Harbour stripe the Canadian way. Display text only: ids, artwork, tags and order are unchanged, so saved designs and project versions, which store the id, show the new names. The downgrade restores the seeded text. |
 
 `app.production` expects exactly this head ([`production.py`](../backend/app/production.py)). The public `/readiness` and `/trust/metadata` reports read the head from the migration scripts, so they always agree with it.
 
@@ -74,14 +75,14 @@ Autogeneration is only a draft. Confirm the upgrade and downgrade order, then ru
 
 ### Seed data
 
-Revision `20260729_01` inserts these 15 patterns in display order. Conflicting existing ids, names or preview handles fail through the constraints instead of being ignored. Downgrading past the seed is blocked by the foreign key while any saved design references a seeded pattern.
+Revision `20260729_01` inserts these 15 patterns in display order; `20261007_02` later renamed four of them (the table shows the current names). Conflicting existing ids, names or preview handles fail through the constraints instead of being ignored. Downgrading past the seed is blocked by the foreign key while any saved design references a seeded pattern.
 
 | Category | Patterns (id) |
 | --- | --- |
-| Botanical | Botanical sample (`prototype-botanical`), Fern trail (`fern-trail`), Meadow sprig (`meadow-sprig`) |
-| Geometric | Geometric sample (`prototype-geometric`), Diamond path (`diamond-path`), Arch grid (`arch-grid`) |
-| Striped | Harbor stripe (`harbor-stripe`), Orchard stripe (`orchard-stripe`), Ribbon stripe (`ribbon-stripe`) |
-| Woven | Woven sample (`prototype-woven`), Basket check (`basket-check`), Linen crosshatch (`linen-crosshatch`) |
+| Botanical | Seed scatter (`prototype-botanical`), Fern trail (`fern-trail`), Meadow sprig (`meadow-sprig`) |
+| Geometric | Harlequin (`prototype-geometric`), Diamond path (`diamond-path`), Arch grid (`arch-grid`) |
+| Striped | Harbour stripe (`harbor-stripe`), Orchard stripe (`orchard-stripe`), Ribbon stripe (`ribbon-stripe`) |
+| Woven | Fine weave (`prototype-woven`), Basket check (`basket-check`), Linen crosshatch (`linen-crosshatch`) |
 | Abstract | Terrace wave (`terrace-wave`), Pebble drift (`pebble-drift`), Confetti grid (`confetti-grid`) |
 
 The frontend's artwork mapping in `frontend/data/patterns.ts` must contain an entry for every seeded id.

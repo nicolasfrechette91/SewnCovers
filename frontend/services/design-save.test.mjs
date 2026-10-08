@@ -403,10 +403,10 @@ test("save/share UI declares labeled, announced, retry, and manual-copy recovery
   assert.match(saveSharePanelSource, /aria-live="polite"/);
   assert.match(saveSharePanelSource, /<ErrorMessage>/);
   assert.match(saveSharePanelSource, /Try saving again/);
-  assert.match(saveSharePanelSource, /onSavingChange\(true\)/);
+  assert.match(saveSharePanelSource, /onSavingChange\?\.\(true\)/);
   assert.match(
     saveSharePanelSource,
-    /finally\(\(\) => onSavingChange\(false\)\)/,
+    /finally\(\(\) => onSavingChange\?\.\(false\)\)/,
   );
   assert.match(
     saveSharePanelSource,
@@ -415,5 +415,5 @@ test("save/share UI declares labeled, announced, retry, and manual-copy recovery
   assert.match(saveSharePanelSource, /readOnly/);
   assert.match(saveSharePanelSource, /Copy share link/);
   assert.match(saveSharePanelSource, /shareUrlInput\.current\?\.select/);
-  assert.match(saveSharePanelSource, /copy it manually/);
+  assert.match(saveSharePanelSource, /so you can copy\s+it yourself/);
 });

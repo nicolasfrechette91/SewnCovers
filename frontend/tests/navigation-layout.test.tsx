@@ -170,8 +170,10 @@ test("leaves the footer prototype line to pages without their own notice", () =>
   const view = render(<SiteFooter year={2026} />);
   assert.match(
     view.container.textContent ?? "",
-    /A portfolio prototype for custom cushion covers..*© 2026 SewnCovers. Portfolio prototype./,
+    /A portfolio prototype for custom cushion covers..*© 2026 SewnCovers.$/,
   );
+  // Said once, not repeated in the copyright line.
+  assert.equal(view.container.textContent?.match(/prototype/gi)?.length, 1);
 
   view.rerender(<SiteFooter showPrototypeNote={false} year={2026} />);
   assert.doesNotMatch(view.container.textContent ?? "", /prototype/i);

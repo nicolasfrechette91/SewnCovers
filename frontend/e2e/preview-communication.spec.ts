@@ -1,16 +1,16 @@
 import { expect, test } from "@playwright/test";
 const base = process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
 const patternRecords = [
-  ["prototype-botanical", "Botanical sample", "An organic, leaf-inspired prototype direction.", "botanical", ["ivory", "green", "terracotta"]],
+  ["prototype-botanical", "Seed scatter", "Green and terracotta seeds scattered over a light ground.", "botanical", ["ivory", "green", "terracotta"]],
   ["fern-trail", "Fern trail", "Layered fronds arranged along a gentle diagonal trail.", "botanical", ["ivory", "green"]],
   ["meadow-sprig", "Meadow sprig", "Small branching sprigs scattered across an open ground.", "botanical", ["ivory", "blue", "gold"]],
-  ["prototype-geometric", "Geometric sample", "A warm, structured prototype direction.", "geometric", ["ivory", "green", "terracotta"]],
+  ["prototype-geometric", "Harlequin", "Green and terracotta triangles in a bold harlequin check.", "geometric", ["ivory", "green", "terracotta"]],
   ["diamond-path", "Diamond path", "Nested diamonds repeat in crisp offset rows.", "geometric", ["ivory", "blue", "charcoal"]],
   ["arch-grid", "Arch grid", "Rounded arches alternate within a compact tiled grid.", "geometric", ["ivory", "terracotta", "gold"]],
-  ["harbor-stripe", "Harbor stripe", "Broad blue bands alternate with fine light pinstripes.", "striped", ["ivory", "blue"]],
+  ["harbor-stripe", "Harbour stripe", "Broad blue bands alternate with fine light pinstripes.", "striped", ["ivory", "blue"]],
   ["orchard-stripe", "Orchard stripe", "Uneven green and gold lines form a relaxed rhythm.", "striped", ["ivory", "green", "gold"]],
   ["ribbon-stripe", "Ribbon stripe", "Slim rose bands cross wider terracotta ribbons.", "striped", ["ivory", "terracotta", "rose"]],
-  ["prototype-woven", "Woven sample", "A quiet, small-scale prototype direction.", "woven", ["ivory", "charcoal"]],
+  ["prototype-woven", "Fine weave", "A fine, quiet grid of crossing threads.", "woven", ["ivory", "charcoal"]],
   ["basket-check", "Basket check", "Alternating blocks suggest an oversized basket weave.", "woven", ["ivory", "blue", "charcoal"]],
   ["linen-crosshatch", "Linen crosshatch", "Fine crossing lines create a loose textured grid.", "woven", ["ivory", "gold"]],
   ["terrace-wave", "Terrace wave", "Layered waves move in alternating cool bands.", "abstract", ["ivory", "green", "blue"]],
@@ -70,7 +70,7 @@ test("preview stays synchronized through contextual edits and accessible at all 
   await expect(slider).toHaveValue("0.6");
   await button("Change pattern").click();
   await expect(
-    page.getByText("Choose fabric color or pattern", { exact: true }),
+    page.getByRole("heading", { level: 1, name: "Choose a colour or pattern" }),
   ).toBeFocused();
   await page.getByRole("radio", { name: "Diamond path", exact: true }).press("Space");
   await next("Preview");
@@ -83,8 +83,9 @@ test("preview stays synchronized through contextual edits and accessible at all 
   await expect(page.getByRole("heading", { name: "Choose cover details" })).toBeFocused();
   await page.getByRole("radio", { name: "More relaxed fit" }).press("Space");
   await next("Pattern"); await next("Preview");
-  await expect(figure).toContainText("A softer, more relaxed profile");
-  await expect(figure).toContainText("does not reshape this reusable cushion model");
+  // The chosen fit is listed; how the model draws it is not explained.
+  await expect(figure).toContainText("More relaxed fit");
+  await expect(figure).not.toContainText("reusable cushion model");
   await button("Edit measurements").click();
   await expect(page.getByText("Measure your rectangle cushion", { exact: true })).toBeFocused();
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("90");
@@ -113,7 +114,9 @@ test("preview stays synchronized through contextual edits and accessible at all 
   await slider.press("ArrowRight");
   await expect(slider).toHaveValue("0.7");
   await figure.screenshot({ path: testInfo.outputPath("preview-forced-colors.png") });
-  await expect(figure.getByText(/not a manufacturing specification/)).toBeVisible();
+  // One disclaimer: the care-label caption.
+  await expect(figure.getByText("Illustrative preview. The finished cover's colour, pattern size and fit may differ.")).toBeVisible();
+  await expect(page.getByRole("main").getByText(/Illustrative preview/)).toHaveCount(1);
   expect(pageErrors).toEqual([]);
 });
 

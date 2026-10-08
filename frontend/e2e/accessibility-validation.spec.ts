@@ -16,16 +16,16 @@ const configurePath = `${basePath}/configure/`;
 const publicId = "AbCdEfGhIjKlMnOpQrStUv";
 
 const patternRecords = [
-  ["prototype-botanical", "Botanical sample", "botanical", ["ivory", "green"]],
+  ["prototype-botanical", "Seed scatter", "botanical", ["ivory", "green"]],
   ["fern-trail", "Fern trail", "botanical", ["ivory", "green"]],
   ["meadow-sprig", "Meadow sprig", "botanical", ["ivory", "blue", "gold"]],
-  ["prototype-geometric", "Geometric sample", "geometric", ["ivory", "terracotta"]],
+  ["prototype-geometric", "Harlequin", "geometric", ["ivory", "terracotta"]],
   ["diamond-path", "Diamond path", "geometric", ["ivory", "blue", "charcoal"]],
   ["arch-grid", "Arch grid", "geometric", ["ivory", "terracotta", "gold"]],
-  ["harbor-stripe", "Harbor stripe", "striped", ["ivory", "blue"]],
+  ["harbor-stripe", "Harbour stripe", "striped", ["ivory", "blue"]],
   ["orchard-stripe", "Orchard stripe", "striped", ["ivory", "green", "gold"]],
   ["ribbon-stripe", "Ribbon stripe", "striped", ["ivory", "terracotta", "rose"]],
-  ["prototype-woven", "Woven sample", "woven", ["ivory", "charcoal"]],
+  ["prototype-woven", "Fine weave", "woven", ["ivory", "charcoal"]],
   ["basket-check", "Basket check", "woven", ["ivory", "blue", "charcoal"]],
   ["linen-crosshatch", "Linen crosshatch", "woven", ["ivory", "gold"]],
 ] as const;
@@ -72,6 +72,12 @@ async function mockApi(context: BrowserContext) {
       await route.fulfill({ headers: corsHeaders, status: 204 });
     } else if (request.method() === "GET" && url.pathname === "/patterns") {
       await fulfillJson(route, patterns);
+    } else if (
+      request.method() === "GET" &&
+      url.pathname === "/uploads/availability"
+    ) {
+      // As in production: custom uploads are off.
+      await fulfillJson(route, { enabled: false });
     } else if (
       request.method() === "GET" &&
       url.pathname === `/designs/${publicId}`
@@ -192,10 +198,11 @@ test("keeps the complete configurator responsive with usable touch targets", asy
       }
       await expect(
         page.getByRole("heading", {
-          level: 2,
+          level: 1,
           name: "SewnCovers configuration summary",
         }),
       ).toBeFocused();
+      await expect(page.locator("h1")).toHaveCount(1);
       await expectNoHorizontalOverflow(page);
     });
   }
@@ -233,7 +240,7 @@ test("gates stages and preserves compatible downstream choices when revisiting",
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("10");
   await width.press("Tab");
   await expect(
-    page.getByRole("status").filter({ hasText: "between 10–300 cm" }),
+    page.getByRole("status").filter({ hasText: "must be 10–300 cm" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Continue to Cover details" }),
@@ -283,7 +290,10 @@ test("gates stages and preserves compatible downstream choices when revisiting",
     page.getByRole("region", { name: "Configuration summary", exact: true }),
   ).toContainText("31.5 in");
 
-  await page.getByRole("button", { name: "Edit shape" }).click();
+  // Review has no edit row; the stage progress is the way back.
+  await progress
+    .getByRole("button", { name: "Return to Shape, completed stage 1 of 6" })
+    .click();
   await page.getByText("Tapered / trapezoid cushion", { exact: true }).click();
   await expect(
     progress.getByRole("button", { name: /Return to Pattern/ }),
@@ -388,28 +398,25 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByText("Choose fabric color or pattern", { exact: true }),
+    page.getByRole("heading", { level: 1, name: "Choose a colour or pattern" }),
   ).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("radio", { name: "Solid color" })).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Upload your own pattern" })).toBeFocused();
+  await expect(page.getByRole("radio", { name: "Solid colour" })).toBeFocused();
+  // Uploads are off, as in production, so nothing to tab to in between.
+  await expect(page.getByText("Custom uploads aren't enabled in this demo.")).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(
-    page.getByRole("searchbox", { name: "Search built-in patterns" }),
+    page.getByRole("searchbox", { name: "Search patterns" }),
   ).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("radio", { name: "All categories" })).toBeFocused();
+  await expect(page.getByRole("radio", { name: "All styles" })).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("radio", { name: "All colors" })).toBeFocused();
+  await expect(page.getByRole("radio", { name: "All colours" })).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("radio", { name: "Botanical sample" })).toBeFocused();
+  await expect(page.getByRole("radio", { name: "Seed scatter" })).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("radio", { name: "Fern trail" })).toBeChecked();
-  await page.keyboard.press("Tab");
-  await expect(
-    page.getByRole("button", { name: "Show all 12 patterns (6 more)" }),
-  ).toBeFocused();
+  // Every pattern is already shown, so no disclosure button follows.
   await page.keyboard.press("Tab");
   await expect(
     page.getByRole("button", { name: "Back to Cover details" }),
@@ -440,14 +447,19 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
 
   await expect(
     page.getByRole("heading", {
-      level: 2,
+      level: 1,
       name: "SewnCovers configuration summary",
     }),
   ).toBeFocused();
-  // Five edit actions and two output actions precede the save button.
-  for (let index = 0; index < 8; index += 1) {
+  // Print and Download precede the save button; there is no edit row.
+  for (const name of [
+    "Print configuration summary",
+    "Download configuration summary as a plain-text file",
+  ]) {
     await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name, exact: true })).toBeFocused();
   }
+  await page.keyboard.press("Tab");
   await expect(
     page.getByRole("button", { name: "Save and create share link" }),
   ).toBeFocused();
@@ -464,6 +476,72 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(
     `${appOrigin}${configurePath}?design=${publicId}`,
   );
+});
+
+test("gives every stage one h1, a matching tab title and announcement, and the first shape card above the fold", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(configurePath);
+
+  const outline = () =>
+    page.evaluate(() => ({
+      h1: Array.from(document.querySelectorAll("h1")).map((heading) =>
+        heading.textContent?.trim(),
+      ),
+      skips: Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6"))
+        .map((heading) => Number(heading.tagName.slice(1)))
+        .filter((level, index, levels) => index > 0 && level > levels[index - 1] + 1),
+    }));
+  const title = (stage: string, index: number) =>
+    `${stage} (stage ${index} of 6) – Configure a cushion | SewnCovers`;
+
+  // Stage 1 keeps the page introduction, short enough for the first card.
+  await expect(page.getByRole("heading", { level: 2, name: "Choose your cushion shape" })).toBeVisible();
+  expect(await outline()).toEqual({ h1: ["Build your custom cover design."], skips: [] });
+  await expect(page).toHaveTitle(title("Shape", 1));
+  const firstCard = await page.locator(".shape-option-label").first().boundingBox();
+  expect(firstCard).not.toBeNull();
+  expect(firstCard!.y).toBeLessThan(844 - 120);
+
+  await page.getByText("Rectangle cushion", { exact: true }).click();
+  const stages = [
+    ["Measurements", 2, "Measure your rectangle cushion"],
+    ["Cover details", 3, "Choose cover details"],
+    ["Pattern", 4, "Choose a colour or pattern"],
+    ["Preview", 5, "Preview your rectangle cushion"],
+    ["Review", 6, "SewnCovers configuration summary"],
+  ] as const;
+  for (const [stage, index, heading] of stages) {
+    await page.getByRole("button", { name: `Continue to ${stage}` }).click();
+    if (stage === "Measurements") {
+      await page.getByRole("textbox", { name: "Width (cm)" }).fill("80");
+      await page.getByRole("textbox", { name: "Height (cm)" }).fill("40");
+      await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("10");
+    }
+    if (stage === "Pattern") {
+      await page.getByText("Fern trail", { exact: true }).click();
+    }
+    await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+    await expect(page).toHaveTitle(title(stage, index));
+    await expect(
+      page.getByRole("status").filter({ hasText: `Stage ${index} of 6: ${stage}.` }),
+    ).toHaveCount(1);
+    // The introduction is not repeated after the first stage.
+    await expect(page.getByText("Build your custom cover design.")).toHaveCount(0);
+    expect(await outline()).toEqual({ h1: [heading], skips: [] });
+  }
+  await expect(page.getByRole("heading", { level: 1, name: "SewnCovers configuration summary" })).toBeFocused();
+
+  // Going back keeps the same rules, and focus lands on the stage heading.
+  await page.getByRole("button", { name: "Back to Preview" }).click();
+  await expect(page.getByRole("slider", { name: "Pattern size" })).toBeFocused();
+  await expect(page).toHaveTitle(title("Preview", 5));
+
+  // Leaving the configurator gives the next page its own title back.
+  await page.getByRole("contentinfo").getByRole("link", { name: "Legal and privacy" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Legal information" })).toBeVisible();
+  await expect(page).toHaveTitle("Legal information | SewnCovers");
 });
 
 test("preserves semantic, contrast, forced-colors, and reduced-motion feedback", async ({

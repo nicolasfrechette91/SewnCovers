@@ -60,6 +60,9 @@ async function mockApi(
       await json(route, account);
     } else if (path === "/account/sessions") {
       await json(route, [{ createdAt: account.createdAt, current: true, expiresAt, id: 1, revokedAt: null }]);
+    } else if (path === "/uploads/availability") {
+      // These journeys need the upload option, so uploads are on here.
+      await json(route, { enabled: true });
     } else if (path === "/uploads") {
       await json(route, []);
     } else if (path === "/patterns") {
@@ -132,7 +135,7 @@ test("creating an account inline at the Pattern step uses the same requests and 
     expect(new URL(url).hostname).not.toBe("nicolasfrechette91.github.io");
   }
   // The design on screen was never touched.
-  await expect(page.getByRole("heading", { exact: true, name: "Built-in patterns" })).toBeVisible();
+  await expect(page.getByRole("heading", { exact: true, name: "Patterns" })).toBeVisible();
 });
 
 test("a missing register route reads clearly, is announced, and keeps the design", async ({ page }) => {
@@ -153,7 +156,50 @@ test("a missing register route reads clearly, is announced, and keeps the design
   expect(count(mock, "POST /auth/register")).toBe(1);
   expect(count(mock, "POST /account/acknowledgements")).toBe(0);
 
-  await create.getByRole("button", { name: "Continue with built-in patterns" }).click();
-  await expect(page.getByRole("heading", { exact: true, name: "Built-in patterns" })).toBeVisible();
+  await create.getByRole("button", { name: "Continue with our patterns" }).click();
+  await expect(page.getByRole("heading", { exact: true, name: "Patterns" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Upload your own pattern" })).toBeFocused();
+});
+
+test("offers no upload until availability answers enabled, and none if it fails", async ({ page }) => {
+  await mockApi(page);
+  // Registered after the general mock, so it answers this path first.
+  let releaseAnswer!: () => void;
+  const answerGate = new Promise<void>((resolve) => { releaseAnswer = resolve; });
+  let availabilityRequests = 0;
+  await page.route(`${apiOrigin}/uploads/availability`, async (route) => {
+    if (route.request().method() === "OPTIONS") {
+      await route.fulfill({ headers: corsHeaders, status: 204 });
+      return;
+    }
+    availabilityRequests += 1;
+    await answerGate;
+    await json(route, { errors: [{ code: "service_unavailable", message: "Unavailable.", location: ["service"] }] }, 503);
+  });
+  const nothingOffered = async () => {
+    await expect(page.getByRole("heading", { exact: true, name: "Patterns" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Upload your own pattern" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /upload your own pattern/i })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Your patterns" })).toHaveCount(0);
+    await expect(page.getByText(/Custom uploads aren't enabled/)).toHaveCount(0);
+  };
+
+  await page.goto(`${basePath}/configure/`);
+  await page.getByText("Box / bench cushion", { exact: true }).click();
+  await page.getByRole("button", { name: "Continue to Measurements" }).click();
+  await page.getByRole("textbox", { name: "Width (cm)" }).fill("72.25");
+  await page.getByRole("textbox", { name: "Depth (cm)" }).fill("48.5");
+  await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("12.75");
+  await page.getByRole("button", { name: "Continue to Cover details" }).click();
+  await page.getByRole("button", { name: "Continue to Pattern" }).click();
+
+  // Pending: the question is out, nothing is offered.
+  await expect.poll(() => availabilityRequests).toBeGreaterThanOrEqual(1);
+  await nothingOffered();
+
+  // Failed, after the client's retries: still nothing.
+  releaseAnswer();
+  await expect.poll(() => availabilityRequests, { timeout: 10_000 }).toBe(3);
+  await page.waitForTimeout(300);
+  await nothingOffered();
 });

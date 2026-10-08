@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 import app.persistence.database as database_module
 import app.persistence.migrations as migrations_module
+import app.uploads.api as upload_api_module
 from app.main import create_application
 from app.persistence.database import get_session
 from app.persistence.models import (
@@ -686,3 +687,31 @@ def test_worker_claim_is_exclusive_and_account_deletion_removes_only_owned_objec
             )
             is not None
         )
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_upload_availability_is_public_and_reports_the_flag(
+    monkeypatch: pytest.MonkeyPatch, enabled: bool
+) -> None:
+    # No account, no database: the configurator asks before anyone signs in.
+    settings = Settings(
+        _env_file=None,
+        environment="test",
+        database_url=None,
+        custom_uploads_enabled=enabled,
+    )
+    # The endpoint reads the same process settings as the upload service.
+    monkeypatch.setattr(upload_api_module, "get_settings", lambda: settings)
+    application = create_application(settings)
+    with TestClient(application) as client:
+        response = client.get("/uploads/availability")
+        listing = client.get("/uploads")
+        schema = client.get("/openapi.json").json()
+
+    assert response.status_code == 200
+    assert response.json() == {"enabled": enabled}
+    # The literal path is not mistaken for an upload id, and listing still
+    # requires an account whichever way the flag is set.
+    assert listing.status_code == 401
+    operation = schema["paths"]["/uploads/availability"]["get"]
+    assert "security" not in operation

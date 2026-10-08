@@ -76,7 +76,7 @@ test("labels the cart as a sandbox and changes quantity through a replacement qu
   assert.equal(screen.getAllByText(/new quote was created/).length, 2);
 });
 
-test("shows solid fabric and its hexadecimal value in cart and order summaries", async () => {
+test("shows solid fabric as a swatch and name, without the code, in cart and order summaries", async () => {
   const solidConfiguration = {
     shape: "box",
     materialId: "linen-blend",
@@ -94,7 +94,8 @@ test("shows solid fabric and its hexadecimal value in cart and order summaries",
     url.endsWith("/commerce/cart") ? json(solidCart) : json({}, 404),
   );
   render(<AuthProvider><CartScreen /></AuthProvider>);
-  await screen.findByText("Solid color · #F5F2EB");
+  await screen.findByText("Solid colour");
+  assert.equal(document.body.textContent?.includes("#F5F2EB"), false);
 
   cleanup();
   const productionSpecification = order.lines[0]
@@ -111,7 +112,8 @@ test("shows solid fabric and its hexadecimal value in cart and order summaries",
     }],
   };
   render(<OrderCard order={solidOrder} detail />);
-  assert.ok(screen.getByText(/Solid color #F5F2EB/));
+  assert.ok(screen.getByText(/Solid colour/));
+  assert.equal(document.body.textContent?.includes("#F5F2EB"), false);
 });
 
 test("explains account-only commerce to guests calmly, with the fictional-commerce warning", () => {

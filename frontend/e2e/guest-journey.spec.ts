@@ -13,16 +13,16 @@ const expiresAt = new Date(Date.now() + 3_600_000).toISOString();
 
 // The catalogue must hold 12–20 patterns.
 const patterns = [
-  ["prototype-botanical", "Botanical sample", "botanical"],
+  ["prototype-botanical", "Seed scatter", "botanical"],
   ["fern-trail", "Fern trail", "botanical"],
   ["meadow-sprig", "Meadow sprig", "botanical"],
-  ["prototype-geometric", "Geometric sample", "geometric"],
+  ["prototype-geometric", "Harlequin", "geometric"],
   ["diamond-path", "Diamond path", "geometric"],
   ["arch-grid", "Arch grid", "geometric"],
-  ["harbor-stripe", "Harbor stripe", "striped"],
+  ["harbor-stripe", "Harbour stripe", "striped"],
   ["orchard-stripe", "Orchard stripe", "striped"],
   ["ribbon-stripe", "Ribbon stripe", "striped"],
-  ["prototype-woven", "Woven sample", "woven"],
+  ["prototype-woven", "Fine weave", "woven"],
   ["basket-check", "Basket check", "woven"],
   ["linen-crosshatch", "Linen crosshatch", "woven"],
 ].map(([id, name, categoryId]) => ({
@@ -90,6 +90,8 @@ async function mockApi(page: Page) {
     if (request.headers().authorization) calls.authenticated.push(`${method} ${path}`);
     const account = { email: "guest@example.invalid", createdAt: "2026-09-30T09:00:00Z", role: "customer" };
     if (method === "GET" && path === "/patterns") return json(route, patterns);
+    // As in production: custom uploads are off.
+    if (method === "GET" && path === "/uploads/availability") return json(route, { enabled: false });
     if (method === "POST" && path === "/designs") return json(route, { ...sharedDesign, ...request.postDataJSON(), publicId }, 201);
     if (method === "GET" && path === `/designs/${publicId}`) { calls.designGets += 1; return json(route, sharedDesign); }
     if (method === "POST" && path === "/auth/login") return json(route, { account, token: sessionToken, expiresAt });
@@ -147,7 +149,7 @@ async function buildDesign(page: Page, stopAt: "pattern" | "review") {
   await expect(page.getByRole("slider", { name: "Pattern size" })).toBeVisible();
   await expectNoSignInPrompt(page);
   await page.getByRole("button", { name: "Continue to Review" }).click();
-  await expect(page.getByRole("heading", { level: 2, name: "SewnCovers configuration summary" })).toBeFocused();
+  await expect(page.getByRole("heading", { level: 1, name: "SewnCovers configuration summary" })).toBeFocused();
 }
 
 test("a guest completes the whole configurator and shares it without a sign-in prompt", async ({ page }) => {
@@ -155,7 +157,11 @@ test("a guest completes the whole configurator and shares it without a sign-in p
   await page.goto(configurePath);
   await buildDesign(page, "review");
   await expectNoSignInPrompt(page);
-  await expect(page.getByText(/Saving and the demonstration cart need an account/)).toBeVisible();
+  await expect(page.getByText(/asked to sign in or create an account next/)).toBeVisible();
+  // A name is suggested, so saving never stops to ask for one first.
+  await expect(page.getByLabel("Project name")).toHaveValue("Box / bench cushion, Fern trail");
+  await expect(page.locator("h1")).toHaveCount(1);
+  await expect(page).toHaveTitle(/^Review \(stage 6 of 6\) – Configure a cushion \| SewnCovers$/);
 
   await page.getByRole("button", { name: "Save and create share link" }).click();
   await expect(page.getByRole("textbox", { name: "Share URL" })).toHaveValue(`${appOrigin}${configurePath}?design=${publicId}`);
@@ -203,7 +209,7 @@ test("the configurator still works when the browser blocks site storage", async 
   await mockApi(page);
   await page.goto(configurePath);
   await buildDesign(page, "review");
-  await expect(page.getByRole("region", { name: "Save to a private project" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Save to My projects" })).toBeVisible();
 
   await page.reload();
   await expect(page.getByRole("group", { name: "Choose your cushion shape" })).toBeVisible();
@@ -217,12 +223,12 @@ test("signing in at Save keeps the design, saves it once, and links the draft", 
   await page.goto(configurePath);
   await buildDesign(page, "review");
 
-  const panel = page.getByRole("region", { name: "Save to a private project" });
+  const panel = page.getByRole("region", { name: "Save to My projects" });
   await panel.getByLabel("Project name").fill("Patio bench");
-  await panel.getByRole("button", { name: "Create private project" }).click();
+  await panel.getByRole("button", { name: "Save to My projects" }).click();
   const signIn = page.getByRole("region", { name: "Sign in to save this design" });
   await expect(signIn.getByRole("heading", { name: "Sign in to save this design" })).toBeFocused();
-  await expect(signIn).toContainText("My projects are private to an account");
+  await expect(signIn).toContainText("Projects are kept in your account");
   await expect(signIn.getByRole("button", { name: "Create an account instead" })).toBeVisible();
   await expect(signIn.getByRole("button", { name: "Continue as guest" })).toBeVisible();
   await signIn.getByLabel("Email").fill("guest@example.invalid");
@@ -236,9 +242,9 @@ test("signing in at Save keeps the design, saves it once, and links the draft", 
 
   // Reloading brings back the same stage and never saves the design again.
   await page.reload();
-  await expect(page.getByRole("heading", { level: 2, name: "SewnCovers configuration summary" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "SewnCovers configuration summary" })).toBeVisible();
   await expect(page.getByText("This design matches version 1, the current version.")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Create private project|Save as new version/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Save to My projects|Save as new version/ })).toHaveCount(0);
   expect(calls.projectPosts).toHaveLength(1);
 
   await page.getByRole("button", { name: "Add to cart" }).click();
@@ -253,7 +259,7 @@ test("creating an account inline at Add to cart resumes it exactly once", async 
   await page.goto(configurePath);
   await buildDesign(page, "review");
 
-  await page.getByLabel("Project name").fill("Window seat");
+  // No name typed: the suggested one goes through sign-in and is used.
   await page.getByRole("button", { name: "Save and add to cart" }).click();
   const signIn = page.getByRole("region", { name: /add this design to your cart|add it to your cart/ });
   await signIn.getByRole("button", { name: "Create an account instead" }).click();
@@ -266,6 +272,7 @@ test("creating an account inline at Add to cart resumes it exactly once", async 
   await expect(page.getByRole("status").filter({ hasText: "Private project created with version 1. Added to your demonstration cart as a fictional quote." })).toBeFocused();
   await expect(page.getByRole("link", { name: "View cart" })).toHaveAttribute("href", `${basePath}/cart/`);
   expect([calls.registrations, calls.projectPosts.length, calls.quotePosts, calls.cartLinePosts]).toEqual([1, 1, 1, 1]);
+  expect(calls.projectPosts).toEqual([{ name: "Box / bench cushion, Fern trail", configuration: projectConfiguration }]);
 });
 
 test("signing in from the header returns to the same stage with the design intact", async ({ page }) => {

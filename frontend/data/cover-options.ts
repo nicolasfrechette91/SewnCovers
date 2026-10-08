@@ -16,20 +16,17 @@ export const materialOptions = [
   {
     id: "cotton-canvas",
     name: "Cotton canvas",
-    description:
-      "A structured woven look for a crisp, substantial visual direction.",
+    description: "Firm and crisp, with a matte, tightly woven finish.",
   },
   {
     id: "linen-blend",
     name: "Linen blend",
-    description:
-      "A softly textured woven look with a more relaxed visual character.",
+    description: "Soft and slightly textured, with a relaxed, natural look.",
   },
   {
     id: "polyester-weave",
     name: "Polyester weave",
-    description:
-      "A smooth, even woven look for a clean visual direction.",
+    description: "Smooth and even, with a clean, uniform look.",
   },
 ] as const satisfies readonly CoverOption<MaterialId>[];
 
@@ -37,20 +34,17 @@ export const fitOptions = [
   {
     id: "close",
     name: "Closer fit",
-    description:
-      "A neater visual profile with less apparent ease; entered measurements stay unchanged.",
+    description: "Snug and smooth, with crisp edges.",
   },
   {
     id: "standard",
     name: "Standard fit",
-    description:
-      "A balanced visual profile and the safe default for existing saved designs.",
+    description: "Neat without being tight. Suits most cushions.",
   },
   {
     id: "relaxed",
     name: "More relaxed fit",
-    description:
-      "A softer visual profile with more apparent ease; entered measurements stay unchanged.",
+    description: "A little looser, for a soft, lived-in look.",
   },
 ] as const satisfies readonly CoverOption<FitPreference>[];
 
@@ -58,20 +52,17 @@ export const closureOptions = [
   {
     id: "zipper",
     name: "Zipper access",
-    description:
-      "Plan for an opening that uses a zipper to remove or insert the cushion.",
+    description: "A zipper along one edge, so the cover comes off easily.",
   },
   {
     id: "envelope",
     name: "Envelope opening",
-    description:
-      "Plan for overlapping fabric panels instead of a separate fastener.",
+    description: "Overlapping panels at the back, with no zipper or buttons.",
   },
   {
     id: "slip-on",
     name: "Open-ended slip-on",
-    description:
-      "Plan for one open end that the cushion slides through.",
+    description: "One open end that the cushion slides into.",
   },
 ] as const satisfies readonly CoverOption<ClosureType>[];
 
@@ -79,12 +70,13 @@ export const seamOptions = [
   {
     id: "plain",
     name: "Plain seam",
-    description: "Keep the edge visually simple without a separate cord detail.",
+    description: "A clean, simple edge.",
   },
   {
     id: "piped",
     name: "Piped edge",
-    description: "Add a visible corded edge detail around the main face.",
+    description:
+      "A thin fabric-covered cord along the edges, for a tailored look.",
   },
 ] as const satisfies readonly CoverOption<SeamStyle>[];
 

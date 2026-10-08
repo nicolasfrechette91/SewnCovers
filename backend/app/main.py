@@ -77,6 +77,7 @@ from app.uploads.api import (
     list_uploads,
     read_direct_asset,
     read_shared_asset,
+    read_upload_availability,
     rename_upload,
     retry_upload,
 )
@@ -84,6 +85,7 @@ from app.uploads.processing import MAX_ENCODED_BYTES
 from app.uploads.schema import (
     AssetAccessResponse,
     DeletedUploadResponse,
+    UploadAvailabilityResponse,
     UploadIntentResponse,
     UploadStatusResponse,
 )
@@ -267,7 +269,7 @@ def create_application(
     application.add_middleware(
         ClientAddressMiddleware,
         header=settings.resolved_client_ip_header,
-        index=settings.client_ip_index,
+        index=settings.resolved_client_ip_index,
     )
 
     application.add_api_route(
@@ -691,6 +693,20 @@ def create_application(
         tags=["Custom uploads"],
         summary="List the current account's custom patterns",
         responses=private_errors,
+    )
+    # Registered before /uploads/{upload_id} so the literal path wins.
+    application.add_api_route(
+        "/uploads/availability",
+        read_upload_availability,
+        methods=["GET"],
+        response_model=UploadAvailabilityResponse,
+        tags=["Custom uploads"],
+        summary="Report whether custom uploads are enabled",
+        description=(
+            "Public and cheap: no account, storage or database work. The "
+            "configurator asks once when the pattern stage opens, so it offers "
+            "uploads only where they can succeed."
+        ),
     )
     application.add_api_route(
         "/uploads/{upload_id}",

@@ -1,14 +1,14 @@
 """Resolve the connecting client's address behind Render's proxy.
 
-Render's documentation says to read ``X-Forwarded-For`` and that Render sets its
-first entry to the real client address, so in production that entry replaces
-the socket peer (which is always Render's proxy). Nothing else in the header is
-trusted: a client can put anything in the entries a proxy appends after it.
-Outside production no trusted proxy rewrites the header, so it is ignored and
-the socket peer is used.
+The socket peer is always Render's proxy. Render's proxies append to
+``X-Forwarded-For`` and keep whatever entries the client sent, so the
+connecting client is a fixed distance from the right: the third entry. In
+production that one entry replaces the socket peer; nothing else in the header
+is trusted, because a client can put anything before it. Outside production no
+trusted proxy writes the header, so it is ignored and the socket peer is used.
 
-``CLIENT_IP_HEADER`` and ``CLIENT_IP_INDEX`` switch the source without a code
-change if the platform's behaviour turns out to differ (see docs/deployment.md).
+``CLIENT_IP_HEADER`` and ``CLIENT_IP_INDEX`` change the source without a code
+change if the platform's proxies change (see docs/deployment.md).
 """
 
 from __future__ import annotations

@@ -11,6 +11,8 @@ export interface CushionPreviewProps
   /** Status and spec list kept directly under the visual. */
   details?: ReactNode;
   emptyMessage?: ReactNode;
+  /** 1 on the Preview stage, where the title is the page's h1; 2 elsewhere. */
+  headingLevel?: 1 | 2;
   title?: ReactNode;
   visual?: ReactNode;
   balanced?: boolean;
@@ -23,11 +25,14 @@ export function CushionPreview({
   description,
   details,
   emptyMessage = "Choose a pattern and measurements to see a preview.",
+  headingLevel = 1,
   title = "Preview",
   visual,
   balanced = false,
   ...sectionProps
 }: CushionPreviewProps) {
+  const Heading = headingLevel === 1 ? "h1" : "h2";
+
   return (
     <figure
       {...sectionProps}
@@ -37,9 +42,9 @@ export function CushionPreview({
         className,
       )}
     >
-      <h2 className="break-words font-display text-section-title font-heading tracking-heading text-text-primary">
+      <Heading className="break-words font-display text-section-title font-heading tracking-heading text-text-primary">
         {title}
-      </h2>
+      </Heading>
       {/* The visual and its spec list share a column so they stay together;
           the grid is its own box so the sticky column never overlaps the caption. */}
       <div

@@ -26,6 +26,9 @@ _HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
 
 LOCAL_FRONTEND_ORIGIN = "http://localhost:3000"
 PRODUCTION_FRONTEND_ORIGIN = "https://nicolasfrechette91.github.io"
+# X-Forwarded-For entry holding the connecting client behind Render's proxies:
+# the third from the right, whatever the client itself put in the header.
+RENDER_FORWARDED_CLIENT_INDEX = -3
 CORS_ALLOWED_METHODS: tuple[CorsMethod, ...] = ("DELETE", "GET", "PATCH", "POST", "PUT")
 CORS_ALLOWED_HEADERS: tuple[CorsHeader, ...] = ("Authorization", "Content-Type")
 # Neither is CORS-safelisted, so browser code can read them only when exposed.
@@ -113,15 +116,16 @@ class Settings(BaseSettings):
     )
     log_level: LogLevel = Field(default="INFO", validation_alias="LOG_LEVEL")
     # Where the client address comes from. Unset means X-Forwarded-For in
-    # production (Render sets its first entry to the connecting client) and the
-    # socket peer everywhere else, where no trusted proxy rewrites the header.
+    # production, where Render's proxies record the connecting client, and the
+    # socket peer everywhere else, where no trusted proxy writes the header.
     client_ip_header: ClientIpHeader | None = Field(
         default=None, validation_alias="CLIENT_IP_HEADER"
     )
     # Which comma-separated entry of that header to use, Python-style: 0 is the
-    # first entry, -N the Nth from the right (for a proxy that only appends).
-    client_ip_index: int = Field(
-        default=0, ge=-8, le=0, validation_alias="CLIENT_IP_INDEX"
+    # first entry, -N the Nth from the right. Unset means the platform default
+    # (see resolved_client_ip_index).
+    client_ip_index: int | None = Field(
+        default=None, ge=-8, le=0, validation_alias="CLIENT_IP_INDEX"
     )
     database_url: SecretStr | None = Field(
         default=None,
@@ -246,6 +250,14 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_client_ip_header(cls, value: object) -> object:
         return value.strip().lower() if isinstance(value, str) else value
+
+    @field_validator("client_ip_index", mode="before")
+    @classmethod
+    def normalize_client_ip_index(cls, value: object) -> object:
+        # An empty CLIENT_IP_INDEX= line means "use the default".
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @field_validator("environment", mode="before")
     @classmethod
@@ -411,6 +423,24 @@ class Settings(BaseSettings):
         if self.client_ip_header is not None:
             return self.client_ip_header
         return "x-forwarded-for" if self.environment == "production" else "none"
+
+    @property
+    def resolved_client_ip_index(self) -> int:
+        """Return the configured header entry or its environment default.
+
+        Render's proxies append to X-Forwarded-For and keep whatever entries
+        the client sent, so in production the connecting client is the third
+        entry from the right (checked on the live service; docs/deployment.md
+        says how). Every other source and environment defaults to 0.
+        """
+        if self.client_ip_index is not None:
+            return self.client_ip_index
+        if (
+            self.environment == "production"
+            and self.resolved_client_ip_header == "x-forwarded-for"
+        ):
+            return RENDER_FORWARDED_CLIENT_INDEX
+        return 0
 
     @property
     def cors(self) -> CorsConfiguration:

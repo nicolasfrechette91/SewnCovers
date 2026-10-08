@@ -1,4 +1,5 @@
 import json
+import logging
 import socket
 import threading
 import time
@@ -67,6 +68,50 @@ def test_production_command_uses_existing_app_platform_port_and_safe_options(
         "timeout_graceful_shutdown": 25,
         "limit_concurrency": 100,
     }
+    reset_settings_cache()
+
+
+@pytest.mark.parametrize(
+    ("variables", "expected"),
+    [
+        ({}, {"clientIpHeader": "x-forwarded-for", "clientIpIndex": -3}),
+        (
+            {"CLIENT_IP_INDEX": "-1"},
+            {"clientIpHeader": "x-forwarded-for", "clientIpIndex": -1},
+        ),
+        (
+            {"CLIENT_IP_HEADER": "cf-connecting-ip"},
+            {"clientIpHeader": "cf-connecting-ip", "clientIpIndex": 0},
+        ),
+    ],
+)
+def test_production_start_logs_the_effective_client_address_source(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    variables: dict[str, str],
+    expected: dict[str, object],
+) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("FRONTEND_ORIGIN", "https://nicolasfrechette91.github.io")
+    for name in ("CLIENT_IP_HEADER", "CLIENT_IP_INDEX"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in variables.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setattr(production_module, "upgrade_database", lambda: None)
+    monkeypatch.setattr(production_module, "verify_database", lambda: None)
+    monkeypatch.setattr(production_module.uvicorn, "run", lambda *_a, **_k: None)
+    reset_settings_cache()
+    caplog.set_level(logging.INFO, logger="app.production")
+
+    production_module.main()
+
+    [record] = [
+        record
+        for record in caplog.records
+        if record.name == "app.production"
+        and record.getMessage() == "Client address source"
+    ]
+    assert record.fields == expected
     reset_settings_cache()
 
 
@@ -361,6 +406,7 @@ def test_openapi_is_public_complete_and_matches_runtime_contracts() -> None:
         "/shares/{share_token}",
         "/shares/{share_token}/assets/{kind}",
         "/uploads",
+        "/uploads/availability",
         "/uploads/{upload_id}",
         "/uploads/{upload_id}/complete",
         "/uploads/{upload_id}/retry",

@@ -90,6 +90,11 @@ export interface HealthResponse {
   readonly commit?: string | null;
 }
 
+/** Whether this API accepts custom pattern uploads at all. */
+export interface UploadAvailabilityResponse {
+  readonly enabled: boolean;
+}
+
 export interface PatternResponse {
   readonly categoryId: string;
   readonly colorIds: readonly string[];
@@ -195,6 +200,9 @@ export interface SewnCoversApiClient {
     options?: ApiRequestOptions,
   ): Promise<DesignResponse>;
   getHealth(options?: ApiRequestOptions): Promise<HealthResponse>;
+  getUploadAvailability(
+    options?: ApiRequestOptions,
+  ): Promise<UploadAvailabilityResponse>;
   listPatterns(
     query?: PatternQuery,
     options?: ApiRequestOptions,
@@ -267,6 +275,16 @@ function parseHealthResponse(value: unknown): HealthResponse | undefined {
   }
 
   return value as unknown as HealthResponse;
+}
+
+function parseUploadAvailability(
+  value: unknown,
+): UploadAvailabilityResponse | undefined {
+  return isRecord(value) &&
+    hasExactKeys(value, ["enabled"]) &&
+    typeof value.enabled === "boolean"
+    ? { enabled: value.enabled }
+    : undefined;
 }
 
 function parsePatternResponse(value: unknown): PatternResponse | undefined {
@@ -779,6 +797,15 @@ export function createApiClient(): SewnCoversApiClient {
         onStatus: options.onStatus,
         parse: parseHealthResponse,
         path: "/health",
+      });
+    },
+    getUploadAvailability(options: ApiRequestOptions = {}) {
+      return request({
+        expectedStatuses: [200],
+        method: "GET",
+        onStatus: options.onStatus,
+        parse: parseUploadAvailability,
+        path: "/uploads/availability",
       });
     },
     listPatterns(

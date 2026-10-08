@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-import { Badge, Button } from "@/components/ui";
+import { Button } from "@/components/ui";
 import {
   useConfiguration,
   type CushionShape,
@@ -53,20 +53,22 @@ export function ShapeSelectionStep({
       aria-describedby={supportingTextId}
       className="fieldset-panel min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline"
     >
-      <legend
-        id={focusTargetId}
-        tabIndex={focusTargetId ? -1 : undefined}
-        className="configurator-edit-target max-w-full scroll-mt-layout pb-2 font-display text-section-title font-heading tracking-heading text-text-primary"
-      >
-        Choose your cushion shape
+      {/* The page header holds the h1 on this stage, so this is an h2. */}
+      <legend className="max-w-full pb-2">
+        <h2
+          id={focusTargetId}
+          tabIndex={focusTargetId ? -1 : undefined}
+          className="configurator-edit-target scroll-mt-layout font-display text-section-title font-heading tracking-heading text-text-primary"
+        >
+          Choose your cushion shape
+        </h2>
       </legend>
       <p
         id={supportingTextId}
         className="mt-2 max-w-2xl break-words text-body text-text-muted"
       >
-        This choice is required. Start with the overall shape of the cushion
-        you already have. Each option uses its own documented measurement
-        terms in the next step.
+        Pick the shape closest to the cushion you have. You&apos;ll measure
+        it next.
       </p>
 
       <div className="mt-component grid min-w-0 gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-5">
@@ -74,7 +76,6 @@ export function ShapeSelectionStep({
           const optionId = `${generatedId}-${option.id}`;
           const titleId = `${optionId}-title`;
           const descriptionId = `${optionId}-description`;
-          const statusId = `${optionId}-status`;
           const isSelected = state.shape === option.id;
 
           return (
@@ -88,7 +89,7 @@ export function ShapeSelectionStep({
                 required
                 checked={isSelected}
                 aria-labelledby={titleId}
-                aria-describedby={`${descriptionId} ${statusId}`}
+                aria-describedby={descriptionId}
                 onChange={() => selectShape(option.id)}
               />
               <label
@@ -123,15 +124,6 @@ export function ShapeSelectionStep({
                   >
                     {option.description}
                   </span>
-                  <span className="mt-auto pt-3">
-                    <Badge
-                      id={statusId}
-                      tone={isSelected ? "brand" : "neutral"}
-                      variant={isSelected ? "solid" : "outline"}
-                    >
-                      {isSelected ? "Selected" : "Available"}
-                    </Badge>
-                  </span>
                 </span>
               </label>
             </div>
@@ -154,13 +146,12 @@ export function ShapeSelectionStep({
             id={`${generatedId}-shape-change-heading`}
             className="text-subhead font-control text-text-primary"
           >
-            Confirm equal dimensions
+            Use the same width and height?
           </h3>
           <p className="mt-2 text-supporting text-text-muted">
-            {getCushionShapeDefinition(pendingShape).name} uses one face
-            measurement. Changing shape will make the stored height match your
-            current width ({state.width} {state.unit}). Your other measurements
-            and choices will be kept.
+            A {getCushionShapeDefinition(pendingShape).name.toLowerCase()}{" "}
+            cushion has one face size, so its height will match your width (
+            {state.width} {state.unit}). Everything else stays as it is.
           </p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Button
@@ -170,7 +161,7 @@ export function ShapeSelectionStep({
                 setPendingShape(null);
               }}
             >
-              Use width for both dimensions
+              Use the width for both
             </Button>
             <Button variant="secondary" onClick={() => setPendingShape(null)}>
               Keep current shape

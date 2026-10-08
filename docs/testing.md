@@ -4,9 +4,9 @@ Every suite runs offline: no test contacts Render, Neon, a payment provider or a
 
 | Suite | Count (October 2026) | Runs in CI | Command |
 | --- | --- | --- | --- |
-| Frontend unit, component and service tests | 187 in two runners | Yes | `npm test` |
-| Playwright browser journeys (Chromium) | 60 | Yes, in the root and GitHub Pages layouts | `npm run test:e2e` |
-| Backend tests | 290 | Yes | `python -m pytest` |
+| Frontend unit, component and service tests | 208 in two runners | Yes | `npm test` |
+| Playwright browser journeys (Chromium) | 63 | Yes, in the root and GitHub Pages layouts | `npm run test:e2e` |
+| Backend tests | 372 | Yes | `python -m pytest` |
 | Lint, formatting and type checks | n/a | Yes | see below |
 | Static-export verification | n/a | Yes | `npm run verify:export` |
 | First-load JavaScript budgets | n/a | Yes | `npm run verify:performance` |
@@ -17,7 +17,7 @@ Every suite runs offline: no test contacts Render, Neon, a payment provider or a
 `npm test` runs two runners in sequence:
 
 1. **Node's built-in test runner** over `config/*.test.mjs` and `services/*.test.mjs` (73 tests). They cover environment validation, base-path and URL construction, the typed API clients (exact response contracts, timeout, retry and cold-start policy, malformed and backend errors, request ids and limit responses), the pattern catalogue, duplicate-safe saving, share-link generation and exact restoration for every shape. The `.mjs` files import the TypeScript sources, so there is no separate build step.
-2. **`tsx` with jsdom and React Testing Library** over `tests/*.test.ts` and `tests/*.test.tsx` (126 tests). They cover the configurator components for all five shapes, measurement and unit behaviour, review and summary output, the draft and sign-in flow, account, project and commerce screens, the landing page, navigation and site metadata, and the design-token guard.
+2. **`tsx` with jsdom and React Testing Library** over `tests/*.test.ts` and `tests/*.test.tsx` (135 tests). They cover the configurator components for all five shapes, measurement and unit behaviour, review and summary output, the draft and sign-in flow, account, project and commerce screens, the landing page, navigation and site metadata, and the design-token guard.
 
 Assertions prefer accessible roles, names and visible recovery text. Requests are mocked, promises are controlled by the test and timers are deterministic, so races (stale responses, edits during restoration, duplicate saves) are tested directly.
 
@@ -27,7 +27,7 @@ Assertions prefer accessible roles, names and visible recovery text. Requests ar
 
 ## Browser journeys (Playwright)
 
-The 60 tests in `frontend/e2e/` use accessible locators and are offline by construction: the runner builds the real static export with the API origin set to the reserved `http://api.sewncovers.test`, serves `out/` from a single-process loopback server, and blocks every other origin. Playwright intercepts the API origin and answers patterns, designs, accounts, projects, uploads, commerce and operations from memory.
+The 63 tests in `frontend/e2e/` use accessible locators and are offline by construction: the runner builds the real static export with the API origin set to the reserved `http://api.sewncovers.test`, serves `out/` from a single-process loopback server, and blocks every other origin. Playwright intercepts the API origin and answers patterns, designs, accounts, projects, uploads, commerce and operations from memory.
 
 ```powershell
 cd frontend
@@ -60,7 +60,7 @@ CI runs the suite in both layouts (see [Continuous integration](#continuous-inte
 
 ## Backend tests
 
-`python -m pytest` runs 364 tests in 19 files under `backend/tests/`. Each file that needs a database creates its own SQLite database and migrates it with Alembic, so the tests exercise the real migrations. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic. `conftest.py` undoes the process-wide logging changes that application start-up makes, and `support.py` holds the shared error-envelope assertion.
+`python -m pytest` runs 372 tests in 19 files under `backend/tests/`. Each file that needs a database creates its own SQLite database and migrates it with Alembic, so the tests exercise the real migrations. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic. `conftest.py` undoes the process-wide logging changes that application start-up makes, and `support.py` holds the shared error-envelope assertion.
 
 They cover:
 

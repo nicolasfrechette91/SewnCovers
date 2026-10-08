@@ -93,7 +93,7 @@ export function CurrentSelections({
       },
       {
         key: "closure",
-        label: "Closure",
+        label: "Opening",
         value: findCoverOption(closureOptions, state.closureType).name,
       },
       {

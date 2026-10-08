@@ -46,9 +46,9 @@ Changing `NEXT_PUBLIC_API_URL` after a build changes nothing; rebuild.
 | Start command | `python -m app.production` |
 | Health check | `/health` |
 | Auto-deploy | Off (`autoDeployTrigger: "off"`); deploys come from the GitHub workflow |
-| Non-secret environment | `PYTHON_VERSION=3.13.2`, `ENVIRONMENT=production`, `FRONTEND_ORIGIN=https://nicolasfrechette91.github.io` |
+| Non-secret environment | `PYTHON_VERSION=3.13.2`, `ENVIRONMENT=production`, `FRONTEND_ORIGIN=https://nicolasfrechette91.github.io`, `CLIENT_IP_INDEX=-3` (see [Client address](#client-address)) |
 | Protected environment | `DATABASE_URL`, declared with `sync: false` and set only in Render |
-| Optional environment | `LOG_LEVEL` (default `INFO`), `CLIENT_IP_HEADER` and `CLIENT_IP_INDEX` (see [Client address](#client-address)); none needs setting |
+| Optional environment | `LOG_LEVEL` (default `INFO`) and `CLIENT_IP_HEADER` (see [Client address](#client-address)); neither needs setting |
 
 Render supplies `PORT`; the production entry point binds `0.0.0.0` on it. Dependencies are the pinned direct dependencies in `backend/pyproject.toml`; there is no backend lockfile, so transitive versions are resolved at build time.
 
@@ -66,14 +66,25 @@ The entry point runs a single Uvicorn worker sized for the free instance (512 MB
 
 ### Client address
 
-Render's proxy sets the first entry of `X-Forwarded-For` to the connecting client, so in production that entry is the client address for the per-network limits and the access log; nothing else in the header is used. Outside production the header is ignored. Two settings change the source without a code change:
+Render's proxies append to `X-Forwarded-For` and keep whatever entries the client sent, so the connecting client is a fixed distance from the right-hand end of the header: the third entry. In production that entry, and nothing else in the header, is the client address for the per-network limits and the access log. Outside production the header is ignored and the socket peer is used.
 
 | Variable | Values | Default |
 | --- | --- | --- |
 | `CLIENT_IP_HEADER` | `x-forwarded-for`, `cf-connecting-ip`, `none` (socket peer) | `x-forwarded-for` in production, `none` elsewhere |
-| `CLIENT_IP_INDEX` | `0` for the first entry, `-N` for the Nth from the right | `0` |
+| `CLIENT_IP_INDEX` | `0` for the first entry, `-N` for the Nth from the right | `-3` in production when the header is `x-forwarded-for`, `0` otherwise |
 
-Each access log line records the resolved `client` network and `forwardedEntries`, the number of entries the header had (never the addresses), which is what to look at when checking this after a platform change. `none` makes every request share the proxy's address, so it is only for local use. Changing either variable in Render takes effect on the next deploy ("Save and deploy").
+Production sets `CLIENT_IP_INDEX=-3` explicitly, in the Render dashboard and in `render.yaml`, so a service rebuilt from the blueprint keeps it. The code default is the same value, so a missing variable does not change the behaviour. Both describe Render's current proxy chain: if the chain gains or loses a hop, the third entry from the right is no longer the client, and the setting has to change with it.
+
+At start-up the production entry point logs `Client address source` with the effective `clientIpHeader` and `clientIpIndex` (the settings, never an address). Each access log line records the resolved `client` network and `forwardedEntries`, the number of entries the header had (never the addresses); a change in the usual count for ordinary requests is the first sign that the chain has changed. `none` makes every request share the proxy's address, so it is only for local use. Changing either variable in Render takes effect on the next deploy ("Save and deploy").
+
+#### How the setting was verified
+
+Checked on the live service on 2026-10-07, with `CLIENT_IP_INDEX=-3`:
+
+1. Requests that sent their own `X-Forwarded-For` entries were attributed to the caller's real network, not to the values they sent.
+2. The sign-in limiter (20 attempts per 10 minutes per network) answered `429` on the 21st attempt from one network.
+
+Re-run both checks after any change to Render's networking (a platform notice about forwarding headers, a custom domain, or a proxy or CDN in front of the service) and after any change to the service setup (region, plan, runtime, or the `CLIENT_IP_*` variables). Until they pass again, treat the per-network limits as unverified.
 
 ### Logs and request ids
 
@@ -100,7 +111,7 @@ Render's free plan has no pre-deploy command, so the start command owns the sequ
 
 1. Load settings and require `ENVIRONMENT=production`, the exact Pages origin and a `DATABASE_URL`, then configure JSON logging.
 2. Run `alembic upgrade head`.
-3. Verify the exact revision (`20261007_01`), the expected tables, the named constraints, the intended pattern indexes and exactly 15 seeded patterns.
+3. Verify the exact revision (`20261007_02`), the expected tables, the named constraints, the intended pattern indexes and exactly 15 seeded patterns.
 4. Only then start Uvicorn.
 
 If any step fails the process exits with a fixed message, the cause is logged with secrets masked, and Render keeps the previous deploy serving. Importing the app, running the tests or running the development server never calls Alembic or opens a connection.

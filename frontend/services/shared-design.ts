@@ -332,7 +332,7 @@ export class SharedDesignController {
     if (result.status === "malformed") {
       this.#publish({
         message:
-          "This shared-design link is malformed. Your current configuration has been kept.",
+          "This shared-design link is incomplete. Your own design hasn\u2019t changed.",
         phase: "malformed-id",
       });
       return;
@@ -375,7 +375,7 @@ export class SharedDesignController {
       this.#pendingConfiguration = null;
       this.#publish({
         message:
-          "Shared-design loading stopped because you changed the configuration. Your changes have been kept.",
+          "The shared design wasn\u2019t opened because you changed your design. Your changes are kept.",
         phase: "superseded",
       });
     }
@@ -438,7 +438,7 @@ export class SharedDesignController {
       if (configuration === null) {
         this.#publish({
           message:
-            "The shared design data could not be verified. Your current configuration has been kept.",
+            "This shared design couldn\u2019t be read. Your own design hasn\u2019t changed.",
           phase: "malformed-response",
         });
         return;
@@ -454,7 +454,7 @@ export class SharedDesignController {
       if (isUnknownDesignError(error)) {
         this.#publish({
           message:
-            "This shared design is unknown or has expired. Your current configuration has been kept.",
+            "We couldn\u2019t find this shared design. Check that the link is complete. Your own design hasn\u2019t changed.",
           phase: "not-found",
         });
         return;
@@ -463,7 +463,7 @@ export class SharedDesignController {
       if (isMalformedResponseError(error)) {
         this.#publish({
           message:
-            "The shared design data could not be verified. Your current configuration has been kept.",
+            "This shared design couldn\u2019t be read. Your own design hasn\u2019t changed.",
           phase: "malformed-response",
         });
         return;
@@ -471,7 +471,7 @@ export class SharedDesignController {
 
       this.#publish({
         message:
-          "The shared design could not be loaded. Your current configuration has been kept. Please try again.",
+          "The shared design couldn\u2019t be loaded. Your own design hasn\u2019t changed. Please try again.",
         phase: "error",
       });
     }
@@ -490,7 +490,7 @@ export class SharedDesignController {
       this.#pendingConfiguration = null;
       this.#publish({
         message:
-          "Shared-design loading stopped because you changed the configuration. Your changes have been kept.",
+          "The shared design wasn\u2019t opened because you changed your design. Your changes are kept.",
         phase: "superseded",
       });
       return;
@@ -519,7 +519,7 @@ export class SharedDesignController {
     if (this.#catalogue.status === "error") {
       this.#publish({
         message:
-          "The shared design was found, but its pattern could not be loaded. Your current configuration has been kept.",
+          "The shared design was found, but its pattern couldn\u2019t be loaded. Your own design hasn\u2019t changed.",
         phase: "catalogue-error",
       });
       return;
@@ -535,7 +535,7 @@ export class SharedDesignController {
     ) {
       this.#publish({
         message:
-          "The shared design\u2019s pattern is no longer available. Your current configuration has been kept.",
+          "The shared design\u2019s pattern is no longer available. Your own design hasn\u2019t changed.",
         phase: "pattern-unavailable",
       });
       return;

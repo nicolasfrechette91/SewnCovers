@@ -521,7 +521,7 @@ test("rejects malformed or mismatched retrieval responses without exposing field
   }
 });
 
-test("handles unknown or expired IDs without retry loops or local mutation", async () => {
+test("handles unknown IDs without retry loops or local mutation", async () => {
   const { SharedDesignController } = await loadSharedDesign();
   const notFound = Object.assign(new Error("private repository detail"), {
     errors: [{ code: "design_not_found" }],
@@ -535,10 +535,12 @@ test("handles unknown or expired IDs without retry loops or local mutation", asy
   await settle();
 
   assert.equal(harness.controller.getSnapshot().phase, "not-found");
+  // Public designs never expire, so the message must not suggest they do.
   assert.match(
     harness.controller.getSnapshot().message,
-    /unknown or has expired/i,
+    /couldn’t find this shared design/i,
   );
+  assert.doesNotMatch(harness.controller.getSnapshot().message, /expire/i);
   assert.doesNotMatch(
     harness.controller.getSnapshot().message,
     /private repository detail/i,

@@ -18,7 +18,7 @@ function configurationSummary(line: Readonly<Record<string, unknown>>) {
   const configuration = typeof line.configuration === "object" && line.configuration !== null ? line.configuration as Record<string, unknown> : {};
   const pattern = typeof configuration.pattern === "object" && configuration.pattern !== null ? configuration.pattern as Record<string, unknown> : {};
   const fabric = pattern.kind === "solid" && typeof pattern.color === "string"
-    ? `Solid color ${pattern.color}`
+    ? "Solid colour"
     : pattern.kind === "built-in" && typeof pattern.patternId === "string"
       ? pattern.patternId
       : pattern.kind === "custom" ? "Custom pattern" : null;

@@ -49,7 +49,7 @@ Tests use isolated SQLite databases and dependency overrides; none needs a popul
 | `app/commerce/`, `app/assurance/` | Sandbox commerce, legal, production work, trust and readiness. |
 | `app/persistence/` | Engine and sessions, ORM models, transactions. |
 | `app/settings.py`, `errors.py`, `production.py` | Typed settings, error contract, production entry point. |
-| `migrations/` | Linear Alembic history (head `20261007_01`). |
+| `migrations/` | Linear Alembic history (head `20261007_02`). |
 | `tests/` | pytest suite. |
 
 ## Documentation
