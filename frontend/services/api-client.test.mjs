@@ -1,39 +1,12 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { after, afterEach, beforeEach, test } from "node:test";
 
-import ts from "typescript";
+import { importFresh } from "../tests/fresh-import.mjs";
 
-const environmentSource = readFileSync(
-  new URL("../config/environment.ts", import.meta.url),
-  "utf8",
-);
-const clientSource = readFileSync(
-  new URL("./api-client.ts", import.meta.url),
-  "utf8",
-);
-const coverOptionsSource = readFileSync(
-  new URL("../data/cover-options.ts", import.meta.url),
-  "utf8",
-);
 const originalApiUrl = process.env.NEXT_PUBLIC_API_URL;
 const originalFetch = globalThis.fetch;
 const originalSetTimeout = globalThis.setTimeout;
 const originalClearTimeout = globalThis.clearTimeout;
-let moduleSequence = 0;
-
-function transpile(source) {
-  const result = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-    },
-    reportDiagnostics: true,
-  });
-
-  assert.deepEqual(result.diagnostics, []);
-  return result.outputText;
-}
 
 async function loadClient(apiUrl) {
   const configuredApiUrl =
@@ -47,27 +20,7 @@ async function loadClient(apiUrl) {
     process.env.NEXT_PUBLIC_API_URL = configuredApiUrl;
   }
 
-  moduleSequence += 1;
-  const environmentUrl = `data:text/javascript;base64,${Buffer.from(
-    transpile(environmentSource),
-  ).toString("base64")}#environment-${moduleSequence}`;
-  const coverOptionsUrl = `data:text/javascript;base64,${Buffer.from(
-    transpile(coverOptionsSource),
-  ).toString("base64")}#cover-options-${moduleSequence}`;
-  const compiledClient = transpile(clientSource)
-    .replace(
-      '"../config/environment"',
-      JSON.stringify(environmentUrl),
-    )
-    .replace(
-      '"../data/cover-options"',
-      JSON.stringify(coverOptionsUrl),
-    );
-  const clientUrl = `data:text/javascript;base64,${Buffer.from(
-    compiledClient,
-  ).toString("base64")}#client-${moduleSequence}`;
-
-  return import(clientUrl);
+  return importFresh("./api-client.ts", import.meta.url);
 }
 
 function jsonResponse(body, status = 200) {

@@ -1,56 +1,19 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { afterEach, test } from "node:test";
 
-import ts from "typescript";
+import { importFresh } from "../tests/fresh-import.mjs";
 
-const environmentSource = readFileSync(
-  new URL("../config/environment.ts", import.meta.url),
-  "utf8",
-);
-const accountApiSource = readFileSync(
-  new URL("./account-api.ts", import.meta.url),
-  "utf8",
-);
 const PRODUCTION_API_URL = "https://sewncovers-api.onrender.com";
 const PAGES_HOST = "nicolasfrechette91.github.io";
 const originalApiUrl = process.env.NEXT_PUBLIC_API_URL;
 const originalBasePath = process.env.NEXT_PUBLIC_BASE_PATH;
 const originalFetch = globalThis.fetch;
-let moduleSequence = 0;
-
-function transpile(source) {
-  const result = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-    },
-    reportDiagnostics: true,
-  });
-
-  assert.deepEqual(result.diagnostics, []);
-  return result.outputText;
-}
-
-const toDataUrl = (code, label) =>
-  `data:text/javascript;base64,${Buffer.from(code).toString("base64")}#${label}-${moduleSequence}`;
 
 // Loads a fresh copy, as a build with these public variables would embed them.
 async function loadAccountApi({ apiUrl, basePath }) {
   process.env.NEXT_PUBLIC_API_URL = apiUrl;
   process.env.NEXT_PUBLIC_BASE_PATH = basePath;
-  moduleSequence += 1;
-  const environmentUrl = toDataUrl(transpile(environmentSource), "environment");
-
-  return import(
-    toDataUrl(
-      transpile(accountApiSource).replace(
-        '"../config/environment"',
-        JSON.stringify(environmentUrl),
-      ),
-      "account-api",
-    )
-  );
+  return importFresh("./account-api.ts", import.meta.url);
 }
 
 function recordRequests() {

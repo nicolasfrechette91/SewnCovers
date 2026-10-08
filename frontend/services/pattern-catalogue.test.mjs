@@ -1,46 +1,10 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import ts from "typescript";
-
-const patternsSource = readFileSync(
-  new URL("../data/patterns.ts", import.meta.url),
-  "utf8",
-);
-const catalogueSource = readFileSync(
-  new URL("./pattern-catalogue.ts", import.meta.url),
-  "utf8",
-);
-let moduleSequence = 0;
-
-function transpile(source) {
-  const result = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-    },
-    reportDiagnostics: true,
-  });
-
-  assert.deepEqual(result.diagnostics, []);
-  return result.outputText;
-}
+import { importFresh } from "../tests/fresh-import.mjs";
 
 async function loadCatalogueModule() {
-  moduleSequence += 1;
-  const patternsUrl = `data:text/javascript;base64,${Buffer.from(
-    transpile(patternsSource),
-  ).toString("base64")}#patterns-${moduleSequence}`;
-  const compiledCatalogue = transpile(catalogueSource).replace(
-    '"../data/patterns"',
-    JSON.stringify(patternsUrl),
-  );
-  const catalogueUrl = `data:text/javascript;base64,${Buffer.from(
-    compiledCatalogue,
-  ).toString("base64")}#catalogue-${moduleSequence}`;
-
-  return import(catalogueUrl);
+  return importFresh("./pattern-catalogue.ts", import.meta.url);
 }
 
 const patternRecords = [

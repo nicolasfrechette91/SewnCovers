@@ -2,28 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import ts from "typescript";
+import { importFresh } from "../tests/fresh-import.mjs";
 
-const measurementSource = readFileSync(
-  new URL("../context/configuration/measurements.ts", import.meta.url),
-  "utf8",
-);
-const patternScaleSource = readFileSync(
-  new URL("../context/configuration/pattern-scale.ts", import.meta.url),
-  "utf8",
-);
-const fabricColorSource = readFileSync(
-  new URL("../context/configuration/fabric-color.ts", import.meta.url),
-  "utf8",
-);
-const sharedDesignSource = readFileSync(
-  new URL("./shared-design.ts", import.meta.url),
-  "utf8",
-);
-const coverOptionsSource = readFileSync(
-  new URL("../data/cover-options.ts", import.meta.url),
-  "utf8",
-);
 const sharedDesignLoaderSource = readFileSync(
   new URL(
     "../components/configurator/shared-design-loader.tsx",
@@ -31,90 +11,13 @@ const sharedDesignLoaderSource = readFileSync(
   ),
   "utf8",
 );
-const reducerSource = readFileSync(
-  new URL("../context/configuration/reducer.ts", import.meta.url),
-  "utf8",
-);
-let moduleSequence = 0;
-
-function transpile(source) {
-  const result = ts.transpileModule(source, {
-    compilerOptions: {
-      jsx: ts.JsxEmit.ReactJSX,
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-    },
-    reportDiagnostics: true,
-  });
-
-  assert.deepEqual(result.diagnostics, []);
-  return result.outputText;
-}
-
-function dataModule(source, label) {
-  moduleSequence += 1;
-  return `data:text/javascript;base64,${Buffer.from(source).toString(
-    "base64",
-  )}#${label}-${moduleSequence}`;
-}
 
 async function loadSharedDesign() {
-  const measurementUrl = dataModule(
-    transpile(measurementSource),
-    "measurements",
-  );
-  const patternScaleUrl = dataModule(
-    transpile(patternScaleSource),
-    "pattern-scale",
-  );
-  const coverOptionsUrl = dataModule(
-    transpile(coverOptionsSource),
-    "cover-options",
-  );
-  const compiled = transpile(sharedDesignSource)
-    .replace(
-      '"../context/configuration/measurements"',
-      JSON.stringify(measurementUrl),
-    )
-    .replace(
-      '"../context/configuration/pattern-scale"',
-      JSON.stringify(patternScaleUrl),
-    )
-    .replace(
-      '"../data/cover-options"',
-      JSON.stringify(coverOptionsUrl),
-    );
-
-  return import(dataModule(compiled, "shared-design"));
+  return importFresh("./shared-design.ts", import.meta.url);
 }
 
 async function loadReducer() {
-  const measurementUrl = dataModule(
-    transpile(measurementSource),
-    "measurements",
-  );
-  const patternScaleUrl = dataModule(
-    transpile(patternScaleSource),
-    "pattern-scale",
-  );
-  const coverOptionsUrl = dataModule(
-    transpile(coverOptionsSource),
-    "cover-options",
-  );
-  const fabricColorUrl = dataModule(
-    transpile(fabricColorSource),
-    "fabric-color",
-  );
-  const compiled = transpile(reducerSource)
-    .replace('"./measurements"', JSON.stringify(measurementUrl))
-    .replace('"./pattern-scale"', JSON.stringify(patternScaleUrl))
-    .replace('"./fabric-color"', JSON.stringify(fabricColorUrl))
-    .replace(
-      '"../../data/cover-options"',
-      JSON.stringify(coverOptionsUrl),
-    );
-
-  return import(dataModule(compiled, "reducer"));
+  return importFresh("../context/configuration/reducer.ts", import.meta.url);
 }
 
 const publicId = "AbCdEfGhIjKlMnOpQrSt_1";

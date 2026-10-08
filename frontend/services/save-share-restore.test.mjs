@@ -1,124 +1,14 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import ts from "typescript";
+import { importFreshTogether } from "../tests/fresh-import.mjs";
 
-const measurementSource = readFileSync(
-  new URL("../context/configuration/measurements.ts", import.meta.url),
-  "utf8",
-);
-const patternScaleSource = readFileSync(
-  new URL(
-    "../context/configuration/pattern-scale.ts",
-    import.meta.url,
-  ),
-  "utf8",
-);
-const patternsSource = readFileSync(
-  new URL("../data/patterns.ts", import.meta.url),
-  "utf8",
-);
-const catalogueSource = readFileSync(
-  new URL("./pattern-catalogue.ts", import.meta.url),
-  "utf8",
-);
-const designSaveSource = readFileSync(
-  new URL("./design-save.ts", import.meta.url),
-  "utf8",
-);
-const sharedDesignSource = readFileSync(
-  new URL("./shared-design.ts", import.meta.url),
-  "utf8",
-);
-const coverOptionsSource = readFileSync(
-  new URL("../data/cover-options.ts", import.meta.url),
-  "utf8",
-);
-let moduleSequence = 0;
-
-function transpile(source) {
-  const result = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-    },
-    reportDiagnostics: true,
-  });
-
-  assert.deepEqual(result.diagnostics, []);
-  return result.outputText;
-}
-
-function dataModule(source, label) {
-  moduleSequence += 1;
-  return `data:text/javascript;base64,${Buffer.from(source).toString(
-    "base64",
-  )}#${label}-${moduleSequence}`;
-}
-
+// The three modules share one private copy of their common dependencies.
 async function loadPhaseSixModules() {
-  const measurementUrl = dataModule(
-    transpile(measurementSource),
-    "measurements",
+  const [catalogue, designSave, sharedDesign] = await importFreshTogether(
+    ["./pattern-catalogue.ts", "./design-save.ts", "./shared-design.ts"],
+    import.meta.url,
   );
-  const patternScaleUrl = dataModule(
-    transpile(patternScaleSource),
-    "pattern-scale",
-  );
-  const coverOptionsUrl = dataModule(
-    transpile(coverOptionsSource),
-    "cover-options",
-  );
-  const patternsUrl = dataModule(
-    transpile(patternsSource),
-    "patterns",
-  );
-  const catalogueUrl = dataModule(
-    transpile(catalogueSource).replace(
-      '"../data/patterns"',
-      JSON.stringify(patternsUrl),
-    ),
-    "pattern-catalogue",
-  );
-  const designSaveUrl = dataModule(
-    transpile(designSaveSource)
-      .replace(
-        '"../context/configuration/measurements"',
-        JSON.stringify(measurementUrl),
-      )
-      .replace(
-        '"../context/configuration/pattern-scale"',
-        JSON.stringify(patternScaleUrl),
-      )
-      .replace(
-        '"../data/cover-options"',
-        JSON.stringify(coverOptionsUrl),
-      ),
-    "design-save",
-  );
-  const sharedDesignUrl = dataModule(
-    transpile(sharedDesignSource)
-      .replace(
-        '"../context/configuration/measurements"',
-        JSON.stringify(measurementUrl),
-      )
-      .replace(
-        '"../context/configuration/pattern-scale"',
-        JSON.stringify(patternScaleUrl),
-      )
-      .replace(
-        '"../data/cover-options"',
-        JSON.stringify(coverOptionsUrl),
-      ),
-    "shared-design",
-  );
-
-  const [catalogue, designSave, sharedDesign] = await Promise.all([
-    import(catalogueUrl),
-    import(designSaveUrl),
-    import(sharedDesignUrl),
-  ]);
 
   return { catalogue, designSave, sharedDesign };
 }

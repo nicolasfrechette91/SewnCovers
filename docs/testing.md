@@ -4,7 +4,7 @@ Every suite runs offline: no test contacts Render, Neon, a payment provider or a
 
 | Suite | Count (October 2026) | Runs in CI | Command |
 | --- | --- | --- | --- |
-| Frontend unit, component and service tests | 208 in two runners | Yes | `npm test` |
+| Frontend unit, component and service tests | 232 in two `tsx --test` runs | Yes | `npm test` |
 | Playwright browser journeys (Chromium) | 63 | Yes, in the root and GitHub Pages layouts | `npm run test:e2e` |
 | Backend tests | 372 | Yes | `python -m pytest` |
 | Lint, formatting and type checks | n/a | Yes | see below |
@@ -14,10 +14,10 @@ Every suite runs offline: no test contacts Render, Neon, a payment provider or a
 
 ## Frontend unit, component and service tests
 
-`npm test` runs two runners in sequence:
+`npm test` runs `tsx --test` twice in sequence, each over a glob:
 
-1. **Node's built-in test runner** over `config/*.test.mjs` and `services/*.test.mjs` (73 tests). They cover environment validation, base-path and URL construction, the typed API clients (exact response contracts, timeout, retry and cold-start policy, malformed and backend errors, request ids and limit responses), the pattern catalogue, duplicate-safe saving, share-link generation and exact restoration for every shape. The `.mjs` files import the TypeScript sources, so there is no separate build step.
-2. **`tsx` with jsdom and React Testing Library** over `tests/*.test.ts` and `tests/*.test.tsx` (159 tests). They cover the configurator components for all five shapes, measurement and unit behaviour, review and summary output, the draft and sign-in flow, account, project and commerce screens, the landing page, navigation and site metadata, and the design-token guard. Three files guard accessibility: `document-audit.test.tsx` proves the audit that the browser specs run (below) against deliberately broken markup, `accessibility-contracts.test.tsx` holds the component-level contracts (names that start with the visible label, labelled groups instead of navigation landmarks, the cushion figure named by its heading, the `ErrorMessage` props allow-list, swatches in forced-colours mode) and `focus-return.test.tsx` checks that closing an inline question returns focus to its opener, that every way of ending a session lands focus on the sign-in heading, and that a work step button that is replaced hands focus to the work heading.
+1. **`npm run test:node`**, over `config/*.test.mjs` and `services/*.test.mjs` (73 tests). They cover environment validation, base-path and URL construction, the typed API clients (exact response contracts, timeout, retry and cold-start policy, malformed and backend errors, request ids and limit responses), the pattern catalogue, duplicate-safe saving, share-link generation and exact restoration for every shape. The `.mjs` files import the TypeScript sources through tsx, so there is no separate build step. A test that needs a private copy of a module and its project imports, because the module reads `process.env` when it loads, uses `importFresh` from `tests/fresh-import.mjs`.
+2. **`npm run test:dom`**, the same runner with jsdom (`tests/setup-dom.mjs`) and React Testing Library, over `tests/*.test.ts` and `tests/*.test.tsx` (159 tests). They cover the configurator components for all five shapes, measurement and unit behaviour, review and summary output, the draft and sign-in flow, account, project and commerce screens, the landing page, navigation and site metadata, and the design-token guard. Three files guard accessibility: `document-audit.test.tsx` proves the audit that the browser specs run (below) against deliberately broken markup, `accessibility-contracts.test.tsx` holds the component-level contracts (names that start with the visible label, labelled groups instead of navigation landmarks, the cushion figure named by its heading, the `ErrorMessage` props allow-list, swatches in forced-colours mode) and `focus-return.test.tsx` checks that closing an inline question returns focus to its opener, that every way of ending a session lands focus on the sign-in heading, and that a work step button that is replaced hands focus to the work heading.
 
 Assertions prefer accessible roles, names and visible recovery text. Requests are mocked, promises are controlled by the test and timers are deterministic, so races (stale responses, edits during restoration, duplicate saves) are tested directly.
 
@@ -125,7 +125,7 @@ When a budget fails, the printed table says which: a larger app column means the
 | Job | Runs when | Steps |
 | --- | --- | --- |
 | Detect changed areas | Always | Chooses the frontend jobs, the backend job or both from the changed paths: `frontend/**`; `backend/**` and `render.yaml`; `ci.yml` selects both. A deploy workflow names its side instead. |
-| Frontend - lint, types, tests, exports, budgets, audit (Node 24.15.0) | Frontend changed | `npm ci`, ESLint, `tsc --noEmit`, `npm test`, build and verify the ordinary export, `verify:performance`, build and verify the GitHub Pages export, `npm audit --omit=dev --audit-level=high`. For a deploy, it uploads that Pages export as the artifact. |
+| Frontend - format, lint, types, tests, exports, budgets, audit (Node 24.15.0) | Frontend changed | `npm ci`, `prettier --check`, ESLint, `tsc --noEmit`, `npm test`, build and verify the ordinary export, `verify:performance`, build and verify the GitHub Pages export, `npm audit --omit=dev --audit-level=high`. For a deploy, it uploads that Pages export as the artifact. |
 | Frontend - Playwright (root, github-pages) | Frontend changed | `npx playwright install --with-deps chromium`, then `npm run test:e2e` in each layout. Uploads `frontend/.playwright/` on failure. |
 | Backend - Ruff, tests, dependency checks, audit (Python 3.13.2) | Backend changed | `pip install -e ".[dev]"`, `ruff format --check`, `ruff check`, `pytest`, `pip check`, then `pip-audit` of the runtime dependencies as Render resolves them. |
 | CI result | Always | Fails if any job above failed or was cancelled. |
@@ -140,7 +140,7 @@ Actions are pinned by commit SHA with version comments, every job has least-priv
 
 ```powershell
 cd frontend
-npm run lint; npm run typecheck; npm test; npm run build; npm run verify:export; npm run verify:performance
+npm run format:check; npm run lint; npm run typecheck; npm test; npm run build; npm run verify:export; npm run verify:performance
 npm run test:e2e
 
 cd ../backend

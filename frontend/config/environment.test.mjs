@@ -1,31 +1,18 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { after, test } from "node:test";
 
-import ts from "typescript";
+import { importFresh } from "../tests/fresh-import.mjs";
 
 const originalApiUrl = process.env.NEXT_PUBLIC_API_URL;
 process.env.NEXT_PUBLIC_API_URL = "";
 
-const source = readFileSync(new URL("./environment.ts", import.meta.url), "utf8");
-const transpiled = ts.transpileModule(source, {
-  compilerOptions: {
-    module: ts.ModuleKind.ESNext,
-    target: ts.ScriptTarget.ES2020,
-  },
-  reportDiagnostics: true,
-});
-
-assert.deepEqual(transpiled.diagnostics, []);
-
+// Imported only now: environment.ts reads the variable when it is evaluated.
 const {
   createPublicEnvironment,
   parsePublicApiOrigin,
   parsePublicApiUrl,
   PublicEnvironmentError,
-} = await import(
-  `data:text/javascript;base64,${Buffer.from(transpiled.outputText).toString("base64")}`
-);
+} = await importFresh("./environment.ts", import.meta.url);
 
 after(() => {
   if (originalApiUrl === undefined) {

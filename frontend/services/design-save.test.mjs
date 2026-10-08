@@ -2,24 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import ts from "typescript";
+import { importFresh } from "../tests/fresh-import.mjs";
 
-const measurementSource = readFileSync(
-  new URL("../context/configuration/measurements.ts", import.meta.url),
-  "utf8",
-);
-const patternScaleSource = readFileSync(
-  new URL("../context/configuration/pattern-scale.ts", import.meta.url),
-  "utf8",
-);
-const designSaveSource = readFileSync(
-  new URL("./design-save.ts", import.meta.url),
-  "utf8",
-);
-const coverOptionsSource = readFileSync(
-  new URL("../data/cover-options.ts", import.meta.url),
-  "utf8",
-);
 const saveSharePanelSource = readFileSync(
   new URL(
     "../components/configurator/save-share-panel.tsx",
@@ -27,56 +11,9 @@ const saveSharePanelSource = readFileSync(
   ),
   "utf8",
 );
-let moduleSequence = 0;
-
-function transpile(source) {
-  const result = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-    },
-    reportDiagnostics: true,
-  });
-
-  assert.deepEqual(result.diagnostics, []);
-  return result.outputText;
-}
-
-function dataModule(source, label) {
-  moduleSequence += 1;
-  return `data:text/javascript;base64,${Buffer.from(source).toString(
-    "base64",
-  )}#${label}-${moduleSequence}`;
-}
 
 async function loadDesignSave() {
-  const measurementUrl = dataModule(
-    transpile(measurementSource),
-    "measurements",
-  );
-  const patternScaleUrl = dataModule(
-    transpile(patternScaleSource),
-    "pattern-scale",
-  );
-  const coverOptionsUrl = dataModule(
-    transpile(coverOptionsSource),
-    "cover-options",
-  );
-  const compiled = transpile(designSaveSource)
-    .replace(
-      '"../context/configuration/measurements"',
-      JSON.stringify(measurementUrl),
-    )
-    .replace(
-      '"../context/configuration/pattern-scale"',
-      JSON.stringify(patternScaleUrl),
-    )
-    .replace(
-      '"../data/cover-options"',
-      JSON.stringify(coverOptionsUrl),
-    );
-
-  return import(dataModule(compiled, "design-save"));
+  return importFresh("./design-save.ts", import.meta.url);
 }
 
 function configuration(overrides = {}) {

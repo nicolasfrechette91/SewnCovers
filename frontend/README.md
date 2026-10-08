@@ -22,6 +22,7 @@ Open <http://localhost:3000>. `.env.example` points the app at `http://localhost
 | --- | --- |
 | `npm run dev` | Development server. |
 | `npm run lint` · `npm run typecheck` | ESLint · strict TypeScript. |
+| `npm run format` · `npm run format:check` | Prettier: rewrite the files · fail if any file would change. |
 | `npm test` | Unit, component, service and configuration tests (offline). |
 | `npm run check:config` | Only the environment and deployment-config tests. |
 | `npm run build` | Static export into `out/`. |

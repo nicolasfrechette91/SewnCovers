@@ -4,13 +4,13 @@ SewnCovers is a cushion-cover configurator: a static Next.js 16 frontend (`front
 
 ## Commands
 
-- Frontend (from `frontend/`): `npm ci`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run verify:export`, `npm run verify:performance`, `npm run test:e2e`.
+- Frontend (from `frontend/`): `npm ci`, `npm run format:check` (`npm run format` writes), `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run verify:export`, `npm run verify:performance`, `npm run test:e2e`.
 - Backend (from `backend/`, venv active): `python -m ruff format --check .`, `python -m ruff check .`, `python -m pytest`, `python -m pip check`.
 - Run the API locally on SQLite: set `DATABASE_URL=sqlite:///./local.sqlite3` in `backend/.env`, then `python -m alembic upgrade head` and `python -m uvicorn app.main:app --reload`.
 
-## Test runners (there are three)
+## Test runners
 
-- `npm test` runs `node --test` on **an explicit list of `.test.mjs` files** in the `test` script in `frontend/package.json` (add new ones there), then `tsx` with jsdom on `tests/*.test.ts` and `tests/*.test.tsx` (new files in `tests/` are picked up by the glob).
+- `npm test` runs `tsx --test` twice, both over globs, so new test files are picked up without editing `frontend/package.json`: `test:node` over `config/*.test.mjs` and `services/*.test.mjs`, then `test:dom` (adds jsdom through `tests/setup-dom.mjs`) over `tests/*.test.ts` and `tests/*.test.tsx`. The `.mjs` tests import the TypeScript sources directly; to get a private copy of a module and its imports (for one that reads `process.env` when it loads), use `importFresh` from `tests/fresh-import.mjs`.
 - `npm run test:e2e` is Playwright. It builds the export itself against a fake `api.sewncovers.test` origin and mocks the API, so it needs no backend. CI runs it in both layouts with one retry; everything it writes stays under the ignored `frontend/.playwright/`.
 - CI has one definition, `.github/workflows/ci.yml`. The deploy workflows call it for their side and deploy only if it passes; only its "CI result" job should be a required check. `npm run verify:performance` reads source maps, so run it after a build without `SEWNCOVERS_GITHUB_PAGES`.
 - Backend tests use pytest with a migrated SQLite database per test; none needs `.env` or network access.
