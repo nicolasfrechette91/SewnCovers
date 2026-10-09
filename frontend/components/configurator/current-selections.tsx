@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  formatMeasurement,
-  useConfiguration,
-} from "@/context/configuration";
+import { formatMeasurement, useConfiguration } from "@/context/configuration";
 import {
   closureOptions,
   findCoverOption,
@@ -75,7 +72,10 @@ export function CurrentSelections({
       key: field,
       label,
       mono: value !== null,
-      value: value === null ? "Not yet measured" : `${formatMeasurement(value)} ${state.unit}`,
+      value:
+        value === null
+          ? "Not yet measured"
+          : `${formatMeasurement(value)} ${state.unit}`,
     });
   }
 

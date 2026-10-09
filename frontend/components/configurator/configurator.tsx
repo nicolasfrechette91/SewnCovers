@@ -33,10 +33,7 @@ import type { SelectedPatternPresentation } from "./preview-step";
 import { deriveReviewReadiness } from "./review-summary";
 import { ShapeSelectionStep } from "./shape-selection-step";
 import { SharedDesignLoader } from "./shared-design-loader";
-import {
-  StepIndicator,
-  type StepIndicatorStep,
-} from "./step-indicator";
+import { StepIndicator, type StepIndicatorStep } from "./step-indicator";
 import { WorkspaceConfigurationLoader } from "./workspace-configuration-loader";
 
 function StageLoading() {
@@ -55,7 +52,8 @@ const MeasurementStep = dynamic(
   { loading: StageLoading },
 );
 const CoverDetailsStep = dynamic(
-  () => import("./cover-details-step").then((loaded) => loaded.CoverDetailsStep),
+  () =>
+    import("./cover-details-step").then((loaded) => loaded.CoverDetailsStep),
   { loading: StageLoading },
 );
 const PatternStep = dynamic(
@@ -145,10 +143,7 @@ export interface ConfiguratorProps {
   intro?: ReactNode;
 }
 
-export function Configurator({
-  documentTitle,
-  intro,
-}: ConfiguratorProps = {}) {
+export function Configurator({ documentTitle, intro }: ConfiguratorProps = {}) {
   const { dispatch, state } = useConfiguration();
   const {
     retry: retryPatternCatalogue,
@@ -204,8 +199,7 @@ export function Configurator({
     dataAllowsThroughStep = measurementsAreValid ? 3 : 1;
   }
   if (measurementsAreValid && patternCanContinue) {
-    dataAllowsThroughStep =
-      reviewReadiness.status === "ready" ? 5 : 4;
+    dataAllowsThroughStep = reviewReadiness.status === "ready" ? 5 : 4;
   }
 
   const maximumAccessibleStep = Math.min(
@@ -213,10 +207,7 @@ export function Configurator({
     dataAllowsThroughStep,
   );
   const requestedStepIndex = getStepIndex(requestedStepId);
-  const activeStepIndex = Math.min(
-    requestedStepIndex,
-    maximumAccessibleStep,
-  );
+  const activeStepIndex = Math.min(requestedStepIndex, maximumAccessibleStep);
   const activeStep = configuratorSteps[activeStepIndex];
   const activeStepId = activeStep.id;
   const lastStepIndex = configuratorSteps.length - 1;
@@ -372,7 +363,9 @@ export function Configurator({
     }
     setGate({ status: "link" });
     focusWhenReady(
-      gate.reason === "design" ? "shared-design-status-heading" : "workspace-load-heading",
+      gate.reason === "design"
+        ? "shared-design-status-heading"
+        : "workspace-load-heading",
     );
   };
 
@@ -440,9 +433,7 @@ export function Configurator({
     const nextStepIndex = activeStepIndex + 1;
     const nextStep = configuratorSteps[nextStepIndex];
     pendingFocusTarget.current = focusTargetIds[nextStep.id];
-    setHighestStepReached((current) =>
-      Math.max(current, nextStepIndex),
-    );
+    setHighestStepReached((current) => Math.max(current, nextStepIndex));
     setRequestedStepId(nextStep.id);
     setStageAnnouncement(
       `Stage ${nextStepIndex + 1} of ${configuratorSteps.length}: ${nextStep.label}.`,
@@ -475,14 +466,13 @@ export function Configurator({
         ? "Enter each measurement within the range shown to continue."
         : activeStepId === "pattern" && patternIssue !== undefined
           ? patternIssue.message
-          : activeStepId === "preview" && reviewReadiness.status === "incomplete"
-            ? reviewReadiness.issues[0]?.message ??
-              "Complete the preview choices to continue."
+          : activeStepId === "preview" &&
+              reviewReadiness.status === "incomplete"
+            ? (reviewReadiness.issues[0]?.message ??
+              "Complete the preview choices to continue.")
             : "";
   const previousStep =
-    activeStepIndex > 0
-      ? configuratorSteps[activeStepIndex - 1]
-      : null;
+    activeStepIndex > 0 ? configuratorSteps[activeStepIndex - 1] : null;
   const nextStep =
     activeStepIndex < lastStepIndex
       ? configuratorSteps[activeStepIndex + 1]
@@ -524,7 +514,9 @@ export function Configurator({
           <Button
             disabled={!canContinue}
             aria-describedby={
-              continueHelp === "" ? undefined : "configuration-stage-action-help"
+              continueHelp === ""
+                ? undefined
+                : "configuration-stage-action-help"
             }
             onClick={continueToNextStep}
           >
@@ -596,9 +588,7 @@ export function Configurator({
         currentStepId={activeStepId}
         revisitableStepIds={completedStepIds}
         steps={configuratorSteps}
-        onStepSelect={(stepId) =>
-          navigateToStep(stepId as ConfiguratorStepId)
-        }
+        onStepSelect={(stepId) => navigateToStep(stepId as ConfiguratorStepId)}
       />
 
       {session && gate.status === "confirm" ? (

@@ -2,13 +2,12 @@ import Link from "next/link";
 import type { ComponentPropsWithoutRef } from "react";
 
 import { classNames } from "../ui/class-names";
-import {
-  isCurrentNavigationPath,
-  type SiteNavigationItem,
-} from "./navigation";
+import { isCurrentNavigationPath, type SiteNavigationItem } from "./navigation";
 
-export interface SiteFooterProps
-  extends Omit<ComponentPropsWithoutRef<"footer">, "children"> {
+export interface SiteFooterProps extends Omit<
+  ComponentPropsWithoutRef<"footer">,
+  "children"
+> {
   currentHref?: string;
   navigationItems?: readonly SiteNavigationItem[];
   /** Pages with their own prototype notice turn this off to avoid repeating it. */

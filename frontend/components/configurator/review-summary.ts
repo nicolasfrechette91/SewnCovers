@@ -21,23 +21,15 @@ import {
   getPatternColorLabels,
   type PatternCatalogueResult,
 } from "@/data/patterns";
-import {
-  getCushionShapeDefinition,
-  getMeasurementLabel,
-} from "@/data/shapes";
+import { getCushionShapeDefinition, getMeasurementLabel } from "@/data/shapes";
 
 export const PROTOTYPE_NOTICE =
   "SewnCovers is a portfolio prototype. This summary isn't an order or a quote, and nothing is made, charged for or shipped.";
 
-export const SUMMARY_DOWNLOAD_FILENAME =
-  "sewncovers-configuration-summary.txt";
+export const SUMMARY_DOWNLOAD_FILENAME = "sewncovers-configuration-summary.txt";
 
 export type ReviewSection =
-  | "coverDetails"
-  | "measurements"
-  | "pattern"
-  | "patternScale"
-  | "shape";
+  "coverDetails" | "measurements" | "pattern" | "patternScale" | "shape";
 
 export interface ReviewIssue {
   readonly id: string;
@@ -90,12 +82,7 @@ function getInvalidMeasurementMessage(
   const definition = getCushionShapeDefinition(shape);
   const invalidLabels: string[] = definition.measurementFields
     .filter(
-      ({ field }) =>
-        !isMeasurementWithinRange(
-          state[field],
-          field,
-          state.unit,
-        ),
+      ({ field }) => !isMeasurementWithinRange(state[field], field, state.unit),
     )
     .map(({ field }) => getMeasurementLabel(shape, field));
 
@@ -103,11 +90,7 @@ function getInvalidMeasurementMessage(
     (shape === "square" || shape === "round") &&
     isMeasurementWithinRange(state.width, "width", state.unit) &&
     (state.height !== state.width ||
-      !isMeasurementWithinRange(
-        state.height,
-        "height",
-        state.unit,
-      ))
+      !isMeasurementWithinRange(state.height, "height", state.unit))
   ) {
     invalidLabels.push("equal face dimensions");
   }
@@ -163,9 +146,12 @@ function buildSummary(
     width,
   } = configuration;
   const definition = getCushionShapeDefinition(shape);
-  const measurementValues: Readonly<
-    Record<MeasurementField, number | null>
-  > = { backWidth, height, thickness, width };
+  const measurementValues: Readonly<Record<MeasurementField, number | null>> = {
+    backWidth,
+    height,
+    thickness,
+    width,
+  };
   const fields: ReviewSummaryField[] = [
     {
       id: "shape",
@@ -359,8 +345,7 @@ export function deriveReviewReadiness(
     if (!builtInPattern) {
       issues.push({
         id: "pattern-unresolved",
-        message:
-          "The selected pattern is unavailable. Choose another pattern.",
+        message: "The selected pattern is unavailable. Choose another pattern.",
         section: "pattern",
       });
     } else {

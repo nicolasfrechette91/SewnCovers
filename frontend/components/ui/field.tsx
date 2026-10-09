@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useId,
-  type ComponentPropsWithRef,
-  type ReactNode,
-} from "react";
+import { useId, type ComponentPropsWithRef, type ReactNode } from "react";
 
 import { classNames } from "./class-names";
 import {
@@ -15,11 +11,17 @@ import {
   fieldLabelClasses,
 } from "./field-styles";
 
-export function TextInput({ className, ...props }: ComponentPropsWithRef<"input">) {
+export function TextInput({
+  className,
+  ...props
+}: ComponentPropsWithRef<"input">) {
   return <input {...props} className={classNames(controlClasses, className)} />;
 }
 
-export function Select({ className, ...props }: ComponentPropsWithRef<"select">) {
+export function Select({
+  className,
+  ...props
+}: ComponentPropsWithRef<"select">) {
   return (
     <select
       {...props}
@@ -40,8 +42,10 @@ export function Textarea({
   );
 }
 
-export interface CheckboxProps
-  extends Omit<ComponentPropsWithRef<"input">, "type"> {
+export interface CheckboxProps extends Omit<
+  ComponentPropsWithRef<"input">,
+  "type"
+> {
   label: ReactNode;
   labelClassName?: string;
 }
@@ -58,7 +62,12 @@ export function Checkbox({
 
   return (
     <div className={classNames("flex min-w-0 items-start gap-3", className)}>
-      <input {...props} id={checkboxId} type="checkbox" className={checkboxClasses} />
+      <input
+        {...props}
+        id={checkboxId}
+        type="checkbox"
+        className={checkboxClasses}
+      />
       <label
         htmlFor={checkboxId}
         className={classNames(
@@ -88,7 +97,14 @@ export interface FieldProps {
 }
 
 /** Label, control, help and error text, with ids wired for assistive tech. */
-export function Field({ children, className, error, help, id, label }: FieldProps) {
+export function Field({
+  children,
+  className,
+  error,
+  help,
+  id,
+  label,
+}: FieldProps) {
   const generatedId = useId();
   const controlId = id ?? `field-${generatedId}`;
   const helpId = help ? `${controlId}-help` : undefined;

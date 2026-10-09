@@ -8,8 +8,5 @@ export function normalizeHexColor(value: string): string | null {
 }
 
 export function isNormalizedHexColor(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    /^#[0-9A-F]{6}$/.test(value)
-  );
+  return typeof value === "string" && /^#[0-9A-F]{6}$/.test(value);
 }

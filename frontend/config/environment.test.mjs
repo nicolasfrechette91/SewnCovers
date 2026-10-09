@@ -75,7 +75,8 @@ test("rejects malformed URLs and unsupported schemes", () => {
 });
 
 test("rejects credentials, queries, and fragments without echoing input", () => {
-  const unsafeValue = "https://private-user:private-pass@example.com?token=private";
+  const unsafeValue =
+    "https://private-user:private-pass@example.com?token=private";
 
   assert.throws(
     () => parsePublicApiUrl(unsafeValue),

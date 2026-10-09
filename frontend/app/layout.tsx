@@ -22,9 +22,7 @@ import { ConfigurationProvider } from "@/context/configuration";
 
 import "./globals.css";
 
-const publicApiOrigin = parsePublicApiOrigin(
-  process.env.NEXT_PUBLIC_API_URL,
-);
+const publicApiOrigin = parsePublicApiOrigin(process.env.NEXT_PUBLIC_API_URL);
 const publicApiConnectSource = publicApiOrigin ? ` ${publicApiOrigin}` : "";
 
 // Self-hosted OFL fonts (see app/fonts/README.md). Local files keep builds
@@ -125,7 +123,11 @@ export default function RootLayout({
               { href: "/commerce/", label: "Pricing" },
             ]}
             utilityItems={[
-              { href: "/projects/", label: "My projects", requiresAccount: true },
+              {
+                href: "/projects/",
+                label: "My projects",
+                requiresAccount: true,
+              },
               { href: "/cart/", label: "Cart", requiresAccount: true },
               { href: "/account/", label: "Account" },
             ]}
@@ -138,9 +140,7 @@ export default function RootLayout({
             <ConfigurationProvider>{children}</ConfigurationProvider>
           </main>
           <RouteAwareSiteFooter
-            navigationItems={[
-              { href: "/legal/", label: "Legal and privacy" },
-            ]}
+            navigationItems={[{ href: "/legal/", label: "Legal and privacy" }]}
           />
           <AuthReturnFocus />
           <ApiWarmup />

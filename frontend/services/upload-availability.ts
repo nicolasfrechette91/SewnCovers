@@ -9,7 +9,8 @@ import { apiClient, type SewnCoversApiClient } from "./api-client";
  * "checking" (no answer yet) and "unknown" (the request failed or timed out)
  * fail closed, so nothing upload-related is shown.
  */
-export type UploadAvailability = "checking" | "enabled" | "disabled" | "unknown";
+export type UploadAvailability =
+  "checking" | "enabled" | "disabled" | "unknown";
 
 let pending: Promise<boolean | null> | null = null;
 

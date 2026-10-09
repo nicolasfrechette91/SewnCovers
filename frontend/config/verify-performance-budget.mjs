@@ -24,7 +24,10 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 
 const frontendUrl = new URL("../", import.meta.url);
-const statsUrl = new URL(".next/diagnostics/route-bundle-stats.json", frontendUrl);
+const statsUrl = new URL(
+  ".next/diagnostics/route-bundle-stats.json",
+  frontendUrl,
+);
 
 // Measured on Next.js 16.3.8 in October 2026 (docs/testing.md has the table).
 // App budgets leave about 25 percent of headroom, transfer budgets about 15
@@ -49,7 +52,11 @@ function decodeVlq(text) {
 
   for (const character of text) {
     const digit = base64Digits.get(character);
-    assert.notEqual(digit, undefined, `Invalid source-map character "${character}".`);
+    assert.notEqual(
+      digit,
+      undefined,
+      `Invalid source-map character "${character}".`,
+    );
     value += (digit & 31) << shift;
     if (digit & 32) {
       shift += 5;
@@ -127,7 +134,9 @@ function attributeChunk(chunkPath) {
     let previousCategory = "glue";
 
     for (const [column, category] of [...lineMarks, [line.length, "glue"]]) {
-      bytes[previousCategory] += Buffer.byteLength(line.slice(previousColumn, column));
+      bytes[previousCategory] += Buffer.byteLength(
+        line.slice(previousColumn, column),
+      );
       previousColumn = column;
       previousCategory = category;
     }
@@ -166,7 +175,9 @@ for (const [route, budget] of budgets) {
     "transfer (gzip)": `${totals.transfer} / ${budget.transfer}`,
   });
   if (totals.app > budget.app) {
-    failures.push(`${route} app code is ${totals.app} bytes; budget is ${budget.app}.`);
+    failures.push(
+      `${route} app code is ${totals.app} bytes; budget is ${budget.app}.`,
+    );
   }
   if (totals.transfer > budget.transfer) {
     failures.push(

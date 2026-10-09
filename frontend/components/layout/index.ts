@@ -1,8 +1,5 @@
 export type { SiteNavigationItem } from "./navigation";
-export {
-  isCurrentNavigationPath,
-  normalizeNavigationPath,
-} from "./navigation";
+export { isCurrentNavigationPath, normalizeNavigationPath } from "./navigation";
 export {
   RouteAwareSiteFooter,
   RouteAwareSiteHeader,

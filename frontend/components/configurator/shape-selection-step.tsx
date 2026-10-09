@@ -3,10 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 import { Button, useDeferredFocus } from "@/components/ui";
-import {
-  useConfiguration,
-  type CushionShape,
-} from "@/context/configuration";
+import { useConfiguration, type CushionShape } from "@/context/configuration";
 import {
   cushionShapeDefinitions,
   getCushionShapeDefinition,
@@ -75,8 +72,8 @@ export function ShapeSelectionStep({
         id={supportingTextId}
         className="mt-2 max-w-2xl break-words text-body text-text-muted"
       >
-        Pick the shape closest to the cushion you have. You&apos;ll measure
-        it next.
+        Pick the shape closest to the cushion you have. You&apos;ll measure it
+        next.
       </p>
 
       <div className="mt-component grid min-w-0 gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:grid-cols-5">

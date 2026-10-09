@@ -15,9 +15,7 @@ afterEach(() => {
 
 test("renders legal, unauthorized, and review-required surfaces", async () => {
   const legal = render(<LegalPage />);
-  assert.ok(
-    legal.getByRole("heading", { name: "Legal information" }),
-  );
+  assert.ok(legal.getByRole("heading", { name: "Legal information" }));
   for (const heading of [
     "Terms of use",
     "Privacy notice",
@@ -35,7 +33,5 @@ test("renders legal, unauthorized, and review-required surfaces", async () => {
       <ProductionOperationsScreen />
     </AuthProvider>,
   );
-  assert.ok(
-    await screen.findByText(/Administrator authorization is required/),
-  );
+  assert.ok(await screen.findByText(/Administrator authorization is required/));
 });

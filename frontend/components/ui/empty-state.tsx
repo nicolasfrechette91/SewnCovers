@@ -12,8 +12,10 @@ export function emptyStateClasses(className?: string | false | null): string {
 
 type EmptyStateHeading = "h2" | "h3";
 
-export interface EmptyStateProps
-  extends Omit<ComponentPropsWithoutRef<"section">, "title"> {
+export interface EmptyStateProps extends Omit<
+  ComponentPropsWithoutRef<"section">,
+  "title"
+> {
   action?: ReactNode;
   description?: ReactNode;
   title: ReactNode;
@@ -35,12 +37,17 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <section {...sectionProps} className={emptyStateClasses(className)}>
-      <span aria-hidden="true" className="stitch-rule stitch-rule-accent mb-component w-16" />
+      <span
+        aria-hidden="true"
+        className="stitch-rule stitch-rule-accent mb-component w-16"
+      />
       <Title id={titleId} className={cardTitleClasses}>
         {title}
       </Title>
       {description ? (
-        <div className="mt-3 max-w-prose text-body text-text-muted">{description}</div>
+        <div className="mt-3 max-w-prose text-body text-text-muted">
+          {description}
+        </div>
       ) : null}
       {action ? <div className="mt-component">{action}</div> : null}
     </section>

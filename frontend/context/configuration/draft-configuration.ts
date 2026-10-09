@@ -12,11 +12,7 @@ import { isNormalizedHexColor } from "./fabric-color";
 import { isFinitePositiveMeasurement, roundMeasurement } from "./measurements";
 import { normalizePatternScale, PATTERN_SCALE_DEFAULT } from "./pattern-scale";
 import { initialConfigurationState } from "./reducer";
-import type {
-  ConfigurationState,
-  CushionShape,
-  PatternChoice,
-} from "./types";
+import type { ConfigurationState, CushionShape, PatternChoice } from "./types";
 
 // Browser drafts are validated field by field, so a half-finished or partly
 // damaged draft still brings back everything that is valid. Only the
@@ -115,10 +111,21 @@ export function sanitizeDraftConfiguration(value: unknown): ConfigurationState {
       patternScale !== null && patternScale === value.patternScale
         ? patternScale
         : PATTERN_SCALE_DEFAULT,
-    materialId: draftOption(materialOptions, value.materialId, DEFAULT_MATERIAL_ID),
-    fitPreference: draftOption(fitOptions, value.fitPreference, DEFAULT_FIT_PREFERENCE),
-    closureType: draftOption(closureOptions, value.closureType, DEFAULT_CLOSURE_TYPE),
+    materialId: draftOption(
+      materialOptions,
+      value.materialId,
+      DEFAULT_MATERIAL_ID,
+    ),
+    fitPreference: draftOption(
+      fitOptions,
+      value.fitPreference,
+      DEFAULT_FIT_PREFERENCE,
+    ),
+    closureType: draftOption(
+      closureOptions,
+      value.closureType,
+      DEFAULT_CLOSURE_TYPE,
+    ),
     seamStyle: draftOption(seamOptions, value.seamStyle, DEFAULT_SEAM_STYLE),
   };
 }
-

@@ -1,6 +1,4 @@
-import {
-  hasValidMeasurementsForShape,
-} from "../context/configuration/measurements";
+import { hasValidMeasurementsForShape } from "../context/configuration/measurements";
 import { normalizePatternScale } from "../context/configuration/pattern-scale";
 import type { ConfigurationState } from "../context/configuration/types";
 import type { PatternCatalogueResult } from "../data/patterns";
@@ -113,10 +111,7 @@ const initialState: SharedDesignLoadState = Object.freeze({
   phase: "idle",
 });
 
-function hasExactKeys(
-  value: object,
-  expectedKeys: readonly string[],
-): boolean {
+function hasExactKeys(value: object, expectedKeys: readonly string[]): boolean {
   const keys = Object.keys(value);
 
   return (
@@ -125,10 +120,7 @@ function hasExactKeys(
   );
 }
 
-function hasAtMostDecimalPlaces(
-  value: number,
-  places: number,
-): boolean {
+function hasAtMostDecimalPlaces(value: number, places: number): boolean {
   if (!Number.isFinite(value)) {
     return false;
   }
@@ -152,9 +144,7 @@ function configurationFromResponse(
   const solidResponse = hasExactKeys(response, SOLID_DESIGN_RESPONSE_KEYS);
   const resolvedConfiguration = {
     backWidth: legacyResponse ? null : response.backWidth,
-    closureType: legacyResponse
-      ? DEFAULT_CLOSURE_TYPE
-      : response.closureType,
+    closureType: legacyResponse ? DEFAULT_CLOSURE_TYPE : response.closureType,
     fitPreference: legacyResponse
       ? DEFAULT_FIT_PREFERENCE
       : response.fitPreference,
@@ -186,12 +176,11 @@ function configurationFromResponse(
       (response.patternId !== null &&
         PATTERN_ID_PATTERN.test(response.patternId) &&
         (!fabricResponse || response.solidColor === null)) ||
-      ((fabricResponse && response.patternId === null) || solidResponse) &&
-        /^#[0-9A-F]{6}$/.test(response.solidColor ?? "")
+      (((fabricResponse && response.patternId === null) || solidResponse) &&
+        /^#[0-9A-F]{6}$/.test(response.solidColor ?? ""))
     ) ||
     !hasAtMostDecimalPlaces(response.patternScale, 1) ||
-    normalizePatternScale(response.patternScale) !==
-      response.patternScale ||
+    normalizePatternScale(response.patternScale) !== response.patternScale ||
     !hasSupportedCoverOptions(resolvedConfiguration)
   ) {
     return null;
@@ -256,14 +245,11 @@ function isMalformedResponseError(error: unknown): boolean {
   return (
     typeof error === "object" &&
     error !== null &&
-    (error as { readonly category?: unknown }).category ===
-      "malformed-response"
+    (error as { readonly category?: unknown }).category === "malformed-response"
   );
 }
 
-export function readSharedDesignId(
-  search: string,
-): SharedDesignIdResult {
+export function readSharedDesignId(search: string): SharedDesignIdResult {
   try {
     const searchParams = new URLSearchParams(
       search.startsWith("?") ? search.slice(1) : search,
@@ -274,10 +260,7 @@ export function readSharedDesignId(
       return { status: "none" };
     }
 
-    if (
-      values.length !== 1 ||
-      !PUBLIC_DESIGN_ID_PATTERN.test(values[0])
-    ) {
+    if (values.length !== 1 || !PUBLIC_DESIGN_ID_PATTERN.test(values[0])) {
       return { status: "malformed" };
     }
 
@@ -367,10 +350,7 @@ export class SharedDesignController {
       return;
     }
 
-    if (
-      this.#getConfigurationRevision() !==
-      this.#configurationRevision
-    ) {
+    if (this.#getConfigurationRevision() !== this.#configurationRevision) {
       this.#requestVersion += 1;
       this.#pendingConfiguration = null;
       this.#publish({
@@ -405,8 +385,7 @@ export class SharedDesignController {
     const publicId = this.#publicId;
     const requestVersion = this.#requestVersion + 1;
     this.#requestVersion = requestVersion;
-    this.#configurationRevision =
-      this.#getConfigurationRevision();
+    this.#configurationRevision = this.#getConfigurationRevision();
     this.#publish({
       message: "Connecting to SewnCovers\u2026",
       phase: "loading",
@@ -430,10 +409,7 @@ export class SharedDesignController {
         return;
       }
 
-      const configuration = configurationFromResponse(
-        response,
-        publicId,
-      );
+      const configuration = configurationFromResponse(response, publicId);
 
       if (configuration === null) {
         this.#publish({
@@ -482,10 +458,7 @@ export class SharedDesignController {
       return;
     }
 
-    if (
-      this.#getConfigurationRevision() !==
-      this.#configurationRevision
-    ) {
+    if (this.#getConfigurationRevision() !== this.#configurationRevision) {
       this.#requestVersion += 1;
       this.#pendingConfiguration = null;
       this.#publish({

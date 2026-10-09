@@ -174,7 +174,10 @@ function insetPolygon(points: readonly Point[], distance: number): Point[] {
   const lines = points.map((current, index) => {
     const next = points[(index + 1) % points.length];
     return {
-      origin: add(current, scale(inwardNormal(current, next, centre), distance)),
+      origin: add(
+        current,
+        scale(inwardNormal(current, next, centre), distance),
+      ),
       direction: unit(subtract(next, current)),
     };
   });
@@ -216,7 +219,10 @@ function pillowSpec(corners: readonly Point[], puff: number): PathSpec {
 }
 
 /** A polygon with softened corners, for firm boxed shapes. */
-function roundedPolygonSpec(points: readonly Point[], radius: number): PathSpec {
+function roundedPolygonSpec(
+  points: readonly Point[],
+  radius: number,
+): PathSpec {
   const corners = points.map((current, index) => {
     const previous = points[(index - 1 + points.length) % points.length];
     const next = points[(index + 1) % points.length];
@@ -299,18 +305,18 @@ function toPath(...specs: readonly PathSpec[]): string {
         }
         return `C${formatPoint(segment.c1)} ${formatPoint(segment.c2)} ${formatPoint(segment.to)}`;
       });
-      return [`M${formatPoint(spec.start)}`, ...commands, spec.closed ? "Z" : ""]
+      return [
+        `M${formatPoint(spec.start)}`,
+        ...commands,
+        spec.closed ? "Z" : "",
+      ]
         .filter(Boolean)
         .join(" ");
     })
     .join(" ");
 }
 
-function bezierPoint(
-  from: Point,
-  segment: Segment,
-  t: number,
-): Point {
+function bezierPoint(from: Point, segment: Segment, t: number): Point {
   if (segment.kind === "L") return lerp(from, segment.to, t);
   if (segment.kind === "Q") {
     return lerp(
@@ -545,7 +551,10 @@ function boxGeometry(width: number, depth: number, thickness: number) {
   const [bl, br, fr, frLow, flLow, blLow] = shapePoints.map(place);
   const fl = place(add(backLeft, depthVector));
   const bandDepth = drop.y * factor;
-  const detail = detailScale(length(subtract(br, bl)), length(subtract(fl, bl)));
+  const detail = detailScale(
+    length(subtract(br, bl)),
+    length(subtract(fl, bl)),
+  );
 
   const top = [bl, br, fr, fl];
   const outlineSpec = roundedPolygonSpec(
@@ -553,7 +562,10 @@ function boxGeometry(width: number, depth: number, thickness: number) {
     9 * detail,
   );
   const faceSpec = roundedPolygonSpec(top, 7 * detail);
-  const seamSpec = roundedPolygonSpec(insetPolygon(top, 11 * detail), 5 * detail);
+  const seamSpec = roundedPolygonSpec(
+    insetPolygon(top, 11 * detail),
+    5 * detail,
+  );
   // A welt seam runs just above the lower edge of the boxing strip.
   const lift = point(0, -clamp(bandDepth * 0.28, 4, 10));
   const trim = 10 * detail;
@@ -579,8 +591,14 @@ function boxGeometry(width: number, depth: number, thickness: number) {
     face: toPath(faceSpec),
     seams: [toPath(seamSpec), toPath(lowerSeam)],
     bands: [
-      { tone: "front" as const, d: toPath(polylineSpec([fl, fr, frLow, flLow], true)) },
-      { tone: "side" as const, d: toPath(polylineSpec([bl, fl, flLow, blLow], true)) },
+      {
+        tone: "front" as const,
+        d: toPath(polylineSpec([fl, fr, frLow, flLow], true)),
+      },
+      {
+        tone: "side" as const,
+        d: toPath(polylineSpec([bl, fl, flLow, blLow], true)),
+      },
     ],
     creases: [toPath(polylineSpec([bl, fl, fr]), polylineSpec([fl, flLow]))],
     folds: [],
@@ -621,7 +639,9 @@ function roundGeometry(diameter: number, thickness: number): CushionGeometry {
   const outlineSpec = silhouetteSpec(centre, radius, band);
   const faceSpec = arcsSpec(centre, radius, [180, 90, 0, -90, -180], true);
   const seams = [
-    toPath(arcsSpec(centre, radius - 13 * detail, [180, 90, 0, -90, -180], true)),
+    toPath(
+      arcsSpec(centre, radius - 13 * detail, [180, 90, 0, -90, -180], true),
+    ),
   ];
   const bands: CushionBand[] = [];
   const creases: string[] = [];
@@ -644,7 +664,12 @@ function roundGeometry(diameter: number, thickness: number): CushionGeometry {
     const lift = clamp(band * 0.28, 4, 10);
     seams.push(
       toPath(
-        arcsSpec(add(lowered, point(0, -lift)), radius - 1.5, [175, 90, 5], false),
+        arcsSpec(
+          add(lowered, point(0, -lift)),
+          radius - 1.5,
+          [175, 90, 5],
+          false,
+        ),
       ),
     );
   }

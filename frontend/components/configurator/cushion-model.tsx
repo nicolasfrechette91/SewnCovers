@@ -77,7 +77,9 @@ export function CushionModel({
       preserveAspectRatio="xMidYMid meet"
       focusable="false"
       data-pattern-applied={hasFabric ? "true" : "false"}
-      data-fabric-kind={solidColor ? "solid" : patternName ? "pattern" : "neutral"}
+      data-fabric-kind={
+        solidColor ? "solid" : patternName ? "pattern" : "neutral"
+      }
       data-preview-model="cushion"
       data-preview-shape={geometry.shape}
       data-preview-band={geometry.bands.length > 0 ? "true" : "false"}

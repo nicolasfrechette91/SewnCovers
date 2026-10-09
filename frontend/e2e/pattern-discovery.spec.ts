@@ -14,21 +14,111 @@ const configurePath = `${basePath}/configure/`;
 const publicId = "PatternDiscoveryDemo01";
 
 const patternRecords = [
-  ["prototype-botanical", "Seed scatter", "Green and terracotta seeds scattered over a light ground.", "botanical", ["ivory", "green", "terracotta"]],
-  ["fern-trail", "Fern trail", "Layered fronds arranged along a gentle diagonal trail.", "botanical", ["ivory", "green"]],
-  ["meadow-sprig", "Meadow sprig", "Small branching sprigs scattered across an open ground.", "botanical", ["ivory", "blue", "gold"]],
-  ["prototype-geometric", "Harlequin", "Green and terracotta triangles in a bold harlequin check.", "geometric", ["ivory", "green", "terracotta"]],
-  ["diamond-path", "Diamond path", "Nested diamonds repeat in crisp offset rows.", "geometric", ["ivory", "blue", "charcoal"]],
-  ["arch-grid", "Arch grid", "Rounded arches alternate within a compact tiled grid.", "geometric", ["ivory", "terracotta", "gold"]],
-  ["harbor-stripe", "Harbour stripe", "Broad blue bands alternate with fine light pinstripes.", "striped", ["ivory", "blue"]],
-  ["orchard-stripe", "Orchard stripe", "Uneven green and gold lines form a relaxed rhythm.", "striped", ["ivory", "green", "gold"]],
-  ["ribbon-stripe", "Ribbon stripe", "Slim rose bands cross wider terracotta ribbons.", "striped", ["ivory", "terracotta", "rose"]],
-  ["prototype-woven", "Fine weave", "A fine, quiet grid of crossing threads.", "woven", ["ivory", "charcoal"]],
-  ["basket-check", "Basket check", "Alternating blocks suggest an oversized basket weave.", "woven", ["ivory", "blue", "charcoal"]],
-  ["linen-crosshatch", "Linen crosshatch", "Fine crossing lines create a loose textured grid.", "woven", ["ivory", "gold"]],
-  ["terrace-wave", "Terrace wave", "Layered waves move in alternating cool bands.", "abstract", ["ivory", "green", "blue"]],
-  ["pebble-drift", "Pebble drift", "Soft-edged pebble forms gather in offset clusters.", "abstract", ["ivory", "terracotta", "charcoal"]],
-  ["confetti-grid", "Confetti grid", "Playful dashes and dots repeat on a spacious grid.", "abstract", ["ivory", "green", "gold", "rose"]],
+  [
+    "prototype-botanical",
+    "Seed scatter",
+    "Green and terracotta seeds scattered over a light ground.",
+    "botanical",
+    ["ivory", "green", "terracotta"],
+  ],
+  [
+    "fern-trail",
+    "Fern trail",
+    "Layered fronds arranged along a gentle diagonal trail.",
+    "botanical",
+    ["ivory", "green"],
+  ],
+  [
+    "meadow-sprig",
+    "Meadow sprig",
+    "Small branching sprigs scattered across an open ground.",
+    "botanical",
+    ["ivory", "blue", "gold"],
+  ],
+  [
+    "prototype-geometric",
+    "Harlequin",
+    "Green and terracotta triangles in a bold harlequin check.",
+    "geometric",
+    ["ivory", "green", "terracotta"],
+  ],
+  [
+    "diamond-path",
+    "Diamond path",
+    "Nested diamonds repeat in crisp offset rows.",
+    "geometric",
+    ["ivory", "blue", "charcoal"],
+  ],
+  [
+    "arch-grid",
+    "Arch grid",
+    "Rounded arches alternate within a compact tiled grid.",
+    "geometric",
+    ["ivory", "terracotta", "gold"],
+  ],
+  [
+    "harbor-stripe",
+    "Harbour stripe",
+    "Broad blue bands alternate with fine light pinstripes.",
+    "striped",
+    ["ivory", "blue"],
+  ],
+  [
+    "orchard-stripe",
+    "Orchard stripe",
+    "Uneven green and gold lines form a relaxed rhythm.",
+    "striped",
+    ["ivory", "green", "gold"],
+  ],
+  [
+    "ribbon-stripe",
+    "Ribbon stripe",
+    "Slim rose bands cross wider terracotta ribbons.",
+    "striped",
+    ["ivory", "terracotta", "rose"],
+  ],
+  [
+    "prototype-woven",
+    "Fine weave",
+    "A fine, quiet grid of crossing threads.",
+    "woven",
+    ["ivory", "charcoal"],
+  ],
+  [
+    "basket-check",
+    "Basket check",
+    "Alternating blocks suggest an oversized basket weave.",
+    "woven",
+    ["ivory", "blue", "charcoal"],
+  ],
+  [
+    "linen-crosshatch",
+    "Linen crosshatch",
+    "Fine crossing lines create a loose textured grid.",
+    "woven",
+    ["ivory", "gold"],
+  ],
+  [
+    "terrace-wave",
+    "Terrace wave",
+    "Layered waves move in alternating cool bands.",
+    "abstract",
+    ["ivory", "green", "blue"],
+  ],
+  [
+    "pebble-drift",
+    "Pebble drift",
+    "Soft-edged pebble forms gather in offset clusters.",
+    "abstract",
+    ["ivory", "terracotta", "charcoal"],
+  ],
+  [
+    "confetti-grid",
+    "Confetti grid",
+    "Playful dashes and dots repeat on a spacious grid.",
+    "abstract",
+    ["ivory", "green", "gold", "rose"],
+  ],
 ] as const;
 
 const patterns = patternRecords.map(
@@ -106,10 +196,7 @@ async function mockApi(context: BrowserContext, patternQueries: string[]) {
       return;
     }
 
-    if (
-      request.method() === "GET" &&
-      url.pathname === `/designs/${publicId}`
-    ) {
+    if (request.method() === "GET" && url.pathname === `/designs/${publicId}`) {
       await fulfillJson(route, { ...savedDesign, publicId });
       return;
     }
@@ -119,12 +206,8 @@ async function mockApi(context: BrowserContext, patternQueries: string[]) {
 }
 
 async function reachPatternStage(page: Page) {
-  await page
-    .getByRole("button", { name: "Continue to Measurements" })
-    .click();
-  await page
-    .getByRole("button", { name: "Continue to Cover details" })
-    .click();
+  await page.getByRole("button", { name: "Continue to Measurements" }).click();
+  await page.getByRole("button", { name: "Continue to Cover details" }).click();
   await page.getByRole("button", { name: "Continue to Pattern" }).click();
   await expect(
     page.getByRole("searchbox", { name: "Search patterns" }),
@@ -155,15 +238,21 @@ test("shows every built-in pattern and narrows them without losing selection", a
   await expect(count).toHaveText("15 patterns");
   await expect(count).toHaveAttribute("role", "status");
   await expect(page.getByText(/^15 patterns$/)).toHaveCount(1);
-  await expect(page.getByRole("button", { name: /Show all|Show fewer/ })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /Show all|Show fewer/ }),
+  ).toHaveCount(0);
   await expect(page.getByRole("radio", { name: "Terrace wave" })).toBeChecked();
   await expect(
     page.getByRole("button", { name: "Continue to Preview" }),
   ).toBeEnabled();
   // Uploads are off here, as in production: one line, no upload or sign-in.
   const yourPatterns = page.getByRole("region", { name: "Your patterns" });
-  await expect(yourPatterns).toContainText("Custom uploads aren't enabled in this demo.");
-  await expect(page.getByRole("button", { name: "Upload your own pattern" })).toHaveCount(0);
+  await expect(yourPatterns).toContainText(
+    "Custom uploads aren't enabled in this demo.",
+  );
+  await expect(
+    page.getByRole("button", { name: "Upload your own pattern" }),
+  ).toHaveCount(0);
   const initialMediaRequests = [...mediaRequests];
 
   const search = page.getByRole("searchbox", {
@@ -210,14 +299,18 @@ test("shows every built-in pattern and narrows them without losing selection", a
   await page.getByRole("radio", { name: "Pebble drift" }).focus();
   await page.keyboard.press("Space");
   await expect(page.getByRole("radio", { name: "Pebble drift" })).toBeChecked();
-  await expect(page.getByRole("radio", { name: "Terrace wave" })).not.toBeChecked();
+  await expect(
+    page.getByRole("radio", { name: "Terrace wave" }),
+  ).not.toBeChecked();
 
   await search.fill("does not exist");
   await expect(
     page.getByRole("heading", { name: "No patterns match" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Your pattern is hidden by the filters" }),
+    page.getByRole("heading", {
+      name: "Your pattern is hidden by the filters",
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Continue to Preview" }),
@@ -242,14 +335,10 @@ test("keeps Continue validation and native selection semantics", async ({
   await mockApi(context, []);
   await page.goto(configurePath);
   await page.getByText("Square cushion", { exact: true }).click();
-  await page
-    .getByRole("button", { name: "Continue to Measurements" })
-    .click();
+  await page.getByRole("button", { name: "Continue to Measurements" }).click();
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("50");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("10");
-  await page
-    .getByRole("button", { name: "Continue to Cover details" })
-    .click();
+  await page.getByRole("button", { name: "Continue to Cover details" }).click();
   await page.getByRole("button", { name: "Continue to Pattern" }).click();
 
   const continueButton = page.getByRole("button", {
@@ -266,7 +355,9 @@ test("keeps Continue validation and native selection semantics", async ({
   await expect(page.getByRole("radio", { name: "Fern trail" })).toBeChecked();
   await page.getByText("Diamond path", { exact: true }).click();
   await expect(page.getByRole("radio", { name: "Diamond path" })).toBeChecked();
-  await expect(page.getByRole("radio", { name: "Fern trail" })).not.toBeChecked();
+  await expect(
+    page.getByRole("radio", { name: "Fern trail" }),
+  ).not.toBeChecked();
 });
 
 test("selects, edits, previews, and preserves a solid fabric colour", async ({
@@ -277,14 +368,10 @@ test("selects, edits, previews, and preserves a solid fabric colour", async ({
   await page.goto(configurePath);
   expect(new URL(page.url()).pathname).toBe(configurePath);
   await page.getByText("Square cushion", { exact: true }).click();
-  await page
-    .getByRole("button", { name: "Continue to Measurements" })
-    .click();
+  await page.getByRole("button", { name: "Continue to Measurements" }).click();
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("50");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("10");
-  await page
-    .getByRole("button", { name: "Continue to Cover details" })
-    .click();
+  await page.getByRole("button", { name: "Continue to Cover details" }).click();
   await page.getByRole("button", { name: "Continue to Pattern" }).click();
 
   const solid = page.getByRole("radio", { name: "Solid colour" });
@@ -294,7 +381,9 @@ test("selects, edits, previews, and preserves a solid fabric colour", async ({
     "solid-color",
   );
   // The card shows a swatch, not a colour code.
-  await expect(page.locator(".pattern-card-label").first()).not.toContainText("#");
+  await expect(page.locator(".pattern-card-label").first()).not.toContainText(
+    "#",
+  );
   const search = page.getByRole("searchbox", {
     name: "Search patterns",
   });
@@ -320,16 +409,21 @@ test("selects, edits, previews, and preserves a solid fabric colour", async ({
   // One live preview, and it names the fabric without its code.
   const livePreview = page.locator(".fabric-preview").filter({ visible: true });
   await expect(livePreview).toHaveCount(1);
-  await expect(livePreview).toContainText("Solid colour on your square cushion");
+  await expect(livePreview).toContainText(
+    "Solid colour on your square cushion",
+  );
   await expect(livePreview).not.toContainText("#");
-  await expect(livePreview.locator('svg[data-fabric-kind="solid"]')).toBeVisible();
+  await expect(
+    livePreview.locator('svg[data-fabric-kind="solid"]'),
+  ).toBeVisible();
 
   const nativePicker = page.getByLabel("Colour", { exact: true });
   await nativePicker.fill("#111827");
   await expect(hex).toHaveValue("#111827");
-  await expect(
-    livePreview.locator(".cushion-preview-solid"),
-  ).toHaveCSS("background-color", "rgb(17, 24, 39)");
+  await expect(livePreview.locator(".cushion-preview-solid")).toHaveCSS(
+    "background-color",
+    "rgb(17, 24, 39)",
+  );
 
   await page.getByRole("button", { name: "Continue to Preview" }).click();
   await expect(page.locator('svg[data-fabric-kind="solid"]')).toBeVisible();
@@ -344,7 +438,9 @@ test("selects, edits, previews, and preserves a solid fabric colour", async ({
   await page.getByRole("radio", { name: "Fern trail" }).focus();
   await page.keyboard.press("Space");
   await expect(solid).not.toBeChecked();
-  await expect(livePreview).toContainText("Fern trail on your square cushion, pattern size 1.0×");
+  await expect(livePreview).toContainText(
+    "Fern trail on your square cushion, pattern size 1.0×",
+  );
   await solid.focus();
   await page.keyboard.press("Space");
   await expect(hex).toHaveValue("#111827");

@@ -88,10 +88,10 @@ async function mockApi(
     requests.push(path);
 
     if (path === "/health") {
-      await (handlers.health ??
-        ((r) => fulfillJson(r, { database: "healthy", process: "healthy" })))(
-        route,
-      );
+      await (
+        handlers.health ??
+        ((r) => fulfillJson(r, { database: "healthy", process: "healthy" }))
+      )(route);
     } else if (path === "/patterns") {
       patternCalls += 1;
       await (handlers.patterns ?? ((r) => fulfillJson(r, patterns)))(
@@ -201,7 +201,9 @@ test("a visitor reaching the Pattern step mid warm-up reuses the in-flight reque
   await openConfigureFromHome(page);
   await expect.poll(() => api.count("/health"), { timeout: 15_000 }).toBe(1);
   await reachPatternStep(page);
-  await expect(page.getByRole("status").filter({ hasText: "Connecting" })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Connecting" }),
+  ).toBeVisible();
   expect(api.count("/patterns")).toBe(0);
 
   releaseHealth();

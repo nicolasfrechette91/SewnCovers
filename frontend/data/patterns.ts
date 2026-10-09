@@ -58,11 +58,8 @@ export const ALL_PATTERN_CATEGORIES = "all-categories";
 export const ALL_PATTERN_COLORS = "all-colors";
 
 export type PatternCategoryFilter =
-  | typeof ALL_PATTERN_CATEGORIES
-  | PatternCategoryId;
-export type PatternColorFilter =
-  | typeof ALL_PATTERN_COLORS
-  | PatternColorId;
+  typeof ALL_PATTERN_CATEGORIES | PatternCategoryId;
+export type PatternColorFilter = typeof ALL_PATTERN_COLORS | PatternColorId;
 
 export interface PatternFilters {
   readonly categoryId: PatternCategoryFilter;
@@ -78,9 +75,7 @@ export type PatternCatalogueResult =
       readonly status: "ready";
     };
 
-function findDuplicateValues(
-  values: readonly string[],
-): readonly string[] {
+function findDuplicateValues(values: readonly string[]): readonly string[] {
   const seen = new Set<string>();
   const duplicates = new Set<string>();
 
@@ -142,9 +137,7 @@ export function resolvePatternResponses(
 
   patterns.forEach((pattern) => {
     const artwork =
-      patternArtworkById[
-        pattern.id as keyof typeof patternArtworkById
-      ];
+      patternArtworkById[pattern.id as keyof typeof patternArtworkById];
 
     if (
       pattern.id.trim() === "" ||
@@ -231,12 +224,10 @@ export function getPatternArtworkClassName(
     : null;
 }
 
-export function getPatternCategoryLabel(
-  categoryId: PatternCategoryId,
-): string {
+export function getPatternCategoryLabel(categoryId: PatternCategoryId): string {
   return (
-    patternCategories.find((category) => category.id === categoryId)
-      ?.label ?? categoryId
+    patternCategories.find((category) => category.id === categoryId)?.label ??
+    categoryId
   );
 }
 
@@ -245,8 +236,7 @@ export function getPatternColorLabels(
 ): readonly string[] {
   return colorIds.map(
     (colorId) =>
-      patternColors.find((color) => color.id === colorId)?.label ??
-      colorId,
+      patternColors.find((color) => color.id === colorId)?.label ?? colorId,
   );
 }
 
@@ -258,7 +248,5 @@ export function getPatternById(
     return null;
   }
 
-  return (
-    patterns.find((pattern) => pattern.id === patternId) ?? null
-  );
+  return patterns.find((pattern) => pattern.id === patternId) ?? null;
 }

@@ -43,15 +43,17 @@ export function SharedDesignLoader({
   onRetryPatterns,
 }: SharedDesignLoaderProps) {
   const Title = asHeading ? "h2" : "p";
-  const { dispatch, getRevision, state: configuration } =
-    useConfiguration();
+  const { dispatch, getRevision, state: configuration } = useConfiguration();
   const [controller] = useState(
     () =>
       new SharedDesignController(
         apiClient,
         (restoredConfiguration) => {
-          const publicId = new URLSearchParams(window.location.search).get("design");
-          if (publicId) onRestored?.(`design:${publicId}`, restoredConfiguration);
+          const publicId = new URLSearchParams(window.location.search).get(
+            "design",
+          );
+          if (publicId)
+            onRestored?.(`design:${publicId}`, restoredConfiguration);
           dispatch({
             configuration: restoredConfiguration,
             type: "restoreConfiguration",
@@ -97,8 +99,7 @@ export function SharedDesignLoader({
   const canRetryDesign =
     state.phase === "error" || state.phase === "malformed-response";
   const canRetryPatterns =
-    state.phase === "catalogue-error" ||
-    state.phase === "pattern-unavailable";
+    state.phase === "catalogue-error" || state.phase === "pattern-unavailable";
 
   return (
     <section

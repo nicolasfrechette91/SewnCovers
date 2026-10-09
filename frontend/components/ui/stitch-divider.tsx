@@ -6,7 +6,10 @@ export interface StitchDividerProps {
 }
 
 /** A decorative running stitch between groups of content. */
-export function StitchDivider({ className, tone = "muted" }: StitchDividerProps) {
+export function StitchDivider({
+  className,
+  tone = "muted",
+}: StitchDividerProps) {
   return (
     <span
       aria-hidden="true"

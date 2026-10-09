@@ -54,8 +54,16 @@ test("leads with one action and states the prototype notice once", async ({
     "Choose fabric and a pattern, then preview, save or share.",
   ]);
   await expect(
-    page.getByRole("region", { name: "Five cushion shapes" }).getByRole("listitem"),
-  ).toHaveText(["Square", "Rectangle", "Box / bench", "Round", "Tapered / trapezoid"]);
+    page
+      .getByRole("region", { name: "Five cushion shapes" })
+      .getByRole("listitem"),
+  ).toHaveText([
+    "Square",
+    "Rectangle",
+    "Box / bench",
+    "Round",
+    "Tapered / trapezoid",
+  ]);
 
   await expect(page.getByRole("complementary")).toHaveCount(1);
   await expect(
@@ -102,10 +110,16 @@ test("starts the unauthenticated configurator by pointer and keyboard at Shape",
   ).toBeVisible();
   // Guests are never prompted to sign in while designing; the header keeps
   // one quiet, optional link.
-  await expect(page.getByRole("main").getByRole("link", { name: /sign in/i })).toHaveCount(0);
-  await expect(page.getByRole("main").getByRole("button", { name: /sign in/i })).toHaveCount(0);
   await expect(
-    page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: /sign in/i }),
+    page.getByRole("main").getByRole("link", { name: /sign in/i }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("main").getByRole("button", { name: /sign in/i }),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("navigation", { name: "Primary navigation" })
+      .getByRole("link", { name: /sign in/i }),
   ).toHaveCount(1);
 
   await page.goto(homePath);
@@ -116,7 +130,9 @@ test("starts the unauthenticated configurator by pointer and keyboard at Shape",
   await expect(page).toHaveURL(`${appOrigin}${configurePath}`);
 });
 
-test("keeps both actions reachable, focused, and overflow-free", async ({ page }) => {
+test("keeps both actions reachable, focused, and overflow-free", async ({
+  page,
+}) => {
   for (const viewport of [
     { width: 320, height: 568 },
     { width: 375, height: 667 },
@@ -157,13 +173,17 @@ test("keeps both actions reachable, focused, and overflow-free", async ({ page }
   await start.focus();
   await expect(start).toBeFocused();
   await expect
-    .poll(() => start.evaluate((element) => getComputedStyle(element).boxShadow))
+    .poll(() =>
+      start.evaluate((element) => getComputedStyle(element).boxShadow),
+    )
     .not.toBe("none");
 
   await page.emulateMedia({ forcedColors: "active" });
   await start.focus();
   await expect
-    .poll(() => start.evaluate((element) => getComputedStyle(element).outlineStyle))
+    .poll(() =>
+      start.evaluate((element) => getComputedStyle(element).outlineStyle),
+    )
     .not.toBe("none");
 });
 

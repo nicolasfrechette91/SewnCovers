@@ -9,7 +9,13 @@ import {
 } from "@/components/ui";
 import { createPageMetadata } from "@/config/site-metadata";
 
-export const metadata: Metadata = createPageMetadata({ title: "Checkout cancelled", description: "Informational cancellation page for hosted demonstration checkout.", index: false, path: "/checkout/cancel/" });
+export const metadata: Metadata = createPageMetadata({
+  title: "Checkout cancelled",
+  description:
+    "Informational cancellation page for hosted demonstration checkout.",
+  index: false,
+  path: "/checkout/cancel/",
+});
 export default function CheckoutCancelPage() {
   return (
     <PageShell width="reading" contentClassName="space-y-component">

@@ -11,9 +11,7 @@ export const API_RETRY_LIMIT = 2;
 export const API_COLD_START_DELAY_MS = 2_000;
 
 const RETRY_DELAYS_MS = [500, 1_000] as const;
-const TRANSIENT_HTTP_STATUSES = new Set([
-  408, 425, 429, 500, 502, 503, 504,
-]);
+const TRANSIENT_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
 const ERROR_CODES = new Set<ApiErrorCode>([
   "design_not_found",
   "field_required",
@@ -104,12 +102,7 @@ export interface PatternResponse {
   readonly previewClassName: string;
 }
 
-export type CushionShape =
-  | "box"
-  | "rectangle"
-  | "round"
-  | "square"
-  | "tapered";
+export type CushionShape = "box" | "rectangle" | "round" | "square" | "tapered";
 export type MeasurementUnit = "cm" | "in";
 
 export interface CreateDesignRequest {
@@ -265,11 +258,11 @@ function parseHealthResponse(value: unknown): HealthResponse | undefined {
     ) ||
     (hasCommit &&
       value.commit !== null &&
-      !(typeof value.commit === "string" && /^[0-9a-f]{40}$/.test(value.commit))) ||
+      !(
+        typeof value.commit === "string" && /^[0-9a-f]{40}$/.test(value.commit)
+      )) ||
     value.process !== "healthy" ||
-    !["healthy", "unavailable", "unconfigured"].includes(
-      String(value.database),
-    )
+    !["healthy", "unavailable", "unconfigured"].includes(String(value.database))
   ) {
     return undefined;
   }
@@ -390,7 +383,10 @@ function parseDesignResponse(value: unknown): DesignResponse | undefined {
 
   if (
     !isRecord(value) ||
-    (!isLegacy && !hasExactKeys(value, expandedKeys) && !hasFabricFields && !isSolid) ||
+    (!isLegacy &&
+      !hasExactKeys(value, expandedKeys) &&
+      !hasFabricFields &&
+      !isSolid) ||
     !["box", "rectangle", "round", "square", "tapered"].includes(
       String(value.shape),
     ) ||
@@ -453,12 +449,8 @@ function parseDesignResponse(value: unknown): DesignResponse | undefined {
     !["cotton-canvas", "linen-blend", "polyester-weave"].includes(
       String(value.materialId),
     ) ||
-    !["close", "relaxed", "standard"].includes(
-      String(value.fitPreference),
-    ) ||
-    !["envelope", "slip-on", "zipper"].includes(
-      String(value.closureType),
-    ) ||
+    !["close", "relaxed", "standard"].includes(String(value.fitPreference)) ||
+    !["envelope", "slip-on", "zipper"].includes(String(value.closureType)) ||
     !["piped", "plain"].includes(String(value.seamStyle))
   ) {
     return undefined;
@@ -467,15 +459,12 @@ function parseDesignResponse(value: unknown): DesignResponse | undefined {
   return {
     ...(value as unknown as DesignResponse),
     patternId: isSolid ? null : (value.patternId as string),
-    solidColor: hasFabricFields || isSolid
-      ? (value.solidColor as string | null)
-      : null,
+    solidColor:
+      hasFabricFields || isSolid ? (value.solidColor as string | null) : null,
   };
 }
 
-function parseApiErrorResponse(
-  value: unknown,
-): ApiErrorResponse | undefined {
+function parseApiErrorResponse(value: unknown): ApiErrorResponse | undefined {
   // The envelope may carry the server's request id beside the errors; any
   // other top-level key is still a contract violation.
   const hasRequestId = isRecord(value) && Object.hasOwn(value, "requestId");
@@ -700,8 +689,7 @@ function shouldRetry(
   }
 
   return (
-    (error.category === "http" ||
-      error.category === "backend-contract") &&
+    (error.category === "http" || error.category === "backend-contract") &&
     error.status !== undefined &&
     TRANSIENT_HTTP_STATUSES.has(error.status)
   );
@@ -808,10 +796,7 @@ export function createApiClient(): SewnCoversApiClient {
         path: "/uploads/availability",
       });
     },
-    listPatterns(
-      query: PatternQuery = {},
-      options: ApiRequestOptions = {},
-    ) {
+    listPatterns(query: PatternQuery = {}, options: ApiRequestOptions = {}) {
       return request({
         expectedStatuses: [200],
         method: "GET",
@@ -821,10 +806,7 @@ export function createApiClient(): SewnCoversApiClient {
         query,
       });
     },
-    createDesign(
-      design: CreateDesignRequest,
-      options: ApiRequestOptions = {},
-    ) {
+    createDesign(design: CreateDesignRequest, options: ApiRequestOptions = {}) {
       return request({
         body: design,
         expectedStatuses: [201],
@@ -834,10 +816,7 @@ export function createApiClient(): SewnCoversApiClient {
         path: "/designs",
       });
     },
-    getDesign(
-      publicId: string,
-      options: ApiRequestOptions = {},
-    ) {
+    getDesign(publicId: string, options: ApiRequestOptions = {}) {
       return request({
         expectedStatuses: [200],
         method: "GET",

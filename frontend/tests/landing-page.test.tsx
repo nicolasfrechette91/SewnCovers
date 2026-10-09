@@ -111,7 +111,10 @@ test("states the prototype disclaimer once", () => {
   );
   const outside = container.cloneNode(true) as HTMLElement;
   outside.querySelector("aside")?.remove();
-  assert.doesNotMatch(outside.textContent ?? "", /prototype|demo|illustrative/i);
+  assert.doesNotMatch(
+    outside.textContent ?? "",
+    /prototype|demo|illustrative/i,
+  );
 });
 
 test("describes only what the configurator offers", () => {

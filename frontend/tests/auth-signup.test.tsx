@@ -68,24 +68,24 @@ const created = (path: string): Response =>
           },
         ])
       : path === "/auth/register" || path === "/auth/login"
-    ? json(
-        {
-          account: ACCOUNT,
-          expiresAt: "2099-01-01T00:00:00Z",
-          token: TEST_TOKEN,
-        },
-        path === "/auth/register" ? 201 : 200,
-      )
-    : json(
-        {
-          acknowledgedAt: "2026-10-01T00:00:01Z",
-          documentType: "terms",
-          documentVersion: 1,
-          id: 1,
-          purpose: "account_terms",
-        },
-        201,
-      );
+        ? json(
+            {
+              account: ACCOUNT,
+              expiresAt: "2099-01-01T00:00:00Z",
+              token: TEST_TOKEN,
+            },
+            path === "/auth/register" ? 201 : 200,
+          )
+        : json(
+            {
+              acknowledgedAt: "2026-10-01T00:00:01Z",
+              documentType: "terms",
+              documentVersion: 1,
+              id: 1,
+              purpose: "account_terms",
+            },
+            201,
+          );
 
 beforeEach(() => {
   calls = [];
@@ -115,11 +115,17 @@ afterEach(() => {
 });
 
 function fillAndSubmit(container: HTMLElement, options: { terms: boolean }) {
-  const email = container.querySelector<HTMLInputElement>('input[name="email"]')!;
-  const password = container.querySelector<HTMLInputElement>('input[name="password"]')!;
+  const email = container.querySelector<HTMLInputElement>(
+    'input[name="email"]',
+  )!;
+  const password = container.querySelector<HTMLInputElement>(
+    'input[name="password"]',
+  )!;
   email.value = "new@example.invalid";
   password.value = TEST_PASSPHRASE;
-  const terms = container.querySelector<HTMLInputElement>('input[name="acceptedTerms"]');
+  const terms = container.querySelector<HTMLInputElement>(
+    'input[name="acceptedTerms"]',
+  );
   if (terms && options.terms) fireEvent.click(terms);
   fireEvent.submit(container.querySelector("form")!);
 }
@@ -135,7 +141,12 @@ const signUpCalls = () =>
 // After the session is stored the provider re-verifies it with two GETs.
 const SESSION_CHECKS = [
   { authorized: true, bodyKeys: [], method: "GET", path: `${API}/account` },
-  { authorized: true, bodyKeys: [], method: "GET", path: `${API}/account/sessions` },
+  {
+    authorized: true,
+    bodyKeys: [],
+    method: "GET",
+    path: `${API}/account/sessions`,
+  },
 ];
 
 const EXPECTED_SIGN_UP = [
@@ -158,7 +169,11 @@ test("the /account create-account form POSTs /auth/register, then records the te
   let signedIn = 0;
   const { container } = render(
     <AuthProvider>
-      <AuthForm focusHeading={false} mode="register" onSuccess={() => (signedIn += 1)} />
+      <AuthForm
+        focusHeading={false}
+        mode="register"
+        onSuccess={() => (signedIn += 1)}
+      />
     </AuthProvider>,
   );
 
@@ -174,7 +189,10 @@ test("the inline create-account step sends the identical requests and calls back
     <AuthProvider>
       <InlineSignIn
         idPrefix="upload"
-        titles={{ login: "Sign in", register: "Create an account to upload your own pattern" }}
+        titles={{
+          login: "Sign in",
+          register: "Create an account to upload your own pattern",
+        }}
         reason={<p>Reason.</p>}
         onCancel={() => undefined}
         onSignedIn={() => (signedIn += 1)}
@@ -182,7 +200,9 @@ test("the inline create-account step sends the identical requests and calls back
     </AuthProvider>,
   );
 
-  fireEvent.click(screen.getByRole("button", { name: "Create an account instead" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Create an account instead" }),
+  );
   fillAndSubmit(container, { terms: true });
   await waitFor(() => assert.equal(signedIn, 1));
   await act(async () => undefined);
@@ -190,7 +210,9 @@ test("the inline create-account step sends the identical requests and calls back
   assert.deepEqual(signUpCalls(), EXPECTED_SIGN_UP);
   assert.equal(signedIn, 1);
   assert.ok(
-    calls.every(({ url }) => url.startsWith(`${API}/`) && !url.includes("github.io")),
+    calls.every(
+      ({ url }) => url.startsWith(`${API}/`) && !url.includes("github.io"),
+    ),
   );
 });
 
@@ -198,7 +220,11 @@ test("sign-in uses POST /auth/login and does not record terms", async () => {
   let signedIn = 0;
   const { container } = render(
     <AuthProvider>
-      <AuthForm focusHeading={false} mode="login" onSuccess={() => (signedIn += 1)} />
+      <AuthForm
+        focusHeading={false}
+        mode="login"
+        onSuccess={() => (signedIn += 1)}
+      />
     </AuthProvider>,
   );
 
@@ -223,9 +249,15 @@ const FAILURES = [
     response: () => apiError("resource_not_found", "Resource not found.", 404),
   },
   {
-    expected: /couldn't create an account with those details\. If you already have one, sign in instead/,
+    expected:
+      /couldn't create an account with those details\. If you already have one, sign in instead/,
     name: "401 (the API's answer for an existing email)",
-    response: () => apiError("authentication_failed", "Email or password could not be accepted.", 401),
+    response: () =>
+      apiError(
+        "authentication_failed",
+        "Email or password could not be accepted.",
+        401,
+      ),
   },
   {
     expected: /email address is already in use/,
@@ -259,7 +291,11 @@ for (const failure of FAILURES) {
     respond = () => failure.response();
     const { container } = render(
       <AuthProvider>
-        <AuthForm focusHeading={false} mode="register" onSuccess={() => undefined} />
+        <AuthForm
+          focusHeading={false}
+          mode="register"
+          onSuccess={() => undefined}
+        />
       </AuthProvider>,
     );
 
@@ -267,10 +303,20 @@ for (const failure of FAILURES) {
     const alert = await screen.findByRole("alert");
 
     assert.match(alert.textContent ?? "", failure.expected);
-    assert.doesNotMatch(alert.textContent ?? "", /Resource not found|Conflict\.|Internal\./);
+    assert.doesNotMatch(
+      alert.textContent ?? "",
+      /Resource not found|Conflict\.|Internal\./,
+    );
     assert.equal(alert.getAttribute("aria-live"), "assertive");
-    assert.ok(document.activeElement?.contains(alert), "focus moves to the error");
-    assert.equal(window.sessionStorage.length, 0, "no session is stored on failure");
+    assert.ok(
+      document.activeElement?.contains(alert),
+      "focus moves to the error",
+    );
+    assert.equal(
+      window.sessionStorage.length,
+      0,
+      "no session is stored on failure",
+    );
   });
 }
 
@@ -287,7 +333,10 @@ test("a network failure reads as unavailable, not as a raw error", async () => {
   fillAndSubmit(container, { terms: false });
   const alert = await screen.findByRole("alert");
 
-  assert.match(alert.textContent ?? "", /may be waking up or temporarily unavailable/);
+  assert.match(
+    alert.textContent ?? "",
+    /may be waking up or temporarily unavailable/,
+  );
   assert.doesNotMatch(alert.textContent ?? "", /Failed to fetch/);
 });
 
@@ -298,14 +347,21 @@ test("a rejected terms acknowledgement says the account exists and stores no ses
       : created(new URL(call.url).pathname);
   const { container } = render(
     <AuthProvider>
-      <AuthForm focusHeading={false} mode="register" onSuccess={() => undefined} />
+      <AuthForm
+        focusHeading={false}
+        mode="register"
+        onSuccess={() => undefined}
+      />
     </AuthProvider>,
   );
 
   fillAndSubmit(container, { terms: true });
   const alert = await screen.findByRole("alert");
 
-  assert.match(alert.textContent ?? "", /account was created, but the terms acknowledgement could not be saved/);
+  assert.match(
+    alert.textContent ?? "",
+    /account was created, but the terms acknowledgement could not be saved/,
+  );
   assert.equal(window.sessionStorage.length, 0);
 });
 
@@ -313,11 +369,20 @@ test("sign-in wording is mode-aware and never confirms that an email is register
   const failed = new AccountApiError("x", 401, "authentication_failed");
 
   assert.match(signInErrorMessage(failed, "login"), /don't match an account/);
-  assert.doesNotMatch(signInErrorMessage(failed, "register"), /already (in use|registered|exists)/i);
+  assert.doesNotMatch(
+    signInErrorMessage(failed, "register"),
+    /already (in use|registered|exists)/i,
+  );
   assert.match(
-    signInErrorMessage(new AccountApiError("x", 0, ACKNOWLEDGEMENT_FAILED_CODE), "register"),
+    signInErrorMessage(
+      new AccountApiError("x", 0, ACKNOWLEDGEMENT_FAILED_CODE),
+      "register",
+    ),
     /Sign in with the same email/,
   );
-  assert.match(signInErrorMessage(new AccountApiError("x", 0, "timeout"), "login"), /waking up/);
+  assert.match(
+    signInErrorMessage(new AccountApiError("x", 0, "timeout"), "login"),
+    /waking up/,
+  );
   assert.match(signInErrorMessage(new Error("raw"), "login"), /unexpected/);
 });

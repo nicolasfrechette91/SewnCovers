@@ -22,9 +22,7 @@ async function json(route: Route, body: unknown, status = 200) {
   });
 }
 
-test("preview and legal content stay keyboard-accessible", async ({
-  page,
-}) => {
+test("preview and legal content stay keyboard-accessible", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.route(`${apiOrigin}/**`, async (route) => {
     const request = route.request();
@@ -47,16 +45,31 @@ test("preview and legal content stay keyboard-accessible", async ({
         ["basket-check", "Basket check", "woven"],
         ["linen-crosshatch", "Linen crosshatch", "woven"],
       ] as const;
-      return json(route, records.map(([id, name, categoryId]) => ({
+      return json(
+        route,
+        records.map(([id, name, categoryId]) => ({
           id,
           name,
           description: "Fictional local motif.",
           previewClassName: `api-${id}`,
           categoryId,
           colorIds: ["ivory"],
-        })));
+        })),
+      );
     }
-    return json(route, { errors: [{ code: "resource_not_found", message: "Not found.", location: ["path"] }] }, 404);
+    return json(
+      route,
+      {
+        errors: [
+          {
+            code: "resource_not_found",
+            message: "Not found.",
+            location: ["path"],
+          },
+        ],
+      },
+      404,
+    );
   });
 
   await page.goto(`${basePath}/configure/`);
@@ -73,7 +86,9 @@ test("preview and legal content stay keyboard-accessible", async ({
   await page
     .getByRole("button", { name: "Continue to Pattern" })
     .press("Enter");
-  await expect(page.locator("#configuration-pattern-edit-target")).toBeFocused();
+  await expect(
+    page.locator("#configuration-pattern-edit-target"),
+  ).toBeFocused();
   await page.getByRole("radio", { name: "Seed scatter" }).press("Space");
   await page
     .getByRole("button", { name: "Continue to Preview" })
@@ -83,12 +98,16 @@ test("preview and legal content stay keyboard-accessible", async ({
   ).toBeFocused();
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
     ),
   ).toBe(true);
 
   await page.goto(`${basePath}/legal/`);
-  await expect(page.getByRole("heading", { name: "Legal information" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Legal information" }),
+  ).toBeVisible();
 });
 
 test("administrator production, packet, and readiness workflow is isolated", async ({
@@ -111,42 +130,133 @@ test("administrator production, packet, and readiness workflow is isolated", asy
     specification: { shape: "box", measurements: { width: "80", unit: "cm" } },
     checklist: [{ itemKey: "specification_review", status: checklistStatus }],
     issues: [],
-    history: [{ action: "created", fromState: null, toState: "review", createdAt: "2026-08-29T12:00:00Z" }],
+    history: [
+      {
+        action: "created",
+        fromState: null,
+        toState: "review",
+        createdAt: "2026-08-29T12:00:00Z",
+      },
+    ],
     demonstration: true,
   });
   await page.route(`${apiOrigin}/**`, async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
-    if (request.method() === "OPTIONS") return route.fulfill({ headers: corsHeaders, status: 204 });
-    if (path === "/account") return json(route, { email: "operations@example.invalid", createdAt: "2026-08-29T00:00:00Z", role: "administrator" });
-    if (path === "/account/sessions") return json(route, [{ id: 1, createdAt: "2026-08-29T00:00:00Z", expiresAt: sessionExpiresAt, revokedAt: null, current: true }]);
-    if (path === "/admin/price-books" || path === "/admin/orders" || path === "/admin/audit") return json(route, []);
-    if (path === "/admin/production-work") return json(route, { items: [work()], page: 1, pageSize: 20, total: 1 });
-    if (path.includes("/checklist/")) { checklistStatus = "complete"; revision += 1; return json(route, work()); }
-    if (path.endsWith("/issues")) { revision += 1; return json(route, work(), 201); }
-    if (path.endsWith("/transition")) { state = request.postDataJSON().targetState; revision += 1; return json(route, work()); }
-    if (path.includes("/quality/pass")) { qualityState = "passed"; revision += 1; return json(route, work()); }
-    if (path.endsWith("/packet")) return json(route, { content: "safe demonstration packet", checksum: "a".repeat(64), generatedAt: "2026-08-29T12:00:00Z" });
-    if (path === "/readiness") return json(route, { ready: false, checks: [{ code: "contact", level: "error", message: "Production contact remains a placeholder." }], disclaimer: "Not an audit or deployment approval." });
-    return json(route, { errors: [{ code: "resource_not_found", message: "Not found.", location: ["path"] }] }, 404);
+    if (request.method() === "OPTIONS")
+      return route.fulfill({ headers: corsHeaders, status: 204 });
+    if (path === "/account")
+      return json(route, {
+        email: "operations@example.invalid",
+        createdAt: "2026-08-29T00:00:00Z",
+        role: "administrator",
+      });
+    if (path === "/account/sessions")
+      return json(route, [
+        {
+          id: 1,
+          createdAt: "2026-08-29T00:00:00Z",
+          expiresAt: sessionExpiresAt,
+          revokedAt: null,
+          current: true,
+        },
+      ]);
+    if (
+      path === "/admin/price-books" ||
+      path === "/admin/orders" ||
+      path === "/admin/audit"
+    )
+      return json(route, []);
+    if (path === "/admin/production-work")
+      return json(route, { items: [work()], page: 1, pageSize: 20, total: 1 });
+    if (path.includes("/checklist/")) {
+      checklistStatus = "complete";
+      revision += 1;
+      return json(route, work());
+    }
+    if (path.endsWith("/issues")) {
+      revision += 1;
+      return json(route, work(), 201);
+    }
+    if (path.endsWith("/transition")) {
+      state = request.postDataJSON().targetState;
+      revision += 1;
+      return json(route, work());
+    }
+    if (path.includes("/quality/pass")) {
+      qualityState = "passed";
+      revision += 1;
+      return json(route, work());
+    }
+    if (path.endsWith("/packet"))
+      return json(route, {
+        content: "safe demonstration packet",
+        checksum: "a".repeat(64),
+        generatedAt: "2026-08-29T12:00:00Z",
+      });
+    if (path === "/readiness")
+      return json(route, {
+        ready: false,
+        checks: [
+          {
+            code: "contact",
+            level: "error",
+            message: "Production contact remains a placeholder.",
+          },
+        ],
+        disclaimer: "Not an audit or deployment approval.",
+      });
+    return json(
+      route,
+      {
+        errors: [
+          {
+            code: "resource_not_found",
+            message: "Not found.",
+            location: ["path"],
+          },
+        ],
+      },
+      404,
+    );
   });
 
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.goto(`${basePath}/admin/`);
   await page.getByRole("button", { name: /SC-DEMO-WORK0001/ }).press("Enter");
-  await expect(page.getByRole("heading", { name: `Work ${workId}` })).toBeFocused();
+  await expect(
+    page.getByRole("heading", { name: `Work ${workId}` }),
+  ).toBeFocused();
   await page.getByRole("button", { name: "Complete" }).press("Enter");
-  await page.getByRole("textbox", { name: "Structured reason" }).fill("Fictional manual review");
+  await page
+    .getByRole("textbox", { name: "Structured reason" })
+    .fill("Fictional manual review");
   await page.getByRole("button", { name: "Add issue" }).press("Enter");
   await page.getByRole("button", { name: "Approve work" }).press("Enter");
   await page.getByRole("button", { name: "Start production" }).press("Enter");
-  await page.getByRole("button", { name: "Start quality check" }).press("Enter");
+  await page
+    .getByRole("button", { name: "Start quality check" })
+    .press("Enter");
   await page.getByRole("button", { name: "Pass quality" }).press("Enter");
   await page.getByRole("button", { name: "Fulfilment handoff" }).press("Enter");
-  await page.getByRole("button", { name: "Download safe packet" }).press("Enter");
-  await expect(page.getByText(/checksum .* verified and downloaded/i)).toBeVisible();
+  await page
+    .getByRole("button", { name: "Download safe packet" })
+    .press("Enter");
+  await expect(
+    page.getByText(/checksum .* verified and downloaded/i),
+  ).toBeVisible();
 
-  await page.getByRole("button", { name: "Run readiness checks" }).press("Enter");
-  await expect(page.getByText(/blocking configuration errors remain/)).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await page
+    .getByRole("button", { name: "Run readiness checks" })
+    .press("Enter");
+  await expect(
+    page.getByText(/blocking configuration errors remain/),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
 });

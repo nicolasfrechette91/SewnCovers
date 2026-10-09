@@ -9,8 +9,10 @@ export interface ConfigurationSummaryItem {
   value?: ReactNode;
 }
 
-export interface ConfigurationSummaryProps
-  extends Omit<ComponentPropsWithoutRef<"section">, "children" | "title"> {
+export interface ConfigurationSummaryProps extends Omit<
+  ComponentPropsWithoutRef<"section">,
+  "children" | "title"
+> {
   emptyMessage?: ReactNode;
   items: readonly ConfigurationSummaryItem[];
   missingValue?: ReactNode;
@@ -77,10 +79,12 @@ export function ConfigurationSummary({
                     <span>{item.value}</span>
                   </span>
                 ) : item.value === undefined ||
-                item.value === null ||
-                item.value === ""
-                  ? missingValue
-                  : item.value}
+                  item.value === null ||
+                  item.value === "" ? (
+                  missingValue
+                ) : (
+                  item.value
+                )}
               </dd>
             </div>
           ))}

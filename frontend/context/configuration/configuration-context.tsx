@@ -12,10 +12,7 @@ import {
 } from "react";
 
 import { subscribeToDraftReset } from "../../services/configurator-draft";
-import {
-  configurationReducer,
-  initialConfigurationState,
-} from "./reducer";
+import { configurationReducer, initialConfigurationState } from "./reducer";
 import type { ConfigurationAction, ConfigurationState } from "./types";
 
 interface ConfigurationContextValue {
@@ -48,16 +45,15 @@ export function ConfigurationProvider({
     () =>
       subscribeToDraftReset((kind) =>
         dispatch({
-          type: kind === "cleared" ? "resetConfiguration" : "clearCustomPattern",
+          type:
+            kind === "cleared" ? "resetConfiguration" : "clearCustomPattern",
         }),
       ),
     [dispatch],
   );
 
   return (
-    <ConfigurationContext.Provider
-      value={{ state, dispatch, getRevision }}
-    >
+    <ConfigurationContext.Provider value={{ state, dispatch, getRevision }}>
       {children}
     </ConfigurationContext.Provider>
   );

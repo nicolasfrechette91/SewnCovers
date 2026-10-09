@@ -46,7 +46,9 @@ test("a GitHub Pages build sends account requests to the API host, not github.io
   });
   const requests = recordRequests();
 
-  await assert.rejects(accountApi.register("a@example.invalid", "x".repeat(12)));
+  await assert.rejects(
+    accountApi.register("a@example.invalid", "x".repeat(12)),
+  );
   await assert.rejects(accountApi.login("a@example.invalid", "x".repeat(12)));
 
   assert.deepEqual(requests, [
@@ -57,7 +59,10 @@ test("a GitHub Pages build sends account requests to the API host, not github.io
     const parsed = new URL(url);
     assert.equal(parsed.hostname, "sewncovers-api.onrender.com");
     assert.notEqual(parsed.hostname, PAGES_HOST);
-    assert.ok(!parsed.pathname.startsWith("/SewnCovers"), "base path never leaks into API paths");
+    assert.ok(
+      !parsed.pathname.startsWith("/SewnCovers"),
+      "base path never leaks into API paths",
+    );
   }
 });
 
@@ -68,7 +73,9 @@ test("a trailing slash on the configured API URL never doubles up in account pat
   });
   const requests = recordRequests();
 
-  await assert.rejects(accountApi.register("a@example.invalid", "x".repeat(12)));
+  await assert.rejects(
+    accountApi.register("a@example.invalid", "x".repeat(12)),
+  );
 
   assert.equal(requests[0].url, `${PRODUCTION_API_URL}/auth/register`);
 });

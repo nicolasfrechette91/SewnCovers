@@ -18,32 +18,32 @@ Open <http://localhost:3000>. `.env.example` points the app at `http://localhost
 
 ## Scripts
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Development server. |
-| `npm run lint` · `npm run typecheck` | ESLint · strict TypeScript. |
-| `npm run format` · `npm run format:check` | Prettier: rewrite the files · fail if any file would change. |
-| `npm test` | Unit, component, service and configuration tests (offline). |
-| `npm run check:config` | Only the environment and deployment-config tests. |
-| `npm run build` | Static export into `out/`. |
-| `npm run verify:export` | Check the export's routes, metadata, base path and embedded API URL. |
-| `npm run verify:performance` | Check app-code and transfer budgets for first-load JavaScript (after `npm run build` without `SEWNCOVERS_GITHUB_PAGES`). |
-| `npm run test:e2e` | Build, serve and run the Playwright journeys (Chromium; run `npx playwright install chromium` once). |
-| `npm run screenshots:readme` | Regenerate the README screenshots in `../docs/images/`. |
+| Command                                   | Purpose                                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `npm run dev`                             | Development server.                                                                                                      |
+| `npm run lint` · `npm run typecheck`      | ESLint · strict TypeScript.                                                                                              |
+| `npm run format` · `npm run format:check` | Prettier: rewrite the files · fail if any file would change.                                                             |
+| `npm test`                                | Unit, component, service and configuration tests (offline).                                                              |
+| `npm run check:config`                    | Only the environment and deployment-config tests.                                                                        |
+| `npm run build`                           | Static export into `out/`.                                                                                               |
+| `npm run verify:export`                   | Check the export's routes, metadata, base path and embedded API URL.                                                     |
+| `npm run verify:performance`              | Check app-code and transfer budgets for first-load JavaScript (after `npm run build` without `SEWNCOVERS_GITHUB_PAGES`). |
+| `npm run test:e2e`                        | Build, serve and run the Playwright journeys (Chromium; run `npx playwright install chromium` once).                     |
+| `npm run screenshots:readme`              | Regenerate the README screenshots in `../docs/images/`.                                                                  |
 
 Set `SEWNCOVERS_GITHUB_PAGES=true` (and `NEXT_PUBLIC_API_URL=https://sewncovers-api.onrender.com`) to build the GitHub Pages variant under the `/SewnCovers` base path.
 
 ## Layout
 
-| Path | Contents |
-| --- | --- |
-| `app/` | Routes, metadata, `globals.css` (design tokens), self-hosted fonts. |
-| `components/` | `configurator/`, `account/`, `projects/`, `commerce/`, `assurance/`, `layout/`, `ui/`. |
-| `context/` | Configuration reducer and auth session state. |
-| `services/` | Typed API clients, catalogue, save and share, draft storage. |
-| `data/` | Shape and cover-option metadata, pattern artwork mapping. |
-| `config/` | Environment validation, export and budget verifiers. |
-| `tests/`, `e2e/` | Unit and component tests; Playwright journeys. |
+| Path             | Contents                                                                               |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| `app/`           | Routes, metadata, `globals.css` (design tokens), self-hosted fonts.                    |
+| `components/`    | `configurator/`, `account/`, `projects/`, `commerce/`, `assurance/`, `layout/`, `ui/`. |
+| `context/`       | Configuration reducer and auth session state.                                          |
+| `services/`      | Typed API clients, catalogue, save and share, draft storage.                           |
+| `data/`          | Shape and cover-option metadata, pattern artwork mapping.                              |
+| `config/`        | Environment validation, export and budget verifiers.                                   |
+| `tests/`, `e2e/` | Unit and component tests; Playwright journeys.                                         |
 
 ## Documentation
 

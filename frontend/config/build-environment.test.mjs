@@ -5,11 +5,13 @@ import { importFreshTogether } from "../tests/fresh-import.mjs";
 
 // One copy of both modules, so the errors build-environment.ts throws are
 // instances of the PublicEnvironmentError imported here.
-const [{ createBuildEnvironment, PRODUCTION_API_URL }, { PublicEnvironmentError }] =
-  await importFreshTogether(
-    ["./build-environment.ts", "./environment.ts"],
-    import.meta.url,
-  );
+const [
+  { createBuildEnvironment, PRODUCTION_API_URL },
+  { PublicEnvironmentError },
+] = await importFreshTogether(
+  ["./build-environment.ts", "./environment.ts"],
+  import.meta.url,
+);
 
 test("selects only the exact Render API for GitHub Pages production", () => {
   const configuration = createBuildEnvironment(

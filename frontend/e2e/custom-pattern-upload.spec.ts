@@ -2,7 +2,8 @@ import { expect, test, type Route } from "@playwright/test";
 
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
-const basePath = process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
+const basePath =
+  process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
 const configurePath = `${basePath}/configure/`;
 const token = "S".repeat(43);
 const uploadId = "U".repeat(22);
@@ -17,12 +18,25 @@ const headers = {
   "content-type": "application/json",
 };
 
-function status(state: "approved" | "awaiting_moderation" | "failed" | "rejected" | "deleted", marker = "U") {
+function status(
+  state: "approved" | "awaiting_moderation" | "failed" | "rejected" | "deleted",
+  marker = "U",
+) {
   return {
     id: marker.repeat(22),
-    label: state === "approved" || state === "deleted" ? "My garden repeat" : `${state} example`,
+    label:
+      state === "approved" || state === "deleted"
+        ? "My garden repeat"
+        : `${state} example`,
     state,
-    moderationState: state === "approved" ? "approved" : state === "rejected" ? "rejected" : state === "awaiting_moderation" ? "unavailable" : "failed",
+    moderationState:
+      state === "approved"
+        ? "approved"
+        : state === "rejected"
+          ? "rejected"
+          : state === "awaiting_moderation"
+            ? "unavailable"
+            : "failed",
     contentType: "image/png",
     byteSize: 400,
     width: state === "approved" ? 64 : null,
@@ -44,9 +58,14 @@ async function json(route: Route, body: unknown, code = 200) {
   await route.fulfill({ body: JSON.stringify(body), headers, status: code });
 }
 
-test("authenticated customer uploads, selects, previews, and deletes a moderated pattern", async ({ page }, testInfo) => {
+test("authenticated customer uploads, selects, previews, and deletes a moderated pattern", async ({
+  page,
+}, testInfo) => {
   await page.setViewportSize({ width: 320, height: 568 });
-  await page.addInitScript((value) => sessionStorage.setItem("sewncovers.session-token", value), token);
+  await page.addInitScript(
+    (value) => sessionStorage.setItem("sewncovers.session-token", value),
+    token,
+  );
   let uploaded = false;
   let deleted = false;
   let tileRequests = 0;
@@ -56,10 +75,36 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   await page.route(`${apiOrigin}/**`, async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
-    if (request.method() === "OPTIONS") return route.fulfill({ headers, status: 204 });
-    if (path === "/account") return json(route, { email: "pattern@example.com", createdAt: "2026-08-18T09:00:00Z", role: "customer" });
-    if (path === "/account/sessions") return json(route, [{ id: 1, createdAt: "2026-08-18T09:00:00Z", expiresAt, revokedAt: null, current: true }]);
-    if (path === "/account/acknowledgements" && request.method() === "POST") return json(route, { id: 1, documentType: "uploads", documentVersion: 1, purpose: "upload_rights", acknowledgedAt: "2026-08-18T12:00:01Z" }, 201);
+    if (request.method() === "OPTIONS")
+      return route.fulfill({ headers, status: 204 });
+    if (path === "/account")
+      return json(route, {
+        email: "pattern@example.com",
+        createdAt: "2026-08-18T09:00:00Z",
+        role: "customer",
+      });
+    if (path === "/account/sessions")
+      return json(route, [
+        {
+          id: 1,
+          createdAt: "2026-08-18T09:00:00Z",
+          expiresAt,
+          revokedAt: null,
+          current: true,
+        },
+      ]);
+    if (path === "/account/acknowledgements" && request.method() === "POST")
+      return json(
+        route,
+        {
+          id: 1,
+          documentType: "uploads",
+          documentVersion: 1,
+          purpose: "upload_rights",
+          acknowledgedAt: "2026-08-18T12:00:01Z",
+        },
+        201,
+      );
     if (path === "/patterns") return json(route, []);
     // This journey needs uploads, so they are on here.
     if (path === "/uploads/availability") return json(route, { enabled: true });
@@ -69,16 +114,83 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
         status("failed", "F"),
         status("rejected", "R"),
       ];
-      return json(route, uploaded ? [status(deleted ? "deleted" : "approved"), ...lifecycle] : lifecycle);
+      return json(
+        route,
+        uploaded
+          ? [status(deleted ? "deleted" : "approved"), ...lifecycle]
+          : lifecycle,
+      );
     }
-    if (path === "/uploads" && request.method() === "POST") return json(route, { ...status("awaiting_moderation"), state: "awaiting_upload", moderationState: "not_started", upload: { method: "PUT", url: `/uploads/direct/${directToken}`, headers: { "Content-Type": "image/png" }, fields: {}, expiresAt } }, 201);
-    if (path === `/uploads/direct/${directToken}` && request.method() === "PUT") { imageBytes = request.postDataBuffer() ?? Buffer.alloc(0); return route.fulfill({ headers, status: 204 }); }
-    if (path === `/uploads/${uploadId}/complete`) { uploaded = true; return json(route, status("approved")); }
-    if (path === `/uploads/${uploadId}` && request.method() === "GET") return json(route, status(deleted ? "deleted" : "approved"));
-    if (path === `/uploads/${uploadId}` && request.method() === "DELETE") { deleted = true; return json(route, { id: uploadId, state: "deleted", referencedByVersions: 1 }); }
-    if (path === `/uploads/${uploadId}/assets/tile/access`) { grantRequests++; return json(route, { url: `/assets/direct/${accessToken}/tile`, expiresAt, contentType: "image/png" }); }
-    if (path === `/assets/direct/${accessToken}/tile`) { tileRequests++; return route.fulfill({ body: imageBytes, headers: { ...headers, "content-type": "image/png", "cache-control": "private, no-store" } }); }
-    return json(route, { errors: [{ code: "resource_not_found", message: "Not found.", location: ["path"] }] }, 404);
+    if (path === "/uploads" && request.method() === "POST")
+      return json(
+        route,
+        {
+          ...status("awaiting_moderation"),
+          state: "awaiting_upload",
+          moderationState: "not_started",
+          upload: {
+            method: "PUT",
+            url: `/uploads/direct/${directToken}`,
+            headers: { "Content-Type": "image/png" },
+            fields: {},
+            expiresAt,
+          },
+        },
+        201,
+      );
+    if (
+      path === `/uploads/direct/${directToken}` &&
+      request.method() === "PUT"
+    ) {
+      imageBytes = request.postDataBuffer() ?? Buffer.alloc(0);
+      return route.fulfill({ headers, status: 204 });
+    }
+    if (path === `/uploads/${uploadId}/complete`) {
+      uploaded = true;
+      return json(route, status("approved"));
+    }
+    if (path === `/uploads/${uploadId}` && request.method() === "GET")
+      return json(route, status(deleted ? "deleted" : "approved"));
+    if (path === `/uploads/${uploadId}` && request.method() === "DELETE") {
+      deleted = true;
+      return json(route, {
+        id: uploadId,
+        state: "deleted",
+        referencedByVersions: 1,
+      });
+    }
+    if (path === `/uploads/${uploadId}/assets/tile/access`) {
+      grantRequests++;
+      return json(route, {
+        url: `/assets/direct/${accessToken}/tile`,
+        expiresAt,
+        contentType: "image/png",
+      });
+    }
+    if (path === `/assets/direct/${accessToken}/tile`) {
+      tileRequests++;
+      return route.fulfill({
+        body: imageBytes,
+        headers: {
+          ...headers,
+          "content-type": "image/png",
+          "cache-control": "private, no-store",
+        },
+      });
+    }
+    return json(
+      route,
+      {
+        errors: [
+          {
+            code: "resource_not_found",
+            message: "Not found.",
+            location: ["path"],
+          },
+        ],
+      },
+      404,
+    );
   });
 
   await page.goto(configurePath);
@@ -98,32 +210,72 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
     .getByRole("button", { name: "Continue to Pattern" })
     .press("Enter");
   const input = page.getByLabel("Choose a pattern image");
-  await expect(input).toHaveAttribute("accept", "image/jpeg,image/png,image/webp");
+  await expect(input).toHaveAttribute(
+    "accept",
+    "image/jpeg,image/png,image/webp",
+  );
   const dataUrl = await page.evaluate(() => {
     const canvas = document.createElement("canvas");
-    canvas.width = 64; canvas.height = 64;
+    canvas.width = 64;
+    canvas.height = 64;
     const context = canvas.getContext("2d")!;
-    context.fillStyle = "#37644c"; context.fillRect(0, 0, 64, 64);
-    context.fillStyle = "#f2e8cf"; context.fillRect(0, 0, 24, 24);
+    context.fillStyle = "#37644c";
+    context.fillRect(0, 0, 64, 64);
+    context.fillStyle = "#f2e8cf";
+    context.fillRect(0, 0, 24, 24);
     return canvas.toDataURL("image/png");
   });
-  await input.setInputFiles({ name: "garden.png", mimeType: "image/png", buffer: Buffer.from(dataUrl.split(",")[1], "base64") });
-  await expect(page.getByLabel("Repeating preview of the selected local image")).toBeVisible();
-  await page.getByRole("checkbox", { name: /upload notice version 1/i }).check();
+  await input.setInputFiles({
+    name: "garden.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(dataUrl.split(",")[1], "base64"),
+  });
+  await expect(
+    page.getByLabel("Repeating preview of the selected local image"),
+  ).toBeVisible();
+  await page
+    .getByRole("checkbox", { name: /upload notice version 1/i })
+    .check();
   await page.getByRole("button", { name: "Upload for review" }).press("Enter");
   await expect(page.getByText("My garden repeat")).toBeVisible();
-  await expect(page.getByText(/moderation is unavailable, so this image cannot be approved/)).toBeVisible();
-  await expect(page.getByText("Processing failed", { exact: true })).toBeVisible();
-  await page.getByRole("radio", { name: "Select custom pattern My garden repeat" }).press("Space");
-  await expect(page.getByText(/selected for this private project configuration/)).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await expect(
+    page.getByText(
+      /moderation is unavailable, so this image cannot be approved/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Processing failed", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("radio", { name: "Select custom pattern My garden repeat" })
+    .press("Space");
+  await expect(
+    page.getByText(/selected for this private project configuration/),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
 
-  await page.getByRole("button", { name: "Continue to Preview" }).press("Enter");
-  const preview = page.getByRole("figure", { name: /^Preview your .+ cushion$/ });
-  await expect(preview.getByText(/^My garden repeat on your .+ cushion$/)).toBeVisible();
-  await expect(preview.getByText("Your own pattern", { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Continue to Preview" })
+    .press("Enter");
+  const preview = page.getByRole("figure", {
+    name: /^Preview your .+ cushion$/,
+  });
+  await expect(
+    preview.getByText(/^My garden repeat on your .+ cushion$/),
+  ).toBeVisible();
+  await expect(
+    preview.getByText("Your own pattern", { exact: true }),
+  ).toBeVisible();
   await expect(preview).toContainText("My garden repeat");
-  expect(await preview.innerText()).not.toMatch(new RegExp(`${uploadId}|${accessToken}|https?://|garden\\.png`));
+  expect(await preview.innerText()).not.toMatch(
+    new RegExp(`${uploadId}|${accessToken}|https?://|garden\\.png`),
+  );
   const tileCount = tileRequests;
   const grantCount = grantRequests;
   const scale = page.getByRole("slider", { name: "Pattern size" });
@@ -131,24 +283,41 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   await expect(scale).toHaveValue("2");
   await scale.press("ArrowLeft");
   await expect(scale).toHaveValue("1.9");
-  await expect(preview.locator(".cushion-preview-face")).toHaveCSS("--pattern-scale", "1.9");
+  await expect(preview.locator(".cushion-preview-face")).toHaveCSS(
+    "--pattern-scale",
+    "1.9",
+  );
   expect(tileRequests).toBe(tileCount);
   expect(grantRequests).toBe(grantCount);
   await preview.screenshot({ path: testInfo.outputPath("custom-preview.png") });
-  await page.getByRole("button", { name: "Change pattern", exact: true }).press("Enter");
+  await page
+    .getByRole("button", { name: "Change pattern", exact: true })
+    .press("Enter");
 
   // Deleting asks inline, in the list item. Focus enters on Cancel, and
   // Escape puts it back on Delete without deleting anything.
-  const deleteButton = page.getByRole("button", { name: "Delete", exact: true }).first();
+  const deleteButton = page
+    .getByRole("button", { name: "Delete", exact: true })
+    .first();
   await deleteButton.press("Enter");
-  const confirmation = page.getByRole("group", { name: /referenced by 1 saved version/ });
+  const confirmation = page.getByRole("group", {
+    name: /referenced by 1 saved version/,
+  });
   await expect(confirmation).toBeVisible();
-  await expect(confirmation.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await expect(
+    confirmation.getByRole("button", { name: "Cancel" }),
+  ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(confirmation).toHaveCount(0);
   await expect(deleteButton).toBeFocused();
 
   await deleteButton.press("Enter");
-  await confirmation.getByRole("button", { name: "Delete pattern" }).press("Enter");
-  await expect(page.getByText(/Custom pattern deleted.*no longer appear in saved projects or previews/)).toBeVisible();
+  await confirmation
+    .getByRole("button", { name: "Delete pattern" })
+    .press("Enter");
+  await expect(
+    page.getByText(
+      /Custom pattern deleted.*no longer appear in saved projects or previews/,
+    ),
+  ).toBeVisible();
 });

@@ -44,7 +44,9 @@ export function AccountRequired({
   return (
     <section className={surfaceClasses({ className })}>
       <Heading
-        className={headingLevel === "h2" ? sectionTitleClasses : cardTitleClasses}
+        className={
+          headingLevel === "h2" ? sectionTitleClasses : cardTitleClasses
+        }
       >
         {title}
       </Heading>
@@ -60,7 +62,9 @@ export function AccountRequired({
         </ErrorMessage>
       ) : null}
       <div className="mt-component flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <ButtonLink href={buildAccountHref("login", returnTo)}>Sign in</ButtonLink>
+        <ButtonLink href={buildAccountHref("login", returnTo)}>
+          Sign in
+        </ButtonLink>
         <ButtonLink
           href={buildAccountHref("register", returnTo)}
           variant="secondary"

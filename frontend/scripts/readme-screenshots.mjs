@@ -45,21 +45,126 @@ const sizeBudget = { perImageBytes: 150 * 1024, totalBytes: 600 * 1024 };
 // backend/migrations/versions/20260729_01_seed_canonical_patterns.py, with
 // the names revision 20261007_02 gave four of them.
 const patterns = [
-  ["prototype-botanical", "Seed scatter", "Green and terracotta seeds scattered over a light ground.", "botanical", ["ivory", "green", "terracotta"], "prototype-pattern-botanical"],
-  ["fern-trail", "Fern trail", "Layered fronds arranged along a gentle diagonal trail.", "botanical", ["ivory", "green"], "pattern-fern-trail"],
-  ["meadow-sprig", "Meadow sprig", "Small branching sprigs scattered across an open ground.", "botanical", ["ivory", "blue", "gold"], "pattern-meadow-sprig"],
-  ["prototype-geometric", "Harlequin", "Green and terracotta triangles in a bold harlequin check.", "geometric", ["ivory", "green", "terracotta"], "prototype-pattern-geometric"],
-  ["diamond-path", "Diamond path", "Nested diamonds repeat in crisp offset rows.", "geometric", ["ivory", "blue", "charcoal"], "pattern-diamond-path"],
-  ["arch-grid", "Arch grid", "Rounded arches alternate within a compact tiled grid.", "geometric", ["ivory", "terracotta", "gold"], "pattern-arch-grid"],
-  ["harbor-stripe", "Harbour stripe", "Broad blue bands alternate with fine light pinstripes.", "striped", ["ivory", "blue"], "pattern-harbor-stripe"],
-  ["orchard-stripe", "Orchard stripe", "Uneven green and gold lines form a relaxed rhythm.", "striped", ["ivory", "green", "gold"], "pattern-orchard-stripe"],
-  ["ribbon-stripe", "Ribbon stripe", "Slim rose bands cross wider terracotta ribbons.", "striped", ["ivory", "terracotta", "rose"], "pattern-ribbon-stripe"],
-  ["prototype-woven", "Fine weave", "A fine, quiet grid of crossing threads.", "woven", ["ivory", "charcoal"], "prototype-pattern-woven"],
-  ["basket-check", "Basket check", "Alternating blocks suggest an oversized basket weave.", "woven", ["ivory", "blue", "charcoal"], "pattern-basket-check"],
-  ["linen-crosshatch", "Linen crosshatch", "Fine crossing lines create a loose textured grid.", "woven", ["ivory", "gold"], "pattern-linen-crosshatch"],
-  ["terrace-wave", "Terrace wave", "Layered waves move in alternating cool bands.", "abstract", ["ivory", "green", "blue"], "pattern-terrace-wave"],
-  ["pebble-drift", "Pebble drift", "Soft-edged pebble forms gather in offset clusters.", "abstract", ["ivory", "terracotta", "charcoal"], "pattern-pebble-drift"],
-  ["confetti-grid", "Confetti grid", "Playful dashes and dots repeat on a spacious grid.", "abstract", ["ivory", "green", "gold", "rose"], "pattern-confetti-grid"],
+  [
+    "prototype-botanical",
+    "Seed scatter",
+    "Green and terracotta seeds scattered over a light ground.",
+    "botanical",
+    ["ivory", "green", "terracotta"],
+    "prototype-pattern-botanical",
+  ],
+  [
+    "fern-trail",
+    "Fern trail",
+    "Layered fronds arranged along a gentle diagonal trail.",
+    "botanical",
+    ["ivory", "green"],
+    "pattern-fern-trail",
+  ],
+  [
+    "meadow-sprig",
+    "Meadow sprig",
+    "Small branching sprigs scattered across an open ground.",
+    "botanical",
+    ["ivory", "blue", "gold"],
+    "pattern-meadow-sprig",
+  ],
+  [
+    "prototype-geometric",
+    "Harlequin",
+    "Green and terracotta triangles in a bold harlequin check.",
+    "geometric",
+    ["ivory", "green", "terracotta"],
+    "prototype-pattern-geometric",
+  ],
+  [
+    "diamond-path",
+    "Diamond path",
+    "Nested diamonds repeat in crisp offset rows.",
+    "geometric",
+    ["ivory", "blue", "charcoal"],
+    "pattern-diamond-path",
+  ],
+  [
+    "arch-grid",
+    "Arch grid",
+    "Rounded arches alternate within a compact tiled grid.",
+    "geometric",
+    ["ivory", "terracotta", "gold"],
+    "pattern-arch-grid",
+  ],
+  [
+    "harbor-stripe",
+    "Harbour stripe",
+    "Broad blue bands alternate with fine light pinstripes.",
+    "striped",
+    ["ivory", "blue"],
+    "pattern-harbor-stripe",
+  ],
+  [
+    "orchard-stripe",
+    "Orchard stripe",
+    "Uneven green and gold lines form a relaxed rhythm.",
+    "striped",
+    ["ivory", "green", "gold"],
+    "pattern-orchard-stripe",
+  ],
+  [
+    "ribbon-stripe",
+    "Ribbon stripe",
+    "Slim rose bands cross wider terracotta ribbons.",
+    "striped",
+    ["ivory", "terracotta", "rose"],
+    "pattern-ribbon-stripe",
+  ],
+  [
+    "prototype-woven",
+    "Fine weave",
+    "A fine, quiet grid of crossing threads.",
+    "woven",
+    ["ivory", "charcoal"],
+    "prototype-pattern-woven",
+  ],
+  [
+    "basket-check",
+    "Basket check",
+    "Alternating blocks suggest an oversized basket weave.",
+    "woven",
+    ["ivory", "blue", "charcoal"],
+    "pattern-basket-check",
+  ],
+  [
+    "linen-crosshatch",
+    "Linen crosshatch",
+    "Fine crossing lines create a loose textured grid.",
+    "woven",
+    ["ivory", "gold"],
+    "pattern-linen-crosshatch",
+  ],
+  [
+    "terrace-wave",
+    "Terrace wave",
+    "Layered waves move in alternating cool bands.",
+    "abstract",
+    ["ivory", "green", "blue"],
+    "pattern-terrace-wave",
+  ],
+  [
+    "pebble-drift",
+    "Pebble drift",
+    "Soft-edged pebble forms gather in offset clusters.",
+    "abstract",
+    ["ivory", "terracotta", "charcoal"],
+    "pattern-pebble-drift",
+  ],
+  [
+    "confetti-grid",
+    "Confetti grid",
+    "Playful dashes and dots repeat on a spacious grid.",
+    "abstract",
+    ["ivory", "green", "gold", "rose"],
+    "pattern-confetti-grid",
+  ],
 ].map(([id, name, description, categoryId, colorIds, previewClassName]) => ({
   id,
   name,
@@ -156,7 +261,10 @@ async function assertExportIsHermetic() {
     );
   }
 
-  const index = await readFile(path.join(exportDirectory, "index.html"), "utf8");
+  const index = await readFile(
+    path.join(exportDirectory, "index.html"),
+    "utf8",
+  );
 
   if (index.includes("/SewnCovers/_next/")) {
     throw new Error(
@@ -213,7 +321,10 @@ async function isolateContext(context, problems) {
       await json({ database: "healthy", process: "healthy" });
     } else if (request.method() === "GET" && pathname === "/patterns") {
       await json(patterns);
-    } else if (request.method() === "GET" && pathname === "/uploads/availability") {
+    } else if (
+      request.method() === "GET" &&
+      pathname === "/uploads/availability"
+    ) {
       // As in production: custom uploads are off.
       await json({ enabled: false });
     } else {
@@ -250,7 +361,9 @@ async function settle(page, name) {
   }));
 
   if (state.overflow > 0) {
-    throw new Error(`${name}: the page scrolls horizontally by ${state.overflow}px.`);
+    throw new Error(
+      `${name}: the page scrolls horizontally by ${state.overflow}px.`,
+    );
   }
 
   const transient = state.text.match(transientText);
@@ -260,7 +373,9 @@ async function settle(page, name) {
       .slice(Math.max(0, transient.index - 40), transient.index + 60)
       .replace(/\s+/g, " ");
 
-    throw new Error(`${name}: transient or error text on screen: "${context}".`);
+    throw new Error(
+      `${name}: transient or error text on screen: "${context}".`,
+    );
   }
 }
 
@@ -332,7 +447,9 @@ async function captureAll(browser) {
     await isolateContext(context, problems);
 
     const page = await context.newPage();
-    page.on("pageerror", (error) => problems.push(`page error: ${error.message}`));
+    page.on("pageerror", (error) =>
+      problems.push(`page error: ${error.message}`),
+    );
     page.on("console", (message) => {
       const text = message.text();
 
@@ -383,7 +500,10 @@ async function captureAll(browser) {
     log("shape stage");
     await page.goto(`${appOrigin}/configure/`);
     await page
-      .getByRole("heading", { level: 1, name: "Build your custom cover design." })
+      .getByRole("heading", {
+        level: 1,
+        name: "Build your custom cover design.",
+      })
       .waitFor();
     await page.getByText(design.shape, { exact: true }).click();
     await check(page.getByRole("radio", { name: design.shape }));
@@ -396,13 +516,19 @@ async function captureAll(browser) {
 
     // Measurements and cover details are walked through but not captured.
     log("measurements and cover details");
-    await page.getByRole("button", { name: "Continue to Measurements" }).click();
+    await page
+      .getByRole("button", { name: "Continue to Measurements" })
+      .click();
     await page.getByRole("textbox", { name: "Width (cm)" }).fill(design.width);
-    await page.getByRole("textbox", { name: "Height (cm)" }).fill(design.height);
+    await page
+      .getByRole("textbox", { name: "Height (cm)" })
+      .fill(design.height);
     await page
       .getByRole("textbox", { name: "Thickness (cm)" })
       .fill(design.thickness);
-    await page.getByRole("button", { name: "Continue to Cover details" }).click();
+    await page
+      .getByRole("button", { name: "Continue to Cover details" })
+      .click();
     for (const option of [
       design.material,
       design.fit,
@@ -420,7 +546,10 @@ async function captureAll(browser) {
     // focus to each new stage; wait for that so it cannot scroll a capture.
     log("pattern stage");
     await expect(
-      page.getByRole("heading", { level: 1, name: "Choose a colour or pattern" }),
+      page.getByRole("heading", {
+        level: 1,
+        name: "Choose a colour or pattern",
+      }),
     ).toBeFocused();
     await page.getByText("15 patterns", { exact: true }).waitFor();
     await page.getByText(design.pattern, { exact: true }).click();
@@ -435,8 +564,13 @@ async function captureAll(browser) {
     // 4. Preview stage: the cushion drawn with the chosen pattern.
     log("preview stage");
     await page.getByRole("button", { name: "Continue to Preview" }).click();
-    await expect(page.getByRole("slider", { name: "Pattern size" })).toBeFocused();
-    await page.getByText("Fern trail on your rectangle cushion").first().waitFor();
+    await expect(
+      page.getByRole("slider", { name: "Pattern size" }),
+    ).toBeFocused();
+    await page
+      .getByText("Fern trail on your rectangle cushion")
+      .first()
+      .waitFor();
     written.push(
       await capture(page, "preview", {
         scrollTo: page.getByRole("heading", {
@@ -501,8 +635,11 @@ async function main() {
     const total = written.reduce((sum, item) => sum + item.bytes, 0);
 
     for (const { bytes, file } of written) {
-      const warning = bytes > sizeBudget.perImageBytes ? "  (over the size budget)" : "";
-      log(`${file.padEnd(18)} ${formatKilobytes(bytes).padStart(10)}${warning}`);
+      const warning =
+        bytes > sizeBudget.perImageBytes ? "  (over the size budget)" : "";
+      log(
+        `${file.padEnd(18)} ${formatKilobytes(bytes).padStart(10)}${warning}`,
+      );
     }
     log(`${"total".padEnd(18)} ${formatKilobytes(total).padStart(10)}`);
 
@@ -520,6 +657,8 @@ async function main() {
 try {
   await main();
 } catch (error) {
-  console.error(`[screenshots] failed: ${error instanceof Error ? error.message : error}`);
+  console.error(
+    `[screenshots] failed: ${error instanceof Error ? error.message : error}`,
+  );
   process.exitCode = 1;
 }

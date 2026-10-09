@@ -57,17 +57,16 @@ const categoryFilterOptions: readonly PatternFilterOption<PatternCategoryFilter>
     })),
   ];
 
-const colorFilterOptions: readonly PatternFilterOption<PatternColorFilter>[] =
-  [
-    {
-      value: ALL_PATTERN_COLORS,
-      label: "All colours",
-    },
-    ...patternColors.map((color) => ({
-      value: color.id,
-      label: color.label,
-    })),
-  ];
+const colorFilterOptions: readonly PatternFilterOption<PatternColorFilter>[] = [
+  {
+    value: ALL_PATTERN_COLORS,
+    label: "All colours",
+  },
+  ...patternColors.map((color) => ({
+    value: color.id,
+    label: color.label,
+  })),
+];
 
 // Two columns from 360 px keep all fifteen patterns within easy reach on a
 // phone; one column below that keeps the cards readable at 320 px.
@@ -91,9 +90,7 @@ function patternMatchesSearch(
     pattern.description,
     getPatternCategoryLabel(pattern.categoryId),
     ...getPatternColorLabels(pattern.colorIds),
-  ].some((value) =>
-    value.toLocaleLowerCase().includes(normalizedQuery),
-  );
+  ].some((value) => value.toLocaleLowerCase().includes(normalizedQuery));
 }
 
 export interface PatternStepProps {
@@ -126,8 +123,7 @@ export function PatternStep({
   const [solidColorError, setSolidColorError] = useState<string | null>(null);
   const { categoryId, colorId } = catalogue.filters;
   const filtersAreActive =
-    categoryId !== ALL_PATTERN_CATEGORIES ||
-    colorId !== ALL_PATTERN_COLORS;
+    categoryId !== ALL_PATTERN_CATEGORIES || colorId !== ALL_PATTERN_COLORS;
   const normalizedSearchQuery = normalizePatternSearch(searchQuery);
   const searchIsActive = normalizedSearchQuery !== "";
   const discoveryCriteriaAreActive = filtersAreActive || searchIsActive;
@@ -213,9 +209,8 @@ export function PatternStep({
   };
 
   const selectSolidColor = () => {
-    const color = solidColor ??
-      normalizeHexColor(solidColorDraft) ??
-      DEFAULT_SOLID_COLOR;
+    const color =
+      solidColor ?? normalizeHexColor(solidColorDraft) ?? DEFAULT_SOLID_COLOR;
     setSolidColorDraft(color);
     setSolidColorError(null);
     dispatch({ type: "setSolidColor", color });
@@ -232,9 +227,10 @@ export function PatternStep({
     dispatch({ type: "setSolidColor", color: normalized });
   };
 
-  const displayedSolidColorDraft = solidColorError === null
-    ? solidColor ?? solidColorDraft
-    : solidColorDraft;
+  const displayedSolidColorDraft =
+    solidColorError === null
+      ? (solidColor ?? solidColorDraft)
+      : solidColorDraft;
 
   const commitSolidColor = () => {
     const normalized = normalizeHexColor(displayedSolidColorDraft);
@@ -259,10 +255,7 @@ export function PatternStep({
   );
 
   return (
-    <section
-      aria-label="Pattern selection"
-      className="scroll-mt-layout"
-    >
+    <section aria-label="Pattern selection" className="scroll-mt-layout">
       <fieldset
         aria-describedby={supportingTextId}
         className="fieldset-panel min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline"
@@ -280,8 +273,8 @@ export function PatternStep({
           id={supportingTextId}
           className="mt-2 max-w-3xl break-words text-body text-text-muted"
         >
-          Pick a plain colour or one of our patterns. You can change the
-          pattern size on the next step.
+          Pick a plain colour or one of our patterns. You can change the pattern
+          size on the next step.
         </p>
         {/* From lg this preview sits in the side column instead. */}
         <FabricPreview
@@ -408,11 +401,7 @@ export function PatternStep({
                 You can still choose a plain colour. Your other choices
                 haven&apos;t changed.
               </p>
-              <Button
-                className="mt-3"
-                variant="secondary"
-                onClick={onRetry}
-              >
+              <Button className="mt-3" variant="secondary" onClick={onRetry}>
                 Check for patterns again
               </Button>
             </div>
@@ -561,9 +550,7 @@ export function PatternStep({
               >
                 {matchingPatterns.map((pattern) => {
                   const optionId = `${generatedId}-${pattern.id}`;
-                  const colorLabels = getPatternColorLabels(
-                    pattern.colorIds,
-                  );
+                  const colorLabels = getPatternColorLabels(pattern.colorIds);
 
                   return (
                     <PatternCard

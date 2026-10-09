@@ -1,6 +1,4 @@
-import {
-  hasValidMeasurementsForShape,
-} from "../context/configuration/measurements";
+import { hasValidMeasurementsForShape } from "../context/configuration/measurements";
 import { normalizePatternScale } from "../context/configuration/pattern-scale";
 import type { ConfigurationState } from "../context/configuration/types";
 import { hasSupportedCoverOptions } from "../data/cover-options";
@@ -53,8 +51,7 @@ type DesignSaveListener = (state: DesignSaveState) => void;
 type ShareUrlFactory = (publicId: string) => string;
 
 const initialState: DesignSaveState = Object.freeze({
-  message:
-    "Save this reviewed configuration to create a public share link.",
+  message: "Save this reviewed configuration to create a public share link.",
   phase: "idle",
 });
 
@@ -79,10 +76,7 @@ export class DesignShareClipboardError extends Error {
   }
 }
 
-function hasAtMostDecimalPlaces(
-  value: number,
-  places: number,
-): boolean {
+function hasAtMostDecimalPlaces(value: number, places: number): boolean {
   const [coefficient, rawExponent = "0"] = value
     .toString()
     .toLowerCase()
@@ -110,20 +104,14 @@ function responseMatchesRequest(
     ...RESPONSE_COMMON_KEYS,
     request.patternId === null ? "solidColor" : "patternId",
   ];
-  const currentKeys = [
-    ...RESPONSE_COMMON_KEYS,
-    "patternId",
-    "solidColor",
-  ];
+  const currentKeys = [...RESPONSE_COMMON_KEYS, "patternId", "solidColor"];
   const actualKeys = Object.keys(value);
-  if (
-    !(
-      (actualKeys.length === compatibilityKeys.length &&
-        compatibilityKeys.every((key) => Object.hasOwn(value, key))) ||
-      (actualKeys.length === currentKeys.length &&
-        currentKeys.every((key) => Object.hasOwn(value, key)))
-    )
-  ) {
+  if (!(
+    (actualKeys.length === compatibilityKeys.length &&
+      compatibilityKeys.every((key) => Object.hasOwn(value, key))) ||
+    (actualKeys.length === currentKeys.length &&
+      currentKeys.every((key) => Object.hasOwn(value, key)))
+  )) {
     return false;
   }
 
@@ -179,13 +167,12 @@ export function mapConfigurationToCreateDesign(
     width,
   } = configuration;
   const normalizedScale = normalizePatternScale(patternScale);
-  const legacyPatternId = isRecord(configuration) &&
-    typeof configuration.patternId === "string"
-    ? configuration.patternId
-    : null;
-  const patternId = pattern?.kind === "built-in"
-    ? pattern.patternId
-    : legacyPatternId;
+  const legacyPatternId =
+    isRecord(configuration) && typeof configuration.patternId === "string"
+      ? configuration.patternId
+      : null;
+  const patternId =
+    pattern?.kind === "built-in" ? pattern.patternId : legacyPatternId;
   const solidColor = pattern?.kind === "solid" ? pattern.color : null;
 
   if (
@@ -193,7 +180,7 @@ export function mapConfigurationToCreateDesign(
     width === null ||
     height === null ||
     thickness === null ||
-    ((patternId === null) === (solidColor === null)) ||
+    (patternId === null) === (solidColor === null) ||
     (patternId !== null && !PATTERN_ID_PATTERN.test(patternId)) ||
     (solidColor !== null && !/^#[0-9A-F]{6}$/.test(solidColor)) ||
     !hasValidMeasurementsForShape(
@@ -263,11 +250,11 @@ export function mapConfigurationToProjectConfiguration(
         }
       : configuration.pattern.kind === "custom"
         ? {
-          kind: "custom" as const,
-          assetId: configuration.pattern.assetId,
-          derivativeId: configuration.pattern.derivativeId,
-          processingVersion: configuration.pattern.processingVersion,
-        }
+            kind: "custom" as const,
+            assetId: configuration.pattern.assetId,
+            derivativeId: configuration.pattern.derivativeId,
+            processingVersion: configuration.pattern.processingVersion,
+          }
         : {
             kind: "solid" as const,
             color: configuration.pattern.color,
@@ -308,10 +295,7 @@ export class DesignSaveController {
   #pending: Promise<void> | null = null;
   #state: DesignSaveState = initialState;
 
-  constructor(
-    client: SewnCoversApiClient,
-    shareUrlFactory: ShareUrlFactory,
-  ) {
+  constructor(client: SewnCoversApiClient, shareUrlFactory: ShareUrlFactory) {
     this.#client = client;
     this.#shareUrlFactory = shareUrlFactory;
   }
@@ -371,10 +355,7 @@ export class DesignSaveController {
     try {
       const response = await this.#client.createDesign(request, {
         onStatus: (status) => {
-          if (
-            status.state === "connecting" ||
-            status.state === "cold-start"
-          ) {
+          if (status.state === "connecting" || status.state === "cold-start") {
             this.#publish({
               message: status.message,
               phase: "saving",

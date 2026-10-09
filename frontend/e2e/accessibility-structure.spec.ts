@@ -46,7 +46,9 @@ async function allowPublicSave(page: Page) {
 }
 
 for (const role of ["guest", "customer", "administrator"] as const) {
-  test(`every route has a sound outline, landmarks and names: ${role}`, async ({ page }) => {
+  test(`every route has a sound outline, landmarks and names: ${role}`, async ({
+    page,
+  }) => {
     test.setTimeout(120_000);
     await fixtures(page, role);
 
@@ -59,7 +61,9 @@ for (const role of ["guest", "customer", "administrator"] as const) {
   });
 }
 
-test("detail and operational states keep the outline sound", async ({ page }) => {
+test("detail and operational states keep the outline sound", async ({
+  page,
+}) => {
   test.setTimeout(120_000);
   await fixtures(page, "administrator");
 
@@ -67,7 +71,10 @@ test("detail and operational states keep the outline sound", async ({ page }) =>
     ["project", `/projects/?project=${id}`],
     ["order", `/orders/?order=${orderId}`],
     ["checkout return", `/checkout/return/?order=${orderId}`],
-    ["sandbox checkout", `/checkout/sandbox/?session=sc_demo_attempt_browser_00001&order=${orderId}`],
+    [
+      "sandbox checkout",
+      `/checkout/sandbox/?session=sc_demo_attempt_browser_00001&order=${orderId}`,
+    ],
     ["pricing and quotes", "/commerce/"],
     ["cart", "/cart/"],
     ["admin", "/admin/"],
@@ -78,14 +85,18 @@ test("detail and operational states keep the outline sound", async ({ page }) =>
     await page.waitForLoadState("networkidle");
     if (name === "pricing and quotes") {
       await page.getByRole("button", { name: "Preview price" }).click();
-      await expect(page.getByRole("region", { name: /Estimated subtotal/ })).toBeVisible();
+      await expect(
+        page.getByRole("region", { name: /Estimated subtotal/ }),
+      ).toBeVisible();
     }
     if (name === "admin") {
       await page.getByRole("button", { name: "Review specification" }).click();
       await page.getByRole("button", { name: /SC-DEMO-WORK0001/ }).click();
       await page.getByRole("button", { name: "Review publication" }).click();
       await page.getByRole("button", { name: "Run readiness checks" }).click();
-      await expect(page.getByText("Production contact remains a placeholder.")).toBeVisible();
+      await expect(
+        page.getByText("Production contact remains a placeholder."),
+      ).toBeVisible();
     }
     await expectStructure(page, name);
   }
@@ -101,7 +112,9 @@ test("every configurator stage, and the panels that open on it, keep the outline
 
   // The first stage keeps the page introduction as its h1.
   await page.goto(`${base}/configure/`);
-  await expect(page.getByRole("heading", { level: 2, name: "Choose your cushion shape" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Choose your cushion shape" }),
+  ).toBeVisible();
   await expectStructure(page, "shape stage");
 
   await page.goto(`${base}/configure/?design=${publicId}`);
@@ -110,57 +123,88 @@ test("every configurator stage, and the panels that open on it, keep the outline
 
   // A shape that needs equal sides asks before changing the measurements.
   await page.getByText("Square cushion", { exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Use the same width and height?" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Use the same width and height?" }),
+  ).toBeVisible();
   await expectStructure(page, "shape change question");
   await page.keyboard.press("Escape");
   await page.getByText("Rectangle cushion", { exact: true }).click();
 
   await page.getByRole("button", { name: "Continue to Measurements" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: /^Measure your/ })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: /^Measure your/ }),
+  ).toBeVisible();
   await expectStructure(page, "measurements stage");
   await page.getByRole("textbox", { name: /^Width/ }).fill("1");
   await page.getByRole("textbox", { name: /^Width/ }).blur();
-  await expect(page.getByRole("status").filter({ hasText: "must be" })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "must be" }),
+  ).toBeVisible();
   await expectStructure(page, "measurements stage with an error");
   await page.getByRole("textbox", { name: /^Width/ }).fill("73.25");
 
   await page.getByRole("button", { name: "Continue to Cover details" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Choose cover details" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Choose cover details" }),
+  ).toBeVisible();
   await expectStructure(page, "cover details stage");
 
   await page.getByRole("button", { name: "Continue to Pattern" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Choose a colour or pattern" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Choose a colour or pattern" }),
+  ).toBeVisible();
   await expectStructure(page, "pattern stage");
   await chooseRadio(page, "Solid colour");
-  await expect(page.getByRole("heading", { name: "Pick your colour" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Pick your colour" }),
+  ).toBeVisible();
   await expectStructure(page, "pattern stage, solid colour");
   await page.getByRole("button", { name: "Upload your own pattern" }).click();
-  await expect(page.getByRole("heading", { name: "Sign in to upload your own pattern" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sign in to upload your own pattern" }),
+  ).toBeVisible();
   await expectStructure(page, "pattern stage, upload sign-in");
-  await page.getByRole("button", { name: "Continue with our patterns" }).click();
+  await page
+    .getByRole("button", { name: "Continue with our patterns" })
+    .click();
   await page.getByRole("searchbox", { name: "Search patterns" }).fill("zzzz");
-  await expect(page.getByRole("heading", { name: "No patterns match" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "No patterns match" }),
+  ).toBeVisible();
   await expectStructure(page, "pattern stage, no matches");
   await page.getByRole("searchbox", { name: "Search patterns" }).fill("");
   await chooseRadio(page, "Terrace wave");
 
   await page.getByRole("button", { name: "Continue to Preview" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: /^Preview your/ })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: /^Preview your/ }),
+  ).toBeVisible();
   await expectStructure(page, "preview stage");
 
   await page.getByRole("button", { name: "Continue to Review" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "SewnCovers configuration summary" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "SewnCovers configuration summary",
+    }),
+  ).toBeVisible();
   await expectStructure(page, "review stage");
   await page.getByRole("button", { name: "Save to My projects" }).click();
-  await expect(page.getByRole("heading", { name: "Sign in to save this design" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sign in to save this design" }),
+  ).toBeVisible();
   await expectStructure(page, "review stage, save sign-in");
   await page.getByRole("button", { name: "Continue as guest" }).click();
-  await page.getByRole("button", { name: "Save and create share link" }).click();
+  await page
+    .getByRole("button", { name: "Save and create share link" })
+    .click();
   await expect(page.getByRole("textbox", { name: "Share URL" })).toBeVisible();
   await expectStructure(page, "review stage, share link created");
 });
 
-test("a signed-in visitor's configurator panels keep the outline sound", async ({ page }) => {
+test("a signed-in visitor's configurator panels keep the outline sound", async ({
+  page,
+}) => {
   test.setTimeout(120_000);
   await fixtures(page, "customer");
   await enableUploads(page);
@@ -183,24 +227,37 @@ test("a signed-in visitor's configurator panels keep the outline sound", async (
   for (const stage of ["Preview", "Review"]) {
     await page.getByRole("button", { name: `Continue to ${stage}` }).click();
   }
-  await expect(page.getByRole("heading", { level: 1, name: "SewnCovers configuration summary" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "SewnCovers configuration summary",
+    }),
+  ).toBeVisible();
   await expectStructure(page, "review stage, signed in");
 });
 
-test("the keep-your-design question keeps the outline sound", async ({ page }) => {
+test("the keep-your-design question keeps the outline sound", async ({
+  page,
+}) => {
   await fixtures(page, "guest");
   await page.goto(`${base}/configure/`);
   await page.getByText("Rectangle cushion", { exact: true }).click();
   await page.getByRole("button", { name: "Continue to Measurements" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: /^Measure your/ })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: /^Measure your/ }),
+  ).toBeVisible();
 
   // A design link would replace the unsaved design kept in this browser.
   await page.goto(`${base}/configure/?design=${publicId}`);
-  await expect(page.getByRole("heading", { name: "Keep your unsaved design?" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Keep your unsaved design?" }),
+  ).toBeVisible();
   await expectStructure(page, "keep your unsaved design");
 });
 
-test("a signed-out visitor sees one Sign in link on the account page, and one elsewhere", async ({ page }) => {
+test("a signed-out visitor sees one Sign in link on the account page, and one elsewhere", async ({
+  page,
+}) => {
   await fixtures(page, "guest");
 
   // The header leaves its Sign in link out where the form's own tab is on
@@ -208,17 +265,25 @@ test("a signed-out visitor sees one Sign in link on the account page, and one el
   // be ambiguous to voice control and to a list of links.
   await page.goto(`${base}/account/?mode=login&returnTo=projects`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(1);
   await expect(
-    page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Sign in" }),
+    page.getByRole("link", { name: "Sign in", exact: true }),
+  ).toHaveCount(1);
+  await expect(
+    page
+      .getByRole("navigation", { name: "Primary navigation" })
+      .getByRole("link", { name: "Sign in" }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("navigation", { name: "Authentication options" }).getByRole("link", { name: "Sign in" }),
+    page
+      .getByRole("navigation", { name: "Authentication options" })
+      .getByRole("link", { name: "Sign in" }),
   ).toHaveAttribute("href", /returnTo=projects$/);
 
   // Anywhere else the header link is the way in.
   await page.goto(`${base}/configure/`);
   await expect(
-    page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Sign in" }),
+    page
+      .getByRole("navigation", { name: "Primary navigation" })
+      .getByRole("link", { name: "Sign in" }),
   ).toHaveCount(1);
 });

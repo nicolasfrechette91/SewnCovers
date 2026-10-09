@@ -53,23 +53,42 @@ const stateLabels: Readonly<Record<CustomUpload["state"], string>> = {
 };
 
 function defaultLabel(file: File): string {
-  return file.name.replace(/\.[^.]+$/, "").trim().slice(0, 120) || "My pattern";
+  return (
+    file.name
+      .replace(/\.[^.]+$/, "")
+      .trim()
+      .slice(0, 120) || "My pattern"
+  );
 }
 
 async function validateImage(
   file: File,
   url: string,
 ): Promise<{ height: number; url: string; width: number }> {
-  if (!ALLOWED_TYPES.has(file.type)) throw new Error("Choose a JPEG, PNG, or WebP image.");
-  if (file.size < 1 || file.size > MAX_BYTES) throw new Error("Choose an image no larger than 10 MB.");
-  const dimensions = await new Promise<{ height: number; width: number }>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve({ height: image.naturalHeight, width: image.naturalWidth });
-    image.onerror = () => reject(new Error("The browser could not preview this image."));
-    image.src = url;
-  });
-  if (dimensions.width < 64 || dimensions.height < 64 || dimensions.width > 4096 || dimensions.height > 4096 || dimensions.width * dimensions.height > 16_000_000) {
-    throw new Error("Image dimensions must be 64–4096 px per side and at most 16 million pixels.");
+  if (!ALLOWED_TYPES.has(file.type))
+    throw new Error("Choose a JPEG, PNG, or WebP image.");
+  if (file.size < 1 || file.size > MAX_BYTES)
+    throw new Error("Choose an image no larger than 10 MB.");
+  const dimensions = await new Promise<{ height: number; width: number }>(
+    (resolve, reject) => {
+      const image = new Image();
+      image.onload = () =>
+        resolve({ height: image.naturalHeight, width: image.naturalWidth });
+      image.onerror = () =>
+        reject(new Error("The browser could not preview this image."));
+      image.src = url;
+    },
+  );
+  if (
+    dimensions.width < 64 ||
+    dimensions.height < 64 ||
+    dimensions.width > 4096 ||
+    dimensions.height > 4096 ||
+    dimensions.width * dimensions.height > 16_000_000
+  ) {
+    throw new Error(
+      "Image dimensions must be 64–4096 px per side and at most 16 million pixels.",
+    );
   }
   return { ...dimensions, url };
 }
@@ -98,7 +117,11 @@ export function YourPatterns() {
   const uploadActionRef = useRef<HTMLButtonElement>(null);
   const returnFocusToUpload = useRef(false);
   // The upload being renamed or deleted, with the inline question it shows.
-  const [editing, setEditing] = useState<{ id: string; kind: "rename" | "delete"; draft: string } | null>(null);
+  const [editing, setEditing] = useState<{
+    id: string;
+    kind: "rename" | "delete";
+    draft: string;
+  } | null>(null);
   const focusLater = useDeferredFocus();
 
   // "Continue with our patterns" puts focus back on the action that opened sign-in.
@@ -115,7 +138,11 @@ export function YourPatterns() {
       setUploads(await accountApi.listUploads(auth.token));
       setError(null);
     } catch (caught) {
-      setError(caught instanceof AccountApiError ? caught.message : "Your patterns could not be loaded.");
+      setError(
+        caught instanceof AccountApiError
+          ? caught.message
+          : "Your patterns could not be loaded.",
+      );
     } finally {
       setPhase("idle");
     }
@@ -125,11 +152,19 @@ export function YourPatterns() {
     const timer = globalThis.setTimeout(() => void load(), 0);
     return () => globalThis.clearTimeout(timer);
   }, [load]);
-  useEffect(() => () => { if (localPreview) URL.revokeObjectURL(localPreview); }, [localPreview]);
-  useEffect(() => () => {
-    pendingValidationUrls.current.forEach((url) => URL.revokeObjectURL(url));
-    pendingValidationUrls.current.clear();
-  }, []);
+  useEffect(
+    () => () => {
+      if (localPreview) URL.revokeObjectURL(localPreview);
+    },
+    [localPreview],
+  );
+  useEffect(
+    () => () => {
+      pendingValidationUrls.current.forEach((url) => URL.revokeObjectURL(url));
+      pendingValidationUrls.current.clear();
+    },
+    [],
+  );
 
   const chooseFile = async (next: File | null) => {
     currentValidationUrl.current = null;
@@ -155,14 +190,18 @@ export function YourPatterns() {
       setLabel(defaultLabel(next));
       setLocalPreview(preview.url);
       setDimensions(`${preview.width} × ${preview.height} px`);
-      setMessage("Local repeat preview ready. The full image will be retained; no silent crop is applied.");
+      setMessage(
+        "Local repeat preview ready. The full image will be retained; no silent crop is applied.",
+      );
     } catch (caught) {
       if (pendingValidationUrls.current.delete(validationUrl)) {
         URL.revokeObjectURL(validationUrl);
       }
       if (currentValidationUrl.current !== validationUrl) return;
       currentValidationUrl.current = null;
-      setError(caught instanceof Error ? caught.message : "Choose a valid image.");
+      setError(
+        caught instanceof Error ? caught.message : "Choose a valid image.",
+      );
       focusLater(() => fileInput.current);
     }
   };
@@ -170,9 +209,20 @@ export function YourPatterns() {
   const poll = async (uploadId: string, attempt = 0): Promise<void> => {
     if (auth.status !== "authenticated") return;
     const current = await accountApi.getUpload(auth.token, uploadId);
-    setUploads((items) => [current, ...items.filter((item) => item.id !== current.id)]);
-    if (["uploaded", "processing", "awaiting_moderation"].includes(current.state) && attempt < 20) {
-      globalThis.setTimeout(() => void poll(uploadId, attempt + 1), POLL_DELAYS[Math.min(attempt, POLL_DELAYS.length - 1)]);
+    setUploads((items) => [
+      current,
+      ...items.filter((item) => item.id !== current.id),
+    ]);
+    if (
+      ["uploaded", "processing", "awaiting_moderation"].includes(
+        current.state,
+      ) &&
+      attempt < 20
+    ) {
+      globalThis.setTimeout(
+        () => void poll(uploadId, attempt + 1),
+        POLL_DELAYS[Math.min(attempt, POLL_DELAYS.length - 1)],
+      );
     }
   };
 
@@ -182,52 +232,103 @@ export function YourPatterns() {
       setError("Acknowledge upload notice version 1 before uploading.");
       return;
     }
-    setPhase("uploading"); setError(null); setMessage("Preparing your private upload…");
+    setPhase("uploading");
+    setError(null);
+    setMessage("Preparing your private upload…");
     try {
-      await assuranceApi.acknowledge(
+      await assuranceApi.acknowledge(auth.token, "uploads", "upload_rights");
+      const intent = await accountApi.createUploadIntent(
         auth.token,
-        "uploads",
-        "upload_rights",
+        label.trim(),
+        file,
       );
-      const intent = await accountApi.createUploadIntent(auth.token, label.trim(), file);
       setMessage("Uploading your image…");
       await performUpload(intent.upload, file);
       setMessage("Upload complete. Preparing the image for review…");
-      const confirmed = await accountApi.confirmUpload(auth.token, intent.id, await sha256File(file));
-      setUploads((items) => [confirmed, ...items.filter((item) => item.id !== confirmed.id)]);
-      setFile(null); setLocalPreview(null); setDimensions(null); setLabel("");
+      const confirmed = await accountApi.confirmUpload(
+        auth.token,
+        intent.id,
+        await sha256File(file),
+      );
+      setUploads((items) => [
+        confirmed,
+        ...items.filter((item) => item.id !== confirmed.id),
+      ]);
+      setFile(null);
+      setLocalPreview(null);
+      setDimensions(null);
+      setLabel("");
       setRightsAcknowledged(false);
-      setMessage("Upload received. Processing and moderation will continue in the background.");
+      setMessage(
+        "Upload received. Processing and moderation will continue in the background.",
+      );
       focusLater(() => statusRef.current);
       void poll(intent.id);
     } catch (caught) {
-      setError(caught instanceof AccountApiError ? caught.message : caught instanceof Error ? caught.message : "The upload could not be completed.");
+      setError(
+        caught instanceof AccountApiError
+          ? caught.message
+          : caught instanceof Error
+            ? caught.message
+            : "The upload could not be completed.",
+      );
       focusLater(() => fileInput.current);
-    } finally { setPhase("idle"); }
+    } finally {
+      setPhase("idle");
+    }
   };
 
   const select = async (item: CustomUpload) => {
-    if (auth.status !== "authenticated" || !item.tileDerivativeId || item.state !== "approved") return;
+    if (
+      auth.status !== "authenticated" ||
+      !item.tileDerivativeId ||
+      item.state !== "approved"
+    )
+      return;
     try {
       const access = await accountApi.assetAccess(auth.token, item.id, "tile");
-      dispatch({ type: "setCustomPattern", pattern: {
-        kind: "custom", assetId: item.id, derivativeId: item.tileDerivativeId,
-        processingVersion: item.processingVersion, label: item.label,
-        previewUrl: resolveAssetUrl(access.url),
-      } });
-      setMessage(`${item.label} selected for this private project configuration.`);
-    } catch (caught) { setError(caught instanceof AccountApiError ? caught.message : "The approved pattern could not be opened."); }
+      dispatch({
+        type: "setCustomPattern",
+        pattern: {
+          kind: "custom",
+          assetId: item.id,
+          derivativeId: item.tileDerivativeId,
+          processingVersion: item.processingVersion,
+          label: item.label,
+          previewUrl: resolveAssetUrl(access.url),
+        },
+      });
+      setMessage(
+        `${item.label} selected for this private project configuration.`,
+      );
+    } catch (caught) {
+      setError(
+        caught instanceof AccountApiError
+          ? caught.message
+          : "The approved pattern could not be opened.",
+      );
+    }
   };
 
   const retry = async (item: CustomUpload) => {
     if (auth.status !== "authenticated") return;
-    try { await accountApi.retryUpload(auth.token, item.id); setMessage("Retry queued."); void poll(item.id); }
-    catch (caught) { setError(caught instanceof AccountApiError ? caught.message : "Retry could not be queued."); }
+    try {
+      await accountApi.retryUpload(auth.token, item.id);
+      setMessage("Retry queued.");
+      void poll(item.id);
+    } catch (caught) {
+      setError(
+        caught instanceof AccountApiError
+          ? caught.message
+          : "Retry could not be queued.",
+      );
+    }
   };
 
   // Each question replaces the button that opened it: focus enters at its
   // first control, and leaving without confirming returns to the opener.
-  const itemControlId = (control: string, item: CustomUpload) => `${id}-${control}-${item.id}`;
+  const itemControlId = (control: string, item: CustomUpload) =>
+    `${id}-${control}-${item.id}`;
   const startRename = (item: CustomUpload) => {
     setEditing({ id: item.id, kind: "rename", draft: item.label });
     focusLater(() => document.getElementById(itemControlId("label", item)));
@@ -250,33 +351,56 @@ export function YourPatterns() {
     }
     try {
       const updated = await accountApi.renameUpload(auth.token, item.id, next);
-      setUploads((items) => items.map((entry) => entry.id === updated.id ? updated : entry));
+      setUploads((items) =>
+        items.map((entry) => (entry.id === updated.id ? updated : entry)),
+      );
       setEditing(null);
       setMessage("Pattern label updated.");
       focusLater(() => statusRef.current);
     } catch (caught) {
-      setError(caught instanceof AccountApiError ? caught.message : "The pattern label could not be updated.");
+      setError(
+        caught instanceof AccountApiError
+          ? caught.message
+          : "The pattern label could not be updated.",
+      );
       focusLater(() => document.getElementById(itemControlId("label", item)));
     }
   };
 
-  const deleteWarning = (item: CustomUpload) => item.referencedByVersions > 0
-    ? `This pattern is referenced by ${item.referencedByVersions} saved version${item.referencedByVersions === 1 ? "" : "s"}. Those versions will show “custom asset deleted.” Delete it anyway?`
-    : "Delete this custom pattern? It will no longer be available in the configurator.";
+  const deleteWarning = (item: CustomUpload) =>
+    item.referencedByVersions > 0
+      ? `This pattern is referenced by ${item.referencedByVersions} saved version${item.referencedByVersions === 1 ? "" : "s"}. Those versions will show “custom asset deleted.” Delete it anyway?`
+      : "Delete this custom pattern? It will no longer be available in the configurator.";
 
   const remove = async (item: CustomUpload) => {
     if (auth.status !== "authenticated") return;
     try {
       await accountApi.deleteUpload(auth.token, item.id);
-      if (configuration.pattern?.kind === "custom" && configuration.pattern.assetId === item.id) {
-        dispatch({ type: "setCustomPattern", pattern: { ...configuration.pattern, previewUrl: null, unavailableReason: "deleted" } });
+      if (
+        configuration.pattern?.kind === "custom" &&
+        configuration.pattern.assetId === item.id
+      ) {
+        dispatch({
+          type: "setCustomPattern",
+          pattern: {
+            ...configuration.pattern,
+            previewUrl: null,
+            unavailableReason: "deleted",
+          },
+        });
       }
       await load();
       setEditing(null);
-      setMessage("Custom pattern deleted. It will no longer appear in saved projects or previews.");
+      setMessage(
+        "Custom pattern deleted. It will no longer appear in saved projects or previews.",
+      );
       focusLater(() => statusRef.current);
     } catch (caught) {
-      setError(caught instanceof AccountApiError ? caught.message : "The custom pattern could not be deleted.");
+      setError(
+        caught instanceof AccountApiError
+          ? caught.message
+          : "The custom pattern could not be deleted.",
+      );
       cancelEditing(item, "delete");
     }
   };
@@ -289,7 +413,9 @@ export function YourPatterns() {
     return (
       <section aria-labelledby={`${id}-heading`} className="mt-layout">
         <StitchDivider className="mb-component" />
-        <h2 id={`${id}-heading`} className={cardTitleClasses}>Your patterns</h2>
+        <h2 id={`${id}-heading`} className={cardTitleClasses}>
+          Your patterns
+        </h2>
         <p className="mt-3 max-w-3xl text-supporting text-text-muted">
           Custom uploads aren&apos;t enabled in this demo.
         </p>
@@ -300,14 +426,20 @@ export function YourPatterns() {
   return (
     <section aria-labelledby={`${id}-heading`} className="mt-layout">
       <StitchDivider className="mb-component" />
-      <h2 id={`${id}-heading`} className={cardTitleClasses}>Your patterns</h2>
+      <h2 id={`${id}-heading`} className={cardTitleClasses}>
+        Your patterns
+      </h2>
       {auth.status === "guest" && !signInOpen ? (
         <div className="mt-3 flex min-w-0 flex-col items-start gap-3">
           <p className="max-w-3xl text-supporting text-text-muted">
             Upload your own image to use as a pattern. You&apos;ll need an
             account.
           </p>
-          <Button ref={uploadActionRef} variant="secondary" onClick={() => setSignInOpen(true)}>
+          <Button
+            ref={uploadActionRef}
+            variant="secondary"
+            onClick={() => setSignInOpen(true)}
+          >
             Upload your own pattern
           </Button>
         </div>
@@ -316,8 +448,16 @@ export function YourPatterns() {
         <InlineSignIn
           idPrefix="upload"
           headingLevel="h3"
-          titles={{ login: "Sign in to upload your own pattern", register: "Create an account to upload your own pattern" }}
-          reason={<p>Your uploads are private to your account. Your design stays as it is while you sign in.</p>}
+          titles={{
+            login: "Sign in to upload your own pattern",
+            register: "Create an account to upload your own pattern",
+          }}
+          reason={
+            <p>
+              Your uploads are private to your account. Your design stays as it
+              is while you sign in.
+            </p>
+          }
           submitLabels={{ login: "Sign in", register: "Create account" }}
           sessionNotice={auth.notice}
           cancelLabel="Continue with our patterns"
@@ -333,98 +473,281 @@ export function YourPatterns() {
           }}
         />
       ) : null}
-      {auth.status === "initializing" ? <LoadingState className="mt-3" label="Waking your private pattern workspace…" /> : null}
-      {auth.status === "authenticated" ? <>
-        <p className="mt-3 text-supporting text-text-muted">JPEG, PNG, or WebP; 1 byte–10 MB; 64–4096 px per side; one still frame; at most 16 million pixels. Your original stays private. If external moderation is available, a processed copy may be checked before you can use the pattern.</p>
-        <label className="mt-3 flex min-h-11 items-start gap-2 text-supporting">
-          <input
-            className={checkboxClasses}
-            type="checkbox"
-            checked={rightsAcknowledged}
-            onChange={(event) =>
-              setRightsAcknowledged(event.currentTarget.checked)
-            }
-          />
-          <span>
-            I acknowledge upload notice version 1: I have permission to use
-            this image; configured external moderation may process it;
-            automated approval does not guarantee safety, legality, or
-            ownership; deletion stops project rendering while a protected
-            paid-order copy may be retained.
-          </span>
-        </label>
-        <div className="cutting-mat mt-4 rounded-card border border-dashed border-border-strong p-4 sm:p-5" onDragOver={(event) => event.preventDefault()} onDrop={(event: DragEvent<HTMLDivElement>) => { event.preventDefault(); void chooseFile(event.dataTransfer.files[0] ?? null); }}>
-          <label htmlFor={`${id}-file`} className={`block ${fieldLabelClasses}`}>Choose a pattern image</label>
-          <input ref={fileInput} id={`${id}-file`} type="file" accept="image/jpeg,image/png,image/webp" className="mt-2 block min-h-11 w-full max-w-full text-body text-text-primary file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-border-strong file:bg-surface file:px-4 file:font-control file:text-text-primary hover:file:border-brand hover:file:text-brand" onChange={(event: ChangeEvent<HTMLInputElement>) => void chooseFile(event.target.files?.[0] ?? null)} />
-          <p className="mt-2 text-supporting text-text-muted">You can also drop one file in this bordered area.</p>
-        </div>
-        {localPreview ? <div className="mt-4 grid gap-4 sm:grid-cols-2"><div><label htmlFor={`${id}-label`} className={`block ${fieldLabelClasses}`}>Pattern label</label><input id={`${id}-label`} value={label} maxLength={120} className={`mt-2 ${controlClasses}`} onChange={(event) => setLabel(event.target.value)} /><p className="mt-2 text-supporting text-text-muted">{dimensions}. The complete image is used without cropping.</p><Button className="mt-3" isLoading={phase === "uploading"} loadingLabel="Uploading pattern…" onClick={() => void upload()}>Upload for review</Button></div><div><p className={fieldLabelClasses}>Live repeating preview</p><div className="mt-2 aspect-square max-w-64 rounded-card border border-border-strong shadow-card" style={{ backgroundImage: `url("${localPreview}")`, backgroundRepeat: "repeat", backgroundSize: "45% auto" }} role="img" aria-label="Repeating preview of the selected local image" /></div></div> : null}
-        {phase === "loading" ? <LoadingState className="mt-4" label="Loading your patterns…" /> : null}
-        {error ? <ErrorMessage className="mt-4">{error}</ErrorMessage> : null}
-        {message ? <p ref={statusRef} tabIndex={-1} role="status" aria-live="polite" className="mt-4 text-supporting text-text-muted">{message}</p> : null}
-        {uploads.length > 0 ? (
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {uploads.map((item) => {
-              const editable = item.state !== "deleted" && item.state !== "expired";
-              const question = editing?.id === item.id ? editing : null;
-              const escapeToCancel = (opener: "rename" | "delete") => (event: KeyboardEvent<HTMLElement>) => {
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  cancelEditing(item, opener);
-                }
-              };
-              return (
-                <li key={item.id} className="rounded-card border border-border bg-surface p-4 shadow-hairline">
-                  <div className="flex min-w-0 items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="break-words font-control">{item.label}</p>
-                      <p className="mt-1 text-supporting text-text-muted">{stateLabels[item.state]}{item.moderationState === "unavailable" ? " — moderation is unavailable, so this image cannot be approved" : ""}</p>
-                    </div>
-                    {item.state === "approved" ? (
-                      <label className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-control has-focus-visible:outline has-focus-visible:outline-2">
-                        <input className="size-5 accent-brand" type="radio" name="cushion-pattern" aria-label={`Select custom pattern ${item.label}`} checked={configuration.pattern?.kind === "custom" && configuration.pattern.assetId === item.id} onChange={() => void select(item)} />
-                      </label>
-                    ) : null}
-                  </div>
-                  {question?.kind === "rename" ? (
-                    <form
-                      className="mt-3 grid min-w-0 gap-2"
-                      onSubmit={(event) => { event.preventDefault(); void rename(item, question.draft); }}
-                      onKeyDown={escapeToCancel("rename")}
-                    >
-                      <label htmlFor={itemControlId("label", item)} className={`block ${fieldLabelClasses}`}>New pattern label</label>
-                      <input id={itemControlId("label", item)} value={question.draft} maxLength={120} required className={controlClasses} onChange={(event) => setEditing({ ...question, draft: event.target.value })} />
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="submit" size="compact">Save label</Button>
-                        <Button type="button" size="compact" variant="secondary" onClick={() => cancelEditing(item, "rename")}>Cancel</Button>
+      {auth.status === "initializing" ? (
+        <LoadingState
+          className="mt-3"
+          label="Waking your private pattern workspace…"
+        />
+      ) : null}
+      {auth.status === "authenticated" ? (
+        <>
+          <p className="mt-3 text-supporting text-text-muted">
+            JPEG, PNG, or WebP; 1 byte–10 MB; 64–4096 px per side; one still
+            frame; at most 16 million pixels. Your original stays private. If
+            external moderation is available, a processed copy may be checked
+            before you can use the pattern.
+          </p>
+          <label className="mt-3 flex min-h-11 items-start gap-2 text-supporting">
+            <input
+              className={checkboxClasses}
+              type="checkbox"
+              checked={rightsAcknowledged}
+              onChange={(event) =>
+                setRightsAcknowledged(event.currentTarget.checked)
+              }
+            />
+            <span>
+              I acknowledge upload notice version 1: I have permission to use
+              this image; configured external moderation may process it;
+              automated approval does not guarantee safety, legality, or
+              ownership; deletion stops project rendering while a protected
+              paid-order copy may be retained.
+            </span>
+          </label>
+          <div
+            className="cutting-mat mt-4 rounded-card border border-dashed border-border-strong p-4 sm:p-5"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event: DragEvent<HTMLDivElement>) => {
+              event.preventDefault();
+              void chooseFile(event.dataTransfer.files[0] ?? null);
+            }}
+          >
+            <label
+              htmlFor={`${id}-file`}
+              className={`block ${fieldLabelClasses}`}
+            >
+              Choose a pattern image
+            </label>
+            <input
+              ref={fileInput}
+              id={`${id}-file`}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="mt-2 block min-h-11 w-full max-w-full text-body text-text-primary file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-border-strong file:bg-surface file:px-4 file:font-control file:text-text-primary hover:file:border-brand hover:file:text-brand"
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                void chooseFile(event.target.files?.[0] ?? null)
+              }
+            />
+            <p className="mt-2 text-supporting text-text-muted">
+              You can also drop one file in this bordered area.
+            </p>
+          </div>
+          {localPreview ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor={`${id}-label`}
+                  className={`block ${fieldLabelClasses}`}
+                >
+                  Pattern label
+                </label>
+                <input
+                  id={`${id}-label`}
+                  value={label}
+                  maxLength={120}
+                  className={`mt-2 ${controlClasses}`}
+                  onChange={(event) => setLabel(event.target.value)}
+                />
+                <p className="mt-2 text-supporting text-text-muted">
+                  {dimensions}. The complete image is used without cropping.
+                </p>
+                <Button
+                  className="mt-3"
+                  isLoading={phase === "uploading"}
+                  loadingLabel="Uploading pattern…"
+                  onClick={() => void upload()}
+                >
+                  Upload for review
+                </Button>
+              </div>
+              <div>
+                <p className={fieldLabelClasses}>Live repeating preview</p>
+                <div
+                  className="mt-2 aspect-square max-w-64 rounded-card border border-border-strong shadow-card"
+                  style={{
+                    backgroundImage: `url("${localPreview}")`,
+                    backgroundRepeat: "repeat",
+                    backgroundSize: "45% auto",
+                  }}
+                  role="img"
+                  aria-label="Repeating preview of the selected local image"
+                />
+              </div>
+            </div>
+          ) : null}
+          {phase === "loading" ? (
+            <LoadingState className="mt-4" label="Loading your patterns…" />
+          ) : null}
+          {error ? <ErrorMessage className="mt-4">{error}</ErrorMessage> : null}
+          {message ? (
+            <p
+              ref={statusRef}
+              tabIndex={-1}
+              role="status"
+              aria-live="polite"
+              className="mt-4 text-supporting text-text-muted"
+            >
+              {message}
+            </p>
+          ) : null}
+          {uploads.length > 0 ? (
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+              {uploads.map((item) => {
+                const editable =
+                  item.state !== "deleted" && item.state !== "expired";
+                const question = editing?.id === item.id ? editing : null;
+                const escapeToCancel =
+                  (opener: "rename" | "delete") =>
+                  (event: KeyboardEvent<HTMLElement>) => {
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      cancelEditing(item, opener);
+                    }
+                  };
+                return (
+                  <li
+                    key={item.id}
+                    className="rounded-card border border-border bg-surface p-4 shadow-hairline"
+                  >
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="break-words font-control">{item.label}</p>
+                        <p className="mt-1 text-supporting text-text-muted">
+                          {stateLabels[item.state]}
+                          {item.moderationState === "unavailable"
+                            ? " — moderation is unavailable, so this image cannot be approved"
+                            : ""}
+                        </p>
                       </div>
-                    </form>
-                  ) : question?.kind === "delete" ? (
-                    <div
-                      className="mt-3 min-w-0 rounded-card border border-error-border p-3"
-                      role="group"
-                      aria-labelledby={itemControlId("warning", item)}
-                      onKeyDown={escapeToCancel("delete")}
-                    >
-                      <p id={itemControlId("warning", item)} className="break-words text-supporting text-text-primary">{deleteWarning(item)}</p>
+                      {item.state === "approved" ? (
+                        <label className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-control has-focus-visible:outline has-focus-visible:outline-2">
+                          <input
+                            className="size-5 accent-brand"
+                            type="radio"
+                            name="cushion-pattern"
+                            aria-label={`Select custom pattern ${item.label}`}
+                            checked={
+                              configuration.pattern?.kind === "custom" &&
+                              configuration.pattern.assetId === item.id
+                            }
+                            onChange={() => void select(item)}
+                          />
+                        </label>
+                      ) : null}
+                    </div>
+                    {question?.kind === "rename" ? (
+                      <form
+                        className="mt-3 grid min-w-0 gap-2"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void rename(item, question.draft);
+                        }}
+                        onKeyDown={escapeToCancel("rename")}
+                      >
+                        <label
+                          htmlFor={itemControlId("label", item)}
+                          className={`block ${fieldLabelClasses}`}
+                        >
+                          New pattern label
+                        </label>
+                        <input
+                          id={itemControlId("label", item)}
+                          value={question.draft}
+                          maxLength={120}
+                          required
+                          className={controlClasses}
+                          onChange={(event) =>
+                            setEditing({
+                              ...question,
+                              draft: event.target.value,
+                            })
+                          }
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <Button type="submit" size="compact">
+                            Save label
+                          </Button>
+                          <Button
+                            type="button"
+                            size="compact"
+                            variant="secondary"
+                            onClick={() => cancelEditing(item, "rename")}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    ) : question?.kind === "delete" ? (
+                      <div
+                        className="mt-3 min-w-0 rounded-card border border-error-border p-3"
+                        role="group"
+                        aria-labelledby={itemControlId("warning", item)}
+                        onKeyDown={escapeToCancel("delete")}
+                      >
+                        <p
+                          id={itemControlId("warning", item)}
+                          className="break-words text-supporting text-text-primary"
+                        >
+                          {deleteWarning(item)}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            id={itemControlId("keep", item)}
+                            size="compact"
+                            variant="secondary"
+                            onClick={() => cancelEditing(item, "delete")}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="compact"
+                            onClick={() => void remove(item)}
+                          >
+                            Delete pattern
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <Button id={itemControlId("keep", item)} size="compact" variant="secondary" onClick={() => cancelEditing(item, "delete")}>Cancel</Button>
-                        <Button size="compact" onClick={() => void remove(item)}>Delete pattern</Button>
+                        {editable ? (
+                          <Button
+                            id={itemControlId("rename", item)}
+                            variant="secondary"
+                            onClick={() => startRename(item)}
+                          >
+                            Rename
+                          </Button>
+                        ) : null}
+                        {item.retryEligible ? (
+                          <Button
+                            variant="secondary"
+                            onClick={() => void retry(item)}
+                          >
+                            Retry
+                          </Button>
+                        ) : null}
+                        {editable ? (
+                          <Button
+                            id={itemControlId("delete", item)}
+                            variant="secondary"
+                            onClick={() => startDelete(item)}
+                          >
+                            Delete
+                          </Button>
+                        ) : null}
                       </div>
-                    </div>
-                  ) : (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {editable ? <Button id={itemControlId("rename", item)} variant="secondary" onClick={() => startRename(item)}>Rename</Button> : null}
-                      {item.retryEligible ? <Button variant="secondary" onClick={() => void retry(item)}>Retry</Button> : null}
-                      {editable ? <Button id={itemControlId("delete", item)} variant="secondary" onClick={() => startDelete(item)}>Delete</Button> : null}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        ) : phase !== "loading" ? <p className="mt-4 rounded-card border border-dashed border-border-strong bg-surface px-4 py-3 text-supporting text-text-muted">No custom patterns yet.</p> : null}
-      </> : null}
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : phase !== "loading" ? (
+            <p className="mt-4 rounded-card border border-dashed border-border-strong bg-surface px-4 py-3 text-supporting text-text-muted">
+              No custom patterns yet.
+            </p>
+          ) : null}
+        </>
+      ) : null}
     </section>
   );
 }

@@ -1,9 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import {
-  PUBLIC_INDEXABLE_PATHS,
-  siteUrl,
-} from "@/config/site-metadata";
+import { PUBLIC_INDEXABLE_PATHS, siteUrl } from "@/config/site-metadata";
 
 export const dynamic = "force-static";
 

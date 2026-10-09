@@ -78,12 +78,7 @@ export function ShapeIllustration({
 
       {shape === "round" ? (
         <>
-          <circle
-            className="shape-illustration-face"
-            cx="96"
-            cy="55"
-            r="40"
-          />
+          <circle className="shape-illustration-face" cx="96" cy="55" r="40" />
           <path
             className="shape-illustration-detail"
             d="M60 64c20 12 52 12 72 0"

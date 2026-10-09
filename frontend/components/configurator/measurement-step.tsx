@@ -22,9 +22,7 @@ import {
 import { MeasurementDiagram } from "./measurement-diagram";
 
 type MeasurementDrafts = Readonly<Record<MeasurementField, string>>;
-type MeasurementErrors = Readonly<
-  Record<MeasurementField, string | null>
->;
+type MeasurementErrors = Readonly<Record<MeasurementField, string | null>>;
 
 function getValidationMessage(
   shape: CushionShape,
@@ -99,10 +97,7 @@ function ShapeMeasurementForm({
     width: null,
   });
 
-  const commitMeasurement = (
-    field: MeasurementField,
-    value: number | null,
-  ) => {
+  const commitMeasurement = (field: MeasurementField, value: number | null) => {
     if (field === "width") {
       dispatch(
         shape === "square" || shape === "round"
@@ -211,9 +206,7 @@ function ShapeMeasurementForm({
           invalid={visibleError !== null}
           aria-describedby={visibleError ? errorId : undefined}
           onChange={(event) => updateDraft(field, event.currentTarget.value)}
-          onBlur={(event) =>
-            normalizeDraft(field, event.currentTarget.value)
-          }
+          onBlur={(event) => normalizeDraft(field, event.currentTarget.value)}
         />
         {visibleError ? (
           <ErrorMessage
@@ -290,9 +283,7 @@ export interface MeasurementStepProps {
   focusTargetId?: string;
 }
 
-export function MeasurementStep({
-  focusTargetId,
-}: MeasurementStepProps = {}) {
+export function MeasurementStep({ focusTargetId }: MeasurementStepProps = {}) {
   const { state } = useConfiguration();
 
   if (state.shape === null) {

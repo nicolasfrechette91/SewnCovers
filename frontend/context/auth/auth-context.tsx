@@ -26,7 +26,12 @@ import { clearAccountLinkedBrowserData } from "@/services/configurator-draft";
 export type AuthState =
   | { readonly status: "initializing" }
   | { readonly status: "guest"; readonly notice?: string }
-  | { readonly status: "authenticated"; readonly account: Account; readonly token: string; readonly expiresAt: string };
+  | {
+      readonly status: "authenticated";
+      readonly account: Account;
+      readonly token: string;
+      readonly expiresAt: string;
+    };
 
 const SESSION_ENDED_NOTICE =
   "Your previous sign-in expired or is no longer valid. Sign in again to continue.";
@@ -61,9 +66,17 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         accountApi.current(token),
         accountApi.sessions(token),
       ]);
-      const current = sessions.find((session) => session.current && !session.revokedAt);
-      if (!current || new Date(current.expiresAt) <= new Date()) throw new Error("expired session");
-      setState({ status: "authenticated", account, token, expiresAt: current.expiresAt });
+      const current = sessions.find(
+        (session) => session.current && !session.revokedAt,
+      );
+      if (!current || new Date(current.expiresAt) <= new Date())
+        throw new Error("expired session");
+      setState({
+        status: "authenticated",
+        account,
+        token,
+        expiresAt: current.expiresAt,
+      });
     } catch {
       removeSessionToken();
       setState({ status: "guest", notice: SESSION_ENDED_NOTICE });
@@ -137,7 +150,12 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         }
       }
       storeSessionToken(response.token);
-      setState({ status: "authenticated", account: response.account, token: response.token, expiresAt: response.expiresAt });
+      setState({
+        status: "authenticated",
+        account: response.account,
+        token: response.token,
+        expiresAt: response.expiresAt,
+      });
     },
     [],
   );
@@ -170,15 +188,18 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   }, [clear, state]);
 
-  const value = useMemo<AuthContextValue>(() => ({
-    state,
-    login: (email, password) => startSession("login", email, password),
-    register: (email, password, acceptedTerms) =>
-      startSession("register", email, password, acceptedTerms),
-    logout,
-    logoutAll,
-    clear,
-  }), [clear, logout, logoutAll, startSession, state]);
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      state,
+      login: (email, password) => startSession("login", email, password),
+      register: (email, password, acceptedTerms) =>
+        startSession("register", email, password, acceptedTerms),
+      logout,
+      logoutAll,
+      clear,
+    }),
+    [clear, logout, logoutAll, startSession, state],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

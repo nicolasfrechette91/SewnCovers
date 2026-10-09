@@ -49,8 +49,7 @@ async function settle() {
 }
 
 test("completes catalogue, save, share, and exact restore for every shape", async () => {
-  const { catalogue, designSave, sharedDesign } =
-    await loadPhaseSixModules();
+  const { catalogue, designSave, sharedDesign } = await loadPhaseSixModules();
   const storedDesigns = new Map();
   const calls = { create: 0, get: 0, patterns: 0 };
   const client = {
@@ -60,10 +59,7 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
     },
     async createDesign(request) {
       calls.create += 1;
-      const publicId = `Task65Journey${String(calls.create).padStart(
-        9,
-        "0",
-      )}`;
+      const publicId = `Task65Journey${String(calls.create).padStart(9, "0")}`;
       const response = { ...request, publicId };
       storedDesigns.set(publicId, response);
       return response;
@@ -73,9 +69,7 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
       return storedDesigns.get(publicId);
     },
   };
-  const patternController = new catalogue.PatternCatalogueController(
-    client,
-  );
+  const patternController = new catalogue.PatternCatalogueController(client);
 
   await patternController.loadInitial();
   const patternSnapshot = patternController.getSnapshot();
@@ -152,12 +146,8 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
           journey.basePath,
         ),
     );
-    const firstSubmission = saveController.submit(
-      journey.configuration,
-    );
-    const duplicateSubmission = saveController.submit(
-      journey.configuration,
-    );
+    const firstSubmission = saveController.submit(journey.configuration);
+    const duplicateSubmission = saveController.submit(journey.configuration);
 
     assert.equal(firstSubmission, duplicateSubmission);
     await firstSubmission;
@@ -166,10 +156,7 @@ test("completes catalogue, save, share, and exact restore for every shape", asyn
     assert.equal(saveSnapshot.phase, "success");
     const shareUrl = new URL(saveSnapshot.shareUrl);
     assert.equal(shareUrl.pathname, journey.expectedPath);
-    assert.equal(
-      shareUrl.searchParams.get("design"),
-      saveSnapshot.publicId,
-    );
+    assert.equal(shareUrl.searchParams.get("design"), saveSnapshot.publicId);
 
     let revision = 0;
     const restored = [];

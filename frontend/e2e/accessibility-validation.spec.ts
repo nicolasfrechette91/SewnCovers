@@ -9,9 +9,7 @@ import {
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
-  process.env.SEWNCOVERS_GITHUB_PAGES === "true"
-    ? "/SewnCovers"
-    : "";
+  process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
 const configurePath = `${basePath}/configure/`;
 const publicId = "AbCdEfGhIjKlMnOpQrStUv";
 
@@ -24,7 +22,12 @@ const patternRecords = [
   ["arch-grid", "Arch grid", "geometric", ["ivory", "terracotta", "gold"]],
   ["harbor-stripe", "Harbour stripe", "striped", ["ivory", "blue"]],
   ["orchard-stripe", "Orchard stripe", "striped", ["ivory", "green", "gold"]],
-  ["ribbon-stripe", "Ribbon stripe", "striped", ["ivory", "terracotta", "rose"]],
+  [
+    "ribbon-stripe",
+    "Ribbon stripe",
+    "striped",
+    ["ivory", "terracotta", "rose"],
+  ],
   ["prototype-woven", "Fine weave", "woven", ["ivory", "charcoal"]],
   ["basket-check", "Basket check", "woven", ["ivory", "blue", "charcoal"]],
   ["linen-crosshatch", "Linen crosshatch", "woven", ["ivory", "gold"]],
@@ -108,13 +111,11 @@ async function expectNoHorizontalOverflow(page: Page) {
 }
 
 function luminance(hex: string) {
-  const channels = [1, 3, 5].map((index) =>
-    Number.parseInt(hex.slice(index, index + 2), 16) / 255,
+  const channels = [1, 3, 5].map(
+    (index) => Number.parseInt(hex.slice(index, index + 2), 16) / 255,
   );
   const linear = channels.map((channel) =>
-    channel <= 0.04045
-      ? channel / 12.92
-      : ((channel + 0.055) / 1.055) ** 2.4,
+    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4,
   );
 
   return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
@@ -168,13 +169,17 @@ test("keeps the complete configurator responsive with usable touch targets", asy
           .filter((element) => {
             const style = getComputedStyle(element);
             const rect = element.getBoundingClientRect();
-            return style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+            return (
+              style.visibility !== "hidden" && rect.width > 0 && rect.height > 0
+            );
           })
           .map((element) => {
             const rect = element.getBoundingClientRect();
             return {
               height: rect.height,
-              label: element.getAttribute("aria-label") ?? element.textContent?.trim().slice(0, 40),
+              label:
+                element.getAttribute("aria-label") ??
+                element.textContent?.trim().slice(0, 40),
               width: rect.width,
             };
           });
@@ -220,17 +225,15 @@ test("gates stages and preserves compatible downstream choices when revisiting",
   await expect(
     page.getByRole("button", { name: "Continue to Measurements" }),
   ).toBeDisabled();
-  await expect(
-    page.getByRole("heading", { name: /Measure your/ }),
-  ).toHaveCount(0);
-  await expect(
-    progress.getByRole("button", { name: /^Pattern/ }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /Measure your/ })).toHaveCount(
+    0,
+  );
+  await expect(progress.getByRole("button", { name: /^Pattern/ })).toHaveCount(
+    0,
+  );
 
   await page.getByText("Rectangle cushion", { exact: true }).click();
-  await page
-    .getByRole("button", { name: "Continue to Measurements" })
-    .click();
+  await page.getByRole("button", { name: "Continue to Measurements" }).click();
   await expect(
     page.getByText("Measure your rectangle cushion", { exact: true }),
   ).toBeFocused();
@@ -248,21 +251,13 @@ test("gates stages and preserves compatible downstream choices when revisiting",
   ).toBeDisabled();
 
   await width.fill("80");
-  await page
-    .getByRole("button", { name: "Continue to Cover details" })
-    .click();
+  await page.getByRole("button", { name: "Continue to Cover details" }).click();
   await page.getByRole("radio", { name: "Linen blend" }).check();
-  await page
-    .getByRole("button", { name: "Continue to Pattern" })
-    .click();
+  await page.getByRole("button", { name: "Continue to Pattern" }).click();
   await page.getByText("Fern trail", { exact: true }).click();
-  await page
-    .getByRole("button", { name: "Continue to Preview" })
-    .click();
+  await page.getByRole("button", { name: "Continue to Preview" }).click();
   await page.getByRole("slider", { name: "Pattern size" }).fill("1.4");
-  await page
-    .getByRole("button", { name: "Continue to Review" })
-    .click();
+  await page.getByRole("button", { name: "Continue to Review" }).click();
   await expect(
     page.getByRole("heading", { name: "SewnCovers configuration summary" }),
   ).toBeFocused();
@@ -279,9 +274,9 @@ test("gates stages and preserves compatible downstream choices when revisiting",
   await expect(width).toHaveValue("80");
   await page.getByRole("radio", { name: "Inches (in)" }).focus();
   await page.keyboard.press("Space");
-  await expect(
-    page.getByRole("textbox", { name: "Width (in)" }),
-  ).toHaveValue("31.5");
+  await expect(page.getByRole("textbox", { name: "Width (in)" })).toHaveValue(
+    "31.5",
+  );
   await progress
     .getByRole("button", {
       name: "Review complete, stage 6 of 6",
@@ -296,12 +291,10 @@ test("gates stages and preserves compatible downstream choices when revisiting",
     .getByRole("button", { name: "Shape complete, stage 1 of 6" })
     .click();
   await page.getByText("Tapered / trapezoid cushion", { exact: true }).click();
-  await expect(
-    progress.getByRole("button", { name: /^Pattern/ }),
-  ).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Continue to Measurements" })
-    .click();
+  await expect(progress.getByRole("button", { name: /^Pattern/ })).toHaveCount(
+    0,
+  );
+  await page.getByRole("button", { name: "Continue to Measurements" }).click();
   await page.getByRole("textbox", { name: "Back width (in)" }).fill("20");
   await progress
     .getByRole("button", {
@@ -321,15 +314,23 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await page.goto(configurePath);
 
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Skip to main content" })).toBeFocused();
+  await expect(
+    page.getByRole("link", { name: "Skip to main content" }),
+  ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("radio", { name: "Square cushion" })).toBeFocused();
+  await expect(
+    page.getByRole("radio", { name: "Square cushion" }),
+  ).toBeFocused();
   await page.keyboard.press("Space");
-  await expect(page.getByRole("radio", { name: "Square cushion" })).toBeChecked();
+  await expect(
+    page.getByRole("radio", { name: "Square cushion" }),
+  ).toBeChecked();
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("radio", { name: "Rectangle cushion" })).toBeChecked();
+  await expect(
+    page.getByRole("radio", { name: "Rectangle cushion" }),
+  ).toBeChecked();
 
   await page.keyboard.press("Tab");
   await expect(
@@ -340,14 +341,18 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
     page.getByText("Measure your rectangle cushion", { exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("radio", { name: "Centimetres (cm)" })).toBeFocused();
+  await expect(
+    page.getByRole("radio", { name: "Centimetres (cm)" }),
+  ).toBeFocused();
   await page.keyboard.press("Tab");
   const width = page.getByRole("textbox", { name: "Width (cm)" });
   await expect(width).toBeFocused();
   await page.keyboard.type("72.123");
   await page.keyboard.press("Tab");
   await expect(width).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByRole("status").filter({ hasText: "two decimal places" })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "two decimal places" }),
+  ).toBeVisible();
   const height = page.getByRole("textbox", { name: "Height (cm)" });
   await expect(height).toBeFocused();
   await page.keyboard.press("Shift+Tab");
@@ -374,17 +379,25 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
     page.getByRole("heading", { name: "Choose cover details" }),
   ).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("radio", { name: "Cotton canvas" })).toBeFocused();
+  await expect(
+    page.getByRole("radio", { name: "Cotton canvas" }),
+  ).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("radio", { name: "Linen blend" })).toBeChecked();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "Standard fit" })).toBeFocused();
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("radio", { name: "More relaxed fit" })).toBeChecked();
+  await expect(
+    page.getByRole("radio", { name: "More relaxed fit" }),
+  ).toBeChecked();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("radio", { name: "Zipper access" })).toBeFocused();
+  await expect(
+    page.getByRole("radio", { name: "Zipper access" }),
+  ).toBeFocused();
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("radio", { name: "Envelope opening" })).toBeChecked();
+  await expect(
+    page.getByRole("radio", { name: "Envelope opening" }),
+  ).toBeChecked();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "Plain seam" })).toBeFocused();
   await page.keyboard.press("ArrowRight");
@@ -404,7 +417,9 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   await page.keyboard.press("Tab");
   await expect(page.getByRole("radio", { name: "Solid colour" })).toBeFocused();
   // Uploads are off, as in production, so nothing to tab to in between.
-  await expect(page.getByText("Custom uploads aren't enabled in this demo.")).toBeVisible();
+  await expect(
+    page.getByText("Custom uploads aren't enabled in this demo."),
+  ).toBeVisible();
   await page.keyboard.press("Tab");
   await expect(
     page.getByRole("searchbox", { name: "Search patterns" }),
@@ -466,14 +481,16 @@ test("supports keyboard-only editing, validation, save, and clipboard flow", asy
   const shareUrl = page.getByRole("textbox", { name: "Share URL" });
   await expect(shareUrl).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Copy share link" })).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Copy share link" }),
+  ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(
     page.getByRole("status").filter({ hasText: "copied to your clipboard" }),
   ).toBeVisible();
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(
-    `${appOrigin}${configurePath}?design=${publicId}`,
-  );
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toBe(`${appOrigin}${configurePath}?design=${publicId}`);
 });
 
 test("gives every stage one h1, a matching tab title and announcement, and the first shape card above the fold", async ({
@@ -489,16 +506,26 @@ test("gives every stage one h1, a matching tab title and announcement, and the f
       ),
       skips: Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6"))
         .map((heading) => Number(heading.tagName.slice(1)))
-        .filter((level, index, levels) => index > 0 && level > levels[index - 1] + 1),
+        .filter(
+          (level, index, levels) => index > 0 && level > levels[index - 1] + 1,
+        ),
     }));
   const title = (stage: string, index: number) =>
     `${stage} (stage ${index} of 6) – Configure a cushion | SewnCovers`;
 
   // Stage 1 keeps the page introduction, short enough for the first card.
-  await expect(page.getByRole("heading", { level: 2, name: "Choose your cushion shape" })).toBeVisible();
-  expect(await outline()).toEqual({ h1: ["Build your custom cover design."], skips: [] });
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Choose your cushion shape" }),
+  ).toBeVisible();
+  expect(await outline()).toEqual({
+    h1: ["Build your custom cover design."],
+    skips: [],
+  });
   await expect(page).toHaveTitle(title("Shape", 1));
-  const firstCard = await page.locator(".shape-option-label").first().boundingBox();
+  const firstCard = await page
+    .locator(".shape-option-label")
+    .first()
+    .boundingBox();
   expect(firstCard).not.toBeNull();
   expect(firstCard!.y).toBeLessThan(844 - 120);
 
@@ -520,25 +547,43 @@ test("gives every stage one h1, a matching tab title and announcement, and the f
     if (stage === "Pattern") {
       await page.getByText("Fern trail", { exact: true }).click();
     }
-    await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: heading }),
+    ).toBeVisible();
     await expect(page).toHaveTitle(title(stage, index));
     await expect(
-      page.getByRole("status").filter({ hasText: `Stage ${index} of 6: ${stage}.` }),
+      page
+        .getByRole("status")
+        .filter({ hasText: `Stage ${index} of 6: ${stage}.` }),
     ).toHaveCount(1);
     // The introduction is not repeated after the first stage.
-    await expect(page.getByText("Build your custom cover design.")).toHaveCount(0);
+    await expect(page.getByText("Build your custom cover design.")).toHaveCount(
+      0,
+    );
     expect(await outline()).toEqual({ h1: [heading], skips: [] });
   }
-  await expect(page.getByRole("heading", { level: 1, name: "SewnCovers configuration summary" })).toBeFocused();
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "SewnCovers configuration summary",
+    }),
+  ).toBeFocused();
 
   // Going back keeps the same rules, and focus lands on the stage heading.
   await page.getByRole("button", { name: "Back to Preview" }).click();
-  await expect(page.getByRole("slider", { name: "Pattern size" })).toBeFocused();
+  await expect(
+    page.getByRole("slider", { name: "Pattern size" }),
+  ).toBeFocused();
   await expect(page).toHaveTitle(title("Preview", 5));
 
   // Leaving the configurator gives the next page its own title back.
-  await page.getByRole("contentinfo").getByRole("link", { name: "Legal and privacy" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Legal information" })).toBeVisible();
+  await page
+    .getByRole("contentinfo")
+    .getByRole("link", { name: "Legal and privacy" })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Legal information" }),
+  ).toBeVisible();
   await expect(page).toHaveTitle("Legal information | SewnCovers");
 });
 
@@ -566,22 +611,26 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
   });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(`${configurePath}?design=${publicId}`);
-  await expect(page.getByRole("status").filter({ hasText: "Shared design restored." })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Shared design restored." }),
+  ).toBeVisible();
 
   const structure = await page.evaluate(() => {
     const ids = Array.from(document.querySelectorAll<HTMLElement>("[id]")).map(
       (element) => element.id,
     );
     const references = Array.from(
-      document.querySelectorAll<HTMLElement>("[aria-labelledby],[aria-describedby]"),
+      document.querySelectorAll<HTMLElement>(
+        "[aria-labelledby],[aria-describedby]",
+      ),
     ).flatMap((element) =>
       ["aria-labelledby", "aria-describedby"].flatMap((attribute) =>
         (element.getAttribute(attribute) ?? "").split(/\s+/).filter(Boolean),
       ),
     );
-    const headings = Array.from(document.querySelectorAll("h1,h2,h3,h4,h5,h6")).map(
-      (heading) => Number(heading.tagName.slice(1)),
-    );
+    const headings = Array.from(
+      document.querySelectorAll("h1,h2,h3,h4,h5,h6"),
+    ).map((heading) => Number(heading.tagName.slice(1)));
 
     return {
       duplicateIds: ids.filter((id, index) => ids.indexOf(id) !== index),
@@ -589,7 +638,9 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
         (level, index) => index > 0 && level > headings[index - 1] + 1,
       ),
       mainCount: document.querySelectorAll("main").length,
-      missingReferences: references.filter((id) => document.getElementById(id) === null),
+      missingReferences: references.filter(
+        (id) => document.getElementById(id) === null,
+      ),
       navigationLabels: Array.from(document.querySelectorAll("nav")).map(
         (navigation) => navigation.getAttribute("aria-label"),
       ),
@@ -685,13 +736,19 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
       .getByRole("button", { name: `Continue to ${nextStage}` })
       .click();
   }
-  await page.getByRole("button", { name: "Save and create share link" }).click();
+  await page
+    .getByRole("button", { name: "Save and create share link" })
+    .click();
   const spinner = page.locator(".motion-safe\\:animate-spin");
   await expect(spinner).toBeVisible();
   expect(
-    await spinner.evaluate((element) => getComputedStyle(element).animationName),
+    await spinner.evaluate(
+      (element) => getComputedStyle(element).animationName,
+    ),
   ).toBe("none");
-  await expect(page.getByRole("status").filter({ hasText: "Connecting" })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Connecting" }),
+  ).toBeVisible();
   releaseSave?.();
   await expect(page.getByRole("textbox", { name: "Share URL" })).toBeFocused();
 
@@ -699,7 +756,9 @@ test("preserves semantic, contrast, forced-colors, and reduced-motion feedback",
   const width = page.getByRole("textbox", { name: "Share URL" });
   await width.focus();
   await expect
-    .poll(() => width.evaluate((element) => getComputedStyle(element).outlineStyle))
+    .poll(() =>
+      width.evaluate((element) => getComputedStyle(element).outlineStyle),
+    )
     .not.toBe("none");
 });
 
@@ -719,7 +778,11 @@ test("gives headings that script moves focus to the token focus ring", async ({
     const focusColour = getComputedStyle(probe).color;
     probe.remove();
     const style = getComputedStyle(element);
-    return { boxShadow: style.boxShadow, focusColour, outlineStyle: style.outlineStyle };
+    return {
+      boxShadow: style.boxShadow,
+      focusColour,
+      outlineStyle: style.outlineStyle,
+    };
   });
   // --shadow-focus: a surface-coloured inner ring and a focus-coloured outer
   // ring; the transparent outline keeps a ring in forced-colours mode.
@@ -738,7 +801,13 @@ test("shows the focus ring at once, without fading the outline in", async ({
   // focused control (or the label that draws a hidden input's ring) starts an
   // outline-color transition.
   await page.setViewportSize({ width: 1280, height: 900 });
-  for (const route of ["/", "/legal/", "/account/", "/commerce/", "/configure/?design=" + publicId]) {
+  for (const route of [
+    "/",
+    "/legal/",
+    "/account/",
+    "/commerce/",
+    "/configure/?design=" + publicId,
+  ]) {
     await page.goto(`${basePath}${route}`);
     await page.getByRole("heading", { level: 1 }).first().waitFor();
     const flashes: string[] = [];
@@ -748,9 +817,16 @@ test("shows the focus ring at once, without fading the outline in", async ({
         ...(await page.evaluate(() => {
           const focused = document.activeElement as HTMLElement | null;
           if (!focused || focused === document.body) return [];
-          const ringDrawers = [focused, focused.nextElementSibling, focused.closest("label")];
+          const ringDrawers = [
+            focused,
+            focused.nextElementSibling,
+            focused.closest("label"),
+          ];
           return ringDrawers
-            .filter((element): element is HTMLElement => element instanceof HTMLElement)
+            .filter(
+              (element): element is HTMLElement =>
+                element instanceof HTMLElement,
+            )
             .filter((element) =>
               element
                 .getAnimations()
@@ -760,7 +836,10 @@ test("shows the focus ring at once, without fading the outline in", async ({
                     animation.transitionProperty === "outline-color",
                 ),
             )
-            .map((element) => `<${element.tagName.toLowerCase()}> ${(element.textContent ?? "").trim().slice(0, 40)}`);
+            .map(
+              (element) =>
+                `<${element.tagName.toLowerCase()}> ${(element.textContent ?? "").trim().slice(0, 40)}`,
+            );
         })),
       );
     }
@@ -772,10 +851,15 @@ test("shows the focus ring at once, without fading the outline in", async ({
   await page.goto(`${basePath}/`);
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
-  const animating = await page.evaluate(() =>
-    (document.activeElement as HTMLElement)
-      .getAnimations()
-      .filter((animation) => animation instanceof CSSTransition && animation.transitionProperty === "outline-color").length,
+  const animating = await page.evaluate(
+    () =>
+      (document.activeElement as HTMLElement)
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation instanceof CSSTransition &&
+            animation.transitionProperty === "outline-color",
+        ).length,
   );
   expect(animating).toBe(0);
 });

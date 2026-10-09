@@ -66,14 +66,10 @@ async function request<T>(
         ...(options.body === undefined
           ? {}
           : { "Content-Type": "application/json" }),
-        ...(options.token
-          ? { Authorization: `Bearer ${options.token}` }
-          : {}),
+        ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
       },
       body:
-        options.body === undefined
-          ? undefined
-          : JSON.stringify(options.body),
+        options.body === undefined ? undefined : JSON.stringify(options.body),
       cache: "no-store",
     },
   );
@@ -180,9 +176,7 @@ export const assuranceApi = {
     reason: string,
   ) {
     return request(
-      "admin/production-work/" +
-        encodeURIComponent(work.id) +
-        "/issues",
+      "admin/production-work/" + encodeURIComponent(work.id) + "/issues",
       {
         method: "POST",
         token,
@@ -212,7 +206,12 @@ export const assuranceApi = {
       },
     );
   },
-  quality(token: string, work: ProductionWork, passed: boolean, reason: string) {
+  quality(
+    token: string,
+    work: ProductionWork,
+    passed: boolean,
+    reason: string,
+  ) {
     return request(
       `admin/production-work/${encodeURIComponent(work.id)}/quality/${passed ? "pass" : "fail"}`,
       {
@@ -255,9 +254,7 @@ export const assuranceApi = {
           (check) =>
             isRecord(check) &&
             typeof check.code === "string" &&
-            ["error", "warning", "information"].includes(
-              String(check.level),
-            ) &&
+            ["error", "warning", "information"].includes(String(check.level)) &&
             typeof check.message === "string",
         ),
     });

@@ -91,7 +91,10 @@ test("draws each supported shape with its own silhouette", () => {
   cleanup();
 
   // The tapered front is the wider edge, drawn at the bottom nearest the viewer.
-  const tapered = buildCushionGeometry({ shape: "tapered", ...TYPICAL.tapered });
+  const tapered = buildCushionGeometry({
+    shape: "tapered",
+    ...TYPICAL.tapered,
+  });
   const corners = pillowCorners(tapered.outline);
   const top = corners.topRight[0] - corners.topLeft[0];
   const bottom = corners.bottomRight[0] - corners.bottomLeft[0];
@@ -104,8 +107,16 @@ test("follows the entered proportions within legible limits", () => {
     const { metrics } = buildCushionGeometry(input);
     return metrics.width / metrics.height;
   };
-  assert.ok(Math.abs(ratio({ shape: "rectangle", width: 80, height: 40, thickness: 10 }) - 2) < 0.01);
-  assert.ok(Math.abs(ratio({ shape: "rectangle", width: 40, height: 80, thickness: 10 }) - 0.5) < 0.01);
+  assert.ok(
+    Math.abs(
+      ratio({ shape: "rectangle", width: 80, height: 40, thickness: 10 }) - 2,
+    ) < 0.01,
+  );
+  assert.ok(
+    Math.abs(
+      ratio({ shape: "rectangle", width: 40, height: 80, thickness: 10 }) - 0.5,
+    ) < 0.01,
+  );
   assert.ok(
     Math.abs(
       ratio({ shape: "rectangle", width: 300, height: 10, thickness: 5 }) -
@@ -113,14 +124,22 @@ test("follows the entered proportions within legible limits", () => {
     ) < 0.01,
   );
   // Square cushions stay square whatever height reaches the model.
-  assert.ok(Math.abs(ratio({ shape: "square", width: 45, height: 90, thickness: 10 }) - 1) < 0.01);
+  assert.ok(
+    Math.abs(
+      ratio({ shape: "square", width: 45, height: 90, thickness: 10 }) - 1,
+    ) < 0.01,
+  );
 
   const taper = (input: CushionGeometryInput) => {
     const { metrics } = buildCushionGeometry({ shape: "tapered", ...input });
     assert.ok(metrics.frontWidth && metrics.backWidth);
     return metrics.backWidth / metrics.frontWidth;
   };
-  assert.ok(Math.abs(taper({ width: 80, backWidth: 65, height: 55, thickness: 10 }) - 65 / 80) < 0.01);
+  assert.ok(
+    Math.abs(
+      taper({ width: 80, backWidth: 65, height: 55, thickness: 10 }) - 65 / 80,
+    ) < 0.01,
+  );
   assert.ok(
     Math.abs(
       taper({ width: 300, backWidth: 10, height: 40, thickness: 8 }) -
@@ -149,8 +168,18 @@ test("follows the entered proportions within legible limits", () => {
 
   // Ratios, not units, drive the drawing.
   assert.equal(
-    buildCushionGeometry({ shape: "rectangle", width: 80, height: 40, thickness: 10 }).outline,
-    buildCushionGeometry({ shape: "rectangle", width: 31.5, height: 15.75, thickness: 3.9375 }).outline,
+    buildCushionGeometry({
+      shape: "rectangle",
+      width: 80,
+      height: 40,
+      thickness: 10,
+    }).outline,
+    buildCushionGeometry({
+      shape: "rectangle",
+      width: 31.5,
+      height: 15.75,
+      thickness: 3.9375,
+    }).outline,
   );
 
   // Extreme or missing values still render inside the canvas.
@@ -161,16 +190,35 @@ test("follows the entered proportions within legible limits", () => {
     { shape: "round", width: 10, thickness: 60 },
     { shape: "tapered", width: 300, backWidth: 299, height: 10, thickness: 60 },
     { shape: "square", width: null, height: null, thickness: null },
-    { shape: "tapered", width: Number.NaN, backWidth: -4, height: 0, thickness: undefined },
+    {
+      shape: "tapered",
+      width: Number.NaN,
+      backWidth: -4,
+      height: 0,
+      thickness: undefined,
+    },
   ];
   for (const input of extremes) {
     const geometry = buildCushionGeometry(input);
-    assert.doesNotMatch(geometry.outline, /NaN|Infinity/, JSON.stringify(input));
+    assert.doesNotMatch(
+      geometry.outline,
+      /NaN|Infinity/,
+      JSON.stringify(input),
+    );
     const { bounds, shadow } = geometry;
     assert.ok(bounds.x >= 0 && bounds.y >= 0, JSON.stringify(input));
-    assert.ok(bounds.x + bounds.width <= CUSHION_VIEWBOX_WIDTH, JSON.stringify(input));
-    assert.ok(bounds.y + bounds.height <= CUSHION_VIEWBOX_HEIGHT, JSON.stringify(input));
-    assert.ok(shadow.cy + shadow.ry <= CUSHION_VIEWBOX_HEIGHT, JSON.stringify(input));
+    assert.ok(
+      bounds.x + bounds.width <= CUSHION_VIEWBOX_WIDTH,
+      JSON.stringify(input),
+    );
+    assert.ok(
+      bounds.y + bounds.height <= CUSHION_VIEWBOX_HEIGHT,
+      JSON.stringify(input),
+    );
+    assert.ok(
+      shadow.cy + shadow.ry <= CUSHION_VIEWBOX_HEIGHT,
+      JSON.stringify(input),
+    );
   }
 });
 
@@ -181,7 +229,9 @@ test("clips solid colour and pattern fabric to each silhouette", () => {
       { patternName: "Solid color", solidColor: "#3E6C7E" },
     ]) {
       const svg = renderModel({ shape, ...TYPICAL[shape], ...fabric });
-      const viewport = svg.querySelector("foreignObject.cushion-preview-pattern-viewport");
+      const viewport = svg.querySelector(
+        "foreignObject.cushion-preview-pattern-viewport",
+      );
       assert.ok(viewport, shape);
       const clipReference = viewport.getAttribute("clip-path") ?? "";
       const clipId = /^url\(#(cushion-clip-[^)]+)\)$/.exec(clipReference)?.[1];
@@ -197,7 +247,8 @@ test("clips solid colour and pattern fabric to each silhouette", () => {
       const geometry = buildCushionGeometry({ shape, ...TYPICAL[shape] });
       assert.ok(Number(viewport.getAttribute("x")) <= geometry.bounds.x);
       assert.ok(
-        Number(viewport.getAttribute("x")) + Number(viewport.getAttribute("width")) >=
+        Number(viewport.getAttribute("x")) +
+          Number(viewport.getAttribute("width")) >=
           geometry.bounds.x + geometry.bounds.width,
       );
       const face = viewport.querySelector<HTMLElement>(".cushion-preview-face");

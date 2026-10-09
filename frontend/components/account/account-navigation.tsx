@@ -19,10 +19,7 @@ export function AccountNavigation({
 
   const destinations =
     state.account.role === "administrator"
-      ? [
-          ...accountDestinations,
-          { href: "/admin/", label: "Administration" },
-        ]
+      ? [...accountDestinations, { href: "/admin/", label: "Administration" }]
       : accountDestinations;
 
   return (

@@ -1,8 +1,15 @@
-import { expect, test, type BrowserContext, type Page, type Route } from "@playwright/test";
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Page,
+  type Route,
+} from "@playwright/test";
 
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
-const basePath = process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
+const basePath =
+  process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
 const customerToken = "C".repeat(43);
 const adminToken = "A".repeat(43);
 const expiresAt = "2099-08-30T00:00:00Z";
@@ -66,16 +73,24 @@ async function expectNoOverflow(page: Page) {
   ).toBe(true);
 }
 
-test("organizes desktop navigation and preserves secondary destinations", async ({ page }) => {
+test("organizes desktop navigation and preserves secondary destinations", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${basePath}/configure/`);
-  const navigation = page.getByRole("navigation", { name: "Primary navigation" });
+  const navigation = page.getByRole("navigation", {
+    name: "Primary navigation",
+  });
   await expect(
-    navigation.getByRole("list", { name: "Primary destinations" }).getByRole("link"),
+    navigation
+      .getByRole("list", { name: "Primary destinations" })
+      .getByRole("link"),
   ).toHaveText(["Configure", "Pricing"]);
   // My projects and Cart would only ask a guest to sign in.
   await expect(
-    navigation.getByRole("list", { name: "Shopping and account" }).getByRole("link"),
+    navigation
+      .getByRole("list", { name: "Shopping and account" })
+      .getByRole("link"),
   ).toHaveText(["Sign in"]);
   // Configure is the one filled button; Pricing stays a plain link.
   const [configureBackground, pricingBackground] = await Promise.all(
@@ -91,64 +106,86 @@ test("organizes desktop navigation and preserves secondary destinations", async 
       .getByRole("link", { name: "Configure" })
       .evaluate((link) => link.getBoundingClientRect().height),
   ).toBeGreaterThanOrEqual(44);
-  await expect(navigation.getByRole("link", { name: "Sign in" })).toHaveAttribute(
+  await expect(
+    navigation.getByRole("link", { name: "Sign in" }),
+  ).toHaveAttribute(
     "href",
     `${basePath}/account/?mode=login&returnTo=configure`,
   );
   for (const removed of ["Orders", "Admin", "Legal"]) {
-    await expect(navigation.getByRole("link", { name: removed })).toHaveCount(0);
+    await expect(navigation.getByRole("link", { name: removed })).toHaveCount(
+      0,
+    );
   }
-  await expect(navigation.getByRole("link", { name: "Configure" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+  await expect(
+    navigation.getByRole("link", { name: "Configure" }),
+  ).toHaveAttribute("aria-current", "page");
   await expect(page.locator('[aria-current="page"]')).toHaveCount(1);
-  await expect(page.getByRole("link", { name: "SewnCovers home" })).toHaveAttribute(
-    "href",
-    `${basePath}/`,
-  );
+  await expect(
+    page.getByRole("link", { name: "SewnCovers home" }),
+  ).toHaveAttribute("href", `${basePath}/`);
 
   const footer = page.getByRole("navigation", { name: "Footer navigation" });
-  await expect(footer.getByRole("link", { name: "Legal and privacy" })).toBeVisible();
+  await expect(
+    footer.getByRole("link", { name: "Legal and privacy" }),
+  ).toBeVisible();
 
   await footer.getByRole("link", { name: "Legal and privacy" }).click();
   await expect(page).toHaveURL(`${appOrigin}${basePath}/legal/`);
   await expect(
-    page.getByRole("navigation", { name: "Footer navigation" }).getByRole("link", {
-      name: "Legal and privacy",
-    }),
+    page
+      .getByRole("navigation", { name: "Footer navigation" })
+      .getByRole("link", {
+        name: "Legal and privacy",
+      }),
   ).toHaveAttribute("aria-current", "page");
 });
 
-test("uses an accessible closed-by-default mobile disclosure", async ({ page }) => {
+test("uses an accessible closed-by-default mobile disclosure", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto(`${basePath}/`);
-  const navigation = page.getByRole("navigation", { name: "Primary navigation" });
+  const navigation = page.getByRole("navigation", {
+    name: "Primary navigation",
+  });
   const menu = navigation.getByRole("button", { name: "Menu" });
   await expect(menu).toHaveAttribute("aria-expanded", "false");
   await expect(menu).toHaveAttribute("aria-controls", "site-navigation-menu");
-  await expect(navigation.getByRole("link", { name: "Configure" })).toBeHidden();
+  await expect(
+    navigation.getByRole("link", { name: "Configure" }),
+  ).toBeHidden();
   await expectNoOverflow(page);
   expect(
-    await page.locator("body > header").evaluate((header) => header.getBoundingClientRect().height),
+    await page
+      .locator("body > header")
+      .evaluate((header) => header.getBoundingClientRect().height),
   ).toBeLessThanOrEqual(80);
 
   await menu.press("Enter");
   await expect(menu).toHaveAttribute("aria-expanded", "true");
-  await expect(navigation.getByRole("link", { name: "Configure" })).toBeVisible();
+  await expect(
+    navigation.getByRole("link", { name: "Configure" }),
+  ).toBeVisible();
   await menu.press("Tab");
-  await expect(navigation.getByRole("link", { name: "Configure" })).toBeFocused();
+  await expect(
+    navigation.getByRole("link", { name: "Configure" }),
+  ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu).toHaveAttribute("aria-expanded", "false");
   await expect(menu).toBeFocused();
 
   await menu.click();
   await navigation.getByRole("link", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(`${appOrigin}${basePath}/account/?mode=login&returnTo=home`);
+  await expect(page).toHaveURL(
+    `${appOrigin}${basePath}/account/?mode=login&returnTo=home`,
+  );
   await expect(menu).toHaveAttribute("aria-expanded", "false");
 });
 
-test("keeps the header compact and overflow-free at required widths", async ({ page }) => {
+test("keeps the header compact and overflow-free at required widths", async ({
+  page,
+}) => {
   for (const viewport of [
     { width: 320, height: 568 },
     { width: 375, height: 667 },
@@ -160,52 +197,82 @@ test("keeps the header compact and overflow-free at required widths", async ({ p
     await page.goto(`${basePath}/`);
     await expectNoOverflow(page);
     expect(
-      await page.locator("body > header").evaluate((header) => header.getBoundingClientRect().height),
+      await page
+        .locator("body > header")
+        .evaluate((header) => header.getBoundingClientRect().height),
     ).toBeLessThanOrEqual(80);
   }
 });
 
-test("relocates Orders and authorizes Administration navigation from account context", async ({ browser }) => {
+test("relocates Orders and authorizes Administration navigation from account context", async ({
+  browser,
+}) => {
   const customer = await browser.newContext();
-  await customer.addInitScript((token) => sessionStorage.setItem("sewncovers.session-token", token), customerToken);
+  await customer.addInitScript(
+    (token) => sessionStorage.setItem("sewncovers.session-token", token),
+    customerToken,
+  );
   await mockAccount(customer);
   const customerPage = await customer.newPage();
   await customerPage.goto(`${basePath}/account/`);
   // A verified session keeps every header destination.
-  const customerHeader = customerPage.getByRole("navigation", { name: "Primary navigation" });
+  const customerHeader = customerPage.getByRole("navigation", {
+    name: "Primary navigation",
+  });
   await expect(
-    customerHeader.getByRole("list", { name: "Primary destinations" }).getByRole("link"),
+    customerHeader
+      .getByRole("list", { name: "Primary destinations" })
+      .getByRole("link"),
   ).toHaveText(["Configure", "Pricing"]);
   await expect(
-    customerHeader.getByRole("list", { name: "Shopping and account" }).getByRole("link"),
+    customerHeader
+      .getByRole("list", { name: "Shopping and account" })
+      .getByRole("link"),
   ).toHaveText(["My projects", "Cart", "Account"]);
-  const customerAccount = customerPage.getByRole("navigation", { name: "Account navigation" });
-  await expect(customerAccount.getByRole("link", { name: "Orders" })).toBeVisible();
-  await expect(customerAccount.getByRole("link", { name: "Administration" })).toHaveCount(0);
+  const customerAccount = customerPage.getByRole("navigation", {
+    name: "Account navigation",
+  });
   await expect(
-    customerPage.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", {
-      name: "Admin",
-    }),
+    customerAccount.getByRole("link", { name: "Orders" }),
+  ).toBeVisible();
+  await expect(
+    customerAccount.getByRole("link", { name: "Administration" }),
+  ).toHaveCount(0);
+  await expect(
+    customerPage
+      .getByRole("navigation", { name: "Primary navigation" })
+      .getByRole("link", {
+        name: "Admin",
+      }),
   ).toHaveCount(0);
   await customerAccount.getByRole("link", { name: "Orders" }).click();
   await expect(customerPage).toHaveURL(`${appOrigin}${basePath}/orders/`);
-  await expect(customerPage.getByRole("heading", { name: "Orders", exact: true })).toBeVisible();
   await expect(
-    customerPage.getByRole("navigation", { name: "Account navigation" }).getByRole("link", {
-      name: "Orders",
-    }),
+    customerPage.getByRole("heading", { name: "Orders", exact: true }),
+  ).toBeVisible();
+  await expect(
+    customerPage
+      .getByRole("navigation", { name: "Account navigation" })
+      .getByRole("link", {
+        name: "Orders",
+      }),
   ).toHaveAttribute("aria-current", "page");
   await customer.close();
 
   const administrator = await browser.newContext();
-  await administrator.addInitScript((token) => sessionStorage.setItem("sewncovers.session-token", token), adminToken);
+  await administrator.addInitScript(
+    (token) => sessionStorage.setItem("sewncovers.session-token", token),
+    adminToken,
+  );
   await mockAccount(administrator);
   const adminPage = await administrator.newPage();
   await adminPage.goto(`${basePath}/account/`);
   await expect(
-    adminPage.getByRole("navigation", { name: "Account navigation" }).getByRole("link", {
-      name: "Administration",
-    }),
+    adminPage
+      .getByRole("navigation", { name: "Account navigation" })
+      .getByRole("link", {
+        name: "Administration",
+      }),
   ).toBeVisible();
   await administrator.close();
 });
@@ -248,8 +315,12 @@ test("loads and reloads without the removed product analytics feature", async ({
   expect(featureRequests).toEqual([]);
   expect(
     await page.evaluate(() => ({
-      local: Object.keys(localStorage).filter((key) => /analytics|consent/i.test(key)),
-      session: Object.keys(sessionStorage).filter((key) => /analytics|consent/i.test(key)),
+      local: Object.keys(localStorage).filter((key) =>
+        /analytics|consent/i.test(key),
+      ),
+      session: Object.keys(sessionStorage).filter((key) =>
+        /analytics|consent/i.test(key),
+      ),
     })),
   ).toEqual({ local: [], session: [] });
   expect(

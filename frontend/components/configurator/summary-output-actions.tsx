@@ -12,9 +12,7 @@ export interface SummaryOutputActionsProps {
   summary: ReviewSummary;
 }
 
-export function SummaryOutputActions({
-  summary,
-}: SummaryOutputActionsProps) {
+export function SummaryOutputActions({ summary }: SummaryOutputActionsProps) {
   const printSummary = () => {
     if (typeof window !== "undefined") {
       window.print();

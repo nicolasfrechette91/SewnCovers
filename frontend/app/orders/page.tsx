@@ -6,7 +6,13 @@ import { OrdersScreen } from "@/components/commerce/orders-screen";
 import { LoadingState, PageHeader, PageShell } from "@/components/ui";
 import { createPageMetadata } from "@/config/site-metadata";
 
-export const metadata: Metadata = createPageMetadata({ title: "Demonstration orders", description: "Private fictional order history, production states, and fulfilment timelines.", index: false, path: "/orders/" });
+export const metadata: Metadata = createPageMetadata({
+  title: "Demonstration orders",
+  description:
+    "Private fictional order history, production states, and fulfilment timelines.",
+  index: false,
+  path: "/orders/",
+});
 export default function OrdersPage() {
   return (
     <PageShell>

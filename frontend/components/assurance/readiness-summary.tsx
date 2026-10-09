@@ -4,17 +4,12 @@ import { useState } from "react";
 
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import { useAuth } from "@/context/auth";
-import {
-  assuranceApi,
-  type ReadinessReport,
-} from "@/services/assurance-api";
+import { assuranceApi, type ReadinessReport } from "@/services/assurance-api";
 
 export function ReadinessSummary() {
   const { state: auth } = useAuth();
   const [report, setReport] = useState<ReadinessReport | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "error">(
-    "idle",
-  );
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
 
   if (auth.status === "initializing") {
@@ -50,8 +45,8 @@ export function ReadinessSummary() {
         Read-only readiness summary
       </h2>
       <p className="mt-2 text-supporting text-text-muted">
-        Validates configuration without revealing secret values, changing
-        state, or calling live providers. It is evidence, not certification.
+        Validates configuration without revealing secret values, changing state,
+        or calling live providers. It is evidence, not certification.
       </p>
       <Button className="mt-4" onClick={() => void load()}>
         Run readiness checks

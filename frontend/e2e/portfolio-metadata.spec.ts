@@ -64,10 +64,14 @@ test("exports canonical and social metadata for every indexable route", async ({
     expect(canonical).toContain("/SewnCovers/");
   }
 
-  const imageResponse = await page.request.get(`${basePath}/social-preview.jpg`);
+  const imageResponse = await page.request.get(
+    `${basePath}/social-preview.jpg`,
+  );
   expect(imageResponse.status()).toBe(200);
   expect(imageResponse.headers()["content-type"]).toBe("image/jpeg");
-  expect(Number(imageResponse.headers()["content-length"])).toBeLessThan(500_000);
+  expect(Number(imageResponse.headers()["content-length"])).toBeLessThan(
+    500_000,
+  );
 });
 
 test("keeps account, operational, transaction, and 404 contexts out of search", async ({

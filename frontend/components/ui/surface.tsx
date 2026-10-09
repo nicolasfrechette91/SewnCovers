@@ -59,15 +59,11 @@ export function surfaceClasses({
 }
 
 type SurfaceElement =
-  | "article"
-  | "aside"
-  | "div"
-  | "figure"
-  | "header"
-  | "section";
+  "article" | "aside" | "div" | "figure" | "header" | "section";
 
 export interface SurfaceProps
-  extends ComponentPropsWithoutRef<"div">,
+  extends
+    ComponentPropsWithoutRef<"div">,
     Omit<SurfaceStyleOptions, "className"> {
   as?: SurfaceElement;
 }
@@ -85,7 +81,13 @@ export function Surface({
   return (
     <Element
       {...elementProps}
-      className={surfaceClasses({ className, elevation, padding, radius, tone })}
+      className={surfaceClasses({
+        className,
+        elevation,
+        padding,
+        radius,
+        tone,
+      })}
     />
   );
 }

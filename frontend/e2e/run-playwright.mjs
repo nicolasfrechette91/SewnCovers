@@ -8,10 +8,7 @@ const frontendDirectory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
-const nextCli = path.join(
-  frontendDirectory,
-  "node_modules/next/dist/bin/next",
-);
+const nextCli = path.join(frontendDirectory, "node_modules/next/dist/bin/next");
 const playwrightCli = path.join(
   frontendDirectory,
   "node_modules/@playwright/test/cli.js",

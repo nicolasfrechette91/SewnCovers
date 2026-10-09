@@ -5,10 +5,7 @@ import {
   isNullableCommittedMeasurement,
   roundMeasurement,
 } from "./measurements";
-import {
-  normalizePatternScale,
-  PATTERN_SCALE_DEFAULT,
-} from "./pattern-scale";
+import { normalizePatternScale, PATTERN_SCALE_DEFAULT } from "./pattern-scale";
 import {
   DEFAULT_CLOSURE_TYPE,
   DEFAULT_FIT_PREFERENCE,
@@ -16,10 +13,7 @@ import {
   DEFAULT_SEAM_STYLE,
   hasSupportedCoverOptions,
 } from "../../data/cover-options";
-import {
-  isNormalizedHexColor,
-  normalizeHexColor,
-} from "./fabric-color";
+import { isNormalizedHexColor, normalizeHexColor } from "./fabric-color";
 
 export const initialConfigurationState: ConfigurationState = {
   shape: null,
@@ -38,8 +32,9 @@ export const initialConfigurationState: ConfigurationState = {
 
 /** True while nothing has been chosen yet, so there is nothing worth keeping. */
 export function isInitialConfiguration(state: ConfigurationState): boolean {
-  return (Object.keys(initialConfigurationState) as (keyof ConfigurationState)[])
-    .every((key) => state[key] === initialConfigurationState[key]);
+  return (
+    Object.keys(initialConfigurationState) as (keyof ConfigurationState)[]
+  ).every((key) => state[key] === initialConfigurationState[key]);
 }
 
 export function configurationReducer(
@@ -52,14 +47,12 @@ export function configurationReducer(
       const legacyPatternId = (
         configuration as unknown as Record<string, unknown>
       ).patternId;
-      const restoredPattern = configuration.pattern ?? (
-        typeof legacyPatternId === "string"
+      const restoredPattern =
+        configuration.pattern ??
+        (typeof legacyPatternId === "string"
           ? { kind: "built-in" as const, patternId: legacyPatternId }
-          : null
-      );
-      const patternScale = normalizePatternScale(
-        configuration.patternScale,
-      );
+          : null);
+      const patternScale = normalizePatternScale(configuration.patternScale);
 
       if (
         configuration.shape === null ||
@@ -75,24 +68,17 @@ export function configurationReducer(
           configuration.backWidth,
         ) ||
         configuration.width === null ||
-        roundMeasurement(configuration.width) !==
-          configuration.width ||
+        roundMeasurement(configuration.width) !== configuration.width ||
         configuration.height === null ||
-        roundMeasurement(configuration.height) !==
-          configuration.height ||
+        roundMeasurement(configuration.height) !== configuration.height ||
         configuration.thickness === null ||
-        roundMeasurement(configuration.thickness) !==
-          configuration.thickness ||
+        roundMeasurement(configuration.thickness) !== configuration.thickness ||
         restoredPattern === null ||
         (restoredPattern.kind === "built-in" &&
-          !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(
-            restoredPattern.patternId,
-          )) ||
+          !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(restoredPattern.patternId)) ||
         (restoredPattern.kind === "custom" &&
           (!/^[A-Za-z0-9_-]{22}$/.test(restoredPattern.assetId) ||
-            !/^[A-Za-z0-9_-]{22}$/.test(
-              restoredPattern.derivativeId,
-            ) ||
+            !/^[A-Za-z0-9_-]{22}$/.test(restoredPattern.derivativeId) ||
             restoredPattern.processingVersion.length === 0)) ||
         (restoredPattern.kind === "solid" &&
           !isNormalizedHexColor(restoredPattern.color)) ||
@@ -171,16 +157,8 @@ export function configurationReducer(
         ...state,
         width: convertMeasurement(state.width, state.unit, action.unit),
         height: convertMeasurement(state.height, state.unit, action.unit),
-        backWidth: convertMeasurement(
-          state.backWidth,
-          state.unit,
-          action.unit,
-        ),
-        thickness: convertMeasurement(
-          state.thickness,
-          state.unit,
-          action.unit,
-        ),
+        backWidth: convertMeasurement(state.backWidth, state.unit, action.unit),
+        thickness: convertMeasurement(state.thickness, state.unit, action.unit),
         unit: action.unit,
       };
     }
@@ -203,9 +181,7 @@ export function configurationReducer(
     case "setPatternScale": {
       const patternScale = normalizePatternScale(action.patternScale);
 
-      return patternScale === null
-        ? state
-        : { ...state, patternScale };
+      return patternScale === null ? state : { ...state, patternScale };
     }
     case "setMaterialId":
       return hasSupportedCoverOptions({

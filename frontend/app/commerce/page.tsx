@@ -14,7 +14,8 @@ import { createPageMetadata } from "@/config/site-metadata";
 
 export const metadata: Metadata = createPageMetadata({
   title: "Prototype pricing",
-  description: "Review public fictional CAD pricing examples for the SewnCovers prototype, with an optional private quote workspace for signed-in accounts.",
+  description:
+    "Review public fictional CAD pricing examples for the SewnCovers prototype, with an optional private quote workspace for signed-in accounts.",
   path: "/commerce/",
 });
 

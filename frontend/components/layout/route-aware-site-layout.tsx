@@ -69,7 +69,10 @@ export function RouteAwareSiteHeader({
           .map((item) =>
             item.href === ACCOUNT_HREF
               ? {
-                  href: buildAccountHref("login", returnTargetForPath(pathname)),
+                  href: buildAccountHref(
+                    "login",
+                    returnTargetForPath(pathname),
+                  ),
                   label: "Sign in",
                 }
               : item,

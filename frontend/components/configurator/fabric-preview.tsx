@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  formatPatternScale,
-  useConfiguration,
-} from "@/context/configuration";
+import { formatPatternScale, useConfiguration } from "@/context/configuration";
 import { getCushionShapeDefinition } from "@/data/shapes";
 
 import { classNames } from "../ui/class-names";
@@ -50,7 +47,9 @@ export function FabricPreview({ className, fabric }: FabricPreviewProps) {
     >
       <div aria-hidden="true" className="mx-auto max-w-sm">
         <CushionModel
-          patternClassName={shown?.solidColor ? undefined : shown?.previewClassName}
+          patternClassName={
+            shown?.solidColor ? undefined : shown?.previewClassName
+          }
           patternName={shown?.name}
           patternScale={state.patternScale}
           seamStyle={state.seamStyle}

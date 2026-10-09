@@ -12,10 +12,7 @@ import {
 } from "../config/site-metadata";
 
 test("builds stable production URLs with the GitHub Pages base path", () => {
-  assert.equal(
-    siteUrl(),
-    "https://nicolasfrechette91.github.io/SewnCovers/",
-  );
+  assert.equal(siteUrl(), "https://nicolasfrechette91.github.io/SewnCovers/");
   assert.equal(
     siteUrl("/legal/"),
     "https://nicolasfrechette91.github.io/SewnCovers/legal/",

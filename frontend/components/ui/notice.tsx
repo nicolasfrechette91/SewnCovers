@@ -17,7 +17,8 @@ const toneClasses: Record<NoticeTone, string> = {
 };
 
 const titleToneClasses: Record<NoticeTone, string> = {
-  prototype: "font-mono text-eyebrow uppercase tracking-eyebrow text-notice-text",
+  prototype:
+    "font-mono text-eyebrow uppercase tracking-eyebrow text-notice-text",
   sandbox: "font-mono text-eyebrow uppercase tracking-eyebrow text-notice-text",
   info: "text-label font-control text-text-primary",
   success: "text-label font-control text-success-text",
@@ -41,8 +42,10 @@ export function noticeTitleClasses(tone: NoticeTone = "info"): string {
 type NoticeElement = "aside" | "div" | "section";
 type NoticeHeading = "h2" | "h3" | "h4" | "p";
 
-export interface NoticeProps
-  extends Omit<ComponentPropsWithoutRef<"div">, "title"> {
+export interface NoticeProps extends Omit<
+  ComponentPropsWithoutRef<"div">,
+  "title"
+> {
   as?: NoticeElement;
   title?: ReactNode;
   titleAs?: NoticeHeading;
@@ -67,7 +70,9 @@ export function Notice({
           {title}
         </Title>
       ) : null}
-      <div className={classNames("min-w-0", title ? "mt-2" : null)}>{children}</div>
+      <div className={classNames("min-w-0", title ? "mt-2" : null)}>
+        {children}
+      </div>
     </Element>
   );
 }

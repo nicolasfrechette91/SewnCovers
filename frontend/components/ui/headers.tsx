@@ -56,8 +56,10 @@ export function PageShell({
   );
 }
 
-export interface PageHeaderProps
-  extends Omit<ComponentPropsWithoutRef<"header">, "title"> {
+export interface PageHeaderProps extends Omit<
+  ComponentPropsWithoutRef<"header">,
+  "title"
+> {
   eyebrow?: ReactNode;
   lede?: ReactNode;
   title: ReactNode;
@@ -77,11 +79,18 @@ export function PageHeader({
   ...headerProps
 }: PageHeaderProps) {
   return (
-    <header {...headerProps} className={classNames("mb-layout min-w-0", className)}>
+    <header
+      {...headerProps}
+      className={classNames("mb-layout min-w-0", className)}
+    >
       {eyebrow ? <p className={eyebrowClasses}>{eyebrow}</p> : null}
       <h1
         id={titleId}
-        className={classNames(pageTitleClasses, eyebrow ? "mt-3" : null, titleClassName)}
+        className={classNames(
+          pageTitleClasses,
+          eyebrow ? "mt-3" : null,
+          titleClassName,
+        )}
       >
         {title}
       </h1>
@@ -96,8 +105,10 @@ export function PageHeader({
 
 type HeadingLevel = 2 | 3 | 4;
 
-export interface SectionHeaderProps
-  extends Omit<ComponentPropsWithoutRef<"div">, "title"> {
+export interface SectionHeaderProps extends Omit<
+  ComponentPropsWithoutRef<"div">,
+  "title"
+> {
   actions?: ReactNode;
   eyebrow?: ReactNode;
   lede?: ReactNode;
@@ -147,7 +158,9 @@ export function SectionHeader({
           <p
             className={classNames(
               "mt-3",
-              size === "section" ? "text-body text-text-muted" : "text-supporting text-text-muted",
+              size === "section"
+                ? "text-body text-text-muted"
+                : "text-supporting text-text-muted",
             )}
           >
             {lede}
@@ -155,7 +168,9 @@ export function SectionHeader({
         ) : null}
       </div>
       {actions ? (
-        <div className="flex min-w-0 flex-wrap items-center gap-3">{actions}</div>
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          {actions}
+        </div>
       ) : null}
     </div>
   );

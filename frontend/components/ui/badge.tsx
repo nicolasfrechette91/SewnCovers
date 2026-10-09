@@ -2,7 +2,8 @@ import type { ComponentPropsWithoutRef } from "react";
 
 import { classNames } from "./class-names";
 
-export type BadgeTone = "neutral" | "brand" | "accent" | "notice" | "success" | "danger";
+export type BadgeTone =
+  "neutral" | "brand" | "accent" | "notice" | "success" | "danger";
 export type BadgeVariant = "outline" | "solid";
 
 const outlineTones: Record<BadgeTone, string> = {
@@ -42,5 +43,7 @@ export interface BadgeProps extends ComponentPropsWithoutRef<"span"> {
 
 /** A small status tag. Never interactive, so it never looks like a button. */
 export function Badge({ className, tone, variant, ...spanProps }: BadgeProps) {
-  return <span {...spanProps} className={badgeClasses(tone, variant, className)} />;
+  return (
+    <span {...spanProps} className={badgeClasses(tone, variant, className)} />
+  );
 }

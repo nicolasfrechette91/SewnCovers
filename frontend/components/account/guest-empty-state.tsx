@@ -57,7 +57,9 @@ export function GuestEmptyState({
       action={
         <div className="flex min-w-0 flex-col items-center gap-2">
           <ButtonLink href="/configure/">
-            {draftHasDesign(draft) ? "Continue your design" : "Start configuring"}
+            {draftHasDesign(draft)
+              ? "Continue your design"
+              : "Start configuring"}
           </ButtonLink>
           <p className="flex min-w-0 flex-wrap items-center justify-center gap-x-4 text-supporting">
             <TextLink href={buildAccountHref("login", returnTo)}>

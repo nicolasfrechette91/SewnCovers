@@ -90,7 +90,10 @@ test("pings once per session and then prefetches the pattern list", async () => 
   // A later page load in the same tab session starts with empty memory.
   resetApiWarmupForTests();
   startApiWarmup(loader);
-  assert.equal(awaitWarmPatterns(() => undefined), undefined);
+  assert.equal(
+    awaitWarmPatterns(() => undefined),
+    undefined,
+  );
   assert.deepEqual(calls, { getHealth: 1, listPatterns: 1 });
   assert.equal(window.sessionStorage.getItem(API_WARMUP_SESSION_KEY), "1");
 });
@@ -100,14 +103,20 @@ test("is skipped when saving data or when the API was already requested", async 
 
   setSaveData(true);
   startApiWarmup(loader);
-  assert.equal(awaitWarmPatterns(() => undefined), undefined);
+  assert.equal(
+    awaitWarmPatterns(() => undefined),
+    undefined,
+  );
   assert.equal(window.sessionStorage.getItem(API_WARMUP_SESSION_KEY), null);
 
   setSaveData(false);
   noteApiRequest();
   window.sessionStorage.clear();
   startApiWarmup(loader);
-  assert.equal(awaitWarmPatterns(() => undefined), undefined);
+  assert.equal(
+    awaitWarmPatterns(() => undefined),
+    undefined,
+  );
   assert.deepEqual(calls, { getHealth: 0, listPatterns: 0 });
 });
 
@@ -159,7 +168,9 @@ test("failures stay silent and leave nothing to reuse", async () => {
 
 test("a visitor arriving mid warm-up joins the in-flight request and its status", async () => {
   const pending = deferred<readonly PatternResponse[]>();
-  const { calls, loader } = createClient({ listPatterns: () => pending.promise });
+  const { calls, loader } = createClient({
+    listPatterns: () => pending.promise,
+  });
 
   startApiWarmup(loader);
   await tick();

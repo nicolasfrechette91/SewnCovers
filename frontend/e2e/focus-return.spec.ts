@@ -20,14 +20,18 @@ import { chooseRadio } from "./support/keyboard";
 const publicId = "AbCdEfGhIjKlMnOpQrStUv";
 
 async function expectNotOnBody(page: Page) {
-  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(false);
+  expect(
+    await page.evaluate(() => document.activeElement === document.body),
+  ).toBe(false);
 }
 
 async function openStage(page: Page, stage: string) {
   await page.getByRole("button", { name: `Continue to ${stage}` }).click();
 }
 
-test("the shape question returns focus to the shape: cancel, Escape and confirm", async ({ page }) => {
+test("the shape question returns focus to the shape: cancel, Escape and confirm", async ({
+  page,
+}) => {
   await fixtures(page, "guest");
   await page.goto(`${base}/configure/?design=${publicId}`);
   await expect(page.getByText("Shared design restored.")).toBeVisible();
@@ -58,7 +62,9 @@ test("the shape question returns focus to the shape: cancel, Escape and confirm"
   await expect(square).toBeChecked();
 });
 
-test("starting a new design returns focus: Escape, cancel and confirm", async ({ page }) => {
+test("starting a new design returns focus: Escape, cancel and confirm", async ({
+  page,
+}) => {
   await fixtures(page, "guest");
   await page.goto(`${base}/configure/`);
   await page.getByText("Rectangle cushion", { exact: true }).click();
@@ -80,48 +86,78 @@ test("starting a new design returns focus: Escape, cancel and confirm", async ({
 
   await startNew.press("Enter");
   await clear.press("Enter");
-  await expect(page.getByRole("heading", { name: "Choose your cushion shape" })).toBeFocused();
+  await expect(
+    page.getByRole("heading", { name: "Choose your cushion shape" }),
+  ).toBeFocused();
 });
 
-test("closing a failed link's panel moves focus on to the stage heading", async ({ page }) => {
+test("closing a failed link's panel moves focus on to the stage heading", async ({
+  page,
+}) => {
   await fixtures(page, "guest");
-  const missing = { errors: [{ code: "resource_not_found", message: "Not found.", location: ["path"] }] };
+  const missing = {
+    errors: [
+      { code: "resource_not_found", message: "Not found.", location: ["path"] },
+    ],
+  };
   await page.route(`${api}/designs/ZZZZZZZZZZZZZZZZZZZZZZ`, async (route) => {
     if (route.request().method() === "OPTIONS") {
       await route.fulfill({ headers: corsHeaders, status: 204 });
       return;
     }
-    await route.fulfill({ body: JSON.stringify(missing), headers: corsHeaders, status: 404 });
+    await route.fulfill({
+      body: JSON.stringify(missing),
+      headers: corsHeaders,
+      status: 404,
+    });
   });
   await page.route(`${api}/shares/**`, async (route) => {
     if (route.request().method() === "OPTIONS") {
       await route.fulfill({ headers: corsHeaders, status: 204 });
       return;
     }
-    await route.fulfill({ body: JSON.stringify(missing), headers: corsHeaders, status: 404 });
+    await route.fulfill({
+      body: JSON.stringify(missing),
+      headers: corsHeaders,
+      status: 404,
+    });
   });
 
-  for (const link of ["?design=ZZZZZZZZZZZZZZZZZZZZZZ", `?share=${"H".repeat(43)}`]) {
+  for (const link of [
+    "?design=ZZZZZZZZZZZZZZZZZZZZZZ",
+    `?share=${"H".repeat(43)}`,
+  ]) {
     await page.goto(`${base}/configure/${link}`);
-    const dismiss = page.getByRole("button", { name: "Continue with my configuration" });
+    const dismiss = page.getByRole("button", {
+      name: "Continue with my configuration",
+    });
     await dismiss.focus();
     await dismiss.press("Enter");
     await expect(dismiss).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Choose your cushion shape" })).toBeFocused();
+    await expect(
+      page.getByRole("heading", { name: "Choose your cushion shape" }),
+    ).toBeFocused();
   }
 });
 
-test("sign-in panels in the configurator return focus to what opened them", async ({ page }) => {
+test("sign-in panels in the configurator return focus to what opened them", async ({
+  page,
+}) => {
   await fixtures(page, "guest");
   await enableUploads(page);
   await page.goto(`${base}/configure/?design=${publicId}`);
   await expect(page.getByText("Shared design restored.")).toBeVisible();
-  for (const stage of ["Measurements", "Cover details", "Pattern"]) await openStage(page, stage);
+  for (const stage of ["Measurements", "Cover details", "Pattern"])
+    await openStage(page, stage);
 
   const upload = page.getByRole("button", { name: "Upload your own pattern" });
   await upload.press("Enter");
-  await expect(page.getByRole("heading", { name: "Sign in to upload your own pattern" })).toBeFocused();
-  await page.getByRole("button", { name: "Continue with our patterns" }).press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Sign in to upload your own pattern" }),
+  ).toBeFocused();
+  await page
+    .getByRole("button", { name: "Continue with our patterns" })
+    .press("Enter");
   await expect(upload).toBeFocused();
 
   await chooseRadio(page, "Terrace wave");
@@ -130,18 +166,25 @@ test("sign-in panels in the configurator return focus to what opened them", asyn
   for (const opener of ["Save to My projects", "Save and add to cart"]) {
     const button = page.getByRole("button", { name: opener, exact: true });
     await button.press("Enter");
-    await expect(page.getByRole("heading", { name: /^(Sign in|Create an account) to/ })).toBeFocused();
-    await page.getByRole("button", { name: "Continue as guest" }).press("Enter");
+    await expect(
+      page.getByRole("heading", { name: /^(Sign in|Create an account) to/ }),
+    ).toBeFocused();
+    await page
+      .getByRole("button", { name: "Continue as guest" })
+      .press("Enter");
     await expect(button).toBeFocused();
   }
 });
 
-test("renaming and deleting an uploaded pattern return focus: Escape, cancel and confirm", async ({ page }) => {
+test("renaming and deleting an uploaded pattern return focus: Escape, cancel and confirm", async ({
+  page,
+}) => {
   await fixtures(page, "customer");
   await enableUploads(page);
   await page.goto(`${base}/configure/?design=${publicId}`);
   await expect(page.getByText("Shared design restored.")).toBeVisible();
-  for (const stage of ["Measurements", "Cover details", "Pattern"]) await openStage(page, stage);
+  for (const stage of ["Measurements", "Cover details", "Pattern"])
+    await openStage(page, stage);
   await expect(page.getByText("Garden repeat", { exact: true })).toBeVisible();
 
   const rename = page.getByRole("button", { name: "Rename" });
@@ -159,9 +202,13 @@ test("renaming and deleting an uploaded pattern return focus: Escape, cancel and
   await rename.press("Enter");
   await label.fill("Garden repeat, larger");
   await label.press("Enter");
-  const status = page.getByRole("status").filter({ hasText: "Pattern label updated." });
+  const status = page
+    .getByRole("status")
+    .filter({ hasText: "Pattern label updated." });
   await expect(status).toBeFocused();
-  await expect(page.getByText("Garden repeat, larger", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Garden repeat, larger", { exact: true }),
+  ).toBeVisible();
 
   const remove = page.getByRole("button", { name: "Delete", exact: true });
   await remove.press("Enter");
@@ -176,7 +223,9 @@ test("renaming and deleting an uploaded pattern return focus: Escape, cancel and
 
   await remove.press("Enter");
   await page.getByRole("button", { name: "Delete pattern" }).press("Enter");
-  await expect(page.getByRole("status").filter({ hasText: "Custom pattern deleted." })).toBeFocused();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Custom pattern deleted." }),
+  ).toBeFocused();
   await expectNotOnBody(page);
 });
 
@@ -197,7 +246,9 @@ test("account deletion returns focus: Escape and cancel", async ({ page }) => {
   await expect(review).toBeFocused();
 });
 
-test("project deletion returns focus: Escape, cancel and confirm", async ({ page }) => {
+test("project deletion returns focus: Escape, cancel and confirm", async ({
+  page,
+}) => {
   await fixtures(page, "customer");
   await page.route(`${api}/projects/${id}`, async (route) => {
     if (route.request().method() === "OPTIONS") {
@@ -210,7 +261,9 @@ test("project deletion returns focus: Escape, cancel and confirm", async ({ page
   });
   await page.goto(`${base}/projects/?project=${id}`);
   const review = page.getByRole("button", { name: "Review project deletion" });
-  const confirm = page.getByRole("button", { name: "Permanently delete project" });
+  const confirm = page.getByRole("button", {
+    name: "Permanently delete project",
+  });
 
   await review.press("Enter");
   await expect(confirm).toBeFocused();
@@ -229,7 +282,9 @@ test("project deletion returns focus: Escape, cancel and confirm", async ({ page
   await expect(page.locator("#main-content")).toBeFocused();
 });
 
-test("administrator confirmations return focus: Escape, cancel and confirm", async ({ page }) => {
+test("administrator confirmations return focus: Escape, cancel and confirm", async ({
+  page,
+}) => {
   await fixtures(page, "administrator");
   await page.route(`${api}/admin/price-books/${id}/publish`, async (route) => {
     if (route.request().method() === "OPTIONS") {
@@ -254,7 +309,9 @@ test("administrator confirmations return focus: Escape, cancel and confirm", asy
   await page.goto(`${base}/admin/`);
 
   const review = page.getByRole("button", { name: "Review publication" });
-  const cancel = page.getByRole("group", { name: /Confirm publication/ }).getByRole("button", { name: "Cancel" });
+  const cancel = page
+    .getByRole("group", { name: /Confirm publication/ })
+    .getByRole("button", { name: "Cancel" });
   await review.press("Enter");
   await expect(cancel).toBeFocused();
   await page.keyboard.press("Escape");
@@ -266,11 +323,17 @@ test("administrator confirmations return focus: Escape, cancel and confirm", asy
 
   await review.press("Enter");
   await page.getByRole("button", { name: "Confirm publish" }).press("Enter");
-  await expect(page.getByRole("status").filter({ hasText: "published and frozen" })).toBeFocused();
+  await expect(
+    page.getByRole("status").filter({ hasText: "published and frozen" }),
+  ).toBeFocused();
 
-  await page.getByRole("button", { name: "Review specification" }).press("Enter");
+  await page
+    .getByRole("button", { name: "Review specification" })
+    .press("Enter");
   const reviewRefund = page.getByRole("button", { name: "Review refund" });
-  const cancelRefund = page.getByRole("group", { name: "Confirm full refund" }).getByRole("button", { name: "Cancel" });
+  const cancelRefund = page
+    .getByRole("group", { name: "Confirm full refund" })
+    .getByRole("button", { name: "Cancel" });
   await reviewRefund.press("Enter");
   await expect(cancelRefund).toBeFocused();
   await page.keyboard.press("Escape");
@@ -294,45 +357,70 @@ test("the menu returns focus to its button on Escape", async ({ page }) => {
   await expect(menu).toHaveAttribute("aria-expanded", "false");
 });
 
-test("ending the session moves focus to the sign-in heading, whichever way it ends", async ({ page }) => {
+test("ending the session moves focus to the sign-in heading, whichever way it ends", async ({
+  page,
+}) => {
   await fixtures(page, "customer");
   // The shared fixtures do not allow DELETE or know these endpoints.
-  await page.route(new RegExp(`^${api}/(auth/logout(-all)?|account/(sessions/1|delete))$`), async (route) => {
-    const method = route.request().method();
-    if (method === "OPTIONS") {
-      await route.fulfill({ headers: corsHeaders, status: 204 });
-    } else if (route.request().url().endsWith("/account/delete")) {
-      await route.fulfill({ body: JSON.stringify({ deleted: true }), headers: corsHeaders });
-    } else {
-      await route.fulfill({ headers: corsHeaders, status: 204 });
-    }
-  });
+  await page.route(
+    new RegExp(`^${api}/(auth/logout(-all)?|account/(sessions/1|delete))$`),
+    async (route) => {
+      const method = route.request().method();
+      if (method === "OPTIONS") {
+        await route.fulfill({ headers: corsHeaders, status: 204 });
+      } else if (route.request().url().endsWith("/account/delete")) {
+        await route.fulfill({
+          body: JSON.stringify({ deleted: true }),
+          headers: corsHeaders,
+        });
+      } else {
+        await route.fulfill({ headers: corsHeaders, status: 204 });
+      }
+    },
+  );
 
-  for (const route of ["Sign out", "Sign out everywhere", "Revoke this session", "Permanently delete account"]) {
+  for (const route of [
+    "Sign out",
+    "Sign out everywhere",
+    "Revoke this session",
+    "Permanently delete account",
+  ]) {
     await page.goto(`${base}/account/`);
     await expect(page.getByText("Current session")).toBeVisible();
     if (route === "Permanently delete account") {
-      await page.getByRole("button", { name: "Review account deletion" }).press("Enter");
-      await page.locator("#delete-password").fill("correct horse battery staple");
+      await page
+        .getByRole("button", { name: "Review account deletion" })
+        .press("Enter");
+      await page
+        .locator("#delete-password")
+        .fill("correct horse battery staple");
     }
     await page.getByRole("button", { name: route, exact: true }).press("Enter");
-    await expect(page.getByRole("heading", { name: "Sign in", exact: true }), route).toBeFocused();
+    await expect(
+      page.getByRole("heading", { name: "Sign in", exact: true }),
+      route,
+    ).toBeFocused();
     await expectNotOnBody(page);
   }
 });
 
-test("a work step button that is replaced hands focus to the work heading", async ({ page }) => {
+test("a work step button that is replaced hands focus to the work heading", async ({
+  page,
+}) => {
   await fixtures(page, "administrator");
-  await page.route(`${api}/admin/production-work/${work.id}/transition`, async (route) => {
-    if (route.request().method() === "OPTIONS") {
-      await route.fulfill({ headers: corsHeaders, status: 204 });
-      return;
-    }
-    await route.fulfill({
-      body: JSON.stringify({ ...work, state: "approved", revision: 2 }),
-      headers: corsHeaders,
-    });
-  });
+  await page.route(
+    `${api}/admin/production-work/${work.id}/transition`,
+    async (route) => {
+      if (route.request().method() === "OPTIONS") {
+        await route.fulfill({ headers: corsHeaders, status: 204 });
+        return;
+      }
+      await route.fulfill({
+        body: JSON.stringify({ ...work, state: "approved", revision: 2 }),
+        headers: corsHeaders,
+      });
+    },
+  );
   await page.goto(`${base}/admin/`);
 
   await page.getByRole("button", { name: /SC-DEMO-WORK0001/ }).press("Enter");
@@ -340,7 +428,11 @@ test("a work step button that is replaced hands focus to the work heading", asyn
   await expect(heading).toBeFocused();
 
   await page.getByRole("button", { name: "Approve work" }).press("Enter");
-  await expect(page.getByRole("button", { name: "Start production" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve work" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Start production" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve work" })).toHaveCount(
+    0,
+  );
   await expect(heading).toBeFocused();
 });

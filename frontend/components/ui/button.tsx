@@ -1,6 +1,10 @@
 import type { ComponentPropsWithRef, ReactNode } from "react";
 
-import { buttonClasses, type ButtonSize, type ButtonVariant } from "./button-styles";
+import {
+  buttonClasses,
+  type ButtonSize,
+  type ButtonVariant,
+} from "./button-styles";
 import { classNames } from "./class-names";
 import { LoadingSpinner } from "./loading-spinner";
 

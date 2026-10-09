@@ -3,8 +3,10 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { classNames } from "./class-names";
 import { LoadingSpinner } from "./loading-spinner";
 
-export interface LoadingStateProps
-  extends Omit<ComponentPropsWithoutRef<"div">, "children"> {
+export interface LoadingStateProps extends Omit<
+  ComponentPropsWithoutRef<"div">,
+  "children"
+> {
   label?: ReactNode;
 }
 

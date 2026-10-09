@@ -13,8 +13,10 @@ const unitOptions = [
 
 export type { MeasurementUnit } from "@/context/configuration";
 
-export interface UnitSelectorProps
-  extends Omit<ComponentPropsWithRef<"fieldset">, "onChange"> {
+export interface UnitSelectorProps extends Omit<
+  ComponentPropsWithRef<"fieldset">,
+  "onChange"
+> {
   legend?: ReactNode;
   name: string;
   onChange: (unit: MeasurementUnit) => void;

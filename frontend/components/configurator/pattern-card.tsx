@@ -54,12 +54,7 @@ export function PatternCard({
   const categoryId = patternCategory ? `${id}-category` : undefined;
   const colorsId = patternColors ? `${id}-colors` : undefined;
   const descriptionId = description ? `${id}-description` : undefined;
-  const describedBy = [
-    ariaDescribedBy,
-    categoryId,
-    colorsId,
-    descriptionId,
-  ]
+  const describedBy = [ariaDescribedBy, categoryId, colorsId, descriptionId]
     .filter(Boolean)
     .join(" ");
 

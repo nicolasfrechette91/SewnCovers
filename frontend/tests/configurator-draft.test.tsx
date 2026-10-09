@@ -2,7 +2,14 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
 import React from "react";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 
 import { RouteAwareSiteHeader } from "../components/layout/route-aware-site-layout";
 import { AuthProvider, useAuth } from "../context/auth";
@@ -69,7 +76,10 @@ afterEach(() => {
 });
 
 function json(value: unknown, status = 200): Response {
-  return new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(value), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 test("restores a partial draft field by field and drops anything malformed", () => {
@@ -98,7 +108,10 @@ test("restores a partial draft field by field and drops anything malformed", () 
     fitPreference: "close",
     seamStyle: "piped",
   });
-  assert.deepEqual(sanitizeDraftConfiguration("not a draft"), initialConfigurationState);
+  assert.deepEqual(
+    sanitizeDraftConfiguration("not a draft"),
+    initialConfigurationState,
+  );
   assert.deepEqual(sanitizeDraftConfiguration(complete), complete);
   assert.equal(isInitialConfiguration(sanitizeDraftConfiguration({})), true);
   assert.equal(isInitialConfiguration(restored), false);
@@ -107,7 +120,10 @@ test("restores a partial draft field by field and drops anything malformed", () 
 test("restores a custom pattern without its short-lived preview grant", () => {
   const restored = configurationReducer(initialConfigurationState, {
     type: "restoreDraft",
-    configuration: sanitizeDraftConfiguration({ ...complete, pattern: customPattern }),
+    configuration: sanitizeDraftConfiguration({
+      ...complete,
+      pattern: customPattern,
+    }),
   });
   assert.deepEqual(restored.pattern, { ...customPattern, previewUrl: null });
   assert.equal(
@@ -116,7 +132,13 @@ test("restores a custom pattern without its short-lived preview grant", () => {
   );
   assert.deepEqual(
     storableConfiguration({ ...complete, pattern: customPattern }).pattern,
-    { kind: "custom", assetId: customPattern.assetId, derivativeId: customPattern.derivativeId, processingVersion: "tile-v1", label: "Grandma's quilt" },
+    {
+      kind: "custom",
+      assetId: customPattern.assetId,
+      derivativeId: customPattern.derivativeId,
+      processingVersion: "tile-v1",
+      label: "Grandma's quilt",
+    },
   );
 });
 
@@ -135,7 +157,10 @@ test("keeps the draft in local storage without any sign-in data", () => {
   window.localStorage.setItem(DRAFT_KEY, "{not json");
   reloadDraftFromStorage();
   assert.equal(readDraft(), null);
-  window.localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...stored, version: 2 }));
+  window.localStorage.setItem(
+    DRAFT_KEY,
+    JSON.stringify({ ...stored, version: 2 }),
+  );
   reloadDraftFromStorage();
   assert.equal(readDraft(), null);
 });
@@ -151,7 +176,9 @@ test("works in memory when browser storage is blocked", () => {
   try {
     reloadDraftFromStorage();
     assert.equal(readDraft(), null);
-    assert.doesNotThrow(() => writeDraft({ configuration: complete, step: "details", highestStep: 2 }));
+    assert.doesNotThrow(() =>
+      writeDraft({ configuration: complete, step: "details", highestStep: 2 }),
+    );
     assert.equal(readDraft()?.step, "details");
   } finally {
     if (descriptor) Object.defineProperty(window, "localStorage", descriptor);
@@ -168,16 +195,33 @@ test("hands a pending account action to exactly one caller", () => {
   assert.equal(takePendingAccountAction(fingerprint), null);
 
   setPendingAccountAction({ kind: "save", name: "Patio bench", fingerprint });
-  assert.equal(takePendingAccountAction(designFingerprint({ ...complete, width: 80 })), null);
-  assert.equal(window.sessionStorage.getItem("sewncovers.pending-account-action"), null);
+  assert.equal(
+    takePendingAccountAction(designFingerprint({ ...complete, width: 80 })),
+    null,
+  );
+  assert.equal(
+    window.sessionStorage.getItem("sewncovers.pending-account-action"),
+    null,
+  );
 });
 
 test("sign-out removes account-linked drafts and keeps a never-saved one", () => {
   const events: string[] = [];
   const unsubscribe = subscribeToDraftReset((kind) => events.push(kind));
   try {
-    writeDraft({ configuration: complete, project: { projectId: "P".repeat(22), versionId: "V".repeat(22), fingerprint: "x" } });
-    setPendingAccountAction({ kind: "save", name: "Patio bench", fingerprint: "x" });
+    writeDraft({
+      configuration: complete,
+      project: {
+        projectId: "P".repeat(22),
+        versionId: "V".repeat(22),
+        fingerprint: "x",
+      },
+    });
+    setPendingAccountAction({
+      kind: "save",
+      name: "Patio bench",
+      fingerprint: "x",
+    });
     assert.equal(clearAccountLinkedBrowserData(), "cleared");
     assert.equal(readDraft(), null);
     assert.equal(window.localStorage.getItem(DRAFT_KEY), null);
@@ -185,7 +229,10 @@ test("sign-out removes account-linked drafts and keeps a never-saved one", () =>
 
     writeDraft({ configuration: { ...complete, pattern: customPattern } });
     assert.equal(clearAccountLinkedBrowserData(), "stripped");
-    assert.deepEqual(readDraft()?.configuration, { ...complete, pattern: null });
+    assert.deepEqual(readDraft()?.configuration, {
+      ...complete,
+      pattern: null,
+    });
 
     assert.equal(clearAccountLinkedBrowserData(), null);
     assert.equal(readDraft()?.configuration !== null, true);
@@ -203,24 +250,47 @@ test("warns before a link replaces unsaved work, and only then", () => {
   assert.equal(linkRefFromSearch("?resume=1"), null);
 
   writeDraft({ configuration: complete });
-  assert.equal(draftNeedsProtection(readDraft(), fingerprint, "design:ABC"), true);
+  assert.equal(
+    draftNeedsProtection(readDraft(), fingerprint, "design:ABC"),
+    true,
+  );
   assert.equal(draftNeedsProtection(readDraft(), null, "design:ABC"), false);
 
   recordPublicDesign("B".repeat(22), complete);
-  assert.equal(draftNeedsProtection(readDraft(), fingerprint, `design:${"B".repeat(22)}`), false);
-  assert.equal(draftNeedsProtection(readDraft(), fingerprint, `design:${"C".repeat(22)}`), true);
+  assert.equal(
+    draftNeedsProtection(readDraft(), fingerprint, `design:${"B".repeat(22)}`),
+    false,
+  );
+  assert.equal(
+    draftNeedsProtection(readDraft(), fingerprint, `design:${"C".repeat(22)}`),
+    true,
+  );
 
   recordLinkRestore("share:token", complete);
-  assert.equal(draftNeedsProtection(readDraft(), fingerprint, "design:other"), false);
+  assert.equal(
+    draftNeedsProtection(readDraft(), fingerprint, "design:other"),
+    false,
+  );
   assert.equal(draftNeedsProtection(readDraft(), edited, "design:other"), true);
   assert.equal(JSON.stringify(readDraft()).includes("share:token"), false);
 
-  writeDraft({ project: { projectId: "P".repeat(22), versionId: "V".repeat(22), fingerprint: edited } });
-  assert.equal(draftNeedsProtection(readDraft(), edited, "design:other"), false);
+  writeDraft({
+    project: {
+      projectId: "P".repeat(22),
+      versionId: "V".repeat(22),
+      fingerprint: edited,
+    },
+  });
+  assert.equal(
+    draftNeedsProtection(readDraft(), edited, "design:other"),
+    false,
+  );
 });
 
 test("plans arrival: restore, open the link, or ask before replacing unsaved work", () => {
-  assert.deepEqual(planArrival("", null, initialConfigurationState), { kind: "none" });
+  assert.deepEqual(planArrival("", null, initialConfigurationState), {
+    kind: "none",
+  });
 
   writeDraft({ configuration: complete, step: "preview", highestStep: 4 });
   assert.deepEqual(planArrival("", readDraft(), initialConfigurationState), {
@@ -229,15 +299,52 @@ test("plans arrival: restore, open the link, or ask before replacing unsaved wor
   });
   // Returning with the same design in memory (a client-side navigation) restores the stage too.
   assert.equal(planArrival("", readDraft(), complete).kind, "restore");
-  assert.deepEqual(planArrival("?design=" + "D".repeat(22), readDraft(), initialConfigurationState), { kind: "confirm", reason: "design" });
-  assert.deepEqual(planArrival("?share=" + "S".repeat(43), readDraft(), initialConfigurationState), { kind: "confirm", reason: "share" });
-  assert.deepEqual(planArrival("?project=P&version=V", readDraft(), initialConfigurationState), { kind: "confirm", reason: "project" });
+  assert.deepEqual(
+    planArrival(
+      "?design=" + "D".repeat(22),
+      readDraft(),
+      initialConfigurationState,
+    ),
+    { kind: "confirm", reason: "design" },
+  );
+  assert.deepEqual(
+    planArrival(
+      "?share=" + "S".repeat(43),
+      readDraft(),
+      initialConfigurationState,
+    ),
+    { kind: "confirm", reason: "share" },
+  );
+  assert.deepEqual(
+    planArrival("?project=P&version=V", readDraft(), initialConfigurationState),
+    { kind: "confirm", reason: "project" },
+  );
   // A new design started before the stored one loaded never silently replaces it.
-  assert.deepEqual(planArrival("", readDraft(), { ...initialConfigurationState, shape: "round" }), { kind: "confirm", reason: "started" });
+  assert.deepEqual(
+    planArrival("", readDraft(), {
+      ...initialConfigurationState,
+      shape: "round",
+    }),
+    { kind: "confirm", reason: "started" },
+  );
 
   recordLinkRestore("design:" + "D".repeat(22), complete);
-  assert.deepEqual(planArrival("?design=" + "D".repeat(22), readDraft(), initialConfigurationState), { kind: "link" });
-  assert.deepEqual(planArrival("?design=" + "E".repeat(22), readDraft(), initialConfigurationState), { kind: "link" });
+  assert.deepEqual(
+    planArrival(
+      "?design=" + "D".repeat(22),
+      readDraft(),
+      initialConfigurationState,
+    ),
+    { kind: "link" },
+  );
+  assert.deepEqual(
+    planArrival(
+      "?design=" + "E".repeat(22),
+      readDraft(),
+      initialConfigurationState,
+    ),
+    { kind: "link" },
+  );
 });
 
 function SignOutProbe() {
@@ -247,7 +354,13 @@ function SignOutProbe() {
     <>
       <span data-testid="auth">{state.status}</span>
       <span data-testid="shape">{configuration.shape ?? "none"}</span>
-      <button onClick={() => dispatch({ type: "restoreDraft", configuration: complete })}>Restore</button>
+      <button
+        onClick={() =>
+          dispatch({ type: "restoreDraft", configuration: complete })
+        }
+      >
+        Restore
+      </button>
       <button onClick={() => void logout()}>Sign out</button>
     </>
   );
@@ -258,22 +371,54 @@ test("signing out clears a saved draft from storage and from the open design", a
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input) => {
     const url = String(input);
-    if (url.endsWith("/account")) return json({ email: "person@example.com", createdAt: "2026-09-30T00:00:00Z", role: "customer" });
-    if (url.endsWith("/account/sessions")) return json([{ id: 1, createdAt: "2026-09-30T00:00:00Z", expiresAt: new Date(Date.now() + 3_600_000).toISOString(), revokedAt: null, current: true }]);
-    if (url.endsWith("/auth/logout")) return new Response(null, { status: 204 });
+    if (url.endsWith("/account"))
+      return json({
+        email: "person@example.com",
+        createdAt: "2026-09-30T00:00:00Z",
+        role: "customer",
+      });
+    if (url.endsWith("/account/sessions"))
+      return json([
+        {
+          id: 1,
+          createdAt: "2026-09-30T00:00:00Z",
+          expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+          revokedAt: null,
+          current: true,
+        },
+      ]);
+    if (url.endsWith("/auth/logout"))
+      return new Response(null, { status: 204 });
     throw new Error(`Unexpected request: ${url}`);
   };
   try {
-    writeDraft({ configuration: complete, project: { projectId: "P".repeat(22), versionId: "V".repeat(22), fingerprint: designFingerprint(complete) } });
-    render(<AuthProvider><ConfigurationProvider><SignOutProbe /></ConfigurationProvider></AuthProvider>);
-    await waitFor(() => assert.equal(screen.getByTestId("auth").textContent, "authenticated"));
+    writeDraft({
+      configuration: complete,
+      project: {
+        projectId: "P".repeat(22),
+        versionId: "V".repeat(22),
+        fingerprint: designFingerprint(complete),
+      },
+    });
+    render(
+      <AuthProvider>
+        <ConfigurationProvider>
+          <SignOutProbe />
+        </ConfigurationProvider>
+      </AuthProvider>,
+    );
+    await waitFor(() =>
+      assert.equal(screen.getByTestId("auth").textContent, "authenticated"),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Restore" }));
     assert.equal(screen.getByTestId("shape").textContent, "tapered");
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
     });
-    await waitFor(() => assert.equal(screen.getByTestId("auth").textContent, "guest"));
+    await waitFor(() =>
+      assert.equal(screen.getByTestId("auth").textContent, "guest"),
+    );
     assert.equal(readDraft(), null);
     assert.equal(screen.getByTestId("shape").textContent, "none");
   } finally {
@@ -288,13 +433,23 @@ const utilityItems = [
 ];
 
 test("shows guests a quiet Sign in link that returns to the current page", async () => {
-  render(<AuthProvider><RouteAwareSiteHeader utilityItems={utilityItems} /></AuthProvider>);
+  render(
+    <AuthProvider>
+      <RouteAwareSiteHeader utilityItems={utilityItems} />
+    </AuthProvider>,
+  );
   const utilities = screen.getByRole("list", { name: "Shopping and account" });
   // My projects and Cart would only ask a guest to sign in.
   await waitFor(() =>
-    assert.deepEqual(Array.from(utilities.querySelectorAll("a"), (link) => link.textContent), ["Sign in"]),
+    assert.deepEqual(
+      Array.from(utilities.querySelectorAll("a"), (link) => link.textContent),
+      ["Sign in"],
+    ),
   );
-  assert.match(screen.getByRole("link", { name: "Sign in" }).getAttribute("href") ?? "", /^\/account\/?\?mode=login&returnTo=home$/);
+  assert.match(
+    screen.getByRole("link", { name: "Sign in" }).getAttribute("href") ?? "",
+    /^\/account\/?\?mode=login&returnTo=home$/,
+  );
 });
 
 test("keeps the Account link for a stored or verified session", async () => {
@@ -302,11 +457,20 @@ test("keeps the Account link for a stored or verified session", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Promise<Response>(() => undefined);
   try {
-    render(<AuthProvider><RouteAwareSiteHeader utilityItems={utilityItems} /></AuthProvider>);
+    render(
+      <AuthProvider>
+        <RouteAwareSiteHeader utilityItems={utilityItems} />
+      </AuthProvider>,
+    );
     await screen.findByRole("link", { name: "Account" });
     assert.equal(screen.queryByRole("link", { name: "Sign in" }), null);
     assert.deepEqual(
-      Array.from(screen.getByRole("list", { name: "Shopping and account" }).querySelectorAll("a"), (link) => link.textContent),
+      Array.from(
+        screen
+          .getByRole("list", { name: "Shopping and account" })
+          .querySelectorAll("a"),
+        (link) => link.textContent,
+      ),
       ["My projects", "Cart", "Account"],
     );
   } finally {

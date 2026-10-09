@@ -102,14 +102,9 @@ test("reads one safely decoded public ID on ordinary and GitHub Pages paths", as
   const encodedId = "%41bCdEfGhIjKlMnOpQrSt%5F1";
   const urls = [
     new URL(`https://example.test/configure/?design=${encodedId}`),
-    new URL(
-      `https://example.test/sewncovers/configure/?design=${encodedId}`,
-    ),
+    new URL(`https://example.test/sewncovers/configure/?design=${encodedId}`),
   ];
-  const harness = createHarness(
-    SharedDesignController,
-    async () => design(),
-  );
+  const harness = createHarness(SharedDesignController, async () => design());
 
   for (const url of urls) {
     assert.deepEqual(readSharedDesignId(url.search), {
@@ -129,10 +124,7 @@ test("reads one safely decoded public ID on ordinary and GitHub Pages paths", as
 test("rejects empty, duplicate, malformed, truncated, and invalidly encoded IDs", async () => {
   const { readSharedDesignId, SharedDesignController } =
     await loadSharedDesign();
-  const harness = createHarness(
-    SharedDesignController,
-    async () => design(),
-  );
+  const harness = createHarness(SharedDesignController, async () => design());
   const malformedSearches = [
     "?design=",
     "?design=short",
@@ -146,10 +138,7 @@ test("rejects empty, duplicate, malformed, truncated, and invalidly encoded IDs"
       status: "malformed",
     });
     harness.controller.start(search, readyCatalogue());
-    assert.equal(
-      harness.controller.getSnapshot().phase,
-      "malformed-id",
-    );
+    assert.equal(harness.controller.getSnapshot().phase, "malformed-id");
   }
   assert.deepEqual(harness.calls, []);
   assert.deepEqual(harness.restored, []);
@@ -213,10 +202,7 @@ test("exactly restores every shape and both units with decimal values", async ()
   ];
 
   for (const response of cases) {
-    const harness = createHarness(
-      SharedDesignController,
-      async () => response,
-    );
+    const harness = createHarness(SharedDesignController, async () => response);
     harness.controller.start(
       `?design=${encodeURIComponent(publicId)}`,
       readyCatalogue(),
@@ -244,10 +230,7 @@ test("exactly restores every shape and both units with decimal values", async ()
       "seamStyle",
     ]);
     assert.equal(Object.isFrozen(harness.restored[0]), true);
-    assert.equal(
-      harness.controller.getSnapshot().phase,
-      "restored",
-    );
+    assert.equal(harness.controller.getSnapshot().phase, "restored");
   }
 });
 
@@ -260,28 +243,27 @@ test("restores legacy responses with safe cover-detail defaults", async () => {
   delete legacy.closureType;
   delete legacy.seamStyle;
   delete legacy.solidColor;
-  const harness = createHarness(
-    SharedDesignController,
-    async () => legacy,
-  );
+  const harness = createHarness(SharedDesignController, async () => legacy);
 
   harness.controller.start(`?design=${publicId}`, readyCatalogue());
   await settle();
 
-  assert.deepEqual(harness.restored, [{
-    shape: legacy.shape,
-    width: legacy.width,
-    height: legacy.height,
-    backWidth: null,
-    thickness: legacy.thickness,
-    unit: legacy.unit,
-    pattern: { kind: "built-in", patternId: legacy.patternId },
-    patternScale: legacy.patternScale,
-    materialId: "cotton-canvas",
-    fitPreference: "standard",
-    closureType: "zipper",
-    seamStyle: "plain",
-  }]);
+  assert.deepEqual(harness.restored, [
+    {
+      shape: legacy.shape,
+      width: legacy.width,
+      height: legacy.height,
+      backWidth: null,
+      thickness: legacy.thickness,
+      unit: legacy.unit,
+      pattern: { kind: "built-in", patternId: legacy.patternId },
+      patternScale: legacy.patternScale,
+      materialId: "cotton-canvas",
+      fitPreference: "standard",
+      closureType: "zipper",
+      seamStyle: "plain",
+    },
+  ]);
 });
 
 test("restores a solid fabric without requiring a catalogue pattern", async () => {
@@ -290,10 +272,7 @@ test("restores a solid fabric without requiring a catalogue pattern", async () =
     patternId: null,
     solidColor: "#0B1320",
   });
-  const harness = createHarness(
-    SharedDesignController,
-    async () => response,
-  );
+  const harness = createHarness(SharedDesignController, async () => response);
 
   harness.controller.start(`?design=${publicId}`, {
     patterns: [],
@@ -327,17 +306,11 @@ test("waits for the API catalogue before restoring a valid pattern", async () =>
     status: "loading",
   });
   assert.equal(harness.controller.getSnapshot().phase, "loading");
-  assert.match(
-    harness.controller.getSnapshot().message,
-    /may be waking up/i,
-  );
+  assert.match(harness.controller.getSnapshot().message, /may be waking up/i);
 
   response.resolve(design());
   await settle();
-  assert.equal(
-    harness.controller.getSnapshot().phase,
-    "waiting-patterns",
-  );
+  assert.equal(harness.controller.getSnapshot().phase, "waiting-patterns");
   assert.deepEqual(harness.restored, []);
 
   harness.controller.updateCatalogue(readyCatalogue());
@@ -355,43 +328,28 @@ test("ignores a late response after a user edit", async () => {
 
   harness.controller.start(`?design=${publicId}`, readyCatalogue());
   harness.edit();
-  assert.equal(
-    harness.controller.getSnapshot().phase,
-    "superseded",
-  );
+  assert.equal(harness.controller.getSnapshot().phase, "superseded");
 
   pending.resolve(design());
   await settle();
   assert.deepEqual(harness.restored, []);
-  assert.equal(
-    harness.controller.getSnapshot().phase,
-    "superseded",
-  );
+  assert.equal(harness.controller.getSnapshot().phase, "superseded");
 });
 
 test("preserves an edit made while a retrieved design waits for patterns", async () => {
   const { SharedDesignController } = await loadSharedDesign();
-  const harness = createHarness(
-    SharedDesignController,
-    async () => design(),
-  );
+  const harness = createHarness(SharedDesignController, async () => design());
 
   harness.controller.start(`?design=${publicId}`, {
     status: "loading",
   });
   await settle();
-  assert.equal(
-    harness.controller.getSnapshot().phase,
-    "waiting-patterns",
-  );
+  assert.equal(harness.controller.getSnapshot().phase, "waiting-patterns");
 
   harness.edit();
   harness.controller.updateCatalogue(readyCatalogue());
   assert.deepEqual(harness.restored, []);
-  assert.equal(
-    harness.controller.getSnapshot().phase,
-    "superseded",
-  );
+  assert.equal(harness.controller.getSnapshot().phase, "superseded");
 });
 
 test("rejects malformed or mismatched retrieval responses without exposing fields", async () => {
@@ -405,17 +363,11 @@ test("rejects malformed or mismatched retrieval responses without exposing field
   ];
 
   for (const response of malformedResponses) {
-    const harness = createHarness(
-      SharedDesignController,
-      async () => response,
-    );
+    const harness = createHarness(SharedDesignController, async () => response);
     harness.controller.start(`?design=${publicId}`, readyCatalogue());
     await settle();
 
-    assert.equal(
-      harness.controller.getSnapshot().phase,
-      "malformed-response",
-    );
+    assert.equal(harness.controller.getSnapshot().phase, "malformed-response");
     assert.doesNotMatch(
       harness.controller.getSnapshot().message,
       /internalDatabaseId|42/,
@@ -474,9 +426,8 @@ test("supports explicit request retry and pattern-load recovery", async () => {
   assert.equal(harness.controller.getSnapshot().phase, "restored");
   assert.deepEqual(harness.calls, [publicId, publicId]);
 
-  const catalogueHarness = createHarness(
-    SharedDesignController,
-    async () => design(),
+  const catalogueHarness = createHarness(SharedDesignController, async () =>
+    design(),
   );
   catalogueHarness.controller.start(`?design=${publicId}`, {
     issues: ["fixed public issue"],
@@ -488,29 +439,20 @@ test("supports explicit request retry and pattern-load recovery", async () => {
     "catalogue-error",
   );
   catalogueHarness.controller.updateCatalogue(readyCatalogue());
-  assert.equal(
-    catalogueHarness.controller.getSnapshot().phase,
-    "restored",
-  );
+  assert.equal(catalogueHarness.controller.getSnapshot().phase, "restored");
   assert.equal(catalogueHarness.restored.length, 1);
 });
 
 test("reports unavailable patterns and can recover when the catalogue changes", async () => {
   const { SharedDesignController } = await loadSharedDesign();
-  const harness = createHarness(
-    SharedDesignController,
-    async () => design(),
-  );
+  const harness = createHarness(SharedDesignController, async () => design());
 
   harness.controller.start(
     `?design=${publicId}`,
     readyCatalogue("different-pattern"),
   );
   await settle();
-  assert.equal(
-    harness.controller.getSnapshot().phase,
-    "pattern-unavailable",
-  );
+  assert.equal(harness.controller.getSnapshot().phase, "pattern-unavailable");
   assert.deepEqual(harness.restored, []);
 
   harness.controller.updateCatalogue(readyCatalogue());
@@ -567,15 +509,9 @@ test("shared-design UI declares loading, success, retry, and continue recovery s
   assert.match(sharedDesignLoaderSource, /role="status"/);
   assert.match(sharedDesignLoaderSource, /aria-live="polite"/);
   assert.match(sharedDesignLoaderSource, /<ErrorMessage/);
-  assert.match(
-    sharedDesignLoaderSource,
-    /Try loading the shared design again/,
-  );
+  assert.match(sharedDesignLoaderSource, /Try loading the shared design again/);
   assert.match(sharedDesignLoaderSource, /Try loading patterns again/);
-  assert.match(
-    sharedDesignLoaderSource,
-    /Continue with my configuration/,
-  );
+  assert.match(sharedDesignLoaderSource, /Continue with my configuration/);
   assert.match(sharedDesignLoaderSource, /history\.replaceState/);
   assert.doesNotMatch(sharedDesignLoaderSource, /createDesign|saveDesign/);
 });

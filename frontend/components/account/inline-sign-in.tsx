@@ -87,9 +87,7 @@ export function InlineSignIn({
       </div>
       <p className="mt-component flex flex-wrap items-center gap-x-1 text-supporting text-text-muted">
         <span>
-          {mode === "login"
-            ? "New to SewnCovers?"
-            : "Already have an account?"}
+          {mode === "login" ? "New to SewnCovers?" : "Already have an account?"}
         </span>
         <Button
           size="compact"

@@ -1,16 +1,8 @@
-export type CushionShape =
-  | "box"
-  | "rectangle"
-  | "round"
-  | "square"
-  | "tapered";
+export type CushionShape = "box" | "rectangle" | "round" | "square" | "tapered";
 
 export type MeasurementUnit = "cm" | "in";
 
-export type MaterialId =
-  | "cotton-canvas"
-  | "linen-blend"
-  | "polyester-weave";
+export type MaterialId = "cotton-canvas" | "linen-blend" | "polyester-weave";
 export type FitPreference = "close" | "relaxed" | "standard";
 export type ClosureType = "envelope" | "slip-on" | "zipper";
 export type SeamStyle = "piped" | "plain";
@@ -107,8 +99,6 @@ export function getBuiltInPatternId(
   return pattern?.kind === "built-in" ? pattern.patternId : null;
 }
 
-export function getSolidColor(
-  pattern: PatternChoice | null,
-): string | null {
+export function getSolidColor(pattern: PatternChoice | null): string | null {
   return pattern?.kind === "solid" ? pattern.color : null;
 }

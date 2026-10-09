@@ -1,13 +1,7 @@
 export type AuthenticationMode = "login" | "register";
 
 export type AuthenticationReturnTarget =
-  | "cart"
-  | "configure"
-  | "home"
-  | "legal"
-  | "orders"
-  | "pricing"
-  | "projects";
+  "cart" | "configure" | "home" | "legal" | "orders" | "pricing" | "projects";
 
 const RETURN_PATHS: Readonly<Record<AuthenticationReturnTarget, string>> = {
   cart: "/cart/",
@@ -19,7 +13,9 @@ const RETURN_PATHS: Readonly<Record<AuthenticationReturnTarget, string>> = {
   projects: "/projects/",
 };
 
-export function parseAuthenticationMode(value: string | null): AuthenticationMode {
+export function parseAuthenticationMode(
+  value: string | null,
+): AuthenticationMode {
   return value === "register" ? "register" : "login";
 }
 
@@ -46,11 +42,15 @@ export function returnTargetForPath(
   basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "",
 ): AuthenticationReturnTarget | null {
   const base = basePath.replace(/\/+$/, "");
-  const path = (base && pathname.startsWith(base) ? pathname.slice(base.length) : pathname)
+  const path = (
+    base && pathname.startsWith(base) ? pathname.slice(base.length) : pathname
+  )
     .split(/[?#]/, 1)[0]
     .replace(/\/*$/, "/");
   if (path.startsWith("/checkout/")) return "orders";
-  const entry = Object.entries(RETURN_PATHS).find(([, target]) => target === path);
+  const entry = Object.entries(RETURN_PATHS).find(
+    ([, target]) => target === path,
+  );
   return entry ? (entry[0] as AuthenticationReturnTarget) : null;
 }
 
@@ -70,6 +70,7 @@ export function resolveAuthenticationReturnDestination(
   if (!target) return null;
 
   const normalizedBasePath = basePath.replace(/\/+$/, "");
-  const safeBasePath = normalizedBasePath === "/SewnCovers" ? normalizedBasePath : "";
+  const safeBasePath =
+    normalizedBasePath === "/SewnCovers" ? normalizedBasePath : "";
   return `${safeBasePath}${RETURN_PATHS[target]}`;
 }

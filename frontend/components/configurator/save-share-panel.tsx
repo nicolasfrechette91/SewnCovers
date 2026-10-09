@@ -69,7 +69,8 @@ export function SaveSharePanel({
   }, [saveState.phase]);
 
   // Opening this public link later must not be mistaken for replacing work.
-  const savedPublicId = saveState.phase === "success" ? saveState.publicId : null;
+  const savedPublicId =
+    saveState.phase === "success" ? saveState.publicId : null;
   useEffect(() => {
     if (savedPublicId) recordPublicDesign(savedPublicId, configuration);
   }, [configuration, savedPublicId]);
@@ -92,9 +93,7 @@ export function SaveSharePanel({
     try {
       await copyDesignShareUrl(
         saveState.shareUrl,
-        typeof navigator === "undefined"
-          ? undefined
-          : navigator.clipboard,
+        typeof navigator === "undefined" ? undefined : navigator.clipboard,
       );
       setCopyState("success");
     } catch {
@@ -121,8 +120,8 @@ export function SaveSharePanel({
         Create a public link
       </h2>
       <p className="mt-3 max-w-3xl break-words text-body text-text-muted">
-        Get a link to this design. Anyone with the link can view it, and a
-        saved design can&apos;t be changed.
+        Get a link to this design. Anyone with the link can view it, and a saved
+        design can&apos;t be changed.
       </p>
 
       {customPatternSelected ? (

@@ -48,7 +48,11 @@ afterEach(() => {
 test("a wrong passphrase on account deletion keeps the user signed in", async () => {
   storeSessionToken(TOKEN);
   respondWith(() =>
-    envelope(401, "authentication_failed", "Email or password could not be accepted."),
+    envelope(
+      401,
+      "authentication_failed",
+      "Email or password could not be accepted.",
+    ),
   );
 
   await assert.rejects(
@@ -85,22 +89,29 @@ test("limited and busy responses carry the wait and the request id", async () =>
     ),
   );
 
-  await assert.rejects(accountApi.login("a@example.invalid", "x".repeat(12)), (error) => {
-    assert.ok(error instanceof AccountApiError);
-    assert.equal(error.status, 429);
-    assert.equal(error.code, "credential_throttled");
-    assert.equal(error.retryAfterSeconds, 120);
-    assert.equal(error.requestId, REQUEST_ID);
-    return true;
-  });
+  await assert.rejects(
+    accountApi.login("a@example.invalid", "x".repeat(12)),
+    (error) => {
+      assert.ok(error instanceof AccountApiError);
+      assert.equal(error.status, 429);
+      assert.equal(error.code, "credential_throttled");
+      assert.equal(error.retryAfterSeconds, 120);
+      assert.equal(error.requestId, REQUEST_ID);
+      return true;
+    },
+  );
 
   for (const header of ["soon", "Wed, 21 Oct 2026 07:28:00 GMT", "0", "-5"]) {
     respondWith(() =>
-      envelope(503, "service_busy", "The service is busy.", { "Retry-After": header }),
+      envelope(503, "service_busy", "The service is busy.", {
+        "Retry-After": header,
+      }),
     );
     await assert.rejects(
       accountApi.login("a@example.invalid", "x".repeat(12)),
-      (error) => error instanceof AccountApiError && error.retryAfterSeconds === undefined,
+      (error) =>
+        error instanceof AccountApiError &&
+        error.retryAfterSeconds === undefined,
     );
   }
 });
@@ -109,11 +120,16 @@ test("sign-in wording uses the server's wait and never calls a busy server aslee
   const limited = new AccountApiError("x", 429, "credential_throttled", {
     retryAfterSeconds: 90,
   });
-  const busy = new AccountApiError("x", 503, "service_busy", { retryAfterSeconds: 2 });
+  const busy = new AccountApiError("x", 503, "service_busy", {
+    retryAfterSeconds: 2,
+  });
   const sleeping = new AccountApiError("x", 503, "storage_unavailable");
 
   for (const mode of ["login", "register"] as const) {
-    assert.equal(signInErrorMessage(limited, mode), "Too many attempts. Try again in 2 minutes.");
+    assert.equal(
+      signInErrorMessage(limited, mode),
+      "Too many attempts. Try again in 2 minutes.",
+    );
     assert.equal(
       signInErrorMessage(busy, mode),
       "The SewnCovers service is busy right now. Wait a few seconds and try again.",
@@ -121,31 +137,35 @@ test("sign-in wording uses the server's wait and never calls a busy server aslee
     assert.match(signInErrorMessage(sleeping, mode), /may be waking up/);
   }
   assert.match(
-    signInErrorMessage(new AccountApiError("x", 429, "credential_throttled"), "login"),
+    signInErrorMessage(
+      new AccountApiError("x", 429, "credential_throttled"),
+      "login",
+    ),
     /Wait a few minutes before trying again/,
   );
 });
 
 test("waits are described the way the API describes them", () => {
-  assert.deepEqual(
-    [1, 5, 6, 59, 60, 61, 3_599, 3_600, 7_200].map(waitPhrase),
-    [
-      "a few seconds",
-      "a few seconds",
-      "6 seconds",
-      "59 seconds",
-      "1 minute",
-      "2 minutes",
-      "1 hour",
-      "1 hour",
-      "2 hours",
-    ],
-  );
+  assert.deepEqual([1, 5, 6, 59, 60, 61, 3_599, 3_600, 7_200].map(waitPhrase), [
+    "a few seconds",
+    "a few seconds",
+    "6 seconds",
+    "59 seconds",
+    "1 minute",
+    "2 minutes",
+    "1 hour",
+    "1 hour",
+    "2 hours",
+  ]);
 });
 
 test("an upload over the size limit says so instead of a generic transfer error", async () => {
   respondWith(() =>
-    envelope(413, "payload_too_large", "The request is larger than this endpoint accepts."),
+    envelope(
+      413,
+      "payload_too_large",
+      "The request is larger than this endpoint accepts.",
+    ),
   );
   const operation = {
     method: "PUT" as const,
@@ -161,13 +181,18 @@ test("an upload over the size limit says so instead of a generic transfer error"
       error instanceof AccountApiError &&
       error.status === 413 &&
       error.code === "payload_too_large" &&
-      error.message === "This image is larger than the 10 MB upload limit. Choose a smaller file.",
+      error.message ===
+        "This image is larger than the 10 MB upload limit. Choose a smaller file.",
   );
 });
 
 test("administrator routes report a permission failure with its stable code", async () => {
   respondWith(() =>
-    envelope(403, "permission_denied", "This action requires an administrator account."),
+    envelope(
+      403,
+      "permission_denied",
+      "This action requires an administrator account.",
+    ),
   );
 
   await assert.rejects(

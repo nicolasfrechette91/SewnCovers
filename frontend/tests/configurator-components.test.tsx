@@ -30,10 +30,7 @@ import {
 } from "../components/configurator/review-summary";
 import { SaveSharePanel } from "../components/configurator/save-share-panel";
 import type { PatternDefinition } from "../data/patterns";
-import {
-  ALL_PATTERN_CATEGORIES,
-  ALL_PATTERN_COLORS,
-} from "../data/patterns";
+import { ALL_PATTERN_CATEGORIES, ALL_PATTERN_COLORS } from "../data/patterns";
 import {
   DesignSaveController,
   mapConfigurationToCreateDesign,
@@ -225,7 +222,15 @@ function StateProbe() {
       <span data-testid="current-shape">{state.shape ?? "none"}</span>
       <span data-testid="current-width">{state.width ?? "none"}</span>
       <span data-testid="current-height">{state.height ?? "none"}</span>
-      <span data-testid="current-pattern">{state.pattern?.kind === "built-in" ? state.pattern.patternId : state.pattern?.kind === "custom" ? state.pattern.label : state.pattern?.kind === "solid" ? state.pattern.color : "none"}</span>
+      <span data-testid="current-pattern">
+        {state.pattern?.kind === "built-in"
+          ? state.pattern.patternId
+          : state.pattern?.kind === "custom"
+            ? state.pattern.label
+            : state.pattern?.kind === "solid"
+              ? state.pattern.color
+              : "none"}
+      </span>
       <span data-testid="current-material">{state.materialId}</span>
       <span data-testid="current-fit">{state.fitPreference}</span>
       <span data-testid="current-closure">{state.closureType}</span>
@@ -293,9 +298,10 @@ test("communicates staged progress and enables only completed steps for revisiti
 
   assert.ok(screen.getByText("Stage 2 of 3"));
   assert.equal(
-    screen.getByText("Measurements").closest("li")?.getAttribute(
-      "aria-current",
-    ),
+    screen
+      .getByText("Measurements")
+      .closest("li")
+      ?.getAttribute("aria-current"),
     "step",
   );
   assert.match(
@@ -308,10 +314,7 @@ test("communicates staged progress and enables only completed steps for revisiti
   );
   // Upcoming stages are not buttons; a completed one is named by its visible
   // label first, then its status and place.
-  assert.equal(
-    screen.queryByRole("button", { name: /^Pattern/ }),
-    null,
-  );
+  assert.equal(screen.queryByRole("button", { name: /^Pattern/ }), null);
 
   fireEvent.click(
     screen.getByRole("button", {
@@ -341,7 +344,12 @@ test("selects accessible shape choices and resets context state", () => {
   assert.equal(box.required, true);
   assert.ok(screen.getByText(/closest to the cushion you have/i));
   // The page header holds the h1 on this stage.
-  assert.ok(screen.getByRole("heading", { level: 2, name: "Choose your cushion shape" }));
+  assert.ok(
+    screen.getByRole("heading", {
+      level: 2,
+      name: "Choose your cushion shape",
+    }),
+  );
   // The check mark and outline show the choice; there is no status badge.
   assert.equal(screen.queryByText(/^(Available|Selected)$/), null);
 
@@ -353,9 +361,11 @@ test("selects accessible shape choices and resets context state", () => {
   assert.equal(rectangle.checked, true);
   assert.equal(screen.getByTestId("current-shape").textContent, "rectangle");
 
-  fireEvent.click(screen.getByRole("button", {
-    name: "Reset test configuration",
-  }));
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Reset test configuration",
+    }),
+  );
   assert.equal(screen.getByTestId("current-shape").textContent, "none");
 });
 
@@ -364,17 +374,31 @@ test("warns before an equal-dimension shape replaces a meaningful height", () =>
 
   fireEvent.click(screen.getByRole("radio", { name: "Round cushion" }));
   assert.equal(screen.getByTestId("current-shape").textContent, "rectangle");
-  assert.ok(screen.getByRole("heading", { name: "Use the same width and height?" }));
-  assert.match(screen.getByText(/height will match your width/i).textContent ?? "", /80 cm/);
+  assert.ok(
+    screen.getByRole("heading", { name: "Use the same width and height?" }),
+  );
+  assert.match(
+    screen.getByText(/height will match your width/i).textContent ?? "",
+    /80 cm/,
+  );
 
-  fireEvent.keyDown(screen.getByRole("heading", { name: "Use the same width and height?" }).parentElement!, {
-    key: "Escape",
-  });
-  assert.equal(screen.queryByRole("heading", { name: "Use the same width and height?" }), null);
+  fireEvent.keyDown(
+    screen.getByRole("heading", { name: "Use the same width and height?" })
+      .parentElement!,
+    {
+      key: "Escape",
+    },
+  );
+  assert.equal(
+    screen.queryByRole("heading", { name: "Use the same width and height?" }),
+    null,
+  );
   assert.equal(screen.getByTestId("current-height").textContent, "40");
 
   fireEvent.click(screen.getByRole("radio", { name: "Round cushion" }));
-  fireEvent.click(screen.getByRole("button", { name: "Use the width for both" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Use the width for both" }),
+  );
   assert.equal(screen.getByTestId("current-shape").textContent, "round");
   assert.equal(screen.getByTestId("current-width").textContent, "80");
   assert.equal(screen.getByTestId("current-height").textContent, "80");
@@ -392,10 +416,7 @@ test("shows shape-specific measurement fields and user-visible validation", () =
 
   assert.ok(screen.getByRole("textbox", { name: "Width (cm)" }));
   assert.ok(screen.getByRole("textbox", { name: "Thickness (cm)" }));
-  assert.equal(
-    screen.queryByRole("textbox", { name: "Height (cm)" }),
-    null,
-  );
+  assert.equal(screen.queryByRole("textbox", { name: "Height (cm)" }), null);
 
   const width = screen.getByRole("textbox", { name: "Width (cm)" });
   fireEvent.change(width, { target: { value: "45.125" } });
@@ -414,16 +435,13 @@ test("shows shape-specific measurement fields and user-visible validation", () =
 });
 
 test("associates tapered guidance and relationship errors with each measurement", () => {
-  renderWithConfiguration(
-    <MeasurementStep />,
-    {
-      ...completeConfiguration,
-      shape: "tapered",
-      width: 80,
-      backWidth: 65,
-      height: 55,
-    },
-  );
+  renderWithConfiguration(<MeasurementStep />, {
+    ...completeConfiguration,
+    shape: "tapered",
+    width: 80,
+    backWidth: 65,
+    height: 55,
+  });
 
   const frontWidth = screen.getByRole("textbox", { name: "Front width (cm)" });
   const backWidth = screen.getByRole("textbox", { name: "Back width (cm)" });
@@ -431,7 +449,10 @@ test("associates tapered guidance and relationship errors with each measurement"
   const frontDescriptionId = frontWidth.getAttribute("aria-describedby");
   assert.ok(frontDescriptionId);
   assert.ok(document.getElementById(frontDescriptionId));
-  assert.match(screen.getByText(/Measure the wider front edge/i).textContent ?? "", /Example: 80 cm/);
+  assert.match(
+    screen.getByText(/Measure the wider front edge/i).textContent ?? "",
+    /Example: 80 cm/,
+  );
 
   const guidance = screen.getByText("More measuring tips");
   assert.equal(guidance.closest("details")?.hasAttribute("open"), false);
@@ -441,28 +462,48 @@ test("associates tapered guidance and relationship errors with each measurement"
   fireEvent.change(backWidth, { target: { value: "80" } });
   const error = screen.getByRole("status");
   assert.match(error.textContent ?? "", /smaller than front width/i);
-  assert.ok((backWidth.getAttribute("aria-describedby") ?? "").includes(error.id));
+  assert.ok(
+    (backWidth.getAttribute("aria-describedby") ?? "").includes(error.id),
+  );
 });
 
 test("selects material, fit, closure, and seam independently", () => {
   renderWithConfiguration(<CoverDetailsStep />, completeConfiguration);
 
-  assert.equal((screen.getByRole("radio", { name: "Cotton canvas" }) as HTMLInputElement).checked, true);
-  assert.equal((screen.getByRole("radio", { name: "Standard fit" }) as HTMLInputElement).checked, true);
+  assert.equal(
+    (screen.getByRole("radio", { name: "Cotton canvas" }) as HTMLInputElement)
+      .checked,
+    true,
+  );
+  assert.equal(
+    (screen.getByRole("radio", { name: "Standard fit" }) as HTMLInputElement)
+      .checked,
+    true,
+  );
   fireEvent.click(screen.getByRole("radio", { name: "Linen blend" }));
   fireEvent.click(screen.getByRole("radio", { name: "More relaxed fit" }));
   fireEvent.click(screen.getByRole("radio", { name: "Envelope opening" }));
   fireEvent.click(screen.getByRole("radio", { name: "Piped edge" }));
 
-  assert.equal(screen.getByTestId("current-material").textContent, "linen-blend");
+  assert.equal(
+    screen.getByTestId("current-material").textContent,
+    "linen-blend",
+  );
   assert.equal(screen.getByTestId("current-fit").textContent, "relaxed");
   assert.equal(screen.getByTestId("current-closure").textContent, "envelope");
   assert.equal(screen.getByTestId("current-seam").textContent, "piped");
-  assert.ok(screen.getByRole("heading", { level: 1, name: "Choose cover details" }));
+  assert.ok(
+    screen.getByRole("heading", { level: 1, name: "Choose cover details" }),
+  );
   assert.ok(screen.getByRole("group", { name: "Fit" }));
   assert.ok(screen.getByText("How snugly the cover sits on the cushion."));
   // Option copy helps someone choose; no implementation notes.
-  assert.equal(screen.queryByText(/safe default|visual profile|planning preference|rewrites/i), null);
+  assert.equal(
+    screen.queryByText(
+      /safe default|visual profile|planning preference|rewrites/i,
+    ),
+    null,
+  );
 });
 
 test("preserves a selected pattern when filters hide it and exposes recovery", () => {
@@ -511,7 +552,8 @@ test("announces unavailable selections and filtered empty results without losing
     pattern: { kind: "built-in" as const, patternId: "removed-pattern" },
   };
   const { rerender } = render(
-    <AuthProvider><ConfigurationProvider>
+    <AuthProvider>
+      <ConfigurationProvider>
         <SeedConfiguration configuration={unavailableConfiguration} />
         <PatternStep
           catalogue={catalogueState()}
@@ -519,7 +561,8 @@ test("announces unavailable selections and filtered empty results without losing
           onRetry={() => undefined}
         />
         <StateProbe />
-      </ConfigurationProvider></AuthProvider>,
+      </ConfigurationProvider>
+    </AuthProvider>,
   );
 
   assert.ok(
@@ -534,22 +577,24 @@ test("announces unavailable selections and filtered empty results without losing
   );
 
   rerender(
-    <AuthProvider><ConfigurationProvider>
-      <SeedConfiguration configuration={unavailableConfiguration} />
-      <PatternStep
-        catalogue={catalogueState({
-          filters: {
-            categoryId: "woven",
-            colorId: "rose",
-          },
-          phase: "empty",
-          visiblePatterns: [],
-        })}
-        onFiltersChange={() => undefined}
-        onRetry={() => undefined}
-      />
-      <StateProbe />
-    </ConfigurationProvider></AuthProvider>,
+    <AuthProvider>
+      <ConfigurationProvider>
+        <SeedConfiguration configuration={unavailableConfiguration} />
+        <PatternStep
+          catalogue={catalogueState({
+            filters: {
+              categoryId: "woven",
+              colorId: "rose",
+            },
+            phase: "empty",
+            visiblePatterns: [],
+          })}
+          onFiltersChange={() => undefined}
+          onRetry={() => undefined}
+        />
+        <StateProbe />
+      </ConfigurationProvider>
+    </AuthProvider>,
   );
   assert.ok(screen.getByRole("heading", { name: "No patterns match" }));
   assert.equal(
@@ -575,12 +620,20 @@ test("shows every built-in pattern at once with a single count line", () => {
   assert.equal(container.querySelectorAll(".pattern-card-input").length, 16);
   assert.ok(screen.getByRole("radio", { name: "Confetti Grid" }));
   assert.ok(screen.getByRole("radio", { name: "Orchard Stripe" }));
-  assert.equal(screen.queryByRole("button", { name: /Show all|Show fewer/ }), null);
+  assert.equal(
+    screen.queryByRole("button", { name: /Show all|Show fewer/ }),
+    null,
+  );
   // One line is both the visible count and the live status.
   assert.equal(screen.getAllByText(/15 patterns/).length, 1);
   assert.equal(screen.getByText("15 patterns").getAttribute("role"), "status");
   assert.equal(screen.queryByText(/Showing/), null);
-  assert.ok(screen.getByRole("heading", { level: 1, name: "Choose a colour or pattern" }));
+  assert.ok(
+    screen.getByRole("heading", {
+      level: 1,
+      name: "Choose a colour or pattern",
+    }),
+  );
   assert.ok(screen.getByRole("heading", { level: 2, name: "Plain colour" }));
   assert.ok(screen.getByRole("heading", { level: 2, name: "Patterns" }));
 });
@@ -641,10 +694,9 @@ test("combines local search with existing filters and keeps filter semantics", a
     completeConfiguration,
   );
 
-  fireEvent.change(
-    screen.getByRole("searchbox", { name: "Search patterns" }),
-    { target: { value: "blue" } },
-  );
+  fireEvent.change(screen.getByRole("searchbox", { name: "Search patterns" }), {
+    target: { value: "blue" },
+  });
   assert.ok(screen.getByRole("radio", { name: "Diamond Path" }));
   assert.equal(screen.queryByRole("radio", { name: "Arch Grid" }), null);
   assert.ok(await screen.findByText("1 of 15 patterns match"));
@@ -714,10 +766,9 @@ test("shows no-results recovery and preserves private/custom separation", async 
     customConfiguration,
   );
 
-  fireEvent.change(
-    screen.getByRole("searchbox", { name: "Search patterns" }),
-    { target: { value: "not in this catalogue" } },
-  );
+  fireEvent.change(screen.getByRole("searchbox", { name: "Search patterns" }), {
+    target: { value: "not in this catalogue" },
+  });
   assert.ok(screen.getByRole("heading", { name: "No patterns match" }));
   assert.ok(await screen.findByRole("region", { name: "Your patterns" }));
   assert.equal(
@@ -750,9 +801,15 @@ test("keeps a selection anywhere in the catalogue visible and replaceable", () =
     true,
   );
   assert.equal(screen.queryByRole("heading", { name: /outside/i }), null);
-  assert.equal(screen.getByTestId("current-pattern").textContent, "terrace-wave");
+  assert.equal(
+    screen.getByTestId("current-pattern").textContent,
+    "terrace-wave",
+  );
   fireEvent.click(screen.getByRole("radio", { name: "Diamond Path" }));
-  assert.equal(screen.getByTestId("current-pattern").textContent, "diamond-path");
+  assert.equal(
+    screen.getByTestId("current-pattern").textContent,
+    "diamond-path",
+  );
   assert.equal(
     (screen.getByRole("radio", { name: "Diamond Path" }) as HTMLInputElement)
       .checked,
@@ -790,7 +847,9 @@ test("selects solid fabric, validates the colour code, and keeps it outside disc
 
   fireEvent.change(hex, { target: { value: "#12" } });
   assert.equal(hex.getAttribute("aria-invalid"), "true");
-  assert.ok(screen.getByRole("alert").textContent?.includes("six-digit colour code"));
+  assert.ok(
+    screen.getByRole("alert").textContent?.includes("six-digit colour code"),
+  );
   assert.equal(screen.getByTestId("current-pattern").textContent, "#B8AFA3");
 
   fireEvent.change(hex, { target: { value: "1a2b3c" } });
@@ -801,10 +860,9 @@ test("selects solid fabric, validates the colour code, and keeps it outside disc
   fireEvent.change(nativePicker, { target: { value: "#f5f2eb" } });
   assert.equal(screen.getByTestId("current-pattern").textContent, "#F5F2EB");
 
-  fireEvent.change(
-    screen.getByRole("searchbox", { name: "Search patterns" }),
-    { target: { value: "does not exist" } },
-  );
+  fireEvent.change(screen.getByRole("searchbox", { name: "Search patterns" }), {
+    target: { value: "does not exist" },
+  });
   assert.ok(screen.getByRole("radio", { name: "Solid colour" }));
   assert.ok(screen.getByRole("heading", { name: "No patterns match" }));
   assert.equal(
@@ -855,7 +913,9 @@ test("previews the chosen built-in pattern on the cushion at the current size", 
     "Choose a colour or pattern to see it on your cushion.",
   );
   assert.equal(
-    container.querySelector(".fabric-preview svg")?.getAttribute("data-fabric-kind"),
+    container
+      .querySelector(".fabric-preview svg")
+      ?.getAttribute("data-fabric-kind"),
     "neutral",
   );
 });
@@ -881,14 +941,20 @@ test("renders solid fabric inside the reusable mask with detail layers and revie
   const face = container.querySelector(".cushion-preview-solid") as HTMLElement;
   assert.ok(face);
   assert.equal(face.style.backgroundColor, "rgb(17, 24, 39)");
-  assert.ok(container.querySelector(".cushion-preview-pattern-viewport[clip-path]"));
+  assert.ok(
+    container.querySelector(".cushion-preview-pattern-viewport[clip-path]"),
+  );
   assert.ok(container.querySelector(".cushion-preview-shading"));
   assert.ok(container.querySelector(".cushion-preview-highlight"));
   assert.ok(container.querySelector(".cushion-preview-fold"));
   assert.ok(container.querySelector(".cushion-preview-seam"));
   assert.equal(screen.queryByRole("slider", { name: "Pattern size" }), null);
-  const region = screen.getByRole("region", { name: "Rectangle cushion preview" });
-  assert.ok(region.textContent?.includes("Solid colour on your rectangle cushion"));
+  const region = screen.getByRole("region", {
+    name: "Rectangle cushion preview",
+  });
+  assert.ok(
+    region.textContent?.includes("Solid colour on your rectangle cushion"),
+  );
   // The Preview stage shows a swatch, never the raw colour code.
   assert.equal(region.textContent?.includes("#111827"), false);
 
@@ -902,10 +968,14 @@ test("renders solid fabric inside the reusable mask with detail layers and revie
       readiness.summary.fields
         .filter((field) => ["fabric", "solid-color"].includes(field.id))
         .map(({ label, value }) => [label, value]),
-      [["Fabric", "Solid colour"], ["Colour", "Custom colour · #111827"]],
+      [
+        ["Fabric", "Solid colour"],
+        ["Colour", "Custom colour · #111827"],
+      ],
     );
     assert.equal(
-      readiness.summary.fields.find(({ id }) => id === "solid-color")?.swatchColor,
+      readiness.summary.fields.find(({ id }) => id === "solid-color")
+        ?.swatchColor,
       "#111827",
     );
     // The download keeps the exact code beside its name.
@@ -914,7 +984,9 @@ test("renders solid fabric inside the reusable mask with detail layers and revie
       /Colour: Custom colour · #111827/,
     );
     assert.equal(
-      readiness.summary.fields.some(({ label }) => label === "Face relationship"),
+      readiness.summary.fields.some(
+        ({ label }) => label === "Face relationship",
+      ),
       false,
     );
   }
@@ -927,13 +999,26 @@ test("renders one clipped cushion model with pattern, measurements, and adjustab
   );
 
   // The figure is named by its own visible heading.
-  const preview = screen.getByRole("figure", { name: "Preview your rectangle cushion" });
+  const preview = screen.getByRole("figure", {
+    name: "Preview your rectangle cushion",
+  });
   assert.equal(screen.queryByRole("figure", { name: "Cushion preview" }), null);
-  assert.match(preview.textContent ?? "", /Fern Trail on your rectangle cushion/);
-  assert.ok(screen.getByRole("heading", { level: 1, name: "Preview your rectangle cushion" }));
+  assert.match(
+    preview.textContent ?? "",
+    /Fern Trail on your rectangle cushion/,
+  );
+  assert.ok(
+    screen.getByRole("heading", {
+      level: 1,
+      name: "Preview your rectangle cushion",
+    }),
+  );
   // One disclaimer, and no notes about how the model works.
   assert.equal(screen.getAllByText(/Illustrative preview/).length, 1);
-  assert.doesNotMatch(preview.textContent ?? "", /Currently previewing|How fit is represented|reusable cushion model/);
+  assert.doesNotMatch(
+    preview.textContent ?? "",
+    /Currently previewing|How fit is represented|reusable cushion model/,
+  );
   assert.match(preview.textContent ?? "", /Rectangle/);
   assert.match(preview.textContent ?? "", /Fern Trail/);
   assert.match(preview.textContent ?? "", /80 cm/);
@@ -945,7 +1030,9 @@ test("renders one clipped cushion model with pattern, measurements, and adjustab
   assert.ok(svg);
   assert.equal(svg.getAttribute("viewBox"), "0 0 640 430");
   assert.equal(svg.getAttribute("data-pattern-applied"), "true");
-  const face = svg.querySelector("foreignObject.cushion-preview-pattern-viewport");
+  const face = svg.querySelector(
+    "foreignObject.cushion-preview-pattern-viewport",
+  );
   assert.ok(face);
   assert.match(face.getAttribute("clip-path") ?? "", /^url\(#cushion-clip-/);
   assert.equal(
@@ -1044,7 +1131,10 @@ test("renders tapered geometry, honest construction details, fit, and review out
   });
   assert.match(preview.textContent ?? "", /More relaxed fit/);
   assert.match(preview.textContent ?? "", /Piped edge/);
-  assert.doesNotMatch(preview.textContent ?? "", /reusable cushion model|not simulated|not visible from this view/i);
+  assert.doesNotMatch(
+    preview.textContent ?? "",
+    /reusable cushion model|not simulated|not visible from this view/i,
+  );
   const svg = container.querySelector('svg[data-preview-model="cushion"]');
   assert.ok(svg);
   assert.ok(svg.querySelector(".cushion-preview-seam-piped"));
@@ -1057,7 +1147,15 @@ test("renders tapered geometry, honest construction details, fit, and review out
   if (readiness.status === "ready") {
     assert.deepEqual(
       readiness.summary.fields
-        .filter(({ id }) => ["backWidth", "material", "fit-preference", "closure-type", "seam-style"].includes(id))
+        .filter(({ id }) =>
+          [
+            "backWidth",
+            "material",
+            "fit-preference",
+            "closure-type",
+            "seam-style",
+          ].includes(id),
+        )
         .map(({ label, value }) => [label, value]),
       [
         ["Back width", "65 cm"],
@@ -1110,16 +1208,16 @@ test("prevents duplicate saves, preserves input, and recovers after API rejectio
     name: "Save and create share link",
   });
   fireEvent.click(save);
-  fireEvent.click(screen.getByRole("button", {
-    name: /Saving design/,
-  }));
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: /Saving design/,
+    }),
+  );
   assert.equal(calls, 1);
   assert.ok(screen.getByRole("status").textContent?.includes("Connecting"));
 
   rejectFirst(new Error("private API rejection"));
-  assert.ok(
-    await screen.findByText(/The design could not be saved/i),
-  );
+  assert.ok(await screen.findByText(/The design could not be saved/i));
   assert.deepEqual(configuration, completeConfiguration);
   assert.ok(screen.getByText("Your design is still here."));
   assert.equal(screen.queryByText(/automatic retry/i), null);
@@ -1169,12 +1267,12 @@ test("shows validation and timeout/network failures with explicit retry recovery
     />,
   );
 
-  fireEvent.click(screen.getByRole("button", {
-    name: "Save and create share link",
-  }));
-  assert.ok(
-    await screen.findByText(/no longer ready to save/i),
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Save and create share link",
+    }),
   );
+  assert.ok(await screen.findByText(/no longer ready to save/i));
   assert.equal(calls, 0);
 
   const recoveryController = new DesignSaveController(client, () => "unused");
@@ -1185,9 +1283,11 @@ test("shows validation and timeout/network failures with explicit retry recovery
       onSavingChange={() => undefined}
     />,
   );
-  fireEvent.click(screen.getByRole("button", {
-    name: "Save and create share link",
-  }));
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Save and create share link",
+    }),
+  );
   assert.ok(await screen.findByText(/took too long to respond/i));
   fireEvent.click(screen.getByRole("button", { name: "Try saving again" }));
   assert.ok(await screen.findByText(/could not be reached/i));
@@ -1196,8 +1296,17 @@ test("shows validation and timeout/network failures with explicit retry recovery
 
 test("preview identifies sources, scale bounds, current output and contextual edits", () => {
   const edits: string[] = [];
-  const { container } = renderWithConfiguration(<PreviewStep selectedPattern={fernPattern} onEdit={(stage) => edits.push(stage)} />, { ...completeConfiguration, patternScale: 1 });
-  assert.equal(screen.queryByRole("heading", { name: "Currently previewing" }), null);
+  const { container } = renderWithConfiguration(
+    <PreviewStep
+      selectedPattern={fernPattern}
+      onEdit={(stage) => edits.push(stage)}
+    />,
+    { ...completeConfiguration, patternScale: 1 },
+  );
+  assert.equal(
+    screen.queryByRole("heading", { name: "Currently previewing" }),
+    null,
+  );
   assert.ok(screen.getByText("Fern Trail on your rectangle cushion"));
   const slider = screen.getByRole("slider", { name: "Pattern size" });
   assert.equal((slider as HTMLInputElement).value, "1");
@@ -1206,25 +1315,65 @@ test("preview identifies sources, scale bounds, current output and contextual ed
   assert.equal(slider.getAttribute("step"), "0.1");
   for (const value of [0.5, 2]) {
     fireEvent.change(slider, { target: { value: String(value) } });
-    assert.equal(container.querySelector<HTMLElement>(".cushion-preview-face")?.style.getPropertyValue("--pattern-scale"), String(value));
-    assert.equal(slider.getAttribute("aria-valuetext"), `${value.toFixed(1)}× pattern size`);
+    assert.equal(
+      container
+        .querySelector<HTMLElement>(".cushion-preview-face")
+        ?.style.getPropertyValue("--pattern-scale"),
+      String(value),
+    );
+    assert.equal(
+      slider.getAttribute("aria-valuetext"),
+      `${value.toFixed(1)}× pattern size`,
+    );
   }
-  assert.equal((screen.getByRole("button", { name: "Larger" }) as HTMLButtonElement).disabled, true);
-  for (const name of ["Edit measurements", "Edit cover details", "Change pattern"]) fireEvent.click(screen.getByRole("button", { name }));
+  assert.equal(
+    (screen.getByRole("button", { name: "Larger" }) as HTMLButtonElement)
+      .disabled,
+    true,
+  );
+  for (const name of [
+    "Edit measurements",
+    "Edit cover details",
+    "Change pattern",
+  ])
+    fireEvent.click(screen.getByRole("button", { name }));
   assert.deepEqual(edits, ["measurements", "details", "pattern"]);
   assert.match(container.textContent ?? "", /standard size/);
   assert.equal(screen.getAllByText(/Illustrative preview/).length, 1);
-  assert.doesNotMatch(container.textContent ?? "", /demonstration pricing|manufacturing specification/);
+  assert.doesNotMatch(
+    container.textContent ?? "",
+    /demonstration pricing|manufacturing specification/,
+  );
 });
 
 test("preview keeps its silhouette stable for every shape, fit, and unit", () => {
-  for (const shape of ["square", "rectangle", "round", "tapered", "box"] as const) {
+  for (const shape of [
+    "square",
+    "rectangle",
+    "round",
+    "tapered",
+    "box",
+  ] as const) {
     for (const unit of ["cm", "in"] as const) {
       let silhouette: string | null = null;
       for (const fitPreference of ["close", "standard", "relaxed"] as const) {
-        const configuration = { ...completeConfiguration, shape, unit, width: 40, height: 40, backWidth: shape === "tapered" ? 30 : null, thickness: 5, fitPreference };
-        const { container } = renderWithConfiguration(<PreviewStep selectedPattern={fernPattern} />, configuration);
-        const model = container.querySelector('svg[data-preview-model="cushion"]');
+        const configuration = {
+          ...completeConfiguration,
+          shape,
+          unit,
+          width: 40,
+          height: 40,
+          backWidth: shape === "tapered" ? 30 : null,
+          thickness: 5,
+          fitPreference,
+        };
+        const { container } = renderWithConfiguration(
+          <PreviewStep selectedPattern={fernPattern} />,
+          configuration,
+        );
+        const model = container.querySelector(
+          'svg[data-preview-model="cushion"]',
+        );
         const edge = model?.querySelector(".cushion-preview-edge");
         assert.ok(model);
         assert.ok(edge);
@@ -1232,7 +1381,10 @@ test("preview keeps its silhouette stable for every shape, fit, and unit", () =>
         if (silhouette) assert.equal(current, silhouette);
         silhouette = current;
         assert.ok(screen.getAllByText(`40 ${unit}`).length > 0);
-        assert.doesNotMatch(container.textContent ?? "", /reusable cushion model|not simulated|not visible from this view/);
+        assert.doesNotMatch(
+          container.textContent ?? "",
+          /reusable cushion model|not simulated|not visible from this view/,
+        );
         cleanup();
       }
     }
@@ -1240,45 +1392,110 @@ test("preview keeps its silhouette stable for every shape, fit, and unit", () =>
 });
 
 test("custom preview exposes only its label and source, reuses its image, and cleans up", async (t) => {
-  const fetchMock = t.mock.method(globalThis, "fetch", async () => new Response("image"));
+  const fetchMock = t.mock.method(
+    globalThis,
+    "fetch",
+    async () => new Response("image"),
+  );
   t.mock.method(URL, "createObjectURL", () => "blob:preview-test");
   const revokeMock = t.mock.method(URL, "revokeObjectURL", () => undefined);
-  const configuration: ConfigurationState = { ...completeConfiguration, pattern: { kind: "custom", assetId: "A".repeat(22), derivativeId: "D".repeat(22), processingVersion: "tile-v1", label: "Garden drawing", previewUrl: "https://assets.example.test/private?grant=secret" } };
-  const { container } = renderWithConfiguration(<PreviewStep selectedPattern={{ name: "Garden drawing", previewClassName: "", previewUrl: configuration.pattern?.kind === "custom" ? configuration.pattern.previewUrl! : undefined }} />, configuration);
+  const configuration: ConfigurationState = {
+    ...completeConfiguration,
+    pattern: {
+      kind: "custom",
+      assetId: "A".repeat(22),
+      derivativeId: "D".repeat(22),
+      processingVersion: "tile-v1",
+      label: "Garden drawing",
+      previewUrl: "https://assets.example.test/private?grant=secret",
+    },
+  };
+  const { container } = renderWithConfiguration(
+    <PreviewStep
+      selectedPattern={{
+        name: "Garden drawing",
+        previewClassName: "",
+        previewUrl:
+          configuration.pattern?.kind === "custom"
+            ? configuration.pattern.previewUrl!
+            : undefined,
+      }}
+    />,
+    configuration,
+  );
   assert.ok(screen.getByText(/Loading your pattern/));
   await waitFor(() => assert.ok(container.querySelector("img")));
   fireEvent.load(container.querySelector("img")!);
   assert.ok(screen.getByText("Garden drawing on your rectangle cushion"));
   assert.ok(screen.getByText("Your own pattern"));
   assert.doesNotMatch(container.textContent ?? "", /A{22}|D{22}|https:|secret/);
-  fireEvent.change(screen.getByRole("slider", { name: "Pattern size" }), { target: { value: "2" } });
+  fireEvent.change(screen.getByRole("slider", { name: "Pattern size" }), {
+    target: { value: "2" },
+  });
   assert.equal(fetchMock.mock.callCount(), 1);
-  assert.equal(container.querySelector("img")?.getAttribute("src"), "blob:preview-test");
+  assert.equal(
+    container.querySelector("img")?.getAttribute("src"),
+    "blob:preview-test",
+  );
   fireEvent.error(container.querySelector("img")!);
-  assert.equal(container.querySelector('svg[data-preview-model="cushion"]')?.getAttribute("data-pattern-applied"), "false");
+  assert.equal(
+    container
+      .querySelector('svg[data-preview-model="cushion"]')
+      ?.getAttribute("data-pattern-applied"),
+    "false",
+  );
   assert.equal(container.querySelector(".cushion-preview-pattern"), null);
   assert.ok(screen.getAllByRole("status").length > 0);
   assert.ok(screen.getByText(/pattern couldn't be shown/));
   cleanup();
   assert.equal(revokeMock.mock.callCount(), 1);
-  renderWithConfiguration(<PreviewStep selectedPattern={null} />, configuration);
+  renderWithConfiguration(
+    <PreviewStep selectedPattern={null} />,
+    configuration,
+  );
   assert.ok(screen.getByText("No longer available"));
   assert.ok(screen.getByText("No fabric shown yet"));
 });
 
 test("custom preview reports denied derivatives without substitution and ignores late responses", async (t) => {
   const createMock = t.mock.method(URL, "createObjectURL", () => "blob:unused");
-  const fetchMock = t.mock.method(globalThis, "fetch", async () => new Response("", { status: 403 }));
-  const pattern = { name: "Private drawing", previewClassName: "", previewUrl: "https://assets.example.test/authorized-tile" };
-  const { container } = renderWithConfiguration(<PreviewStep selectedPattern={pattern} />, completeConfiguration);
+  const fetchMock = t.mock.method(
+    globalThis,
+    "fetch",
+    async () => new Response("", { status: 403 }),
+  );
+  const pattern = {
+    name: "Private drawing",
+    previewClassName: "",
+    previewUrl: "https://assets.example.test/authorized-tile",
+  };
+  const { container } = renderWithConfiguration(
+    <PreviewStep selectedPattern={pattern} />,
+    completeConfiguration,
+  );
   await screen.findByText(/pattern couldn't be shown/);
-  assert.equal(container.querySelector('svg[data-preview-model="cushion"]')?.getAttribute("data-pattern-applied"), "false");
+  assert.equal(
+    container
+      .querySelector('svg[data-preview-model="cushion"]')
+      ?.getAttribute("data-pattern-applied"),
+    "false",
+  );
   assert.equal(createMock.mock.callCount(), 0);
   cleanup();
   let resolveResponse!: (response: Response) => void;
-  fetchMock.mock.mockImplementation(() => new Promise<Response>((resolve) => { resolveResponse = resolve; }));
-  const view = renderWithConfiguration(<PreviewStep selectedPattern={pattern} />, completeConfiguration);
+  fetchMock.mock.mockImplementation(
+    () =>
+      new Promise<Response>((resolve) => {
+        resolveResponse = resolve;
+      }),
+  );
+  const view = renderWithConfiguration(
+    <PreviewStep selectedPattern={pattern} />,
+    completeConfiguration,
+  );
   view.unmount();
-  await act(async () => { resolveResponse(new Response("image")); });
+  await act(async () => {
+    resolveResponse(new Response("image"));
+  });
   assert.equal(createMock.mock.callCount(), 0);
 });

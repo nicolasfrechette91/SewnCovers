@@ -2,8 +2,7 @@ import type { NextConfig } from "next";
 
 import { createBuildEnvironment } from "./config/build-environment";
 
-const isGitHubPagesBuild =
-  process.env.SEWNCOVERS_GITHUB_PAGES === "true";
+const isGitHubPagesBuild = process.env.SEWNCOVERS_GITHUB_PAGES === "true";
 const isBrowserTestBuild = process.env.SEWNCOVERS_E2E === "true";
 const basePath = isGitHubPagesBuild ? "/SewnCovers" : "";
 

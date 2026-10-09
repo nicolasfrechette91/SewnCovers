@@ -7,9 +7,7 @@ import { fileURLToPath } from "node:url";
 const host = "127.0.0.1";
 const port = 3100;
 const basePath =
-  process.env.SEWNCOVERS_GITHUB_PAGES === "true"
-    ? "/SewnCovers"
-    : "";
+  process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
 const exportDirectory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../out",
@@ -46,9 +44,7 @@ function exportedPath(requestUrl) {
     : pathname;
   const filePath = path.resolve(exportDirectory, `.${relativePath}`);
 
-  return filePath.startsWith(`${exportDirectory}${path.sep}`)
-    ? filePath
-    : null;
+  return filePath.startsWith(`${exportDirectory}${path.sep}`) ? filePath : null;
 }
 
 const server = createServer(async (request, response) => {
@@ -70,8 +66,7 @@ const server = createServer(async (request, response) => {
     response.writeHead(200, {
       "content-length": file.size,
       "content-type":
-        contentTypes[path.extname(filePath)] ??
-        "application/octet-stream",
+        contentTypes[path.extname(filePath)] ?? "application/octet-stream",
     });
     createReadStream(filePath).pipe(response);
   } catch {

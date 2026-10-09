@@ -13,11 +13,7 @@ import type {
   SewnCoversApiClient,
 } from "./api-client";
 
-export type PatternCataloguePhase =
-  | "empty"
-  | "error"
-  | "loading"
-  | "ready";
+export type PatternCataloguePhase = "empty" | "error" | "loading" | "ready";
 
 export interface PatternCatalogueState {
   readonly allPatterns: readonly PatternDefinition[];
@@ -28,9 +24,7 @@ export interface PatternCatalogueState {
   readonly visiblePatterns: readonly PatternDefinition[];
 }
 
-type PatternCatalogueListener = (
-  state: PatternCatalogueState,
-) => void;
+type PatternCatalogueListener = (state: PatternCatalogueState) => void;
 
 /**
  * Joins a request that already started before this controller existed (the
@@ -61,10 +55,7 @@ function buildPatternQuery(filters: PatternFilters): PatternQuery {
       filters.categoryId === ALL_PATTERN_CATEGORIES
         ? undefined
         : filters.categoryId,
-    color:
-      filters.colorId === ALL_PATTERN_COLORS
-        ? undefined
-        : filters.colorId,
+    color: filters.colorId === ALL_PATTERN_COLORS ? undefined : filters.colorId,
   };
 }
 
@@ -278,10 +269,7 @@ export function getCompleteCatalogueResult(
   if (state.phase === "error") {
     return {
       status: "error",
-      issues:
-        state.issues.length > 0
-          ? state.issues
-          : [state.message],
+      issues: state.issues.length > 0 ? state.issues : [state.message],
     };
   }
 

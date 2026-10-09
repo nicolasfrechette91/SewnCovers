@@ -1,6 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { api, base, fixtures, id, project, quote } from "./support/api-fixtures";
+import {
+  api,
+  base,
+  fixtures,
+  id,
+  project,
+  quote,
+} from "./support/api-fixtures";
 import { chooseRadio } from "./support/keyboard";
 
 // In forced-colours (high-contrast) mode the browser replaces author colours
@@ -19,17 +26,19 @@ async function chooseSolidColour(page: Page) {
 
 /** Every swatch on the page must keep its colour and show an outline. */
 async function expectSwatchesKeepTheirColour(page: Page, where: string) {
-  const swatches = await page.locator(".fabric-swatch").evaluateAll((elements) =>
-    elements.map((element) => {
-      const style = getComputedStyle(element);
-      return {
-        backgroundColor: style.backgroundColor,
-        borderTopStyle: style.borderTopStyle,
-        borderTopWidth: Number.parseFloat(style.borderTopWidth),
-        forcedColorAdjust: style.forcedColorAdjust,
-      };
-    }),
-  );
+  const swatches = await page
+    .locator(".fabric-swatch")
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const style = getComputedStyle(element);
+        return {
+          backgroundColor: style.backgroundColor,
+          borderTopStyle: style.borderTopStyle,
+          borderTopWidth: Number.parseFloat(style.borderTopWidth),
+          forcedColorAdjust: style.forcedColorAdjust,
+        };
+      }),
+    );
 
   expect(swatches.length, `${where}: no swatch on the page`).toBeGreaterThan(0);
   for (const swatch of swatches) {
@@ -41,10 +50,14 @@ async function expectSwatchesKeepTheirColour(page: Page, where: string) {
   return swatches;
 }
 
-test("keeps the chosen fabric colour on every swatch in the configurator", async ({ page }) => {
+test("keeps the chosen fabric colour on every swatch in the configurator", async ({
+  page,
+}) => {
   await fixtures(page, "guest");
   await page.emulateMedia({ forcedColors: "active" });
-  expect(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)).toBe(true);
+  expect(
+    await page.evaluate(() => matchMedia("(forced-colors: active)").matches),
+  ).toBe(true);
 
   await page.goto(`${base}/configure/?design=${publicId}`);
   await expect(page.getByText("Shared design restored.")).toBeVisible();
@@ -55,20 +68,34 @@ test("keeps the chosen fabric colour on every swatch in the configurator", async
   // The Plain colour card and the "Current selections" ticket.
   await chooseSolidColour(page);
   await page.getByRole("textbox", { name: "Colour code" }).fill(chosen);
-  await expect(page.getByRole("textbox", { name: "Colour code" })).toHaveValue(chosen);
-  const onPatternStage = await expectSwatchesKeepTheirColour(page, "pattern stage");
+  await expect(page.getByRole("textbox", { name: "Colour code" })).toHaveValue(
+    chosen,
+  );
+  const onPatternStage = await expectSwatchesKeepTheirColour(
+    page,
+    "pattern stage",
+  );
   expect(onPatternStage.length).toBeGreaterThanOrEqual(2);
 
   // The Preview stage's fabric row, then the Review summary and its preview.
   await page.getByRole("button", { name: "Continue to Preview" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: /^Preview your/ })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: /^Preview your/ }),
+  ).toBeVisible();
   await expectSwatchesKeepTheirColour(page, "preview stage");
   await page.getByRole("button", { name: "Continue to Review" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "SewnCovers configuration summary" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "SewnCovers configuration summary",
+    }),
+  ).toBeVisible();
   await expectSwatchesKeepTheirColour(page, "review stage");
 });
 
-test("keeps the chosen fabric colour on swatches in saved projects and the cart", async ({ page }) => {
+test("keeps the chosen fabric colour on swatches in saved projects and the cart", async ({
+  page,
+}) => {
   await fixtures(page, "customer");
   const configuration = {
     ...project.currentVersion.configuration,
@@ -80,7 +107,14 @@ test("keeps the chosen fabric colour on swatches in saved projects and the cart"
     demonstration: true,
     state: "active",
     currency: "CAD",
-    lines: [{ id, quote: { ...quote, configuration }, quantity: 1, extendedAmountMinor: 10450 }],
+    lines: [
+      {
+        id,
+        quote: { ...quote, configuration },
+        quantity: 1,
+        extendedAmountMinor: 10450,
+      },
+    ],
     subtotalAmountMinor: 10450,
     subtotalFormatted: "$104.50 CAD",
     notices: [],
@@ -107,16 +141,22 @@ test("keeps the chosen fabric colour on swatches in saved projects and the cart"
   await page.emulateMedia({ forcedColors: "active" });
 
   await page.goto(`${base}/projects/?project=${id}`);
-  await expect(page.getByRole("heading", { name: "Version history" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Version history" }),
+  ).toBeVisible();
   // The small chip beside the fabric name and the larger preview block.
-  expect(await expectSwatchesKeepTheirColour(page, "saved project")).toHaveLength(2);
+  expect(
+    await expectSwatchesKeepTheirColour(page, "saved project"),
+  ).toHaveLength(2);
 
   await page.goto(`${base}/cart/`);
   await expect(page.getByText("Quote subtotal:")).toBeVisible();
   expect(await expectSwatchesKeepTheirColour(page, "cart")).toHaveLength(1);
 });
 
-test("outlines a swatch in the system text colour so it stays visible", async ({ page }) => {
+test("outlines a swatch in the system text colour so it stays visible", async ({
+  page,
+}) => {
   await fixtures(page, "guest");
   await page.emulateMedia({ forcedColors: "active" });
   await page.goto(`${base}/configure/?design=${publicId}`);
@@ -126,14 +166,17 @@ test("outlines a swatch in the system text colour so it stays visible", async ({
   }
   await chooseSolidColour(page);
 
-  const border = await page.locator(".fabric-swatch").first().evaluate((element) => {
-    // CanvasText resolves to the system text colour in forced-colours mode.
-    const probe = document.createElement("span");
-    probe.style.color = "CanvasText";
-    document.body.append(probe);
-    const systemText = getComputedStyle(probe).color;
-    probe.remove();
-    return { actual: getComputedStyle(element).borderTopColor, systemText };
-  });
+  const border = await page
+    .locator(".fabric-swatch")
+    .first()
+    .evaluate((element) => {
+      // CanvasText resolves to the system text colour in forced-colours mode.
+      const probe = document.createElement("span");
+      probe.style.color = "CanvasText";
+      document.body.append(probe);
+      const systemText = getComputedStyle(probe).color;
+      probe.remove();
+      return { actual: getComputedStyle(element).borderTopColor, systemText };
+    });
   expect(border.actual).toBe(border.systemText);
 });

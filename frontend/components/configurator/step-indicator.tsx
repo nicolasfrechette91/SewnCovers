@@ -7,8 +7,10 @@ export interface StepIndicatorStep {
   label: string;
 }
 
-export interface StepIndicatorProps
-  extends Omit<ComponentPropsWithoutRef<"div">, "aria-label" | "role"> {
+export interface StepIndicatorProps extends Omit<
+  ComponentPropsWithoutRef<"div">,
+  "aria-label" | "role"
+> {
   "aria-label"?: string;
   completedStepIds?: readonly string[];
   currentStepId?: string;

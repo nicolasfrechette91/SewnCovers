@@ -23,9 +23,13 @@ const labels: Readonly<Record<string, string>> = {
   piped: "Piped edge",
 };
 
-export function ConfigurationReadonly({ configuration }: Readonly<{ configuration: ProjectConfigurationRequest }>) {
+export function ConfigurationReadonly({
+  configuration,
+}: Readonly<{ configuration: ProjectConfigurationRequest }>) {
   const { state: auth } = useAuth();
-  const [custom, setCustom] = useState<{ label: string; url: string } | { deleted: true } | null>(null);
+  const [custom, setCustom] = useState<
+    { label: string; url: string } | { deleted: true } | null
+  >(null);
   useEffect(() => {
     let active = true;
     const pattern = configuration.pattern;
@@ -34,27 +38,57 @@ export function ConfigurationReadonly({ configuration }: Readonly<{ configuratio
       try {
         const upload = await accountApi.getUpload(auth.token, pattern.assetId);
         if (!active) return;
-        if (upload.state === "deleted") { setCustom({ deleted: true }); return; }
-        const access = await accountApi.assetAccess(auth.token, upload.id, "tile");
-        if (active) setCustom({ label: upload.label, url: resolveAssetUrl(access.url) });
-      } catch { if (active) setCustom({ deleted: true }); }
+        if (upload.state === "deleted") {
+          setCustom({ deleted: true });
+          return;
+        }
+        const access = await accountApi.assetAccess(
+          auth.token,
+          upload.id,
+          "tile",
+        );
+        if (active)
+          setCustom({ label: upload.label, url: resolveAssetUrl(access.url) });
+      } catch {
+        if (active) setCustom({ deleted: true });
+      }
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [auth, configuration.pattern]);
   const measurement = (value: number) => `${value} ${configuration.unit}`;
-  const artworkClassName = configuration.pattern.kind === "built-in"
-    ? getPatternArtworkClassName(configuration.pattern.patternId)
-    : null;
-  const patternLabel = configuration.pattern.kind === "built-in"
-    ? configuration.pattern.patternId
-    : configuration.pattern.kind === "solid"
-      ? "Solid colour"
-      : custom && "label" in custom ? custom.label : custom && "deleted" in custom ? "Custom asset deleted" : "Loading custom pattern…";
+  const artworkClassName =
+    configuration.pattern.kind === "built-in"
+      ? getPatternArtworkClassName(configuration.pattern.patternId)
+      : null;
+  const patternLabel =
+    configuration.pattern.kind === "built-in"
+      ? configuration.pattern.patternId
+      : configuration.pattern.kind === "solid"
+        ? "Solid colour"
+        : custom && "label" in custom
+          ? custom.label
+          : custom && "deleted" in custom
+            ? "Custom asset deleted"
+            : "Loading custom pattern…";
   const fields = [
     ["Shape", configuration.shape],
-    [configuration.shape === "round" ? "Diameter" : configuration.shape === "tapered" ? "Front width" : "Width", measurement(configuration.width)],
-    [configuration.shape === "box" ? "Depth" : "Height", measurement(configuration.height)],
-    ...(configuration.backWidth === null ? [] : [["Back width", measurement(configuration.backWidth)]]),
+    [
+      configuration.shape === "round"
+        ? "Diameter"
+        : configuration.shape === "tapered"
+          ? "Front width"
+          : "Width",
+      measurement(configuration.width),
+    ],
+    [
+      configuration.shape === "box" ? "Depth" : "Height",
+      measurement(configuration.height),
+    ],
+    ...(configuration.backWidth === null
+      ? []
+      : [["Back width", measurement(configuration.backWidth)]]),
     ["Thickness", measurement(configuration.thickness)],
     ["Material", labels[configuration.materialId]],
     ["Fit", labels[configuration.fitPreference]],
@@ -67,8 +101,13 @@ export function ConfigurationReadonly({ configuration }: Readonly<{ configuratio
     <div className="grid min-w-0 gap-component md:grid-cols-[minmax(0,1fr)_minmax(12rem,0.7fr)]">
       <dl className="grid min-w-0 gap-x-component sm:grid-cols-2">
         {fields.map(([label, value]) => (
-          <div key={label} className="min-w-0 border-b border-dashed border-border py-2.5">
-            <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">{label}</dt>
+          <div
+            key={label}
+            className="min-w-0 border-b border-dashed border-border py-2.5"
+          >
+            <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
+              {label}
+            </dt>
             <dd className="mt-1 flex items-center gap-2 break-words text-body text-text-primary">
               {label === "Pattern" && configuration.pattern.kind === "solid" ? (
                 <span
@@ -85,9 +124,42 @@ export function ConfigurationReadonly({ configuration }: Readonly<{ configuratio
       </dl>
       <figure className="min-w-0">
         <div className="cutting-mat flex aspect-[4/3] items-center justify-center overflow-hidden rounded-card border border-border">
-          {configuration.pattern.kind === "built-in" ? <div className={`prototype-pattern ${artworkClassName ?? ""} h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised`} style={{ "--pattern-scale": configuration.patternScale } as CSSProperties} aria-hidden="true" /> : configuration.pattern.kind === "solid" ? <div className="fabric-swatch h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised" style={{ backgroundColor: configuration.pattern.color }} aria-hidden="true" /> : custom && "url" in custom ? <div className="h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised" style={{ backgroundImage: `url("${custom.url}")`, backgroundRepeat: "repeat", backgroundSize: `${Math.round(160 * configuration.patternScale)}px auto` }} aria-hidden="true" /> : <p className="p-4 text-center text-supporting text-text-muted">Custom asset deleted or unavailable.</p>}
+          {configuration.pattern.kind === "built-in" ? (
+            <div
+              className={`prototype-pattern ${artworkClassName ?? ""} h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised`}
+              style={
+                {
+                  "--pattern-scale": configuration.patternScale,
+                } as CSSProperties
+              }
+              aria-hidden="true"
+            />
+          ) : configuration.pattern.kind === "solid" ? (
+            <div
+              className="fabric-swatch h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised"
+              style={{ backgroundColor: configuration.pattern.color }}
+              aria-hidden="true"
+            />
+          ) : custom && "url" in custom ? (
+            <div
+              className="h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised"
+              style={{
+                backgroundImage: `url("${custom.url}")`,
+                backgroundRepeat: "repeat",
+                backgroundSize: `${Math.round(160 * configuration.patternScale)}px auto`,
+              }}
+              aria-hidden="true"
+            />
+          ) : (
+            <p className="p-4 text-center text-supporting text-text-muted">
+              Custom asset deleted or unavailable.
+            </p>
+          )}
         </div>
-        <figcaption className="mt-2 text-supporting text-text-muted">Read-only preview of the saved {configuration.shape} design. Use the complete text details for the saved choices.</figcaption>
+        <figcaption className="mt-2 text-supporting text-text-muted">
+          Read-only preview of the saved {configuration.shape} design. Use the
+          complete text details for the saved choices.
+        </figcaption>
       </figure>
     </div>
   );

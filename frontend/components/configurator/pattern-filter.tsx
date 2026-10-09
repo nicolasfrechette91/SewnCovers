@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useId,
-  type ComponentPropsWithRef,
-  type ReactNode,
-} from "react";
+import { useId, type ComponentPropsWithRef, type ReactNode } from "react";
 
 import { classNames } from "../ui/class-names";
 
@@ -14,31 +10,34 @@ export interface PatternFilterOption<Value extends string = string> {
   value: Value;
 }
 
-interface PatternFilterBaseProps<Value extends string>
-  extends Omit<ComponentPropsWithRef<"fieldset">, "onChange"> {
+interface PatternFilterBaseProps<Value extends string> extends Omit<
+  ComponentPropsWithRef<"fieldset">,
+  "onChange"
+> {
   emptyMessage?: ReactNode;
   legend: ReactNode;
   name: string;
   options: readonly PatternFilterOption<Value>[];
 }
 
-interface SinglePatternFilterProps<Value extends string>
-  extends PatternFilterBaseProps<Value> {
+interface SinglePatternFilterProps<
+  Value extends string,
+> extends PatternFilterBaseProps<Value> {
   onChange: (value: Value) => void;
   selectionMode?: "single";
   value?: Value;
 }
 
-interface MultiplePatternFilterProps<Value extends string>
-  extends PatternFilterBaseProps<Value> {
+interface MultiplePatternFilterProps<
+  Value extends string,
+> extends PatternFilterBaseProps<Value> {
   onChange: (values: Value[]) => void;
   selectionMode: "multiple";
   value: readonly Value[];
 }
 
 export type PatternFilterProps<Value extends string = string> =
-  | SinglePatternFilterProps<Value>
-  | MultiplePatternFilterProps<Value>;
+  SinglePatternFilterProps<Value> | MultiplePatternFilterProps<Value>;
 
 export function PatternFilter<Value extends string = string>(
   props: PatternFilterProps<Value>,
@@ -78,9 +77,7 @@ export function PatternFilter<Value extends string = string>(
       nextSelectedValues.add(option);
     }
 
-    (onChange as (values: Value[]) => void)(
-      Array.from(nextSelectedValues),
-    );
+    (onChange as (values: Value[]) => void)(Array.from(nextSelectedValues));
   };
 
   const optionValues = new Set(options.map((option) => option.value));

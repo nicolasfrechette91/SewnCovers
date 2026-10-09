@@ -77,16 +77,12 @@ export function calculatePreviewGeometry({
     shape === "box"
       ? BOX_THICKNESS_VERTICAL_PROJECTION
       : THICKNESS_VERTICAL_PROJECTION;
-  const projectedThicknessX =
-    thicknessInCentimetres * horizontalProjection;
-  const projectedThicknessY =
-    thicknessInCentimetres * verticalProjection;
+  const projectedThicknessX = thicknessInCentimetres * horizontalProjection;
+  const projectedThicknessY = thicknessInCentimetres * verticalProjection;
   const unscaledWidth = widthInCentimetres + projectedThicknessX;
   const unscaledHeight = heightInCentimetres + projectedThicknessY;
-  const availableWidth =
-    PREVIEW_VIEWBOX_WIDTH - PREVIEW_HORIZONTAL_PADDING * 2;
-  const availableHeight =
-    PREVIEW_VIEWBOX_HEIGHT - PREVIEW_VERTICAL_PADDING * 2;
+  const availableWidth = PREVIEW_VIEWBOX_WIDTH - PREVIEW_HORIZONTAL_PADDING * 2;
+  const availableHeight = PREVIEW_VIEWBOX_HEIGHT - PREVIEW_VERTICAL_PADDING * 2;
   const scale = Math.min(
     availableWidth / unscaledWidth,
     availableHeight / unscaledHeight,
@@ -104,14 +100,7 @@ export function calculatePreviewGeometry({
   const totalHeight = faceHeight + offsetY;
   const faceX = (PREVIEW_VIEWBOX_WIDTH - totalWidth) / 2;
   const faceY = (PREVIEW_VIEWBOX_HEIGHT - totalHeight) / 2;
-  const values = [
-    faceHeight,
-    faceWidth,
-    faceX,
-    faceY,
-    offsetX,
-    offsetY,
-  ];
+  const values = [faceHeight, faceWidth, faceX, faceY, offsetX, offsetY];
 
   if (values.some((value) => !Number.isFinite(value) || value < 0)) {
     return null;

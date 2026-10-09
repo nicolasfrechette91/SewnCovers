@@ -3,9 +3,7 @@ import { expect, test, type Route } from "@playwright/test";
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
-  process.env.SEWNCOVERS_GITHUB_PAGES === "true"
-    ? "/SewnCovers"
-    : "";
+  process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
 const configurePath = `${basePath}/configure/`;
 const publicId = "AbCdEfGhIjKlMnOpQrStUv";
 
@@ -18,22 +16,25 @@ const patternRecords = [
   ["arch-grid", "Arch grid", "geometric", ["ivory", "terracotta", "gold"]],
   ["harbor-stripe", "Harbour stripe", "striped", ["ivory", "blue"]],
   ["orchard-stripe", "Orchard stripe", "striped", ["ivory", "green", "gold"]],
-  ["ribbon-stripe", "Ribbon stripe", "striped", ["ivory", "terracotta", "rose"]],
+  [
+    "ribbon-stripe",
+    "Ribbon stripe",
+    "striped",
+    ["ivory", "terracotta", "rose"],
+  ],
   ["prototype-woven", "Fine weave", "woven", ["ivory", "charcoal"]],
   ["basket-check", "Basket check", "woven", ["ivory", "blue", "charcoal"]],
   ["linen-crosshatch", "Linen crosshatch", "woven", ["ivory", "gold"]],
 ] as const;
 
-const patterns = patternRecords.map(
-  ([id, name, categoryId, colorIds]) => ({
-    id,
-    name,
-    description: `Mocked ${name.toLowerCase()} direction.`,
-    categoryId,
-    colorIds,
-    previewClassName: `api-${id}`,
-  }),
-);
+const patterns = patternRecords.map(([id, name, categoryId, colorIds]) => ({
+  id,
+  name,
+  description: `Mocked ${name.toLowerCase()} direction.`,
+  categoryId,
+  colorIds,
+  previewClassName: `api-${id}`,
+}));
 
 const savedDesign = Object.freeze({
   shape: "box",
@@ -57,11 +58,7 @@ const corsHeaders = {
   "access-control-allow-origin": appOrigin,
 };
 
-async function fulfillJson(
-  route: Route,
-  body: unknown,
-  status = 200,
-) {
+async function fulfillJson(route: Route, body: unknown, status = 200) {
   await route.fulfill({
     body: JSON.stringify(body),
     headers: {
@@ -111,7 +108,10 @@ test("restores the exact shared design after a duplicate-safe save", async ({
       return;
     }
 
-    if (request.method() === "GET" && url.pathname === "/uploads/availability") {
+    if (
+      request.method() === "GET" &&
+      url.pathname === "/uploads/availability"
+    ) {
       // As in production: custom uploads are off.
       await fulfillJson(route, { enabled: false });
       return;
@@ -125,10 +125,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
       return;
     }
 
-    if (
-      request.method() === "GET" &&
-      url.pathname === `/designs/${publicId}`
-    ) {
+    if (request.method() === "GET" && url.pathname === `/designs/${publicId}`) {
       requests.designGets += 1;
       await fulfillJson(route, { ...savedDesign, publicId });
       return;
@@ -157,9 +154,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
 
     await page.getByRole("textbox", { name: "Width (cm)" }).fill("72.25");
     await page.getByRole("textbox", { name: "Depth (cm)" }).fill("48.5");
-    await page
-      .getByRole("textbox", { name: "Thickness (cm)" })
-      .fill("12.75");
+    await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("12.75");
     await expect(
       page.getByRole("radio", { name: "Centimetres (cm)" }),
     ).toBeChecked();
@@ -170,20 +165,14 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await page.getByRole("radio", { name: "More relaxed fit" }).check();
     await page.getByRole("radio", { name: "Envelope opening" }).check();
     await page.getByRole("radio", { name: "Piped edge" }).check();
-    await page
-      .getByRole("button", { name: "Continue to Pattern" })
-      .click();
+    await page.getByRole("button", { name: "Continue to Pattern" }).click();
     await expect(page.getByText("12 patterns", { exact: true })).toBeVisible();
   });
 
   await test.step("select a pattern and verify the live preview", async () => {
     await page.getByText("Fern trail", { exact: true }).click();
-    await expect(
-      page.getByRole("radio", { name: "Fern trail" }),
-    ).toBeChecked();
-    await page
-      .getByRole("button", { name: "Continue to Preview" })
-      .click();
+    await expect(page.getByRole("radio", { name: "Fern trail" })).toBeChecked();
+    await page.getByRole("button", { name: "Continue to Preview" }).click();
 
     const scale = page.getByRole("slider", { name: "Pattern size" });
     await scale.fill("1.3");
@@ -193,7 +182,9 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     const preview = page.getByRole("region", {
       name: "Box / bench cushion preview",
     });
-    await expect(preview).toContainText("Fern trail on your box / bench cushion");
+    await expect(preview).toContainText(
+      "Fern trail on your box / bench cushion",
+    );
     await expect(preview).toContainText("Fern trail");
     await expect(preview).toContainText("72.25 cm");
     await expect(preview).toContainText("48.5 cm");
@@ -202,9 +193,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
   });
 
   await test.step("review accessible, user-visible values", async () => {
-    await page
-      .getByRole("button", { name: "Continue to Review" })
-      .click();
+    await page.getByRole("button", { name: "Continue to Review" }).click();
     await expect(
       page.getByRole("heading", {
         level: 1,
@@ -325,7 +314,9 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     const restoredPreview = restoredPage.getByRole("region", {
       name: "Box / bench cushion preview",
     });
-    await expect(restoredPreview).toContainText("Fern trail on your box / bench cushion");
+    await expect(restoredPreview).toContainText(
+      "Fern trail on your box / bench cushion",
+    );
     await expect(restoredPreview).toContainText("Fern trail");
     await expect(restoredPreview).toContainText("72.25 cm");
     await expect(restoredPreview).toContainText("48.5 cm");
@@ -350,9 +341,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
       restoredPage.getByRole("textbox", { name: "Width (cm)" }),
     ).toHaveValue("72.25");
 
-    await restoredPage
-      .getByRole("link", { name: "SewnCovers home" })
-      .click();
+    await restoredPage.getByRole("link", { name: "SewnCovers home" }).click();
     await expect(restoredPage).toHaveURL(`${appOrigin}${basePath}/`);
   });
 

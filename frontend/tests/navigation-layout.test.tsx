@@ -96,10 +96,10 @@ test("separates desktop primary and utility destinations", () => {
     ["My projects", "Cart", "Account"],
   );
   // Configure is the one call to action: a compact primary button.
-  const buttonLinks = Array.from(
-    navigation.querySelectorAll("a"),
-    (link) => [link.textContent, link.classList.contains("bg-brand")],
-  ).filter(([, isButton]) => isButton);
+  const buttonLinks = Array.from(navigation.querySelectorAll("a"), (link) => [
+    link.textContent,
+    link.classList.contains("bg-brand"),
+  ]).filter(([, isButton]) => isButton);
   assert.deepEqual(buttonLinks, [["Configure", true]]);
   for (const removed of ["Orders", "Admin", "Legal"]) {
     assert.equal(
@@ -123,13 +123,17 @@ test("opens and closes the mobile disclosure with state and focus restoration", 
   assert.equal(button.getAttribute("aria-expanded"), "false");
   assert.equal(button.getAttribute("aria-controls"), "site-navigation-menu");
   assert.ok(
-    document.getElementById("site-navigation-menu")?.classList.contains("hidden"),
+    document
+      .getElementById("site-navigation-menu")
+      ?.classList.contains("hidden"),
   );
 
   fireEvent.click(button);
   assert.equal(button.getAttribute("aria-expanded"), "true");
   assert.ok(
-    document.getElementById("site-navigation-menu")?.classList.contains("block"),
+    document
+      .getElementById("site-navigation-menu")
+      ?.classList.contains("block"),
   );
   screen.getByRole("link", { name: "Pricing" }).focus();
   fireEvent.keyDown(navigation, { key: "Escape" });
@@ -144,7 +148,10 @@ test("opens and closes the mobile disclosure with state and focus restoration", 
 test("normalizes trailing slashes and the GitHub Pages base path", () => {
   assert.equal(normalizeNavigationPath("/configure"), "/configure/");
   assert.equal(
-    normalizeNavigationPath("/SewnCovers/configure/?design=example", "/SewnCovers/"),
+    normalizeNavigationPath(
+      "/SewnCovers/configure/?design=example",
+      "/SewnCovers/",
+    ),
     "/configure/",
   );
   assert.equal(
@@ -155,10 +162,7 @@ test("normalizes trailing slashes and the GitHub Pages base path", () => {
     ),
     true,
   );
-  assert.equal(
-    isCurrentNavigationPath("/orders/", "/account/"),
-    false,
-  );
+  assert.equal(isCurrentNavigationPath("/orders/", "/account/"), false);
 
   render(header("/configure"));
   const currentLinks = document.querySelectorAll('[aria-current="page"]');

@@ -35,7 +35,9 @@ export function SpecList({
       {...listProps}
       className={classNames(
         "min-w-0",
-        layout === "grid" ? "grid gap-x-component gap-y-4 sm:grid-cols-2" : "divide-y divide-dashed divide-border-strong",
+        layout === "grid"
+          ? "grid gap-x-component gap-y-4 sm:grid-cols-2"
+          : "divide-y divide-dashed divide-border-strong",
         className,
       )}
     >

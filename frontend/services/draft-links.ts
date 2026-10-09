@@ -38,21 +38,32 @@ export function hashValue(value: string): string {
     first = Math.imul(first ^ code, 2654435761);
     second = Math.imul(second ^ code, 1597334677);
   }
-  first = Math.imul(first ^ (first >>> 16), 2246822507) ^ Math.imul(second ^ (second >>> 13), 3266489909);
-  second = Math.imul(second ^ (second >>> 16), 2246822507) ^ Math.imul(first ^ (first >>> 13), 3266489909);
+  first =
+    Math.imul(first ^ (first >>> 16), 2246822507) ^
+    Math.imul(second ^ (second >>> 13), 3266489909);
+  second =
+    Math.imul(second ^ (second >>> 16), 2246822507) ^
+    Math.imul(first ^ (first >>> 13), 3266489909);
   return (4294967296 * (2097151 & second) + (first >>> 0)).toString(36);
 }
 
 /** Identifies a design's saved values, for configurator state and saved project versions alike. */
 export function designFingerprint(configuration: FingerprintSource): string {
-  const pattern = isRecord(configuration.pattern) ? configuration.pattern : null;
+  const pattern = isRecord(configuration.pattern)
+    ? configuration.pattern
+    : null;
   const patternKey =
     pattern?.kind === "built-in"
       ? [pattern.kind, pattern.patternId]
       : pattern?.kind === "solid"
         ? [pattern.kind, pattern.color]
         : pattern?.kind === "custom"
-          ? [pattern.kind, pattern.assetId, pattern.derivativeId, pattern.processingVersion]
+          ? [
+              pattern.kind,
+              pattern.assetId,
+              pattern.derivativeId,
+              pattern.processingVersion,
+            ]
           : null;
   return hashValue(
     JSON.stringify([

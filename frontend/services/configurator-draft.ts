@@ -131,7 +131,13 @@ export function storableConfiguration<T extends { readonly pattern: unknown }>(
   const { assetId, derivativeId, processingVersion, label } = pattern;
   return {
     ...configuration,
-    pattern: { kind: "custom", assetId, derivativeId, processingVersion, label },
+    pattern: {
+      kind: "custom",
+      assetId,
+      derivativeId,
+      processingVersion,
+      label,
+    },
   };
 }
 
@@ -142,22 +148,36 @@ function parseLink<T>(value: unknown, keys: readonly string[]): T | null {
 }
 
 function parseDraft(value: unknown): ConfiguratorDraft | null {
-  if (!isRecord(value) || value.version !== 1 || !isRecord(value.configuration)) {
+  if (
+    !isRecord(value) ||
+    value.version !== 1 ||
+    !isRecord(value.configuration)
+  ) {
     return null;
   }
   const step = CONFIGURATOR_STEP_IDS.find((id) => id === value.step) ?? "shape";
   const highestStep =
     typeof value.highestStep === "number" && Number.isInteger(value.highestStep)
-      ? Math.min(Math.max(value.highestStep, 0), CONFIGURATOR_STEP_IDS.length - 1)
+      ? Math.min(
+          Math.max(value.highestStep, 0),
+          CONFIGURATOR_STEP_IDS.length - 1,
+        )
       : 0;
   return {
     configuration: value.configuration,
     step,
     highestStep,
     origin: parseLink<DraftOrigin>(value.origin, ["ref", "fingerprint"]),
-    project: parseLink<DraftProjectLink>(value.project, ["projectId", "versionId", "fingerprint"]),
+    project: parseLink<DraftProjectLink>(value.project, [
+      "projectId",
+      "versionId",
+      "fingerprint",
+    ]),
     cart: parseLink<DraftCartMarker>(value.cart, ["versionId", "quoteId"]),
-    publicDesign: parseLink<DraftPublicDesign>(value.publicDesign, ["publicId", "fingerprint"]),
+    publicDesign: parseLink<DraftPublicDesign>(value.publicDesign, [
+      "publicId",
+      "fingerprint",
+    ]),
   };
 }
 
@@ -221,7 +241,10 @@ export function getServerDraftSnapshot(): ConfiguratorDraft | null {
 
 /** True when the draft holds at least a chosen shape worth coming back to. */
 export function draftHasDesign(draft: ConfiguratorDraft | null): boolean {
-  return isRecord(draft?.configuration) && typeof draft.configuration.shape === "string";
+  return (
+    isRecord(draft?.configuration) &&
+    typeof draft.configuration.shape === "string"
+  );
 }
 
 export function setPendingAccountAction(

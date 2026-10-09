@@ -10,13 +10,12 @@ import {
 
 import { buttonClasses } from "../ui/button-styles";
 import { classNames } from "../ui/class-names";
-import {
-  isCurrentNavigationPath,
-  type SiteNavigationItem,
-} from "./navigation";
+import { isCurrentNavigationPath, type SiteNavigationItem } from "./navigation";
 
-export interface SiteHeaderProps
-  extends Omit<ComponentPropsWithoutRef<"header">, "children"> {
+export interface SiteHeaderProps extends Omit<
+  ComponentPropsWithoutRef<"header">,
+  "children"
+> {
   currentHref?: string;
   primaryItems?: readonly SiteNavigationItem[];
   utilityItems?: readonly SiteNavigationItem[];
@@ -67,7 +66,8 @@ export function SiteHeader({
                   ? buttonClasses({
                       className: classNames(
                         "w-full md:w-auto",
-                        isCurrent && "underline decoration-2 underline-offset-4",
+                        isCurrent &&
+                          "underline decoration-2 underline-offset-4",
                       ),
                       element: "link",
                       size: "compact",

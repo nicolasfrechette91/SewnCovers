@@ -280,11 +280,7 @@ body {
 }
 
 .responsive-form
-  :where(
-    input:not([type="checkbox"]):not([type="radio"]),
-    select,
-    textarea
-  ) {
+  :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   min-width: 0;
   max-width: 100%;
   width: 100%;
@@ -751,7 +747,11 @@ body {
       var(--dye-terracotta) 0 9%,
       transparent 10%
     ),
-    radial-gradient(ellipse at 76% 30%, var(--dye-forest) 0 10%, transparent 11%),
+    radial-gradient(
+      ellipse at 76% 30%,
+      var(--dye-forest) 0 10%,
+      transparent 11%
+    ),
     radial-gradient(
       ellipse at 82% 78%,
       var(--dye-terracotta) 0 7%,
@@ -773,20 +773,27 @@ body {
 
 .prototype-pattern-botanical {
   background-image:
-    radial-gradient(ellipse at 20% 24%, var(--dye-forest) 0 9%, transparent 10%),
+    radial-gradient(
+      ellipse at 20% 24%,
+      var(--dye-forest) 0 9%,
+      transparent 10%
+    ),
     radial-gradient(
       ellipse at 48% 62%,
       var(--dye-terracotta) 0 8%,
       transparent 9%
     ),
-    radial-gradient(ellipse at 78% 28%, var(--dye-forest) 0 10%, transparent 11%),
+    radial-gradient(
+      ellipse at 78% 28%,
+      var(--dye-forest) 0 10%,
+      transparent 11%
+    ),
     radial-gradient(
       ellipse at 82% 80%,
       var(--dye-terracotta) 0 7%,
       transparent 8%
     );
-  background-size:
-    calc(5rem * var(--pattern-scale))
+  background-size: calc(5rem * var(--pattern-scale))
     calc(5rem * var(--pattern-scale));
 }
 
@@ -807,10 +814,8 @@ body {
     );
   background-position:
     0 0,
-    calc(1.25rem * var(--pattern-scale))
-    calc(1.25rem * var(--pattern-scale));
-  background-size:
-    calc(2.5rem * var(--pattern-scale))
+    calc(1.25rem * var(--pattern-scale)) calc(1.25rem * var(--pattern-scale));
+  background-size: calc(2.5rem * var(--pattern-scale))
     calc(2.5rem * var(--pattern-scale));
 }
 
@@ -819,15 +824,13 @@ body {
     repeating-linear-gradient(
       0deg,
       transparent 0 calc(0.4rem * var(--pattern-scale)),
-      var(--dye-taupe)
-        calc(0.45rem * var(--pattern-scale))
+      var(--dye-taupe) calc(0.45rem * var(--pattern-scale))
         calc(0.5rem * var(--pattern-scale))
     ),
     repeating-linear-gradient(
       90deg,
       transparent 0 calc(0.4rem * var(--pattern-scale)),
-      var(--dye-oat)
-        calc(0.45rem * var(--pattern-scale))
+      var(--dye-oat) calc(0.45rem * var(--pattern-scale))
         calc(0.5rem * var(--pattern-scale))
     );
   background-size: 100% 100%;
@@ -836,25 +839,44 @@ body {
 .pattern-fern-trail {
   background-color: var(--dye-cream);
   background-image:
-    radial-gradient(ellipse at 24% 25%, var(--dye-forest) 0 10%, transparent 11%),
-    radial-gradient(ellipse at 55% 58%, var(--dye-forest) 0 12%, transparent 13%),
-    radial-gradient(ellipse at 82% 84%, var(--dye-forest) 0 9%, transparent 10%),
+    radial-gradient(
+      ellipse at 24% 25%,
+      var(--dye-forest) 0 10%,
+      transparent 11%
+    ),
+    radial-gradient(
+      ellipse at 55% 58%,
+      var(--dye-forest) 0 12%,
+      transparent 13%
+    ),
+    radial-gradient(
+      ellipse at 82% 84%,
+      var(--dye-forest) 0 9%,
+      transparent 10%
+    ),
     linear-gradient(
       42deg,
       transparent 46%,
       var(--dye-forest) 47% 50%,
       transparent 51%
     );
-  background-size:
-    calc(6rem * var(--pattern-scale))
+  background-size: calc(6rem * var(--pattern-scale))
     calc(6rem * var(--pattern-scale));
 }
 
 .pattern-meadow-sprig {
   background-color: var(--dye-cream);
   background-image:
-    radial-gradient(circle at 30% 30%, var(--pattern-gold) 0 5%, transparent 6%),
-    radial-gradient(circle at 65% 62%, var(--pattern-blue) 0 6%, transparent 7%),
+    radial-gradient(
+      circle at 30% 30%,
+      var(--pattern-gold) 0 5%,
+      transparent 6%
+    ),
+    radial-gradient(
+      circle at 65% 62%,
+      var(--pattern-blue) 0 6%,
+      transparent 7%
+    ),
     linear-gradient(
       62deg,
       transparent 45%,
@@ -867,8 +889,7 @@ body {
       var(--pattern-gold) 53% 55%,
       transparent 56%
     );
-  background-size:
-    calc(4.5rem * var(--pattern-scale))
+  background-size: calc(4.5rem * var(--pattern-scale))
     calc(4.5rem * var(--pattern-scale));
 }
 
@@ -890,8 +911,7 @@ body {
   background-position:
     0 0,
     calc(1.5rem * var(--pattern-scale)) 0;
-  background-size:
-    calc(3rem * var(--pattern-scale))
+  background-size: calc(3rem * var(--pattern-scale))
     calc(3rem * var(--pattern-scale));
 }
 
@@ -912,10 +932,8 @@ body {
     );
   background-position:
     0 0,
-    calc(1.75rem * var(--pattern-scale))
-      calc(1.75rem * var(--pattern-scale));
-  background-size:
-    calc(3.5rem * var(--pattern-scale))
+    calc(1.75rem * var(--pattern-scale)) calc(1.75rem * var(--pattern-scale));
+  background-size: calc(3.5rem * var(--pattern-scale))
     calc(3.5rem * var(--pattern-scale));
 }
 
@@ -973,10 +991,8 @@ body {
     );
   background-position:
     0 0,
-    calc(1.25rem * var(--pattern-scale))
-      calc(1.25rem * var(--pattern-scale));
-  background-size:
-    calc(2.5rem * var(--pattern-scale))
+    calc(1.25rem * var(--pattern-scale)) calc(1.25rem * var(--pattern-scale));
+  background-size: calc(2.5rem * var(--pattern-scale))
     calc(2.5rem * var(--pattern-scale));
 }
 
@@ -987,8 +1003,7 @@ body {
       12deg,
       transparent 0 calc(0.34rem * var(--pattern-scale)),
       color-mix(in srgb, var(--pattern-gold) 62%, transparent)
-        calc(0.36rem * var(--pattern-scale))
-        calc(0.4rem * var(--pattern-scale))
+        calc(0.36rem * var(--pattern-scale)) calc(0.4rem * var(--pattern-scale))
     ),
     repeating-linear-gradient(
       102deg,
@@ -1015,10 +1030,8 @@ body {
     );
   background-position:
     0 0,
-    calc(2rem * var(--pattern-scale))
-      calc(2rem * var(--pattern-scale));
-  background-size:
-    calc(4rem * var(--pattern-scale))
+    calc(2rem * var(--pattern-scale)) calc(2rem * var(--pattern-scale));
+  background-size: calc(4rem * var(--pattern-scale))
     calc(4rem * var(--pattern-scale));
 }
 
@@ -1040,16 +1053,23 @@ body {
       var(--dye-terracotta) 0 7%,
       transparent 8%
     );
-  background-size:
-    calc(5.5rem * var(--pattern-scale))
+  background-size: calc(5.5rem * var(--pattern-scale))
     calc(4.5rem * var(--pattern-scale));
 }
 
 .pattern-confetti-grid {
   background-color: var(--dye-cream);
   background-image:
-    radial-gradient(circle at 22% 24%, var(--pattern-rose) 0 5%, transparent 6%),
-    radial-gradient(circle at 74% 72%, var(--pattern-gold) 0 6%, transparent 7%),
+    radial-gradient(
+      circle at 22% 24%,
+      var(--pattern-rose) 0 5%,
+      transparent 6%
+    ),
+    radial-gradient(
+      circle at 74% 72%,
+      var(--pattern-gold) 0 6%,
+      transparent 7%
+    ),
     linear-gradient(
       35deg,
       transparent 46%,
@@ -1059,10 +1079,8 @@ body {
   background-position:
     0 0,
     0 0,
-    calc(1.5rem * var(--pattern-scale))
-      calc(1.5rem * var(--pattern-scale));
-  background-size:
-    calc(3rem * var(--pattern-scale))
+    calc(1.5rem * var(--pattern-scale)) calc(1.5rem * var(--pattern-scale));
+  background-size: calc(3rem * var(--pattern-scale))
     calc(3rem * var(--pattern-scale));
 }
 
@@ -1329,7 +1347,9 @@ body {
   color: var(--color-on-brand);
 }
 
-.pattern-card-input:checked + .pattern-card-label .pattern-card-selected-marker {
+.pattern-card-input:checked
+  + .pattern-card-label
+  .pattern-card-selected-marker {
   display: flex;
 }
 

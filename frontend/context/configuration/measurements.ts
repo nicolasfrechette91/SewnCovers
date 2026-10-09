@@ -1,16 +1,9 @@
-import type {
-  CushionShape,
-  MeasurementUnit,
-} from "./types";
+import type { CushionShape, MeasurementUnit } from "./types";
 
 export const CENTIMETRES_PER_INCH = 2.54;
 export const MEASUREMENT_DECIMAL_PLACES = 2;
 
-export type MeasurementField =
-  | "backWidth"
-  | "height"
-  | "thickness"
-  | "width";
+export type MeasurementField = "backWidth" | "height" | "thickness" | "width";
 
 export type MeasurementDraftIssue =
   | "aboveMaximum"
@@ -41,8 +34,7 @@ export const MEASUREMENT_RANGES_CM: Readonly<
 };
 
 const displayPrecisionFactor = 10 ** MEASUREMENT_DECIMAL_PLACES;
-const completeDecimalPattern =
-  /^(?:\d+(?:[.,]\d+)?|[.,]\d+)$/;
+const completeDecimalPattern = /^(?:\d+(?:[.,]\d+)?|[.,]\d+)$/;
 const trailingDecimalPattern = /^(?:\d+[.,]|[.,])$/;
 
 export function isFinitePositiveMeasurement(
@@ -51,9 +43,7 @@ export function isFinitePositiveMeasurement(
   return value !== null && Number.isFinite(value) && value > 0;
 }
 
-export function isNullableCommittedMeasurement(
-  value: number | null,
-): boolean {
+export function isNullableCommittedMeasurement(value: number | null): boolean {
   return value === null || isFinitePositiveMeasurement(value);
 }
 
@@ -62,8 +52,10 @@ export function roundMeasurement(value: number): number {
     throw new RangeError("Measurements must be finite before rounding.");
   }
 
-  return Math.round((value + Number.EPSILON) * displayPrecisionFactor) /
-    displayPrecisionFactor;
+  return (
+    Math.round((value + Number.EPSILON) * displayPrecisionFactor) /
+    displayPrecisionFactor
+  );
 }
 
 export function formatMeasurement(value: number | null): string {
@@ -97,10 +89,7 @@ export function convertMeasurement(
   return roundMeasurement(converted);
 }
 
-export function toCentimetres(
-  value: number,
-  unit: MeasurementUnit,
-): number {
+export function toCentimetres(value: number, unit: MeasurementUnit): number {
   return unit === "cm" ? value : value * CENTIMETRES_PER_INCH;
 }
 
@@ -116,10 +105,7 @@ export function isMeasurementWithinRange(
   const valueInCentimetres = toCentimetres(value, unit);
   const range = MEASUREMENT_RANGES_CM[field];
 
-  return (
-    valueInCentimetres >= range.min &&
-    valueInCentimetres <= range.max
-  );
+  return valueInCentimetres >= range.min && valueInCentimetres <= range.max;
 }
 
 export function hasValidMeasurementsForShape(
@@ -168,13 +154,11 @@ export function getMeasurementRange(
 
   return {
     min:
-      Math.ceil(
-        (range.min / CENTIMETRES_PER_INCH) * displayPrecisionFactor,
-      ) / displayPrecisionFactor,
+      Math.ceil((range.min / CENTIMETRES_PER_INCH) * displayPrecisionFactor) /
+      displayPrecisionFactor,
     max:
-      Math.floor(
-        (range.max / CENTIMETRES_PER_INCH) * displayPrecisionFactor,
-      ) / displayPrecisionFactor,
+      Math.floor((range.max / CENTIMETRES_PER_INCH) * displayPrecisionFactor) /
+      displayPrecisionFactor,
   };
 }
 

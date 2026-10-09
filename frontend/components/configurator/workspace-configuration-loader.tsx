@@ -5,7 +5,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button, ErrorMessage, LoadingState } from "@/components/ui";
 import { useAuth } from "@/context/auth";
-import { useConfiguration, type ConfigurationState } from "@/context/configuration";
+import {
+  useConfiguration,
+  type ConfigurationState,
+} from "@/context/configuration";
 import {
   accountApi,
   AccountApiError,
@@ -16,7 +19,9 @@ import {
 
 // Loaded only when a guest opens a private project version link.
 const PrivateVersionSignIn = dynamic(() =>
-  import("./private-version-sign-in").then((loaded) => loaded.PrivateVersionSignIn),
+  import("./private-version-sign-in").then(
+    (loaded) => loaded.PrivateVersionSignIn,
+  ),
 );
 
 type LoaderState =
@@ -31,7 +36,11 @@ function removeWorkspaceParameters(): void {
   url.searchParams.delete("share");
   url.searchParams.delete("project");
   url.searchParams.delete("version");
-  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${url.pathname}${url.search}${url.hash}`,
+  );
 }
 
 async function restoreState(
@@ -52,7 +61,10 @@ async function restoreState(
       if (share) {
         previewUrl = buildSharedAssetUrl(share);
       } else if (token) {
-        const upload = await accountApi.getUpload(token, configuration.pattern.assetId);
+        const upload = await accountApi.getUpload(
+          token,
+          configuration.pattern.assetId,
+        );
         label = upload.label;
         if (upload.state === "deleted") unavailableReason = "deleted";
         else if (upload.state !== "approved") unavailableReason = "unavailable";
@@ -117,7 +129,10 @@ export function WorkspaceConfigurationLoader({
     };
     applyPrivateDirective();
     const observer = new MutationObserver(applyPrivateDirective);
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+    });
 
     return () => {
       observer.disconnect();
@@ -129,25 +144,58 @@ export function WorkspaceConfigurationLoader({
 
   const load = useCallback(async () => {
     const url = new URL(window.location.href);
-    if (url.searchParams.has("design")) { setState({ status: "idle" }); return; }
+    if (url.searchParams.has("design")) {
+      setState({ status: "idle" });
+      return;
+    }
     const share = url.searchParams.get("share");
     const project = url.searchParams.get("project");
     const version = url.searchParams.get("version");
-    if (!share && !project && !version) { setState({ status: "idle" }); return; }
-    if (share && (project || version)) { setState({ status: "error", label: "This URL combines incompatible sharing modes." }); return; }
-    if (project && version && auth.status === "guest") { setState({ status: "signin" }); return; }
-    if (project && version && auth.status === "initializing") { setState({ status: "loading", label: "Restoring your session…" }); return; }
-    if ((!share && (!project || !version)) || (share && !/^[A-Za-z0-9_-]{43}$/.test(share)) || (project && !/^[A-Za-z0-9_-]{22}$/.test(project)) || (version && !/^[A-Za-z0-9_-]{22}$/.test(version))) {
-      setState({ status: "error", label: "The saved-configuration link is malformed." }); return;
+    if (!share && !project && !version) {
+      setState({ status: "idle" });
+      return;
+    }
+    if (share && (project || version)) {
+      setState({
+        status: "error",
+        label: "This URL combines incompatible sharing modes.",
+      });
+      return;
+    }
+    if (project && version && auth.status === "guest") {
+      setState({ status: "signin" });
+      return;
+    }
+    if (project && version && auth.status === "initializing") {
+      setState({ status: "loading", label: "Restoring your session…" });
+      return;
+    }
+    if (
+      (!share && (!project || !version)) ||
+      (share && !/^[A-Za-z0-9_-]{43}$/.test(share)) ||
+      (project && !/^[A-Za-z0-9_-]{22}$/.test(project)) ||
+      (version && !/^[A-Za-z0-9_-]{22}$/.test(version))
+    ) {
+      setState({
+        status: "error",
+        label: "The saved-configuration link is malformed.",
+      });
+      return;
     }
     const active = ++generation.current;
     const revision = getRevision();
-    setState({ status: "loading", label: share ? "Loading the read-only shared configuration…" : "Loading the private project version…" });
+    setState({
+      status: "loading",
+      label: share
+        ? "Loading the read-only shared configuration…"
+        : "Loading the private project version…",
+    });
     try {
       const snapshot = share
         ? (await accountApi.restoreShare(share)).configuration
         : auth.status === "authenticated"
-          ? (await accountApi.getVersion(auth.token, project!, version!)).configuration
+          ? (await accountApi.getVersion(auth.token, project!, version!))
+              .configuration
           : null;
       if (active !== generation.current || snapshot === null) return;
       const configuration = await restoreState(
@@ -156,7 +204,11 @@ export function WorkspaceConfigurationLoader({
         share,
       );
       if (getRevision() !== revision) {
-        setState({ status: "error", label: "Your configuration changed while the saved version was loading, so it was not overwritten." });
+        setState({
+          status: "error",
+          label:
+            "Your configuration changed while the saved version was loading, so it was not overwritten.",
+        });
         return;
       }
       onRestored?.(
@@ -165,16 +217,30 @@ export function WorkspaceConfigurationLoader({
         share ? null : { projectId: project!, versionId: version! },
       );
       dispatch({ type: "restoreConfiguration", configuration });
-      setState({ status: "restored", label: share ? "Read-only project share restored. Changes affect only your current configurator unless you save them separately." : "Private project version restored for editing. Saving adds a new version and leaves this one unchanged." });
+      setState({
+        status: "restored",
+        label: share
+          ? "Read-only project share restored. Changes affect only your current configurator unless you save them separately."
+          : "Private project version restored for editing. Saving adds a new version and leaves this one unchanged.",
+      });
     } catch (error) {
       if (active !== generation.current) return;
-      setState({ status: "error", label: error instanceof AccountApiError ? error.message : "The saved configuration could not be loaded." });
+      setState({
+        status: "error",
+        label:
+          error instanceof AccountApiError
+            ? error.message
+            : "The saved configuration could not be loaded.",
+      });
     }
   }, [auth, dispatch, getRevision, onRestored]);
 
   useEffect(() => {
     const timer = globalThis.setTimeout(() => void load(), 0);
-    return () => { globalThis.clearTimeout(timer); generation.current += 1; };
+    return () => {
+      globalThis.clearTimeout(timer);
+      generation.current += 1;
+    };
   }, [load]);
   useEffect(() => {
     if (state.status !== "restored" || !focusRestored.current) return;
@@ -191,19 +257,55 @@ export function WorkspaceConfigurationLoader({
 
   if (state.status === "idle") return null;
   return (
-    <section aria-labelledby="workspace-load-heading" className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline">
-      <Title id="workspace-load-heading" tabIndex={-1} className="font-display text-section-title font-heading">{state.status === "signin" ? "Private project version" : "Saved configuration"}</Title>
-      {state.status === "loading" ? <LoadingState className="mt-3" label={state.label} /> : null}
-      {state.status === "restored" ? <p ref={restoredRef} tabIndex={-1} className="mt-3 text-supporting text-text-muted" role="status" aria-live="polite">{state.label}</p> : null}
+    <section
+      aria-labelledby="workspace-load-heading"
+      className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline"
+    >
+      <Title
+        id="workspace-load-heading"
+        tabIndex={-1}
+        className="font-display text-section-title font-heading"
+      >
+        {state.status === "signin"
+          ? "Private project version"
+          : "Saved configuration"}
+      </Title>
+      {state.status === "loading" ? (
+        <LoadingState className="mt-3" label={state.label} />
+      ) : null}
+      {state.status === "restored" ? (
+        <p
+          ref={restoredRef}
+          tabIndex={-1}
+          className="mt-3 text-supporting text-text-muted"
+          role="status"
+          aria-live="polite"
+        >
+          {state.label}
+        </p>
+      ) : null}
       {state.status === "signin" ? (
         <PrivateVersionSignIn
           sessionNotice={auth.status === "guest" ? auth.notice : undefined}
           onCancel={continueWithMine}
-          onSignedIn={() => { focusRestored.current = true; }}
+          onSignedIn={() => {
+            focusRestored.current = true;
+          }}
         />
       ) : null}
-      {state.status === "error" ? <ErrorMessage className="mt-3">{state.label}</ErrorMessage> : null}
-      {state.status === "error" ? <div className="mt-3 flex flex-wrap gap-3"><Button variant="secondary" onClick={() => void load()}>Try loading again</Button><Button variant="secondary" onClick={continueWithMine}>Continue with my configuration</Button></div> : null}
+      {state.status === "error" ? (
+        <ErrorMessage className="mt-3">{state.label}</ErrorMessage>
+      ) : null}
+      {state.status === "error" ? (
+        <div className="mt-3 flex flex-wrap gap-3">
+          <Button variant="secondary" onClick={() => void load()}>
+            Try loading again
+          </Button>
+          <Button variant="secondary" onClick={continueWithMine}>
+            Continue with my configuration
+          </Button>
+        </div>
+      ) : null}
     </section>
   );
 }

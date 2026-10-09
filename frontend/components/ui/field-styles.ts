@@ -7,7 +7,8 @@ export const fieldLabelClasses =
 
 export const fieldHelpClasses = "text-supporting text-text-muted";
 
-export const fieldErrorClasses = "text-supporting font-emphasis text-error-text";
+export const fieldErrorClasses =
+  "text-supporting font-emphasis text-error-text";
 
 export const checkboxClasses =
   "mt-0.5 size-5 shrink-0 cursor-pointer accent-brand disabled:cursor-not-allowed";

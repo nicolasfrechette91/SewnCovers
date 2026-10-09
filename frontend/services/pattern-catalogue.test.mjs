@@ -25,10 +25,7 @@ const patternRecords = [
   ["confetti-grid", "abstract", ["ivory", "green", "gold", "rose"]],
 ];
 
-function patternResponse(
-  [id, categoryId, colorIds],
-  overrides = {},
-) {
+function patternResponse([id, categoryId, colorIds], overrides = {}) {
   return {
     id,
     name: `API ${id}`,
@@ -59,10 +56,8 @@ function createMockClient(handler) {
 function filterResponses(patterns, query) {
   return patterns.filter(
     (pattern) =>
-      (query.category === undefined ||
-        pattern.categoryId === query.category) &&
-      (query.color === undefined ||
-        pattern.colorIds.includes(query.color)),
+      (query.category === undefined || pattern.categoryId === query.category) &&
+      (query.color === undefined || pattern.colorIds.includes(query.color)),
   );
 }
 
@@ -82,9 +77,7 @@ test("loads API metadata in response order and resolves artwork by stable ID", a
 
   await controller.loadInitial();
 
-  assert.deepEqual(requests, [
-    { category: undefined, color: undefined },
-  ]);
+  assert.deepEqual(requests, [{ category: undefined, color: undefined }]);
   assert.equal(controller.getSnapshot().phase, "ready");
   assert.deepEqual(
     controller.getSnapshot().visiblePatterns.map(({ id }) => id),
@@ -131,9 +124,7 @@ test("filters the complete catalogue locally without additional API requests", a
     colorId: "blue",
   });
 
-  assert.deepEqual(requests, [
-    { category: undefined, color: undefined },
-  ]);
+  assert.deepEqual(requests, [{ category: undefined, color: undefined }]);
   assert.deepEqual(
     controller.getSnapshot().visiblePatterns.map(({ id }) => id),
     ["diamond-path"],
@@ -141,9 +132,7 @@ test("filters the complete catalogue locally without additional API requests", a
 });
 
 test("keeps the complete catalogue and a valid selection when filters hide it", async () => {
-  const {
-    PatternCatalogueController,
-  } = await loadCatalogueModule();
+  const { PatternCatalogueController } = await loadCatalogueModule();
   const patterns = completeCatalogue();
   const { client } = createMockClient(async (query) =>
     filterResponses(patterns, query),
@@ -170,9 +159,7 @@ test("keeps the complete catalogue and a valid selection when filters hide it", 
 test("represents empty API catalogues and empty filtered results separately", async () => {
   const { PatternCatalogueController } = await loadCatalogueModule();
   const emptyMock = createMockClient(async () => []);
-  const emptyController = new PatternCatalogueController(
-    emptyMock.client,
-  );
+  const emptyController = new PatternCatalogueController(emptyMock.client);
 
   await emptyController.loadInitial();
   assert.equal(emptyController.getSnapshot().phase, "empty");
@@ -197,21 +184,19 @@ test("represents empty API catalogues and empty filtered results separately", as
 test("exposes retryable failures and recovers without a local fallback", async () => {
   const { PatternCatalogueController } = await loadCatalogueModule();
   let shouldFail = true;
-  const { client, requests } = createMockClient(
-    async (_query, options) => {
-      if (shouldFail) {
-        options.onStatus({
-          category: "network",
-          message:
-            "The SewnCovers API could not be reached. Check your connection and try again.",
-          state: "failure",
-        });
-        throw new Error("mocked network failure");
-      }
+  const { client, requests } = createMockClient(async (_query, options) => {
+    if (shouldFail) {
+      options.onStatus({
+        category: "network",
+        message:
+          "The SewnCovers API could not be reached. Check your connection and try again.",
+        state: "failure",
+      });
+      throw new Error("mocked network failure");
+    }
 
-      return completeCatalogue();
-    },
-  );
+    return completeCatalogue();
+  });
   const controller = new PatternCatalogueController(client);
 
   await controller.loadInitial();
@@ -229,20 +214,18 @@ test("exposes retryable failures and recovers without a local fallback", async (
 test("surfaces cold-start status and recovers when the mocked request resolves", async () => {
   const { PatternCatalogueController } = await loadCatalogueModule();
   const pending = deferred();
-  const { client } = createMockClient(
-    async (_query, options) => {
-      options.onStatus({
-        message: "Connecting to SewnCovers\u2026",
-        state: "connecting",
-      });
-      options.onStatus({
-        message:
-          "The SewnCovers API may be waking up. This can take up to a minute.",
-        state: "cold-start",
-      });
-      return pending.promise;
-    },
-  );
+  const { client } = createMockClient(async (_query, options) => {
+    options.onStatus({
+      message: "Connecting to SewnCovers\u2026",
+      state: "connecting",
+    });
+    options.onStatus({
+      message:
+        "The SewnCovers API may be waking up. This can take up to a minute.",
+      state: "cold-start",
+    });
+    return pending.promise;
+  });
   const controller = new PatternCatalogueController(client);
 
   const loading = controller.loadInitial();
@@ -315,9 +298,7 @@ test("rejects semantically malformed responses and missing visual mappings", asy
     id: "api-only-pattern",
   };
   const artworkMock = createMockClient(async () => missingArtwork);
-  const artworkController = new PatternCatalogueController(
-    artworkMock.client,
-  );
+  const artworkController = new PatternCatalogueController(artworkMock.client);
 
   await artworkController.loadInitial();
   assert.equal(artworkController.getSnapshot().phase, "error");
@@ -325,7 +306,6 @@ test("rejects semantically malformed responses and missing visual mappings", asy
     artworkController.getSnapshot().issues.join(" "),
     /no frontend artwork mapping/i,
   );
-
 });
 
 test("reuses the warm-up result without a second request", async () => {

@@ -19,7 +19,9 @@ test("the 404 page explains itself and links home and to the configurator", () =
   render(<NotFound />);
 
   assert.equal(document.querySelectorAll("h1").length, 1);
-  assert.ok(screen.getByRole("heading", { level: 1, name: "This page doesn't exist." }));
+  assert.ok(
+    screen.getByRole("heading", { level: 1, name: "This page doesn't exist." }),
+  );
   assert.ok(screen.getByText("The link may be mistyped or out of date."));
   // next/link adds the base path and trailing slash in the export build.
   assert.ok(
@@ -29,7 +31,9 @@ test("the 404 page explains itself and links home and to the configurator", () =
       ?.startsWith("/configure"),
   );
   assert.equal(
-    screen.getByRole("link", { name: "Go to the home page" }).getAttribute("href"),
+    screen
+      .getByRole("link", { name: "Go to the home page" })
+      .getAttribute("href"),
     "/",
   );
 });

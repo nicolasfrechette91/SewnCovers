@@ -6,11 +6,20 @@ import { ReadinessSummary } from "@/components/assurance/readiness-summary";
 import { PageHeader, PageShell } from "@/components/ui";
 import { createPageMetadata } from "@/config/site-metadata";
 
-export const metadata: Metadata = createPageMetadata({ title: "Demonstration administration", description: "Role-protected demonstration pricing, manufacturing, fulfilment, refund, and audit operations.", index: false, path: "/admin/" });
+export const metadata: Metadata = createPageMetadata({
+  title: "Demonstration administration",
+  description:
+    "Role-protected demonstration pricing, manufacturing, fulfilment, refund, and audit operations.",
+  index: false,
+  path: "/admin/",
+});
 export default function AdminPage() {
   return (
     <PageShell>
-      <PageHeader eyebrow="Protected sandbox operations" title="Administration" />
+      <PageHeader
+        eyebrow="Protected sandbox operations"
+        title="Administration"
+      />
       <AdminScreen />
       <ProductionOperationsScreen />
       <ReadinessSummary />

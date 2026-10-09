@@ -128,8 +128,13 @@ export function auditDocument(): AuditFinding[] {
   const navigations = visibleElements('nav, [role="navigation"]');
   const navigationNames = new Map<string, number>();
   for (const navigation of navigations) {
-    if (visibleElements("a[href]").every((link) => !navigation.contains(link))) {
-      add("landmark", `a navigation landmark contains no links: ${describe(navigation)}`);
+    if (
+      visibleElements("a[href]").every((link) => !navigation.contains(link))
+    ) {
+      add(
+        "landmark",
+        `a navigation landmark contains no links: ${describe(navigation)}`,
+      );
     }
     const labelledBy = navigation.getAttribute("aria-labelledby");
     const name = normalise(

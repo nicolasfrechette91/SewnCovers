@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 
-import {
-  PageHeader,
-  PageShell,
-  sectionTitleClasses,
-} from "@/components/ui";
+import { PageHeader, PageShell, sectionTitleClasses } from "@/components/ui";
 import { createPageMetadata } from "@/config/site-metadata";
 
 const documents = [
@@ -80,7 +76,10 @@ export default function LegalPage() {
         title="Legal information"
       />
       <div className="grid min-w-0 gap-layout lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start">
-        <nav className="min-w-0 lg:sticky lg:top-6" aria-label="Legal documents">
+        <nav
+          className="min-w-0 lg:sticky lg:top-6"
+          aria-label="Legal documents"
+        >
           <ol className="divide-y divide-dashed divide-border-strong border-y border-dashed border-border-strong">
             {documents.map((document, index) => (
               <li key={document.type}>
@@ -119,15 +118,106 @@ export default function LegalPage() {
             <h2 className={sectionTitleClasses}>
               Third-party processing categories and retention map
             </h2>
-            <p id="retention-scroll-help" className="mt-3 text-supporting text-text-muted">Scroll horizontally to read all columns when needed.</p>
-            <div role="region" aria-label="Processing categories and retention" aria-describedby="retention-scroll-help" tabIndex={0} className="mt-4 overflow-x-auto rounded-card border border-border">
+            <p
+              id="retention-scroll-help"
+              className="mt-3 text-supporting text-text-muted"
+            >
+              Scroll horizontally to read all columns when needed.
+            </p>
+            <div
+              role="region"
+              aria-label="Processing categories and retention"
+              aria-describedby="retention-scroll-help"
+              tabIndex={0}
+              className="mt-4 overflow-x-auto rounded-card border border-border"
+            >
               <table className="w-full min-w-[36rem] border-collapse text-left text-supporting">
-                <thead className="bg-surface-subtle"><tr><th scope="col" className="border-b border-border-strong px-4 py-3 font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Category</th><th scope="col" className="border-b border-border-strong px-4 py-3 font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Configured boundary</th><th scope="col" className="border-b border-border-strong px-4 py-3 font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">Portfolio retention</th></tr></thead>
+                <thead className="bg-surface-subtle">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="border-b border-border-strong px-4 py-3 font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted"
+                    >
+                      Category
+                    </th>
+                    <th
+                      scope="col"
+                      className="border-b border-border-strong px-4 py-3 font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted"
+                    >
+                      Configured boundary
+                    </th>
+                    <th
+                      scope="col"
+                      className="border-b border-border-strong px-4 py-3 font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted"
+                    >
+                      Portfolio retention
+                    </th>
+                  </tr>
+                </thead>
                 <tbody className="divide-y divide-dashed divide-border-strong">
-                  <tr><th scope="row" className="px-4 py-3 align-top font-control text-text-primary">Payments</th><td className="px-4 py-3 align-top text-text-muted">Stripe configured-only; sandbox local</td><td className="px-4 py-3 align-top text-text-muted">No raw payment payload; immutable order and verified-event digest retained</td></tr>
-                  <tr><th scope="row" className="px-4 py-3 align-top font-control text-text-primary">Uploads</th><td className="px-4 py-3 align-top text-text-muted">Private S3-compatible storage and external moderation configured-only</td><td className="px-4 py-3 align-top text-text-muted">Private objects deleted on account/upload deletion except protected paid-order derivatives</td></tr>
-                  <tr><th scope="row" className="px-4 py-3 align-top font-control text-text-primary">Browser storage</th><td className="px-4 py-3 align-top text-text-muted">Design in progress in local storage; sign-in token and a one-time API wake-up marker in session storage</td><td className="px-4 py-3 align-top text-text-muted">Draft kept until you start a new design, sign out of the account it was saved to, or clear site data; sign-in ends when the tab closes</td></tr>
-                  <tr><th scope="row" className="px-4 py-3 align-top font-control text-text-primary">Shipping</th><td className="px-4 py-3 align-top text-text-muted">Encrypted database fields; allowlisted fictional carriers</td><td className="px-4 py-3 align-top text-text-muted">Removed when a retained order is detached on account deletion</td></tr>
+                  <tr>
+                    <th
+                      scope="row"
+                      className="px-4 py-3 align-top font-control text-text-primary"
+                    >
+                      Payments
+                    </th>
+                    <td className="px-4 py-3 align-top text-text-muted">
+                      Stripe configured-only; sandbox local
+                    </td>
+                    <td className="px-4 py-3 align-top text-text-muted">
+                      No raw payment payload; immutable order and verified-event
+                      digest retained
+                    </td>
+                  </tr>
+                  <tr>
+                    <th
+                      scope="row"
+                      className="px-4 py-3 align-top font-control text-text-primary"
+                    >
+                      Uploads
+                    </th>
+                    <td className="px-4 py-3 align-top text-text-muted">
+                      Private S3-compatible storage and external moderation
+                      configured-only
+                    </td>
+                    <td className="px-4 py-3 align-top text-text-muted">
+                      Private objects deleted on account/upload deletion except
+                      protected paid-order derivatives
+                    </td>
+                  </tr>
+                  <tr>
+                    <th
+                      scope="row"
+                      className="px-4 py-3 align-top font-control text-text-primary"
+                    >
+                      Browser storage
+                    </th>
+                    <td className="px-4 py-3 align-top text-text-muted">
+                      Design in progress in local storage; sign-in token and a
+                      one-time API wake-up marker in session storage
+                    </td>
+                    <td className="px-4 py-3 align-top text-text-muted">
+                      Draft kept until you start a new design, sign out of the
+                      account it was saved to, or clear site data; sign-in ends
+                      when the tab closes
+                    </td>
+                  </tr>
+                  <tr>
+                    <th
+                      scope="row"
+                      className="px-4 py-3 align-top font-control text-text-primary"
+                    >
+                      Shipping
+                    </th>
+                    <td className="px-4 py-3 align-top text-text-muted">
+                      Encrypted database fields; allowlisted fictional carriers
+                    </td>
+                    <td className="px-4 py-3 align-top text-text-muted">
+                      Removed when a retained order is detached on account
+                      deletion
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>

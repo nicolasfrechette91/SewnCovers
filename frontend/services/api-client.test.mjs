@@ -10,9 +10,7 @@ const originalClearTimeout = globalThis.clearTimeout;
 
 async function loadClient(apiUrl) {
   const configuredApiUrl =
-    arguments.length === 0
-      ? "https://api.example.com/v1///"
-      : apiUrl;
+    arguments.length === 0 ? "https://api.example.com/v1///" : apiUrl;
 
   if (configuredApiUrl === undefined) {
     delete process.env.NEXT_PUBLIC_API_URL;
@@ -244,10 +242,7 @@ test("returns exact typed health, pattern, create, and retrieval responses", asy
     if (String(url).endsWith("/patterns")) {
       return jsonResponse([pattern()]);
     }
-    return jsonResponse(
-      createdDesign,
-      init.method === "POST" ? 201 : 200,
-    );
+    return jsonResponse(createdDesign, init.method === "POST" ? 201 : 200);
   };
 
   assert.deepEqual(await apiClient.getHealth(), {
@@ -312,11 +307,7 @@ test("preserves the exact typed backend error contract without retrying validati
   let fetchCalls = 0;
   globalThis.fetch = async () => {
     fetchCalls += 1;
-    return backendError(
-      422,
-      "pattern_unavailable",
-      ["body", "patternId"],
-    );
+    return backendError(422, "pattern_unavailable", ["body", "patternId"]);
   };
 
   await assert.rejects(
@@ -340,7 +331,13 @@ test("preserves the exact typed backend error contract without retrying validati
 
 const REQUEST_ID = "0123456789abcdef0123456789abcdef";
 
-function envelope(status, code, message, location, { requestId, headers } = {}) {
+function envelope(
+  status,
+  code,
+  message,
+  location,
+  { requestId, headers } = {},
+) {
   return new Response(
     JSON.stringify({
       errors: [{ code, message, location }],
@@ -353,21 +350,27 @@ function envelope(status, code, message, location, { requestId, headers } = {}) 
 test("keeps the server request id from an error envelope on the typed error", async () => {
   const { apiClient, ApiClientError } = await loadClient();
   globalThis.fetch = async () =>
-    envelope(422, "pattern_unavailable", "Selected pattern is unavailable.", [
-      "body",
-      "patternId",
-    ], { requestId: REQUEST_ID });
-
-  await assert.rejects(apiClient.createDesign(createDesignRequest()), (error) => {
-    assert.equal(error instanceof ApiClientError, true);
-    assert.equal(error.category, "backend-contract");
-    assert.equal(error.requestId, REQUEST_ID);
-    assert.deepEqual(
-      error.errors.map((detail) => detail.code),
-      ["pattern_unavailable"],
+    envelope(
+      422,
+      "pattern_unavailable",
+      "Selected pattern is unavailable.",
+      ["body", "patternId"],
+      { requestId: REQUEST_ID },
     );
-    return true;
-  });
+
+  await assert.rejects(
+    apiClient.createDesign(createDesignRequest()),
+    (error) => {
+      assert.equal(error instanceof ApiClientError, true);
+      assert.equal(error.category, "backend-contract");
+      assert.equal(error.requestId, REQUEST_ID);
+      assert.deepEqual(
+        error.errors.map((detail) => detail.code),
+        ["pattern_unavailable"],
+      );
+      return true;
+    },
+  );
 });
 
 test("still rejects envelopes with any other extra key or a non-string request id", async () => {
@@ -472,8 +475,7 @@ test("distinguishes malformed success payloads from unexpected HTTP failures", a
       !/private-host/.test(error.message),
   );
 
-  globalThis.fetch = async () =>
-    jsonResponse(design({ patternScale: 1e-7 }));
+  globalThis.fetch = async () => jsonResponse(design({ patternScale: 1e-7 }));
 
   await assert.rejects(
     apiClient.getDesign("AbCdEfGhIjKlMnOpQrSt_1"),
@@ -510,7 +512,11 @@ test("accepts health with or without the deployed commit and rejects a malformed
 
   for (const malformed of [commit.slice(0, 7), commit.toUpperCase(), 42, ""]) {
     globalThis.fetch = async () =>
-      jsonResponse({ process: "healthy", database: "healthy", commit: malformed });
+      jsonResponse({
+        process: "healthy",
+        database: "healthy",
+        commit: malformed,
+      });
 
     await assert.rejects(
       apiClient.getHealth(),
@@ -558,9 +564,7 @@ test("aborts a timed-out request and clears its controller and timers", async ()
     });
   };
 
-  const request = apiClient.createDesign(
-    createDesignRequest(),
-  );
+  const request = apiClient.createDesign(createDesignRequest());
   await clock.tick(API_REQUEST_TIMEOUT_MS);
 
   await assert.rejects(
@@ -575,8 +579,7 @@ test("aborts a timed-out request and clears its controller and timers", async ()
 });
 
 test("retries only safe transient GET failures and stops at the exact limit", async () => {
-  const { apiClient, ApiClientError, API_RETRY_LIMIT } =
-    await loadClient();
+  const { apiClient, ApiClientError, API_RETRY_LIMIT } = await loadClient();
   let fetchCalls = 0;
   let activeRequests = 0;
   let maximumActiveRequests = 0;
@@ -638,11 +641,7 @@ test("retries transient backend and HTTP statuses but not permanent GET failures
   calls = 0;
   globalThis.fetch = async () => {
     calls += 1;
-    return backendError(
-      404,
-      "design_not_found",
-      ["path", "public_id"],
-    );
+    return backendError(404, "design_not_found", ["path", "public_id"]);
   };
 
   await assert.rejects(apiClient.getDesign("AbCdEfGhIjKlMnOpQrSt_1"));
@@ -722,8 +721,7 @@ test("reports bounded retry recovery and a useful secret-safe final failure", as
     ["connecting", "retrying", "success"],
   );
   assert.deepEqual(recoveryStatuses[1], {
-    message:
-      "The SewnCovers API may be waking up. Retrying (1 of 2)\u2026",
+    message: "The SewnCovers API may be waking up. Retrying (1 of 2)\u2026",
     retry: 1,
     retryLimit: 2,
     state: "retrying",

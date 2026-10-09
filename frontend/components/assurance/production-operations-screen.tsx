@@ -10,10 +10,7 @@ import {
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
-import {
-  assuranceApi,
-  type ProductionWork,
-} from "@/services/assurance-api";
+import { assuranceApi, type ProductionWork } from "@/services/assurance-api";
 
 const states = [
   "",
@@ -33,8 +30,7 @@ export function ProductionOperationsScreen() {
   const [stateFilter, setStateFilter] = useState("");
   const [issueFilter, setIssueFilter] = useState("");
   const [search, setSearch] = useState("");
-  const [status, setStatus] =
-    useState<"idle" | "loading" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [message, setMessage] = useState("");
   const [reason, setReason] = useState("");
   const detailHeading = useRef<HTMLHeadingElement>(null);
@@ -54,14 +50,11 @@ export function ProductionOperationsScreen() {
       if (stateFilter) query.set("state", stateFilter);
       if (issueFilter) query.set("issueState", issueFilter);
       if (search.trim().length >= 2) query.set("search", search.trim());
-      const queue = await assuranceApi.productionQueue(
-        auth.token,
-        "?" + query,
-      );
+      const queue = await assuranceApi.productionQueue(auth.token, "?" + query);
       setItems(queue.items);
       setSelected((current) =>
         current
-          ? queue.items.find((item) => item.id === current.id) ?? null
+          ? (queue.items.find((item) => item.id === current.id) ?? null)
           : null,
       );
       setStatus("idle");
@@ -257,12 +250,8 @@ export function ProductionOperationsScreen() {
                   {work.orderReference} · line {work.lineIndex + 1}
                 </strong>
                 <span className="mt-1 block text-supporting text-text-muted">
-                  {work.state.replaceAll("_", " ")} · revision {work.revision}{" "}
-                  ·
-                  {
-                    work.issues.filter((issue) => issue.state === "open")
-                      .length
-                  }{" "}
+                  {work.state.replaceAll("_", " ")} · revision {work.revision} ·
+                  {work.issues.filter((issue) => issue.state === "open").length}{" "}
                   open issues
                 </span>
               </button>
@@ -365,8 +354,7 @@ export function ProductionOperationsScreen() {
               <Button
                 variant="secondary"
                 disabled={
-                  selected.state !== "quality_check" ||
-                  reason.trim().length < 3
+                  selected.state !== "quality_check" || reason.trim().length < 3
                 }
                 onClick={() =>
                   void update(
@@ -386,8 +374,7 @@ export function ProductionOperationsScreen() {
               <Button
                 variant="secondary"
                 disabled={
-                  selected.state !== "quality_check" ||
-                  reason.trim().length < 3
+                  selected.state !== "quality_check" || reason.trim().length < 3
                 }
                 onClick={() =>
                   void update(
@@ -412,11 +399,7 @@ export function ProductionOperationsScreen() {
                 onClick={() =>
                   void update(
                     () =>
-                      assuranceApi.transition(
-                        auth.token,
-                        selected,
-                        "approved",
-                      ),
+                      assuranceApi.transition(auth.token, selected, "approved"),
                     "Work approved.",
                   )
                 }
@@ -476,10 +459,7 @@ export function ProductionOperationsScreen() {
                 Fulfilment handoff
               </Button>
             ) : null}
-            <Button
-              variant="secondary"
-              onClick={() => void downloadPacket()}
-            >
+            <Button variant="secondary" onClick={() => void downloadPacket()}>
               Download safe packet
             </Button>
           </div>

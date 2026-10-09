@@ -61,18 +61,9 @@ test("validates shape-specific measurements, inclusive boundaries, and decimals"
     hasValidMeasurementsForShape("rectangle", 45.25, 45.24, 5, "cm"),
     true,
   );
-  assert.equal(
-    hasValidMeasurementsForShape("box", 180, 60, 12.5, "cm"),
-    true,
-  );
-  assert.equal(
-    hasValidMeasurementsForShape("round", 50, 50, 8, "cm"),
-    true,
-  );
-  assert.equal(
-    hasValidMeasurementsForShape("round", 50, 49, 8, "cm"),
-    false,
-  );
+  assert.equal(hasValidMeasurementsForShape("box", 180, 60, 12.5, "cm"), true);
+  assert.equal(hasValidMeasurementsForShape("round", 50, 50, 8, "cm"), true);
+  assert.equal(hasValidMeasurementsForShape("round", 50, 49, 8, "cm"), false);
   assert.equal(
     hasValidMeasurementsForShape("tapered", 80, 55, 10, "cm", 65),
     true,
@@ -274,8 +265,7 @@ test("calculates bounded proportional preview geometry for every shape and unit"
     );
     assert.ok(
       Math.abs(
-        geometry.faceWidth / geometry.faceHeight -
-          input.width / input.height,
+        geometry.faceWidth / geometry.faceHeight - input.width / input.height,
       ) < 0.001,
     );
 

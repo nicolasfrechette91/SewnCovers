@@ -8,18 +8,14 @@ const frontendDirectory = path.resolve(
   "..",
 );
 const exportDirectory = path.join(frontendDirectory, "out");
-const isPagesExport =
-  process.env.SEWNCOVERS_GITHUB_PAGES === "true";
+const isPagesExport = process.env.SEWNCOVERS_GITHUB_PAGES === "true";
 const basePath = isPagesExport ? "/SewnCovers" : "";
 const productionOrigin = "https://nicolasfrechette91.github.io";
 const productionBasePath = "/SewnCovers";
 const productionSiteUrl = `${productionOrigin}${productionBasePath}/`;
 const socialImageUrl = `${productionSiteUrl}social-preview.jpg`;
 const productionApiUrl = "https://sewncovers-api.onrender.com";
-const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(
-  /\/+$/,
-  "",
-);
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
 const expectedApiUrl = isPagesExport ? productionApiUrl : configuredApiUrl;
 
 if (isPagesExport) {
@@ -73,9 +69,7 @@ function stripQueryAndHash(url) {
 
 function exportedFileForUrl(url) {
   const pathname = stripQueryAndHash(url);
-  const withoutBasePath = basePath
-    ? pathname.slice(basePath.length)
-    : pathname;
+  const withoutBasePath = basePath ? pathname.slice(basePath.length) : pathname;
   const relativePath = withoutBasePath.endsWith("/")
     ? `${withoutBasePath}index.html`
     : withoutBasePath;
@@ -107,7 +101,12 @@ function readJpegDimensions(buffer) {
     const marker = buffer[offset + 1];
     if (marker === 0xd9 || marker === 0xda) break;
     const length = buffer.readUInt16BE(offset + 2);
-    if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
+    if (
+      [
+        0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce,
+        0xcf,
+      ].includes(marker)
+    ) {
       return {
         height: buffer.readUInt16BE(offset + 5),
         width: buffer.readUInt16BE(offset + 7),
@@ -137,9 +136,7 @@ for (const htmlFile of htmlFiles) {
   assert.match(html, /<meta name="description" content="[^"]+"\/>/);
   assert.match(
     html,
-    new RegExp(
-      `href="${basePath.replace(/\//g, "\\/")}\\/favicon\\.ico\\?`,
-    ),
+    new RegExp(`href="${basePath.replace(/\//g, "\\/")}\\/favicon\\.ico\\?`),
   );
 
   for (const url of localUrls) {
@@ -167,7 +164,10 @@ for (const htmlFile of htmlFiles) {
   }
 }
 
-const homeHtml = await readFile(path.join(exportDirectory, "index.html"), "utf8");
+const homeHtml = await readFile(
+  path.join(exportDirectory, "index.html"),
+  "utf8",
+);
 const configureHtml = await readFile(
   path.join(exportDirectory, "configure", "index.html"),
   "utf8",
@@ -180,38 +180,97 @@ const projectsHtml = await readFile(
   path.join(exportDirectory, "projects", "index.html"),
   "utf8",
 );
-const commerceHtml = await readFile(path.join(exportDirectory, "commerce", "index.html"), "utf8");
-const ordersHtml = await readFile(path.join(exportDirectory, "orders", "index.html"), "utf8");
-const adminHtml = await readFile(path.join(exportDirectory, "admin", "index.html"), "utf8");
-const legalHtml = await readFile(path.join(exportDirectory, "legal", "index.html"), "utf8");
-const cartHtml = await readFile(path.join(exportDirectory, "cart", "index.html"), "utf8");
-const checkoutSandboxHtml = await readFile(path.join(exportDirectory, "checkout", "sandbox", "index.html"), "utf8");
-const checkoutReturnHtml = await readFile(path.join(exportDirectory, "checkout", "return", "index.html"), "utf8");
-const checkoutCancelHtml = await readFile(path.join(exportDirectory, "checkout", "cancel", "index.html"), "utf8");
-const notFoundHtml = await readFile(path.join(exportDirectory, "404.html"), "utf8");
+const commerceHtml = await readFile(
+  path.join(exportDirectory, "commerce", "index.html"),
+  "utf8",
+);
+const ordersHtml = await readFile(
+  path.join(exportDirectory, "orders", "index.html"),
+  "utf8",
+);
+const adminHtml = await readFile(
+  path.join(exportDirectory, "admin", "index.html"),
+  "utf8",
+);
+const legalHtml = await readFile(
+  path.join(exportDirectory, "legal", "index.html"),
+  "utf8",
+);
+const cartHtml = await readFile(
+  path.join(exportDirectory, "cart", "index.html"),
+  "utf8",
+);
+const checkoutSandboxHtml = await readFile(
+  path.join(exportDirectory, "checkout", "sandbox", "index.html"),
+  "utf8",
+);
+const checkoutReturnHtml = await readFile(
+  path.join(exportDirectory, "checkout", "return", "index.html"),
+  "utf8",
+);
+const checkoutCancelHtml = await readFile(
+  path.join(exportDirectory, "checkout", "cancel", "index.html"),
+  "utf8",
+);
+const notFoundHtml = await readFile(
+  path.join(exportDirectory, "404.html"),
+  "utf8",
+);
 
 const publicPages = new Map([
-  [homeHtml, ["SewnCovers | Cushion-cover design prototype", productionSiteUrl]],
-  [configureHtml, ["Configure a cushion | SewnCovers", `${productionSiteUrl}configure/`]],
-  [commerceHtml, ["Prototype pricing | SewnCovers", `${productionSiteUrl}commerce/`]],
+  [
+    homeHtml,
+    ["SewnCovers | Cushion-cover design prototype", productionSiteUrl],
+  ],
+  [
+    configureHtml,
+    ["Configure a cushion | SewnCovers", `${productionSiteUrl}configure/`],
+  ],
+  [
+    commerceHtml,
+    ["Prototype pricing | SewnCovers", `${productionSiteUrl}commerce/`],
+  ],
   [legalHtml, ["Legal information | SewnCovers", `${productionSiteUrl}legal/`]],
 ]);
 
 for (const [html, [title, canonical]] of publicPages) {
-  assert.match(html, new RegExp(`<title>${title.replace(/[|]/g, "\\|")}<\\/title>`));
+  assert.match(
+    html,
+    new RegExp(`<title>${title.replace(/[|]/g, "\\|")}<\\/title>`),
+  );
   assert.match(html, /<meta name="description" content="[^"]+"\/>/);
   assert.match(html, /<meta name="robots" content="index, follow"\/>/);
-  assert.match(html, new RegExp(`<link rel="canonical" href="${canonical}"\\/>`));
-  assert.match(html, new RegExp(`<meta property="og:title" content="${title.replace(/[|]/g, "\\|")}"\\/>`));
+  assert.match(
+    html,
+    new RegExp(`<link rel="canonical" href="${canonical}"\\/>`),
+  );
+  assert.match(
+    html,
+    new RegExp(
+      `<meta property="og:title" content="${title.replace(/[|]/g, "\\|")}"\\/>`,
+    ),
+  );
   assert.match(html, /<meta property="og:description" content="[^"]+"\/>/);
-  assert.match(html, new RegExp(`<meta property="og:url" content="${canonical}"\\/>`));
+  assert.match(
+    html,
+    new RegExp(`<meta property="og:url" content="${canonical}"\\/>`),
+  );
   assert.match(html, /<meta property="og:site_name" content="SewnCovers"\/>/);
-  assert.match(html, new RegExp(`<meta property="og:image" content="${socialImageUrl}"\\/>`));
+  assert.match(
+    html,
+    new RegExp(`<meta property="og:image" content="${socialImageUrl}"\\/>`),
+  );
   assert.match(html, /<meta property="og:image:type" content="image\/jpeg"\/>/);
   assert.match(html, /<meta property="og:image:width" content="1200"\/>/);
   assert.match(html, /<meta property="og:image:height" content="630"\/>/);
-  assert.match(html, /<meta name="twitter:card" content="summary_large_image"\/>/);
-  assert.match(html, new RegExp(`<meta name="twitter:image" content="${socialImageUrl}"\\/>`));
+  assert.match(
+    html,
+    /<meta name="twitter:card" content="summary_large_image"\/>/,
+  );
+  assert.match(
+    html,
+    new RegExp(`<meta name="twitter:image" content="${socialImageUrl}"\\/>`),
+  );
   assert.doesNotMatch(canonical, /localhost|[?#]/);
 }
 
@@ -226,13 +285,25 @@ const privatePages = [
   checkoutCancelHtml,
 ];
 for (const html of privatePages) {
-  assert.match(html, /<meta name="robots" content="noindex, nofollow, nocache"\/>/);
-  assert.match(html, /<meta name="googlebot" content="noindex, nofollow, noimageindex"\/>/);
+  assert.match(
+    html,
+    /<meta name="robots" content="noindex, nofollow, nocache"\/>/,
+  );
+  assert.match(
+    html,
+    /<meta name="googlebot" content="noindex, nofollow, noimageindex"\/>/,
+  );
   assert.doesNotMatch(html, /<link rel="canonical" href="[^"]*[?#][^"]*"\/>/);
 }
 
-assert.match(homeHtml, /<meta property="og:description" content="Explore a portfolio prototype/);
-assert.match(homeHtml, /<meta name="twitter:description" content="Explore a portfolio prototype/);
+assert.match(
+  homeHtml,
+  /<meta property="og:description" content="Explore a portfolio prototype/,
+);
+assert.match(
+  homeHtml,
+  /<meta name="twitter:description" content="Explore a portfolio prototype/,
+);
 assert.match(
   configureHtml,
   /<title>Configure a cushion \| SewnCovers<\/title>/,
@@ -245,11 +316,16 @@ assert.match(commerceHtml, /Everyday square cushion/);
 assert.match(commerceHtml, /\$75\.25 CAD/);
 assert.match(
   commerceHtml,
-  new RegExp(`href="${(basePath || "").replace(/\//g, "\\/")}\\/configure\\/"[^>]*>Start configuring<\\/a>`),
+  new RegExp(
+    `href="${(basePath || "").replace(/\//g, "\\/")}\\/configure\\/"[^>]*>Start configuring<\\/a>`,
+  ),
 );
 assert.match(commerceHtml, /returnTo=pricing/);
 assert.match(ordersHtml, /<title>Demonstration orders \| SewnCovers<\/title>/);
-assert.match(adminHtml, /<title>Demonstration administration \| SewnCovers<\/title>/);
+assert.match(
+  adminHtml,
+  /<title>Demonstration administration \| SewnCovers<\/title>/,
+);
 assert.match(legalHtml, /<title>Legal information \| SewnCovers<\/title>/);
 assert.match(homeHtml, new RegExp(`href="${basePath || ""}\\/"`));
 assert.match(
@@ -263,28 +339,57 @@ assert.match(configureHtml, new RegExp(`href="${basePath || ""}\\/"`));
 assert.match(notFoundHtml, /<meta name="robots" content="noindex"\/>/);
 assert.doesNotMatch(notFoundHtml, /<link rel="canonical"/);
 
-const robotsText = await readFile(path.join(exportDirectory, "robots.txt"), "utf8");
+const robotsText = await readFile(
+  path.join(exportDirectory, "robots.txt"),
+  "utf8",
+);
 assert.equal(
   robotsText.replaceAll("\r\n", "\n"),
   `User-Agent: *\nAllow: /SewnCovers/\n\nSitemap: ${productionSiteUrl}sitemap.xml\n`,
 );
 assert.doesNotMatch(robotsText, /account|admin|checkout|projects|orders|cart/i);
 
-const sitemapText = await readFile(path.join(exportDirectory, "sitemap.xml"), "utf8");
-const sitemapUrls = Array.from(sitemapText.matchAll(/<loc>(.*?)<\/loc>/g), (match) => match[1]);
-const expectedSitemapUrls = Array.from(publicPages.values(), ([, canonical]) => canonical);
+const sitemapText = await readFile(
+  path.join(exportDirectory, "sitemap.xml"),
+  "utf8",
+);
+const sitemapUrls = Array.from(
+  sitemapText.matchAll(/<loc>(.*?)<\/loc>/g),
+  (match) => match[1],
+);
+const expectedSitemapUrls = Array.from(
+  publicPages.values(),
+  ([, canonical]) => canonical,
+);
 assert.deepEqual(sitemapUrls, expectedSitemapUrls);
-assert.doesNotMatch(sitemapText, /lastmod|account|admin|checkout|projects|orders|cart/i);
+assert.doesNotMatch(
+  sitemapText,
+  /lastmod|account|admin|checkout|projects|orders|cart/i,
+);
 for (const url of sitemapUrls) {
-  const targetStat = await stat(exportedFileForCanonical(url)).catch(() => undefined);
-  assert.equal(targetStat?.isFile(), true, `${url} does not resolve within the export.`);
+  const targetStat = await stat(exportedFileForCanonical(url)).catch(
+    () => undefined,
+  );
+  assert.equal(
+    targetStat?.isFile(),
+    true,
+    `${url} does not resolve within the export.`,
+  );
 }
 
-const socialImage = await readFile(path.join(exportDirectory, "social-preview.jpg"));
+const socialImage = await readFile(
+  path.join(exportDirectory, "social-preview.jpg"),
+);
 assert.deepEqual(readJpegDimensions(socialImage), { height: 630, width: 1200 });
-assert.equal(socialImage.length < 500_000, true, "The social preview should remain below 500 KB.");
+assert.equal(
+  socialImage.length < 500_000,
+  true,
+  "The social preview should remain below 500 KB.",
+);
 
-const manifest = JSON.parse(await readFile(path.join(exportDirectory, "site.webmanifest"), "utf8"));
+const manifest = JSON.parse(
+  await readFile(path.join(exportDirectory, "site.webmanifest"), "utf8"),
+);
 assert.equal(manifest.start_url, productionSiteUrl);
 assert.equal(manifest.icons[0].src, `${productionSiteUrl}favicon.ico`);
 assert.equal(manifest.icons[0].sizes, "256x256");

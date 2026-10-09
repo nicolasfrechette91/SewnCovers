@@ -2,8 +2,10 @@ import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
 import { classNames } from "../ui/class-names";
 
-export interface CushionPreviewProps
-  extends Omit<ComponentPropsWithoutRef<"figure">, "children" | "title"> {
+export interface CushionPreviewProps extends Omit<
+  ComponentPropsWithoutRef<"figure">,
+  "children" | "title"
+> {
   /** Adjustments and notes shown beside the visual on wide layouts. */
   controls?: ReactNode;
   /** The figure caption, spanning the full width below everything else. */
@@ -83,7 +85,10 @@ export function CushionPreview({
                   aria-hidden="true"
                   className="block h-20 w-28 rounded-panel border border-dashed border-border-strong bg-surface sm:h-28 sm:w-40"
                 />
-                <p role="status" className="break-words text-supporting text-text-muted">
+                <p
+                  role="status"
+                  className="break-words text-supporting text-text-muted"
+                >
                   {emptyMessage}
                 </p>
               </div>

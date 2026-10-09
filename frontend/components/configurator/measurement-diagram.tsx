@@ -67,13 +67,7 @@ function SquareDiagram() {
         height="112"
         rx="10"
       />
-      <DimensionLine
-        label="Width"
-        x1={28}
-        x2={140}
-        y1={160}
-        y2={160}
-      />
+      <DimensionLine label="Width" x1={28} x2={140} y1={160} y2={160} />
       <rect
         className="measurement-diagram-face"
         x="190"
@@ -106,13 +100,7 @@ function RectangleDiagram() {
         height="96"
         rx="10"
       />
-      <DimensionLine
-        label="Width"
-        x1={38}
-        x2={190}
-        y1={162}
-        y2={162}
-      />
+      <DimensionLine label="Width" x1={38} x2={190} y1={162} y2={162} />
       <DimensionLine
         label="Height"
         labelX={58}
@@ -158,13 +146,7 @@ function BoxDiagram() {
         className="measurement-diagram-side"
         points="44,62 98,102 98,154 44,114"
       />
-      <DimensionLine
-        label="Width"
-        x1={98}
-        x2={250}
-        y1={174}
-        y2={142}
-      />
+      <DimensionLine label="Width" x1={98} x2={250} y1={174} y2={142} />
       <DimensionLine
         label="Depth"
         labelX={69}
@@ -190,12 +172,7 @@ function BoxDiagram() {
 function RoundDiagram() {
   return (
     <>
-      <circle
-        className="measurement-diagram-face"
-        cx="92"
-        cy="86"
-        r="58"
-      />
+      <circle className="measurement-diagram-face" cx="92" cy="86" r="58" />
       <DimensionLine
         label="Diameter"
         x1={34}

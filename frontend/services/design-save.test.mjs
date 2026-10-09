@@ -5,10 +5,7 @@ import { test } from "node:test";
 import { importFresh } from "../tests/fresh-import.mjs";
 
 const saveSharePanelSource = readFileSync(
-  new URL(
-    "../components/configurator/save-share-panel.tsx",
-    import.meta.url,
-  ),
+  new URL("../components/configurator/save-share-panel.tsx", import.meta.url),
   "utf8",
 );
 
@@ -127,10 +124,8 @@ test("maps solid fabric explicitly for public designs and saved projects", async
 });
 
 test("refuses incomplete or contract-incompatible configurations before saving", async () => {
-  const {
-    InvalidReviewedConfigurationError,
-    mapConfigurationToCreateDesign,
-  } = await loadDesignSave();
+  const { InvalidReviewedConfigurationError, mapConfigurationToCreateDesign } =
+    await loadDesignSave();
   const invalidConfigurations = [
     configuration({ shape: null }),
     configuration({ patternId: null }),
@@ -165,9 +160,7 @@ test("saves once, publishes accessible progress data, and uses the returned publ
   const controller = new DesignSaveController(
     client,
     (publicId) =>
-      `https://example.test/configure/?design=${encodeURIComponent(
-        publicId,
-      )}`,
+      `https://example.test/configure/?design=${encodeURIComponent(publicId)}`,
   );
   const states = [];
   controller.subscribe((state) => states.push(state));
@@ -187,8 +180,7 @@ test("saves once, publishes accessible progress data, and uses the returned publ
     message: "Design saved. Your share link is ready.",
     phase: "success",
     publicId: "AbCdEfGhIjKlMnOpQrSt_1",
-    shareUrl:
-      "https://example.test/configure/?design=AbCdEfGhIjKlMnOpQrSt_1",
+    shareUrl: "https://example.test/configure/?design=AbCdEfGhIjKlMnOpQrSt_1",
   });
   assert.deepEqual(
     states.map(({ phase }) => phase),
@@ -223,8 +215,7 @@ test("preserves configuration through a single-attempt failure and explicit reco
   };
   const controller = new DesignSaveController(
     client,
-    (publicId) =>
-      `https://example.test/configure/?design=${publicId}`,
+    (publicId) => `https://example.test/configure/?design=${publicId}`,
   );
   const value = configuration();
   const beforeSave = structuredClone(value);
@@ -282,10 +273,7 @@ test("builds encoded links for ordinary and GitHub Pages base paths", async () =
   const { buildDesignShareUrl } = await loadDesignSave();
 
   assert.equal(
-    buildDesignShareUrl(
-      "opaque id/+?",
-      "https://example.test/",
-    ),
+    buildDesignShareUrl("opaque id/+?", "https://example.test/"),
     "https://example.test/configure/?design=opaque%20id%2F%2B%3F",
   );
   assert.equal(
@@ -299,10 +287,8 @@ test("builds encoded links for ordinary and GitHub Pages base paths", async () =
 });
 
 test("copies the exact link once and reports unavailable or rejected clipboard access", async () => {
-  const {
-    copyDesignShareUrl,
-    DesignShareClipboardError,
-  } = await loadDesignSave();
+  const { copyDesignShareUrl, DesignShareClipboardError } =
+    await loadDesignSave();
   const copied = [];
   const shareUrl =
     "https://example.test/configure/?design=AbCdEfGhIjKlMnOpQrSt_1";
@@ -345,10 +331,7 @@ test("save/share UI declares labeled, announced, retry, and manual-copy recovery
     saveSharePanelSource,
     /finally\(\(\) => onSavingChange\?\.\(false\)\)/,
   );
-  assert.match(
-    saveSharePanelSource,
-    /htmlFor="configuration-share-url"/,
-  );
+  assert.match(saveSharePanelSource, /htmlFor="configuration-share-url"/);
   assert.match(saveSharePanelSource, /readOnly/);
   assert.match(saveSharePanelSource, /Copy share link/);
   assert.match(saveSharePanelSource, /shareUrlInput\.current\?\.select/);

@@ -3,10 +3,16 @@
 import { useId, type ComponentPropsWithRef, type ReactNode } from "react";
 
 import { classNames } from "./class-names";
-import { controlClasses, fieldHelpClasses, fieldLabelClasses } from "./field-styles";
+import {
+  controlClasses,
+  fieldHelpClasses,
+  fieldLabelClasses,
+} from "./field-styles";
 
-export interface NumberInputProps
-  extends Omit<ComponentPropsWithRef<"input">, "type"> {
+export interface NumberInputProps extends Omit<
+  ComponentPropsWithRef<"input">,
+  "type"
+> {
   containerClassName?: string;
   invalid?: boolean;
   label: ReactNode;
@@ -34,13 +40,17 @@ export function NumberInput({
 }: NumberInputProps) {
   const generatedId = useId();
   const inputId = id ?? `number-input-${generatedId}`;
-  const supportingTextId = supportingText ? `${inputId}-description` : undefined;
+  const supportingTextId = supportingText
+    ? `${inputId}-description`
+    : undefined;
   const describedBy = [ariaDescribedBy, supportingTextId]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <div className={classNames("flex min-w-0 flex-col gap-2", containerClassName)}>
+    <div
+      className={classNames("flex min-w-0 flex-col gap-2", containerClassName)}
+    >
       <label htmlFor={inputId} className={fieldLabelClasses}>
         {label}
       </label>

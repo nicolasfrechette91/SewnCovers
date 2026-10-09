@@ -56,7 +56,9 @@ export function removeLinkParameters(): void {
   );
 }
 
-export function readStoredDesign(draft: ConfiguratorDraft | null): StoredDesign | null {
+export function readStoredDesign(
+  draft: ConfiguratorDraft | null,
+): StoredDesign | null {
   if (!draft || !draftHasDesign(draft)) return null;
   const configuration = sanitizeDraftConfiguration(draft.configuration);
   return isInitialConfiguration(configuration)
@@ -90,7 +92,10 @@ export function planArrival(
       : { kind: "link" };
   }
   if (!stored) return { kind: "none" };
-  if (isInitialConfiguration(current) || designFingerprint(current) === fingerprint) {
+  if (
+    isInitialConfiguration(current) ||
+    designFingerprint(current) === fingerprint
+  ) {
     return { kind: "restore", stored };
   }
   return draftNeedsProtection(draft, fingerprint, "")
@@ -113,7 +118,11 @@ export async function resolveCustomPatternPreview(
     }
     if (upload.state === "approved") {
       const access = await accountApi.assetAccess(token, upload.id, "tile");
-      return { ...pattern, label: upload.label, previewUrl: resolveAssetUrl(access.url) };
+      return {
+        ...pattern,
+        label: upload.label,
+        previewUrl: resolveAssetUrl(access.url),
+      };
     }
   } catch {
     // Stays marked unavailable; the pattern can be chosen again.
@@ -121,28 +130,37 @@ export async function resolveCustomPatternPreview(
   return { ...pattern, unavailableReason: "unavailable" };
 }
 
-const REPLACE_COPY: Readonly<Record<ReplaceReason, {
-  readonly description: string;
-  readonly keep: string;
-  readonly replace: string;
-}>> = {
+const REPLACE_COPY: Readonly<
+  Record<
+    ReplaceReason,
+    {
+      readonly description: string;
+      readonly keep: string;
+      readonly replace: string;
+    }
+  >
+> = {
   design: {
-    description: "This link opens a shared design. Opening it replaces the unsaved design kept in this browser, and that design can’t be brought back.",
+    description:
+      "This link opens a shared design. Opening it replaces the unsaved design kept in this browser, and that design can’t be brought back.",
     keep: "Keep my design",
     replace: "Open the link instead",
   },
   project: {
-    description: "This link opens a private project version. Opening it replaces the unsaved design kept in this browser, and that design can’t be brought back.",
+    description:
+      "This link opens a private project version. Opening it replaces the unsaved design kept in this browser, and that design can’t be brought back.",
     keep: "Keep my design",
     replace: "Open the link instead",
   },
   share: {
-    description: "This link opens a shared project version. Opening it replaces the unsaved design kept in this browser, and that design can’t be brought back.",
+    description:
+      "This link opens a shared project version. Opening it replaces the unsaved design kept in this browser, and that design can’t be brought back.",
     keep: "Keep my design",
     replace: "Open the link instead",
   },
   started: {
-    description: "You started a new design before your earlier one loaded. The earlier, unsaved design is still kept in this browser; keeping the new one replaces it.",
+    description:
+      "You started a new design before your earlier one loaded. The earlier, unsaved design is still kept in this browser; keeping the new one replaces it.",
     keep: "Restore my earlier design",
     replace: "Keep the new design",
   },

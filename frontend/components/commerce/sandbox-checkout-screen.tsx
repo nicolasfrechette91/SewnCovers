@@ -10,10 +10,7 @@ import {
   withBasePath,
 } from "@/services/account-api";
 import { assuranceApi } from "@/services/assurance-api";
-import {
-  commerceApi,
-  type SandboxCheckout,
-} from "@/services/commerce-api";
+import { commerceApi, type SandboxCheckout } from "@/services/commerce-api";
 
 import { CommerceError, DemoBanner } from "./demo-banner";
 
@@ -33,8 +30,9 @@ export function SandboxCheckoutScreen() {
   const orderId = params.get("order");
   const [checkout, setCheckout] = useState<SandboxCheckout | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] =
-    useState<"success" | "failure" | "cancel" | null>(null);
+  const [busy, setBusy] = useState<"success" | "failure" | "cancel" | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [termsAcknowledged, setTermsAcknowledged] = useState(false);
 
@@ -64,9 +62,7 @@ export function SandboxCheckoutScreen() {
     return <LoadingState label="Opening fictional hosted checkout…" />;
   }
 
-  const finish = async (
-    outcome: "success" | "failure" | "cancel",
-  ) => {
+  const finish = async (outcome: "success" | "failure" | "cancel") => {
     if (!sessionId || !orderId) {
       setError("The fictional checkout mapping is incomplete.");
       return;
@@ -82,25 +78,13 @@ export function SandboxCheckoutScreen() {
     try {
       const token = readSessionToken();
       if (outcome === "success" && token) {
-        await assuranceApi.acknowledge(
-          token,
-          "commerce",
-          "sandbox_checkout",
-        );
+        await assuranceApi.acknowledge(token, "commerce", "sandbox_checkout");
       }
-      await commerceApi.completeSandbox(
-        sessionId,
-        FICTIONAL_SHIPPING,
-        outcome,
-      );
+      await commerceApi.completeSandbox(sessionId, FICTIONAL_SHIPPING, outcome);
       const target =
-        outcome === "success"
-          ? "/checkout/return/"
-          : "/checkout/cancel/";
+        outcome === "success" ? "/checkout/return/" : "/checkout/cancel/";
       window.location.assign(
-        withBasePath(target) +
-          "?order=" +
-          encodeURIComponent(orderId),
+        withBasePath(target) + "?order=" + encodeURIComponent(orderId),
       );
     } catch (caught) {
       setError(
@@ -126,8 +110,8 @@ export function SandboxCheckoutScreen() {
             {checkout.orderReference}
           </p>
           <p className="mt-2 font-display text-section-title font-heading tabular-nums text-text-primary">
-            {"$"}{(checkout.amountMinor / 100).toFixed(2)} CAD estimated
-            subtotal
+            {"$"}
+            {(checkout.amountMinor / 100).toFixed(2)} CAD estimated subtotal
           </p>
           <p className="mt-2 text-text-muted">
             This sandbox has no card fields and cannot charge anyone. It adds
@@ -146,10 +130,7 @@ export function SandboxCheckoutScreen() {
                 Fixed fictional shipping fixture
               </legend>
               {Object.entries(FICTIONAL_SHIPPING).map(([key, value]) => (
-                <label
-                  key={key}
-                  className="grid gap-1 text-label font-control"
-                >
+                <label key={key} className="grid gap-1 text-label font-control">
                   {key.replace(/([A-Z])/g, " $1")}
                   <input
                     readOnly
@@ -169,10 +150,10 @@ export function SandboxCheckoutScreen() {
                 }
               />
               <span>
-                I acknowledge demonstration commerce notice version 1:
-                pricing, tax, shipping, payment, refund, production, and
-                fulfilment are fictional sandbox behavior with no charge,
-                manufacturing, delivery, or commercial-availability promise.
+                I acknowledge demonstration commerce notice version 1: pricing,
+                tax, shipping, payment, refund, production, and fulfilment are
+                fictional sandbox behavior with no charge, manufacturing,
+                delivery, or commercial-availability promise.
               </span>
             </label>
             <div className="mt-4 flex flex-wrap gap-3">

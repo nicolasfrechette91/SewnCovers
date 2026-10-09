@@ -34,10 +34,7 @@ function validateAuthForm(
 
   if (!email) {
     errors.email = "Enter your email address.";
-  } else if (
-    email.length > 254 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  ) {
+  } else if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     errors.email = "Enter a valid email address.";
   }
 
@@ -48,7 +45,8 @@ function validateAuthForm(
   }
 
   if (isRegister && !data.get("acceptedTerms")) {
-    errors.acceptedTerms = "Acknowledge the account terms to create an account.";
+    errors.acceptedTerms =
+      "Acknowledge the account terms to create an account.";
   }
 
   return errors;
@@ -132,11 +130,7 @@ export function AuthForm({
       const email = String(data.get("email")).trim();
       const password = String(data.get("password"));
       if (isRegister) {
-        await register(
-          email,
-          password,
-          Boolean(data.get("acceptedTerms")),
-        );
+        await register(email, password, Boolean(data.get("acceptedTerms")));
       } else {
         await login(email, password);
       }
@@ -243,30 +237,38 @@ export function AuthForm({
           : "Password recovery is unavailable in this portfolio prototype."}
       </p>
       {fieldErrors.password ? (
-        <p id={passwordErrorId} className="mt-2 text-supporting text-error-text">
+        <p
+          id={passwordErrorId}
+          className="mt-2 text-supporting text-error-text"
+        >
           {fieldErrors.password}
         </p>
       ) : null}
       {isRegister ? (
         <div className="mt-4">
           <label className="flex items-start gap-2 text-supporting">
-          <input
-            ref={termsRef}
-            className="mt-0.5 size-5 shrink-0 cursor-pointer accent-brand"
-            type="checkbox"
-            name="acceptedTerms"
-            required
-            aria-invalid={fieldErrors.acceptedTerms ? true : undefined}
-            aria-describedby={fieldErrors.acceptedTerms ? termsErrorId : undefined}
-            onChange={() => clearFieldError("acceptedTerms")}
-          />
-          <span>
-            I acknowledge account terms version 1 and understand this is a
-            portfolio demonstration without commercial availability.
-          </span>
+            <input
+              ref={termsRef}
+              className="mt-0.5 size-5 shrink-0 cursor-pointer accent-brand"
+              type="checkbox"
+              name="acceptedTerms"
+              required
+              aria-invalid={fieldErrors.acceptedTerms ? true : undefined}
+              aria-describedby={
+                fieldErrors.acceptedTerms ? termsErrorId : undefined
+              }
+              onChange={() => clearFieldError("acceptedTerms")}
+            />
+            <span>
+              I acknowledge account terms version 1 and understand this is a
+              portfolio demonstration without commercial availability.
+            </span>
           </label>
           {fieldErrors.acceptedTerms ? (
-            <p id={termsErrorId} className="mt-2 text-supporting text-error-text">
+            <p
+              id={termsErrorId}
+              className="mt-2 text-supporting text-error-text"
+            >
               {fieldErrors.acceptedTerms}
             </p>
           ) : null}
