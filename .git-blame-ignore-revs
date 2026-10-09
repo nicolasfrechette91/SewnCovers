@@ -1,0 +1,10 @@
+# Commits that only reformat code, so `git blame` can look past them to the
+# change that wrote each line. GitHub reads this file by itself in its blame
+# view. In a local clone, run once:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: format the frontend with Prettier. 153 files, formatting only, apart
+# from two // @ts-expect-error comments in
+# frontend/tests/accessibility-contracts.test.tsx that moved onto the JSX line
+# Prettier now wraps below them.
+d56e4cda9b6b46a976b951f881d4be14fa71c313

@@ -7,6 +7,7 @@ SewnCovers is a cushion-cover configurator: a static Next.js 16 frontend (`front
 - Frontend (from `frontend/`): `npm ci`, `npm run format:check` (`npm run format` writes), `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run verify:export`, `npm run verify:performance`, `npm run test:e2e`.
 - Backend (from `backend/`, venv active): `python -m ruff format --check .`, `python -m ruff check .`, `python -m pytest`, `python -m pip check`.
 - Run the API locally on SQLite: set `DATABASE_URL=sqlite:///./local.sqlite3` in `backend/.env`, then `python -m alembic upgrade head` and `python -m uvicorn app.main:app --reload`.
+- Once per clone, `git config blame.ignoreRevsFile .git-blame-ignore-revs` makes `git blame` skip the formatting-only commits listed there (GitHub's blame view applies the file by itself).
 
 ## Test runners
 
