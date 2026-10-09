@@ -8,6 +8,7 @@ import {
   resolveAssetUrl,
   type ProjectConfigurationRequest,
 } from "@/services/account-api";
+import { Surface } from "@/components/ui";
 
 const labels: Readonly<Record<string, string>> = {
   "cotton-canvas": "Cotton canvas",
@@ -123,7 +124,13 @@ export function ConfigurationReadonly({
         ))}
       </dl>
       <figure className="min-w-0">
-        <div className="cutting-mat flex aspect-[4/3] items-center justify-center overflow-hidden rounded-card border border-border">
+        <Surface
+          tone="page"
+          elevation="flat"
+          padding="none"
+          radius="card"
+          className="cutting-mat flex aspect-[4/3] items-center justify-center overflow-hidden"
+        >
           {configuration.pattern.kind === "built-in" ? (
             <div
               className={`prototype-pattern ${artworkClassName ?? ""} h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised`}
@@ -155,7 +162,7 @@ export function ConfigurationReadonly({
               Custom asset deleted or unavailable.
             </p>
           )}
-        </div>
+        </Surface>
         <figcaption className="mt-2 text-supporting text-text-muted">
           Read-only preview of the saved {configuration.shape} design. Use the
           complete text details for the saved choices.

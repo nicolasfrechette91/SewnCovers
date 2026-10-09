@@ -23,6 +23,7 @@ import {
   TextInput,
   TextLink,
   useDeferredFocus,
+  Surface,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
@@ -103,9 +104,10 @@ function ProjectList({ token }: Readonly<{ token: string }>) {
   return (
     <ul className="grid min-w-0 wrap-anywhere gap-component sm:grid-cols-2 lg:grid-cols-3">
       {state.value.map((project) => (
-        <li
+        <Surface
+          as="li"
           key={project.id}
-          className="flex min-w-0 flex-col rounded-panel border border-border bg-surface p-card shadow-hairline transition-[border-color,box-shadow] duration-(--duration-base) hover:border-border-strong hover:shadow-card motion-reduce:transition-none"
+          className="flex flex-col transition-[border-color,box-shadow] duration-(--duration-base) hover:border-border-strong hover:shadow-card motion-reduce:transition-none"
         >
           <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
             {project.privacy === "shared"
@@ -126,7 +128,7 @@ function ProjectList({ token }: Readonly<{ token: string }>) {
           >
             Open project
           </Link>
-        </li>
+        </Surface>
       ))}
     </ul>
   );
@@ -257,7 +259,7 @@ function ProjectView({
       >
         ← All projects
       </Link>
-      <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+      <Surface as="section">
         <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
           {detail.privacy === "shared"
             ? "Shared — one or more revocable links are active"
@@ -296,11 +298,13 @@ function ProjectView({
             Rename project
           </Button>
         </form>
-      </section>
+      </Surface>
 
       {shareUrl ? (
-        <section
-          className="rounded-panel border border-brand bg-surface p-card shadow-card"
+        <Surface
+          as="section"
+          tone="emphasis"
+          elevation="card"
           aria-live="polite"
         >
           <h2 className="font-display text-card-title font-heading tracking-heading text-text-primary">
@@ -341,7 +345,7 @@ function ProjectView({
           >
             Copy share link
           </Button>
-        </section>
+        </Surface>
       ) : null}
       {actionError ? <ErrorMessage>{actionError}</ErrorMessage> : null}
       {actionStatus ? (
@@ -368,10 +372,7 @@ function ProjectView({
         </p>
         <ol className="mt-component space-y-component">
           {versions.map((version) => (
-            <li
-              key={version.id}
-              className="rounded-panel border border-border bg-surface p-card shadow-hairline"
-            >
+            <Surface as="li" key={version.id}>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h3 className="font-display text-card-title font-heading tracking-heading text-text-primary">
@@ -422,13 +423,13 @@ function ProjectView({
               <div className="mt-component border-t border-dashed border-border-strong pt-component">
                 <ConfigurationReadonly configuration={version.configuration} />
               </div>
-            </li>
+            </Surface>
           ))}
         </ol>
       </section>
 
       {detail.activeShares.length ? (
-        <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+        <Surface as="section">
           <h2 className="font-display text-card-title font-heading tracking-heading text-text-primary">
             Active read-only shares
           </h2>
@@ -466,10 +467,10 @@ function ProjectView({
               </li>
             ))}
           </ul>
-        </section>
+        </Surface>
       ) : null}
 
-      <section className="rounded-panel border border-error-border bg-surface p-card">
+      <Surface as="section" tone="danger" elevation="flat">
         <h2 className="font-display text-card-title font-heading tracking-heading text-text-primary">
           Delete project
         </h2>
@@ -510,7 +511,7 @@ function ProjectView({
             </Button>
           </div>
         )}
-      </section>
+      </Surface>
     </div>
   );
 }

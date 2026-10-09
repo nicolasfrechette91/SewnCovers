@@ -9,6 +9,7 @@ import {
   Field,
   TextInput,
   useDeferredFocus,
+  surfaceClasses,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
@@ -162,11 +163,7 @@ export function AuthForm({
       noValidate
       aria-busy={pending}
       onSubmit={(event) => void submit(event)}
-      className={
-        isInline
-          ? "min-w-0"
-          : "min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline"
-      }
+      className={isInline ? "min-w-0" : surfaceClasses()}
     >
       {isInline ? null : (
         <>

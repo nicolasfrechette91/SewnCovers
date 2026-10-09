@@ -10,6 +10,8 @@ import {
   Select,
   TextInput,
   useDeferredFocus,
+  Surface,
+  surfaceClasses,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
@@ -177,7 +179,12 @@ export function ProductionOperationsScreen() {
           </Button>
         </div>
         <form
-          className="mt-4 grid gap-3 rounded-card border border-border bg-surface p-4 lg:grid-cols-3"
+          className={surfaceClasses({
+            elevation: "flat",
+            padding: "compact",
+            radius: "card",
+            className: "mt-4 grid gap-3 lg:grid-cols-3",
+          })}
           onSubmit={(event) => {
             event.preventDefault();
             void load();
@@ -267,10 +274,7 @@ export function ProductionOperationsScreen() {
       </section>
 
       {selected ? (
-        <section
-          className="rounded-panel border border-border bg-surface p-card shadow-hairline"
-          aria-labelledby="work-detail-heading"
-        >
+        <Surface as="section" aria-labelledby="work-detail-heading">
           <h2
             id="work-detail-heading"
             ref={detailHeading}
@@ -284,7 +288,14 @@ export function ProductionOperationsScreen() {
             {selected.state.replaceAll("_", " ")} · quality{" "}
             {selected.qualityState}
           </p>
-          <details className="mt-4 rounded-card border border-border p-3">
+          <details
+            className={surfaceClasses({
+              elevation: "flat",
+              padding: "tight",
+              radius: "card",
+              className: "mt-4",
+            })}
+          >
             <summary className="min-h-11 cursor-pointer font-control">
               Immutable production specification
             </summary>
@@ -300,8 +311,12 @@ export function ProductionOperationsScreen() {
               const key = String(item.itemKey);
               const complete = item.status === "complete";
               return (
-                <li
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-border p-3"
+                <Surface
+                  as="li"
+                  elevation="flat"
+                  padding="tight"
+                  radius="card"
+                  className="flex flex-wrap items-center justify-between gap-2"
                   key={key}
                 >
                   <span>{key.replaceAll("_", " ")}</span>
@@ -323,11 +338,16 @@ export function ProductionOperationsScreen() {
                   >
                     {complete ? "Reopen" : "Complete"}
                   </Button>
-                </li>
+                </Surface>
               );
             })}
           </ul>
-          <div className="mt-component grid gap-3 rounded-card border border-border p-4 lg:grid-cols-2">
+          <Surface
+            elevation="flat"
+            padding="compact"
+            radius="card"
+            className="mt-component grid gap-3 lg:grid-cols-2"
+          >
             <Field label="Structured reason">
               {(control) => (
                 <TextInput
@@ -399,7 +419,7 @@ export function ProductionOperationsScreen() {
                 Fail quality
               </Button>
             </div>
-          </div>
+          </Surface>
           <div className="mt-3 flex flex-wrap gap-2">
             {selected.state === "review" ? (
               <Button
@@ -475,8 +495,12 @@ export function ProductionOperationsScreen() {
           </h3>
           <ol className="mt-2 space-y-2">
             {selected.history.map((entry, index) => (
-              <li
-                className="rounded-card border border-border p-3 text-supporting"
+              <Surface
+                as="li"
+                elevation="flat"
+                padding="tight"
+                radius="card"
+                className="text-supporting"
                 key={String(entry.createdAt) + "-" + index}
               >
                 <strong>{String(entry.action)}</strong> ·{" "}
@@ -487,10 +511,10 @@ export function ProductionOperationsScreen() {
                     {String(entry.reason)}
                   </span>
                 ) : null}
-              </li>
+              </Surface>
             ))}
           </ol>
-        </section>
+        </Surface>
       ) : null}
       <p
         role="status"

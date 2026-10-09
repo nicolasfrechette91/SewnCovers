@@ -10,6 +10,7 @@ import {
   Select,
   TextInput,
   useDeferredFocus,
+  Surface,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
@@ -29,10 +30,7 @@ function message(error: unknown) {
 
 function PricingCard({ pricing }: Readonly<{ pricing: Pricing }>) {
   return (
-    <section
-      className="rounded-panel border border-border bg-surface p-card shadow-hairline"
-      aria-labelledby="estimate-heading"
-    >
+    <Surface as="section" aria-labelledby="estimate-heading">
       <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
         Demonstration estimate · Price book v{pricing.priceBookVersion}
       </p>
@@ -57,7 +55,7 @@ function PricingCard({ pricing }: Readonly<{ pricing: Pricing }>) {
           </div>
         ))}
       </dl>
-    </section>
+    </Surface>
   );
 }
 
@@ -144,7 +142,7 @@ export function PrivatePricingWorkspace({
           {status}
         </p>
       ) : null}
-      <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+      <Surface as="section">
         <h3 className="font-display text-section-title font-heading tracking-heading text-text-primary">
           Price a saved project version
         </h3>
@@ -234,7 +232,7 @@ export function PrivatePricingWorkspace({
             estimate.
           </p>
         )}
-      </section>
+      </Surface>
       {pricing ? <PricingCard pricing={pricing} /> : null}
       <section aria-labelledby="quotes-heading">
         <h3
@@ -250,10 +248,7 @@ export function PrivatePricingWorkspace({
         {quotes.length ? (
           <ul className="mt-4 grid gap-component lg:grid-cols-2">
             {quotes.map((quote) => (
-              <li
-                key={quote.id}
-                className="rounded-panel border border-border bg-surface p-card shadow-hairline"
-              >
+              <Surface as="li" key={quote.id}>
                 <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
                   Demo quote · {quote.status}
                 </p>
@@ -302,7 +297,7 @@ export function PrivatePricingWorkspace({
                     Reprice
                   </Button>
                 </div>
-              </li>
+              </Surface>
             ))}
           </ul>
         ) : (

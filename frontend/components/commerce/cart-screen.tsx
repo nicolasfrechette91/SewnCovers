@@ -9,6 +9,7 @@ import {
   LoadingState,
   TextInput,
   useDeferredFocus,
+  Surface,
 } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { useAuth } from "@/context/auth";
@@ -143,10 +144,7 @@ export function CartScreen() {
         <>
           <ul className="space-y-component">
             {cart.lines.map((line) => (
-              <li
-                key={line.id}
-                className="rounded-panel border border-border bg-surface p-card shadow-hairline"
-              >
+              <Surface as="li" key={line.id}>
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
@@ -230,10 +228,10 @@ export function CartScreen() {
                     </Button>
                   </form>
                 </div>
-              </li>
+              </Surface>
             ))}
           </ul>
-          <section className="rounded-panel border border-brand bg-surface p-card shadow-card">
+          <Surface as="section" tone="emphasis" elevation="card">
             <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
               Estimated subtotal
             </p>
@@ -265,7 +263,7 @@ export function CartScreen() {
                 Empty cart
               </Button>
             </div>
-          </section>
+          </Surface>
         </>
       )}
     </div>

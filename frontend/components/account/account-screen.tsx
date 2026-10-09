@@ -11,6 +11,8 @@ import {
   LoadingState,
   TextInput,
   useDeferredFocus,
+  Surface,
+  surfaceClasses,
 } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { useAuth } from "@/context/auth";
@@ -143,7 +145,7 @@ function AuthenticatedAccount({
   return (
     <div className="space-y-layout">
       <AccountNavigation currentHref="/account/" />
-      <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+      <Surface as="section">
         <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
           Signed in
         </p>
@@ -181,9 +183,9 @@ function AuthenticatedAccount({
             Sign out everywhere
           </Button>
         </div>
-      </section>
+      </Surface>
 
-      <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+      <Surface as="section">
         <h2 className="font-display text-section-title font-heading tracking-heading text-text-primary">
           Active sessions
         </h2>
@@ -192,9 +194,12 @@ function AuthenticatedAccount({
         ) : (
           <ul className="mt-3 space-y-3">
             {sessions.map((session) => (
-              <li
+              <Surface
+                as="li"
+                elevation="flat"
+                padding="tight"
+                radius="card"
                 key={session.id}
-                className="rounded-card border border-border p-3"
               >
                 <p className="text-body text-text-primary">
                   {session.current ? "Current session" : "Session"} —{" "}
@@ -227,7 +232,7 @@ function AuthenticatedAccount({
                     Revoke this session
                   </Button>
                 ) : null}
-              </li>
+              </Surface>
             ))}
           </ul>
         )}
@@ -241,9 +246,9 @@ function AuthenticatedAccount({
             Retry sessions
           </Button>
         ) : null}
-      </section>
+      </Surface>
 
-      <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+      <Surface as="section">
         <h2 className="font-display text-section-title font-heading tracking-heading text-text-primary">
           Your data
         </h2>
@@ -260,9 +265,9 @@ function AuthenticatedAccount({
         >
           Export my data
         </Button>
-      </section>
+      </Surface>
 
-      <section className="rounded-panel border border-error-border bg-surface p-card">
+      <Surface as="section" tone="danger" elevation="flat">
         <h2 className="font-display text-section-title font-heading tracking-heading text-text-primary">
           Delete account
         </h2>
@@ -326,7 +331,7 @@ function AuthenticatedAccount({
             </div>
           </form>
         )}
-      </section>
+      </Surface>
     </div>
   );
 }
@@ -383,7 +388,12 @@ export function AccountScreen({
       ) : null}
       <nav
         aria-label="Authentication options"
-        className="rounded-card border border-border bg-surface p-2"
+        className={surfaceClasses({
+          elevation: "flat",
+          padding: "none",
+          radius: "card",
+          className: "p-2",
+        })}
       >
         <ul className="grid grid-cols-2 gap-1 rounded-control border border-border-strong bg-surface-subtle p-1">
           {(["login", "register"] as const).map((item) => {

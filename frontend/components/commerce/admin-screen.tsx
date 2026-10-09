@@ -10,6 +10,8 @@ import {
   Textarea,
   TextInput,
   useDeferredFocus,
+  Surface,
+  surfaceClasses,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError, resolveAssetUrl } from "@/services/account-api";
@@ -80,9 +82,13 @@ function ProductionSpecification({
                 ? String(fabric.patternId ?? "Built-in pattern")
                 : "Custom pattern";
           return (
-            <li
+            <Surface
+              as="li"
+              tone="subtle"
+              elevation="flat"
+              padding="compact"
+              radius="card"
               key={String(line.quoteId ?? index)}
-              className="rounded-card border border-border bg-surface-subtle p-4"
             >
               <h4 className="font-control">
                 Line {index + 1} ·{" "}
@@ -167,7 +173,7 @@ function ProductionSpecification({
                     : "Built-in pattern; no custom production asset."}
                 </p>
               )}
-            </li>
+            </Surface>
           );
         })}
       </ul>
@@ -309,7 +315,11 @@ export function AdminScreen() {
           demonstration configuration into a new version.
         </p>
         <form
-          className="responsive-form mt-3 flex flex-col gap-3 rounded-panel border border-border bg-surface p-card sm:flex-row sm:items-end"
+          className={surfaceClasses({
+            elevation: "flat",
+            className:
+              "responsive-form mt-3 flex flex-col gap-3 sm:flex-row sm:items-end",
+          })}
           onSubmit={(event: FormEvent<HTMLFormElement>) => {
             event.preventDefault();
             const label = String(
@@ -347,9 +357,12 @@ export function AdminScreen() {
         </form>
         <ul className="mt-3 space-y-2">
           {books.map((book) => (
-            <li
+            <Surface
+              as="li"
+              elevation="flat"
+              padding="compact"
+              radius="card"
               key={book.id}
-              className="rounded-card border border-border bg-surface p-4"
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <span>
@@ -499,7 +512,7 @@ export function AdminScreen() {
                   </Button>
                 </form>
               ) : null}
-            </li>
+            </Surface>
           ))}
         </ul>
       </section>
@@ -513,9 +526,12 @@ export function AdminScreen() {
         {orders.length ? (
           <ul className="mt-3 grid gap-3 lg:grid-cols-2">
             {orders.map((order) => (
-              <li
+              <Surface
+                as="li"
+                elevation="flat"
+                padding="compact"
+                radius="card"
                 key={order.id}
-                className="rounded-card border border-border bg-surface p-4"
               >
                 <strong>{order.reference}</strong>
                 <br />
@@ -538,7 +554,7 @@ export function AdminScreen() {
                 >
                   Review specification
                 </Button>
-              </li>
+              </Surface>
             ))}
           </ul>
         ) : (
@@ -548,7 +564,7 @@ export function AdminScreen() {
         )}
       </section>
       {selected ? (
-        <section className="rounded-panel border border-brand bg-surface p-card shadow-card">
+        <Surface as="section" tone="emphasis" elevation="card">
           <OrderCard order={selected} detail sectionHeadingLevel={3} />
           <ProductionSpecification
             order={selected}
@@ -571,7 +587,13 @@ export function AdminScreen() {
             }
           />
           <form
-            className="responsive-form mt-component grid gap-3 rounded-card border border-border p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
+            className={surfaceClasses({
+              elevation: "flat",
+              padding: "compact",
+              radius: "card",
+              className:
+                "responsive-form mt-component grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end",
+            })}
             onSubmit={(event) => {
               event.preventDefault();
               const data = new FormData(event.currentTarget);
@@ -614,7 +636,13 @@ export function AdminScreen() {
             </Button>
           </form>
           <form
-            className="responsive-form mt-3 grid gap-3 rounded-card border border-border p-4 sm:grid-cols-2 sm:items-end"
+            className={surfaceClasses({
+              elevation: "flat",
+              padding: "compact",
+              radius: "card",
+              className:
+                "responsive-form mt-3 grid gap-3 sm:grid-cols-2 sm:items-end",
+            })}
             onSubmit={(event) => {
               event.preventDefault();
               const data = new FormData(event.currentTarget);
@@ -730,7 +758,7 @@ export function AdminScreen() {
               </Button>
             )}
           </div>
-        </section>
+        </Surface>
       ) : null}
       <section aria-labelledby="audit-heading">
         <h2
@@ -741,9 +769,12 @@ export function AdminScreen() {
         </h2>
         <ul className="mt-3 space-y-2">
           {audit.map((entry) => (
-            <li
+            <Surface
+              as="li"
+              elevation="flat"
+              padding="tight"
+              radius="card"
               key={entry.id}
-              className="rounded-card border border-border bg-surface p-3"
             >
               <strong>{entry.action}</strong> · {entry.targetType}{" "}
               {entry.targetId}
@@ -751,7 +782,7 @@ export function AdminScreen() {
               <span className="text-supporting text-text-muted">
                 {new Date(entry.createdAt).toLocaleString()}
               </span>
-            </li>
+            </Surface>
           ))}
         </ul>
       </section>

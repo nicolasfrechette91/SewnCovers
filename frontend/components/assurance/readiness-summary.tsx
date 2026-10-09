@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Button, ErrorMessage, LoadingState } from "@/components/ui";
+import { Button, ErrorMessage, LoadingState, Surface } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { assuranceApi, type ReadinessReport } from "@/services/assurance-api";
 
@@ -58,7 +58,7 @@ export function ReadinessSummary() {
         <ErrorMessage heading="Readiness unavailable">{error}</ErrorMessage>
       ) : null}
       {report ? (
-        <div className="mt-4 rounded-panel border border-border bg-surface p-card shadow-hairline">
+        <Surface className="mt-4">
           <p className="font-control" role="status">
             {report.ready
               ? "No blocking configuration errors were found."
@@ -74,7 +74,7 @@ export function ReadinessSummary() {
           <p className="mt-3 text-supporting text-text-muted">
             {report.disclaimer}
           </p>
-        </div>
+        </Surface>
       ) : null}
     </section>
   );

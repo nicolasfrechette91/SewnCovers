@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 
-import { Button, LoadingState } from "@/components/ui";
+import { Button, LoadingState, Surface } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
 import { commerceApi, type Order } from "@/services/commerce-api";
@@ -77,9 +77,10 @@ export function OrderCard({
         .join(", ")
     : null;
   return (
-    <article
+    <Surface
+      as="article"
       aria-labelledby={referenceId}
-      className="min-w-0 wrap-anywhere rounded-panel border border-border bg-surface p-card shadow-hairline"
+      className="wrap-anywhere"
     >
       <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
         Sandbox demonstration order
@@ -183,15 +184,28 @@ export function OrderCard({
             </ol>
           </section>
           {shippingSummary ? (
-            <section className="mt-component rounded-card border border-border p-4">
+            <Surface
+              as="section"
+              elevation="flat"
+              padding="compact"
+              radius="card"
+              className="mt-component"
+            >
               <SectionHeading className="font-control">
                 Authorized shipping details
               </SectionHeading>
               <p className="mt-1">{shippingSummary}</p>
-            </section>
+            </Surface>
           ) : null}
           {order.shipment ? (
-            <section className="mt-component rounded-card border border-brand bg-surface p-4 shadow-card">
+            <Surface
+              as="section"
+              tone="emphasis"
+              elevation="card"
+              padding="compact"
+              radius="card"
+              className="mt-component"
+            >
               <SectionHeading className="font-control">Shipment</SectionHeading>
               <p>
                 {label(order.shipment.carrier)} ·{" "}
@@ -207,7 +221,7 @@ export function OrderCard({
                   Track on carrier website
                 </a>
               ) : null}
-            </section>
+            </Surface>
           ) : null}
         </>
       ) : (
@@ -218,7 +232,7 @@ export function OrderCard({
           View order details and timeline
         </Link>
       )}
-    </article>
+    </Surface>
   );
 }
 

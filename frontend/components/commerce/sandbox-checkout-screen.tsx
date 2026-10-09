@@ -9,6 +9,7 @@ import {
   Field,
   LoadingState,
   TextInput,
+  Surface,
 } from "@/components/ui";
 import {
   AccountApiError,
@@ -107,7 +108,7 @@ export function SandboxCheckoutScreen() {
       <DemoBanner />
       {error ? <CommerceError message={error} /> : null}
       {checkout ? (
-        <section className="rounded-panel border border-brand bg-surface p-card shadow-card">
+        <Surface as="section" tone="emphasis" elevation="card">
           <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
             Fictional hosted checkout
           </p>
@@ -175,7 +176,7 @@ export function SandboxCheckoutScreen() {
               </Button>
             </div>
           </form>
-        </section>
+        </Surface>
       ) : null}
     </div>
   );

@@ -1,6 +1,11 @@
 "use client";
 
-import { ButtonLink, noticeClasses, noticeTitleClasses } from "@/components/ui";
+import {
+  ButtonLink,
+  noticeClasses,
+  noticeTitleClasses,
+  Surface,
+} from "@/components/ui";
 
 import examples from "@/data/public-pricing-examples.json";
 
@@ -16,10 +21,7 @@ export function formatPublicCad(amountMinor: number): string {
 export function PublicPricingOverview() {
   return (
     <div className="space-y-component">
-      <section
-        className="rounded-panel border border-border bg-surface p-card shadow-hairline"
-        aria-labelledby="public-pricing-heading"
-      >
+      <Surface as="section" aria-labelledby="public-pricing-heading">
         <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
           Public illustrative pricing
         </p>
@@ -40,7 +42,7 @@ export function PublicPricingOverview() {
         <p className="mt-3 text-supporting text-text-muted">
           Starting a configuration does not create a quote.
         </p>
-      </section>
+      </Surface>
 
       <section aria-labelledby="examples-heading">
         <div className="max-w-3xl">
@@ -58,9 +60,11 @@ export function PublicPricingOverview() {
         </div>
         <ul className="mt-component grid min-w-0 gap-component lg:grid-cols-3">
           {examples.examples.map((example) => (
-            <li
+            <Surface
+              as="li"
+              padding="none"
               key={example.id}
-              className="flex min-w-0 flex-col rounded-panel border border-border bg-surface shadow-hairline"
+              className="flex flex-col"
             >
               <article
                 aria-labelledby={`${example.id}-heading`}
@@ -120,13 +124,16 @@ export function PublicPricingOverview() {
                   shipping.
                 </p>
               </article>
-            </li>
+            </Surface>
           ))}
         </ul>
       </section>
 
-      <section
-        className="grid gap-component rounded-panel border border-border bg-surface-subtle p-card md:grid-cols-2"
+      <Surface
+        as="section"
+        tone="subtle"
+        elevation="flat"
+        className="grid gap-component md:grid-cols-2"
         aria-labelledby="factors-heading"
       >
         <div>
@@ -155,7 +162,7 @@ export function PublicPricingOverview() {
             here and calculated separately during sandbox checkout.
           </p>
         </div>
-      </section>
+      </Surface>
 
       <aside
         className={noticeClasses("prototype")}
