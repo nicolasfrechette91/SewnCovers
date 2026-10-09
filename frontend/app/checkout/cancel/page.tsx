@@ -5,7 +5,7 @@ import {
   ButtonLink,
   PageShell,
   pageTitleClasses,
-  surfaceClasses,
+  Surface,
 } from "@/components/ui";
 import { createPageMetadata } from "@/config/site-metadata";
 
@@ -20,7 +20,7 @@ export default function CheckoutCancelPage() {
   return (
     <PageShell width="reading" contentClassName="space-y-component">
       <DemoBanner />
-      <section className={surfaceClasses()}>
+      <Surface as="section">
         <h1 className={pageTitleClasses}>Checkout was not completed</h1>
         <p className="mt-3 text-body text-text-muted">
           No fictional payment was completed. Review your demonstration orders
@@ -32,7 +32,7 @@ export default function CheckoutCancelPage() {
             Pricing and quotes
           </ButtonLink>
         </div>
-      </section>
+      </Surface>
     </PageShell>
   );
 }

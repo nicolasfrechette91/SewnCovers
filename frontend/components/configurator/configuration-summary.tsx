@@ -1,6 +1,6 @@
 import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
-import { classNames } from "../ui/class-names";
+import { Surface } from "@/components/ui";
 
 export interface ConfigurationSummaryItem {
   id: string;
@@ -39,14 +39,12 @@ export function ConfigurationSummary({
   }
 
   return (
-    <section
+    <Surface
+      as="section"
       {...sectionProps}
       aria-label={ariaLabel}
       aria-labelledby={ariaLabel ? undefined : headingId}
-      className={classNames(
-        "min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline",
-        className,
-      )}
+      className={className}
     >
       <h2
         id={headingId}
@@ -90,6 +88,6 @@ export function ConfigurationSummary({
           ))}
         </dl>
       )}
-    </section>
+    </Surface>
   );
 }

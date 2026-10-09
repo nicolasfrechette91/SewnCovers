@@ -19,7 +19,7 @@ import { getCushionShapeDefinition } from "@/data/shapes";
 
 import { CushionPreview } from "./cushion-preview";
 import { CushionModel } from "./cushion-model";
-import { Button, buttonClasses, noticeClasses } from "../ui";
+import { Button, buttonClasses, noticeClasses, Surface } from "../ui";
 
 export interface SelectedPatternPresentation {
   readonly name: string;
@@ -385,7 +385,13 @@ function PreviewStepContent({
           isSummary ? undefined : (
             <div className="flex min-w-0 flex-col gap-component">
               {selectedPattern && !selectedPattern.solidColor ? (
-                <div className="rounded-card border border-border bg-surface-subtle p-4 sm:p-5">
+                <Surface
+                  tone="subtle"
+                  elevation="flat"
+                  padding="compact"
+                  radius="card"
+                  className="sm:p-5"
+                >
                   <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
                     <label
                       htmlFor={scaleControlId}
@@ -450,7 +456,7 @@ function PreviewStepContent({
                     {PATTERN_SCALE_MAX.toFixed(1)}× (bolder motifs). 1.0× is the
                     standard size.
                   </p>
-                </div>
+                </Surface>
               ) : null}
 
               {onEdit ? (

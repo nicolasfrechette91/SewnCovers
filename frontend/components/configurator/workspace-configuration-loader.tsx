@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Button, ErrorMessage, LoadingState } from "@/components/ui";
+import { Button, ErrorMessage, LoadingState, Surface } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
   useConfiguration,
@@ -257,9 +257,10 @@ export function WorkspaceConfigurationLoader({
 
   if (state.status === "idle") return null;
   return (
-    <section
+    <Surface
+      as="section"
       aria-labelledby="workspace-load-heading"
-      className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline"
+      className="print-hidden mt-layout"
     >
       <Title
         id="workspace-load-heading"
@@ -306,6 +307,6 @@ export function WorkspaceConfigurationLoader({
           </Button>
         </div>
       ) : null}
-    </section>
+    </Surface>
   );
 }

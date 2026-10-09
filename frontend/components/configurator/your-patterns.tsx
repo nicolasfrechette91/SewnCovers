@@ -23,6 +23,7 @@ import {
   StitchDivider,
   TextInput,
   useDeferredFocus,
+  Surface,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useConfiguration } from "@/context/configuration";
@@ -594,9 +595,11 @@ export function YourPatterns() {
                     }
                   };
                 return (
-                  <li
+                  <Surface
+                    as="li"
+                    padding="compact"
+                    radius="card"
                     key={item.id}
-                    className="rounded-card border border-border bg-surface p-4 shadow-hairline"
                   >
                     <div className="flex min-w-0 items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -667,8 +670,12 @@ export function YourPatterns() {
                         </div>
                       </form>
                     ) : question?.kind === "delete" ? (
-                      <div
-                        className="mt-3 min-w-0 rounded-card border border-error-border p-3"
+                      <Surface
+                        tone="danger"
+                        elevation="flat"
+                        padding="tight"
+                        radius="card"
+                        className="mt-3"
                         role="group"
                         aria-labelledby={itemControlId("warning", item)}
                         onKeyDown={escapeToCancel("delete")}
@@ -695,7 +702,7 @@ export function YourPatterns() {
                             Delete pattern
                           </Button>
                         </div>
-                      </div>
+                      </Surface>
                     ) : (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {editable ? (
@@ -726,7 +733,7 @@ export function YourPatterns() {
                         ) : null}
                       </div>
                     )}
-                  </li>
+                  </Surface>
                 );
               })}
             </ul>

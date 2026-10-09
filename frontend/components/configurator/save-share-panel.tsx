@@ -8,7 +8,13 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { Button, ErrorMessage, Field, TextInput } from "@/components/ui";
+import {
+  Button,
+  ErrorMessage,
+  Field,
+  TextInput,
+  Surface,
+} from "@/components/ui";
 import type { ConfigurationState } from "@/context/configuration";
 import { apiClient } from "@/services/api-client";
 import { recordPublicDesign } from "@/services/draft-links";
@@ -106,9 +112,12 @@ export function SaveSharePanel({
   };
 
   return (
-    <section
+    <Surface
+      as="section"
+      tone="emphasis"
+      elevation="card"
       aria-labelledby="configuration-save-share-heading"
-      className="print-hidden mt-layout min-w-0 rounded-panel border border-brand bg-surface p-card shadow-card"
+      className="print-hidden mt-layout"
     >
       <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
         Save and share
@@ -232,6 +241,6 @@ export function SaveSharePanel({
           </div>
         </div>
       ) : null}
-    </section>
+    </Surface>
   );
 }

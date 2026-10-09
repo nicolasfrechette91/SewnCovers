@@ -18,6 +18,8 @@ import {
   StitchDivider,
   TextInput,
   useDeferredFocus,
+  Surface,
+  surfaceClasses,
 } from "@/components/ui";
 import {
   DEFAULT_SOLID_COLOR,
@@ -258,7 +260,7 @@ export function PatternStep({
     <section aria-label="Pattern selection" className="scroll-mt-layout">
       <fieldset
         aria-describedby={supportingTextId}
-        className="fieldset-panel min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline"
+        className={surfaceClasses({ className: "fieldset-panel" })}
       >
         <legend className="max-w-full pb-2">
           <h1
@@ -305,8 +307,12 @@ export function PatternStep({
           />
         </div>
         {solidColor !== null ? (
-          <div
-            className="mt-4 max-w-2xl rounded-card border border-border bg-surface-subtle p-4 sm:p-5"
+          <Surface
+            tone="subtle"
+            elevation="flat"
+            padding="compact"
+            radius="card"
+            className="mt-4 max-w-2xl sm:p-5"
             role="group"
             aria-labelledby={`${generatedId}-solid-color-heading`}
           >
@@ -372,7 +378,7 @@ export function PatternStep({
             <p className="sr-only" role="status" aria-live="polite">
               Solid colour selected.
             </p>
-          </div>
+          </Surface>
         ) : null}
 
         <YourPatterns />
@@ -403,7 +409,13 @@ export function PatternStep({
           )
         ) : (
           <>
-            <div className="mt-4 rounded-card border border-border bg-surface-subtle p-4 sm:p-5">
+            <Surface
+              tone="subtle"
+              elevation="flat"
+              padding="compact"
+              radius="card"
+              className="mt-4 sm:p-5"
+            >
               <Field
                 className="max-w-2xl"
                 describedBy={resultCountId}
@@ -470,7 +482,7 @@ export function PatternStep({
                   Clear search and filters
                 </Button>
               </div>
-            </div>
+            </Surface>
 
             {selectedPatternIsHiddenByCriteria ? (
               <div

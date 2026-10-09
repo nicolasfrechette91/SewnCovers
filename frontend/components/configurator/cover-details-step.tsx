@@ -15,6 +15,7 @@ import {
   materialOptions,
   seamOptions,
 } from "@/data/cover-options";
+import { Surface } from "@/components/ui";
 
 interface OptionGroupProps<Id extends string> {
   readonly description: string;
@@ -106,10 +107,7 @@ export function CoverDetailsStep({
   }
 
   return (
-    <section
-      aria-labelledby={focusTargetId}
-      className="min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline"
-    >
+    <Surface as="section" aria-labelledby={focusTargetId}>
       <h1
         id={focusTargetId}
         tabIndex={focusTargetId ? -1 : undefined}
@@ -164,6 +162,6 @@ export function CoverDetailsStep({
           }
         />
       </div>
-    </section>
+    </Surface>
   );
 }

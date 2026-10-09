@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 
-import { PageHeader, PageShell, sectionTitleClasses } from "@/components/ui";
+import {
+  PageHeader,
+  PageShell,
+  sectionTitleClasses,
+  Surface,
+} from "@/components/ui";
 import { createPageMetadata } from "@/config/site-metadata";
 
 const documents = [
@@ -101,10 +106,11 @@ export default function LegalPage() {
         </nav>
         <div className="min-w-0 max-w-reading space-y-component">
           {documents.map((document) => (
-            <article
+            <Surface
+              as="article"
               id={document.type}
               key={document.type}
-              className="scroll-mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline"
+              className="scroll-mt-layout"
             >
               <h2 className={sectionTitleClasses}>{document.title}</h2>
               {document.body.map((paragraph) => (
@@ -112,9 +118,9 @@ export default function LegalPage() {
                   {paragraph}
                 </p>
               ))}
-            </article>
+            </Surface>
           ))}
-          <section className="rounded-panel border border-border bg-surface p-card shadow-hairline">
+          <Surface as="section">
             <h2 className={sectionTitleClasses}>
               Third-party processing categories and retention map
             </h2>
@@ -124,12 +130,15 @@ export default function LegalPage() {
             >
               Scroll horizontally to read all columns when needed.
             </p>
-            <div
+            <Surface
+              elevation="flat"
+              padding="none"
+              radius="card"
               role="region"
               aria-label="Processing categories and retention"
               aria-describedby="retention-scroll-help"
               tabIndex={0}
-              className="mt-4 overflow-x-auto rounded-card border border-border"
+              className="mt-4 overflow-x-auto"
             >
               <table className="w-full min-w-[36rem] border-collapse text-left text-supporting">
                 <thead className="bg-surface-subtle">
@@ -220,8 +229,8 @@ export default function LegalPage() {
                   </tr>
                 </tbody>
               </table>
-            </div>
-          </section>
+            </Surface>
+          </Surface>
         </div>
       </div>
     </PageShell>

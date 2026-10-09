@@ -17,6 +17,7 @@ import {
   textLinkClasses,
   TextInput,
   useDeferredFocus,
+  Surface,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import type { ConfigurationState } from "@/context/configuration";
@@ -418,9 +419,10 @@ export function PrivateProjectPanel({
   const copy = signInFor ? SIGN_IN_COPY[signInFor] : null;
 
   return (
-    <section
+    <Surface
+      as="section"
       aria-labelledby="private-project-heading"
-      className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline"
+      className="print-hidden mt-layout"
     >
       <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
         Your account
@@ -541,6 +543,6 @@ export function PrivateProjectPanel({
           onCancel={continueAsGuest}
         />
       ) : null}
-    </section>
+    </Surface>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { Button, ErrorMessage, LoadingState } from "@/components/ui";
+import { Button, ErrorMessage, LoadingState, Surface } from "@/components/ui";
 import {
   useConfiguration,
   type ConfigurationState,
@@ -102,9 +102,10 @@ export function SharedDesignLoader({
     state.phase === "catalogue-error" || state.phase === "pattern-unavailable";
 
   return (
-    <section
+    <Surface
+      as="section"
       aria-labelledby="shared-design-status-heading"
-      className="print-hidden mt-layout rounded-panel border border-border bg-surface p-card shadow-hairline"
+      className="print-hidden mt-layout"
     >
       <Title
         id="shared-design-status-heading"
@@ -147,6 +148,6 @@ export function SharedDesignLoader({
           </div>
         </ErrorMessage>
       )}
-    </section>
+    </Surface>
   );
 }

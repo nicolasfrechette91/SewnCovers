@@ -2,7 +2,12 @@
 
 import { useId, useState } from "react";
 
-import { ErrorMessage, NumberInput, UnitSelector } from "@/components/ui";
+import {
+  ErrorMessage,
+  NumberInput,
+  UnitSelector,
+  surfaceClasses,
+} from "@/components/ui";
 import {
   formatMeasurement,
   getMeasurementRange,
@@ -223,7 +228,7 @@ function ShapeMeasurementForm({
   };
 
   return (
-    <fieldset className="fieldset-panel min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline">
+    <fieldset className={surfaceClasses({ className: "fieldset-panel" })}>
       {/* From stage 2 the stage heading is the page's h1. */}
       <legend className="max-w-full pb-2">
         <h1

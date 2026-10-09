@@ -1,5 +1,6 @@
 import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
+import { Surface } from "@/components/ui";
 import { classNames } from "../ui/class-names";
 
 export interface CushionPreviewProps extends Omit<
@@ -41,14 +42,12 @@ export function CushionPreview({
   const headingId = useId();
 
   return (
-    <figure
+    <Surface
+      as="figure"
       {...sectionProps}
       aria-label={ariaLabel}
       aria-labelledby={ariaLabel ? undefined : headingId}
-      className={classNames(
-        "min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline",
-        className,
-      )}
+      className={className}
     >
       <Heading
         id={headingId}
@@ -71,7 +70,12 @@ export function CushionPreview({
             balanced && "@3xl:sticky @3xl:top-6",
           )}
         >
-          <div className="cutting-mat mt-component flex aspect-[4/3] min-h-48 w-full min-w-0 items-center justify-center overflow-hidden rounded-card border border-border p-card">
+          <Surface
+            tone="page"
+            elevation="flat"
+            radius="card"
+            className="cutting-mat mt-component flex aspect-[4/3] min-h-48 w-full items-center justify-center overflow-hidden"
+          >
             {visual ? (
               <div
                 aria-hidden="true"
@@ -93,7 +97,7 @@ export function CushionPreview({
                 </p>
               </div>
             )}
-          </div>
+          </Surface>
           {details ? (
             <div className="mt-component min-w-0 break-words text-supporting text-text-muted">
               {details}
@@ -111,6 +115,6 @@ export function CushionPreview({
           {description}
         </figcaption>
       ) : null}
-    </figure>
+    </Surface>
   );
 }

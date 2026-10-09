@@ -6,6 +6,7 @@ import {
   noticeClasses,
   noticeTitleClasses,
   sectionTitleClasses,
+  Surface,
 } from "@/components/ui";
 import {
   createPageMetadata,
@@ -51,11 +52,19 @@ export default function Home() {
           </div>
 
           {/* Decorative; below lg it would only push the next step down. */}
-          <div
+          <Surface
+            elevation="raised"
+            padding="compact"
             aria-hidden="true"
-            className="hidden min-w-0 rounded-panel border border-border bg-surface p-4 shadow-raised lg:block"
+            className="hidden lg:block"
           >
-            <div className="cutting-mat flex min-h-80 items-center justify-center overflow-hidden rounded-card border border-border px-card py-10">
+            <Surface
+              tone="page"
+              elevation="flat"
+              padding="none"
+              radius="card"
+              className="cutting-mat flex min-h-80 items-center justify-center overflow-hidden px-card py-10"
+            >
               <span className="landing-measured">
                 <span className="landing-cushion landing-pattern-botanical block w-full" />
                 <span className="dimension dimension-x">
@@ -65,8 +74,8 @@ export default function Home() {
                   <span className="dimension-label">45 cm</span>
                 </span>
               </span>
-            </div>
-          </div>
+            </Surface>
+          </Surface>
         </div>
       </section>
 
@@ -109,9 +118,11 @@ export default function Home() {
 
           <ul className="mt-layout grid min-w-0 gap-3 sm:grid-cols-6 sm:gap-component lg:grid-cols-5">
             {cushionShapeDefinitions.map((shape) => (
-              <li
+              <Surface
+                as="li"
+                padding="tight"
                 key={shape.id}
-                className="flex min-w-0 items-center gap-4 rounded-panel border border-border bg-surface p-3 shadow-hairline sm:col-span-2 sm:flex-col sm:gap-3 sm:p-4 sm:text-center sm:nth-4:col-start-2 lg:col-span-1 lg:nth-4:col-start-auto"
+                className="flex items-center gap-4 sm:col-span-2 sm:flex-col sm:gap-3 sm:p-4 sm:text-center sm:nth-4:col-start-2 lg:col-span-1 lg:nth-4:col-start-auto"
               >
                 <ShapeIllustration
                   shape={shape.id}
@@ -120,7 +131,7 @@ export default function Home() {
                 <span className="min-w-0 break-words text-subhead font-control text-text-primary">
                   {shape.name}
                 </span>
-              </li>
+              </Surface>
             ))}
           </ul>
         </div>

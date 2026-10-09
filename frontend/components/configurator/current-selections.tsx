@@ -10,6 +10,7 @@ import {
 } from "@/data/cover-options";
 import { getCushionShapeDefinition } from "@/data/shapes";
 
+import { Surface } from "@/components/ui";
 import { classNames } from "../ui/class-names";
 import { ShapeIllustration } from "./shape-illustration";
 
@@ -113,12 +114,12 @@ export function CurrentSelections({
   }
 
   return (
-    <aside
+    <Surface
+      as="aside"
       aria-labelledby="current-selections-title"
-      className={classNames(
-        "print-hidden min-w-0 rounded-card border border-border bg-surface shadow-hairline",
-        className,
-      )}
+      radius="card"
+      padding="none"
+      className={classNames("print-hidden", className)}
     >
       <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-3">
         <p
@@ -160,6 +161,6 @@ export function CurrentSelections({
           </div>
         ))}
       </dl>
-    </aside>
+    </Surface>
   );
 }

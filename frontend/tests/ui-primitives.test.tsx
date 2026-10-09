@@ -4,7 +4,15 @@ import { afterEach, test } from "node:test";
 import { createRef } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 
-import { Checkbox, Field, Select, Textarea, TextInput } from "../components/ui";
+import {
+  Checkbox,
+  Field,
+  Select,
+  Surface,
+  surfaceClasses,
+  Textarea,
+  TextInput,
+} from "../components/ui";
 
 afterEach(() => {
   cleanup();
@@ -187,6 +195,109 @@ test("only text inputs and textareas take the read-only look, never selects", ()
   assert.ok(readOnlyTokens("Notes").includes("read-only:bg-surface-subtle"));
   assert.deepEqual(readOnlyTokens("Choice"), []);
   assert.deepEqual(readOnlyTokens("Narrow choice"), []);
+});
+
+// Surface -------------------------------------------------------------------
+
+const tokens = (element: Element) => element.className.split(" ");
+
+test("Surface defaults are the panel recipe and keep the caller's classes", () => {
+  render(
+    <Surface as="section" aria-label="Panel" className="scroll-mt-layout">
+      Body
+    </Surface>,
+  );
+
+  const panel = screen.getByRole("region", { name: "Panel" });
+  assert.equal(panel.tagName, "SECTION");
+  for (const token of [
+    "min-w-0",
+    "rounded-panel",
+    "border",
+    "border-border",
+    "bg-surface",
+    "p-card",
+    "shadow-hairline",
+    "scroll-mt-layout",
+  ]) {
+    assert.ok(tokens(panel).includes(token), "has " + token);
+  }
+});
+
+test("Surface takes a tight padding and renders as a list item", () => {
+  render(
+    <ul>
+      <Surface as="li" padding="tight" className="sm:p-4">
+        Item
+      </Surface>
+    </ul>,
+  );
+
+  const item = screen.getByRole("listitem");
+  assert.equal(item.tagName, "LI");
+  assert.ok(tokens(item).includes("p-3"));
+  assert.equal(tokens(item).includes("p-card"), false);
+  // A responsive padding from the caller can sit beside the base padding.
+  assert.ok(tokens(item).includes("sm:p-4"));
+});
+
+test("Surface tones, elevation and radius map to the design tokens", () => {
+  render(
+    <>
+      <Surface
+        data-testid="subtle"
+        tone="subtle"
+        radius="card"
+        elevation="flat"
+        padding="compact"
+      />
+      <Surface data-testid="page" tone="page" elevation="flat" padding="none" />
+      <Surface data-testid="emphasis" tone="emphasis" elevation="card" />
+      <Surface data-testid="danger" tone="danger" padding="tight" />
+    </>,
+  );
+
+  const subtle = tokens(screen.getByTestId("subtle"));
+  for (const token of [
+    "bg-surface-subtle",
+    "rounded-card",
+    "shadow-none",
+    "p-4",
+  ]) {
+    assert.ok(subtle.includes(token), "subtle has " + token);
+  }
+  const page = tokens(screen.getByTestId("page"));
+  assert.ok(page.includes("bg-page"));
+  assert.equal(
+    page.some((token) => token.startsWith("p-")),
+    false,
+  );
+  const emphasis = tokens(screen.getByTestId("emphasis"));
+  assert.ok(
+    emphasis.includes("border-brand") && emphasis.includes("shadow-card"),
+  );
+  assert.ok(
+    tokens(screen.getByTestId("danger")).includes("border-error-border"),
+  );
+});
+
+test("surfaceClasses puts the same recipe on elements Surface does not render", () => {
+  render(
+    <fieldset className={surfaceClasses({ className: "fieldset-panel" })}>
+      <legend>Group</legend>
+    </fieldset>,
+  );
+
+  const group = screen.getByRole("group", { name: "Group" });
+  for (const token of [
+    "fieldset-panel",
+    "min-w-0",
+    "rounded-panel",
+    "p-card",
+    "shadow-hairline",
+  ]) {
+    assert.ok(tokens(group).includes(token), "has " + token);
+  }
 });
 
 // Checkbox -------------------------------------------------------------------

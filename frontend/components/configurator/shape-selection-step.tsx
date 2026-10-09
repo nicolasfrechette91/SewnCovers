@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-import { Button, useDeferredFocus } from "@/components/ui";
+import { Button, useDeferredFocus, surfaceClasses } from "@/components/ui";
 import { useConfiguration, type CushionShape } from "@/context/configuration";
 import {
   cushionShapeDefinitions,
@@ -56,7 +56,7 @@ export function ShapeSelectionStep({
   return (
     <fieldset
       aria-describedby={supportingTextId}
-      className="fieldset-panel min-w-0 rounded-panel border border-border bg-surface p-card shadow-hairline"
+      className={surfaceClasses({ className: "fieldset-panel" })}
     >
       {/* The page header holds the h1 on this stage, so this is an h2. */}
       <legend className="max-w-full pb-2">

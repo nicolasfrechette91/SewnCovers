@@ -4,7 +4,7 @@ import { classNames } from "./class-names";
 
 export type SurfaceTone = "default" | "subtle" | "page" | "emphasis" | "danger";
 export type SurfaceElevation = "flat" | "hairline" | "card" | "raised";
-export type SurfacePadding = "card" | "compact" | "none";
+export type SurfacePadding = "card" | "compact" | "tight" | "none";
 export type SurfaceRadius = "panel" | "card";
 
 const toneClasses: Record<SurfaceTone, string> = {
@@ -25,6 +25,7 @@ const elevationClasses: Record<SurfaceElevation, string> = {
 const paddingClasses: Record<SurfacePadding, string> = {
   card: "p-card",
   compact: "p-4",
+  tight: "p-3",
   none: "",
 };
 
@@ -59,11 +60,12 @@ export function surfaceClasses({
 }
 
 type SurfaceElement =
-  "article" | "aside" | "div" | "figure" | "header" | "section";
+  "article" | "aside" | "div" | "figure" | "header" | "li" | "section";
 
 export interface SurfaceProps
+  // HTMLElement handlers, so the same props fit every element in `as`.
   extends
-    ComponentPropsWithoutRef<"div">,
+    ComponentPropsWithoutRef<"section">,
     Omit<SurfaceStyleOptions, "className"> {
   as?: SurfaceElement;
 }

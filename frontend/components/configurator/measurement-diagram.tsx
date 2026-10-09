@@ -1,5 +1,6 @@
 import type { CushionShape } from "@/context/configuration";
 import { getCushionShapeDefinition } from "@/data/shapes";
+import { Surface } from "@/components/ui";
 
 function DimensionLine({
   label,
@@ -258,7 +259,14 @@ export function MeasurementDiagram({
   };
 
   return (
-    <figure className="min-w-0 rounded-card border border-border bg-surface-subtle p-4 sm:p-5">
+    <Surface
+      as="figure"
+      tone="subtle"
+      elevation="flat"
+      padding="compact"
+      radius="card"
+      className="sm:p-5"
+    >
       <p className="font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
         {definition.name} measurement guide
       </p>
@@ -280,6 +288,6 @@ export function MeasurementDiagram({
       <figcaption className="mt-4 text-supporting text-text-muted">
         {captions[shape]}
       </figcaption>
-    </figure>
+    </Surface>
   );
 }
