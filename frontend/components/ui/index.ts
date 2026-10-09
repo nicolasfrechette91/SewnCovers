@@ -9,7 +9,12 @@ export type { EmptyStateProps } from "./empty-state";
 export { ErrorMessage } from "./error-message";
 export type { ErrorMessageProps } from "./error-message";
 export { Checkbox, Field, Select, Textarea, TextInput } from "./field";
-export type { CheckboxProps, FieldControlProps, FieldProps } from "./field";
+export type {
+  CheckboxProps,
+  ControlWidth,
+  FieldControlProps,
+  FieldProps,
+} from "./field";
 export {
   checkboxClasses,
   controlClasses,

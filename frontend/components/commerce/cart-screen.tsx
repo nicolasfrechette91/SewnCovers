@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { Button, LoadingState, useDeferredFocus } from "@/components/ui";
+import {
+  Button,
+  Field,
+  LoadingState,
+  TextInput,
+  useDeferredFocus,
+} from "@/components/ui";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
@@ -186,18 +192,21 @@ export function CartScreen() {
                       );
                     }}
                   >
-                    <label className="grid gap-1 text-label font-control">
-                      Quantity
-                      <input
-                        name="quantity"
-                        type="number"
-                        min="1"
-                        max="20"
-                        step="1"
-                        defaultValue={line.quantity}
-                        className="min-h-11 w-24 rounded-control border border-border-strong bg-surface px-3 font-mono text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-                      />
-                    </label>
+                    <Field label="Quantity">
+                      {(control) => (
+                        <TextInput
+                          {...control}
+                          name="quantity"
+                          type="number"
+                          min="1"
+                          max="20"
+                          step="1"
+                          defaultValue={line.quantity}
+                          width="narrow"
+                          className="font-mono"
+                        />
+                      )}
+                    </Field>
                     <Button
                       type="submit"
                       size="compact"

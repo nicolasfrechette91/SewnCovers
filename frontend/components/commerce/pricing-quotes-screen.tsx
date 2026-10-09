@@ -3,7 +3,14 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { Button, LoadingState, useDeferredFocus } from "@/components/ui";
+import {
+  Button,
+  Field,
+  LoadingState,
+  Select,
+  TextInput,
+  useDeferredFocus,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
   AccountApiError,
@@ -154,43 +161,45 @@ export function PrivatePricingWorkspace({
               });
             }}
           >
-            <label className="grid gap-1 text-label font-control">
-              Saved version
-              <select
-                required
-                value={versionId}
-                onChange={(event) => {
-                  setVersionId(event.target.value);
-                  setPricing(null);
-                }}
-                className="min-h-12 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-              >
-                {projects.map((project) => (
-                  <option
-                    key={project.currentVersion.id}
-                    value={project.currentVersion.id}
-                  >
-                    {project.name} · version{" "}
-                    {project.currentVersion.versionNumber}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-label font-control">
-              Quantity
-              <input
-                type="number"
-                required
-                min="1"
-                max="20"
-                step="1"
-                value={quantity}
-                onChange={(event) =>
-                  setQuantity(event.currentTarget.valueAsNumber)
-                }
-                className="min-h-12 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-              />
-            </label>
+            <Field label="Saved version">
+              {(control) => (
+                <Select
+                  {...control}
+                  required
+                  value={versionId}
+                  onChange={(event) => {
+                    setVersionId(event.target.value);
+                    setPricing(null);
+                  }}
+                >
+                  {projects.map((project) => (
+                    <option
+                      key={project.currentVersion.id}
+                      value={project.currentVersion.id}
+                    >
+                      {project.name} · version{" "}
+                      {project.currentVersion.versionNumber}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <Field label="Quantity">
+              {(control) => (
+                <TextInput
+                  {...control}
+                  type="number"
+                  required
+                  min="1"
+                  max="20"
+                  step="1"
+                  value={quantity}
+                  onChange={(event) =>
+                    setQuantity(event.currentTarget.valueAsNumber)
+                  }
+                />
+              )}
+            </Field>
             <Button
               type="submit"
               variant="secondary"

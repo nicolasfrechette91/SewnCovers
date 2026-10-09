@@ -9,35 +9,71 @@ import {
   fieldErrorClasses,
   fieldHelpClasses,
   fieldLabelClasses,
+  narrowControlClasses,
+  narrowSelectClasses,
+  selectClasses,
 } from "./field-styles";
+
+export type ControlWidth = "full" | "narrow";
+
+const controlWidthClasses: Record<ControlWidth, string> = {
+  full: controlClasses,
+  narrow: narrowControlClasses,
+};
+
+const selectWidthClasses: Record<ControlWidth, string> = {
+  full: selectClasses,
+  narrow: narrowSelectClasses,
+};
+
+interface ControlWidthProps {
+  /** "narrow" fixes the control at 6rem, for short values such as a quantity. */
+  width?: ControlWidth;
+}
 
 export function TextInput({
   className,
+  width = "full",
   ...props
-}: ComponentPropsWithRef<"input">) {
-  return <input {...props} className={classNames(controlClasses, className)} />;
+}: Omit<ComponentPropsWithRef<"input">, "width"> & ControlWidthProps) {
+  return (
+    <input
+      {...props}
+      className={classNames(controlWidthClasses[width], className)}
+    />
+  );
 }
 
 export function Select({
   className,
+  width = "full",
   ...props
-}: ComponentPropsWithRef<"select">) {
+}: ComponentPropsWithRef<"select"> & ControlWidthProps) {
   return (
     <select
       {...props}
-      className={classNames(controlClasses, "cursor-pointer pr-10", className)}
+      className={classNames(
+        selectWidthClasses[width],
+        "cursor-pointer pr-10",
+        className,
+      )}
     />
   );
 }
 
 export function Textarea({
   className,
+  width = "full",
   ...props
-}: ComponentPropsWithRef<"textarea">) {
+}: ComponentPropsWithRef<"textarea"> & ControlWidthProps) {
   return (
     <textarea
       {...props}
-      className={classNames(controlClasses, "leading-relaxed", className)}
+      className={classNames(
+        controlWidthClasses[width],
+        "leading-relaxed",
+        className,
+      )}
     />
   );
 }

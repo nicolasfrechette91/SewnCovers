@@ -3,7 +3,13 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
-import { Button, LoadingState } from "@/components/ui";
+import {
+  Button,
+  Checkbox,
+  Field,
+  LoadingState,
+  TextInput,
+} from "@/components/ui";
 import {
   AccountApiError,
   readSessionToken,
@@ -130,32 +136,21 @@ export function SandboxCheckoutScreen() {
                 Fixed fictional shipping fixture
               </legend>
               {Object.entries(FICTIONAL_SHIPPING).map(([key, value]) => (
-                <label key={key} className="grid gap-1 text-label font-control">
-                  {key.replace(/([A-Z])/g, " $1")}
-                  <input
-                    readOnly
-                    value={value}
-                    className="min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-                  />
-                </label>
+                <Field key={key} label={key.replace(/([A-Z])/g, " $1")}>
+                  {(control) => (
+                    <TextInput {...control} readOnly value={value} />
+                  )}
+                </Field>
               ))}
             </fieldset>
-            <label className="mt-4 flex items-start gap-2 text-supporting">
-              <input
-                className="mt-0.5 size-5 shrink-0 cursor-pointer accent-brand"
-                type="checkbox"
-                checked={termsAcknowledged}
-                onChange={(event) =>
-                  setTermsAcknowledged(event.currentTarget.checked)
-                }
-              />
-              <span>
-                I acknowledge demonstration commerce notice version 1: pricing,
-                tax, shipping, payment, refund, production, and fulfilment are
-                fictional sandbox behavior with no charge, manufacturing,
-                delivery, or commercial-availability promise.
-              </span>
-            </label>
+            <Checkbox
+              className="mt-4"
+              checked={termsAcknowledged}
+              onChange={(event) =>
+                setTermsAcknowledged(event.currentTarget.checked)
+              }
+              label="I acknowledge demonstration commerce notice version 1: pricing, tax, shipping, payment, refund, production, and fulfilment are fictional sandbox behavior with no charge, manufacturing, delivery, or commercial-availability promise."
+            />
             <div className="mt-4 flex flex-wrap gap-3">
               <Button
                 type="submit"

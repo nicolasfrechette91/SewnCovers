@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { Button, LoadingState, useDeferredFocus } from "@/components/ui";
+import {
+  Button,
+  Field,
+  LoadingState,
+  Select,
+  Textarea,
+  TextInput,
+  useDeferredFocus,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError, resolveAssetUrl } from "@/services/account-api";
 import {
@@ -322,16 +330,17 @@ export function AdminScreen() {
             });
           }}
         >
-          <label className="grid min-w-0 flex-1 gap-1 text-label font-control">
-            New draft label
-            <input
-              name="label"
-              required
-              maxLength={120}
-              placeholder="Demonstration CAD price model v2"
-              className="min-h-12 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-            />
-          </label>
+          <Field className="flex-1" label="New draft label">
+            {(control) => (
+              <TextInput
+                {...control}
+                name="label"
+                required
+                maxLength={120}
+                placeholder="Demonstration CAD price model v2"
+              />
+            )}
+          </Field>
           <Button type="submit" isLoading={busy === "draft"}>
             Create draft
           </Button>
@@ -452,26 +461,33 @@ export function AdminScreen() {
                     });
                   }}
                 >
-                  <label className="grid gap-1 text-label font-control">
-                    Draft label
-                    <input
-                      name="bookLabel"
-                      defaultValue={book.label}
-                      required
-                      maxLength={120}
-                      className="min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-                    />
-                  </label>
-                  <label className="grid gap-1 text-label font-control">
-                    Demonstration pricing configuration JSON
-                    <textarea
-                      name="configuration"
-                      required
-                      rows={12}
-                      defaultValue={JSON.stringify(book.configuration, null, 2)}
-                      className="min-h-48 w-full rounded-control border border-border-strong bg-surface px-3 py-2 font-mono text-supporting text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-                    />
-                  </label>
+                  <Field label="Draft label">
+                    {(control) => (
+                      <TextInput
+                        {...control}
+                        name="bookLabel"
+                        defaultValue={book.label}
+                        required
+                        maxLength={120}
+                      />
+                    )}
+                  </Field>
+                  <Field label="Demonstration pricing configuration JSON">
+                    {(control) => (
+                      <Textarea
+                        {...control}
+                        name="configuration"
+                        required
+                        rows={12}
+                        defaultValue={JSON.stringify(
+                          book.configuration,
+                          null,
+                          2,
+                        )}
+                        className="font-mono"
+                      />
+                    )}
+                  </Field>
                   <Button
                     className="justify-self-start"
                     size="compact"
@@ -577,27 +593,22 @@ export function AdminScreen() {
               );
             }}
           >
-            <label className="grid gap-1 text-label font-control">
-              Next state
-              <select
-                name="state"
-                className="min-h-12 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-              >
-                {STATES.map((item) => (
-                  <option key={item} value={item}>
-                    {title(item)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-label font-control">
-              Issue reason (required for manual review)
-              <input
-                name="reason"
-                maxLength={240}
-                className="min-h-12 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-              />
-            </label>
+            <Field label="Next state">
+              {(control) => (
+                <Select {...control} name="state">
+                  {STATES.map((item) => (
+                    <option key={item} value={item}>
+                      {title(item)}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <Field label="Issue reason (required for manual review)">
+              {(control) => (
+                <TextInput {...control} name="reason" maxLength={240} />
+              )}
+            </Field>
             <Button type="submit" isLoading={busy === "transition"}>
               Apply valid transition
             </Button>
@@ -620,47 +631,48 @@ export function AdminScreen() {
               );
             }}
           >
-            <label className="grid gap-1 text-label font-control">
-              Carrier
-              <select
-                name="carrier"
-                className="min-h-12 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-              >
-                <option value="canada-post">Canada Post</option>
-                <option value="ups">UPS</option>
-                <option value="fedex">FedEx</option>
-                <option value="purolator">Purolator</option>
-              </select>
-            </label>
-            <label className="grid gap-1 text-label font-control">
-              Fictional tracking reference
-              <input
-                name="tracking"
-                required
-                minLength={6}
-                maxLength={40}
-                pattern="[A-Za-z0-9 -]+"
-                placeholder="DEMO TRACK 10001"
-                className="min-h-12 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-              />
-            </label>
-            <label className="grid gap-1 text-label font-control">
-              Shipped at
-              <input
-                name="shippedAt"
-                type="datetime-local"
-                required
-                className="min-h-12 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-              />
-            </label>
-            <label className="grid gap-1 text-label font-control">
-              Delivered at (optional)
-              <input
-                name="deliveredAt"
-                type="datetime-local"
-                className="min-h-12 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-              />
-            </label>
+            <Field label="Carrier">
+              {(control) => (
+                <Select {...control} name="carrier">
+                  <option value="canada-post">Canada Post</option>
+                  <option value="ups">UPS</option>
+                  <option value="fedex">FedEx</option>
+                  <option value="purolator">Purolator</option>
+                </Select>
+              )}
+            </Field>
+            <Field label="Fictional tracking reference">
+              {(control) => (
+                <TextInput
+                  {...control}
+                  name="tracking"
+                  required
+                  minLength={6}
+                  maxLength={40}
+                  pattern="[A-Za-z0-9 -]+"
+                  placeholder="DEMO TRACK 10001"
+                />
+              )}
+            </Field>
+            <Field label="Shipped at">
+              {(control) => (
+                <TextInput
+                  {...control}
+                  name="shippedAt"
+                  type="datetime-local"
+                  required
+                />
+              )}
+            </Field>
+            <Field label="Delivered at (optional)">
+              {(control) => (
+                <TextInput
+                  {...control}
+                  name="deliveredAt"
+                  type="datetime-local"
+                />
+              )}
+            </Field>
             <Button
               type="submit"
               variant="secondary"

@@ -5,7 +5,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Button,
   ErrorMessage,
+  Field,
   LoadingState,
+  Select,
+  TextInput,
   useDeferredFocus,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
@@ -180,40 +183,43 @@ export function ProductionOperationsScreen() {
             void load();
           }}
         >
-          <label className="font-control">
-            Search order or work reference
-            <input
-              className="mt-1 w-full min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-              value={search}
-              onChange={(event) => setSearch(event.currentTarget.value)}
-            />
-          </label>
-          <label className="font-control">
-            Work state
-            <select
-              className="mt-1 w-full min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-              value={stateFilter}
-              onChange={(event) => setStateFilter(event.currentTarget.value)}
-            >
-              {states.map((value) => (
-                <option key={value || "all"} value={value}>
-                  {value ? value.replaceAll("_", " ") : "All states"}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="font-control">
-            Issue state
-            <select
-              className="mt-1 w-full min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-              value={issueFilter}
-              onChange={(event) => setIssueFilter(event.currentTarget.value)}
-            >
-              <option value="">All issues</option>
-              <option value="open">Open</option>
-              <option value="resolved">Resolved</option>
-            </select>
-          </label>
+          <Field label="Search order or work reference">
+            {(control) => (
+              <TextInput
+                {...control}
+                value={search}
+                onChange={(event) => setSearch(event.currentTarget.value)}
+              />
+            )}
+          </Field>
+          <Field label="Work state">
+            {(control) => (
+              <Select
+                {...control}
+                value={stateFilter}
+                onChange={(event) => setStateFilter(event.currentTarget.value)}
+              >
+                {states.map((value) => (
+                  <option key={value || "all"} value={value}>
+                    {value ? value.replaceAll("_", " ") : "All states"}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+          <Field label="Issue state">
+            {(control) => (
+              <Select
+                {...control}
+                value={issueFilter}
+                onChange={(event) => setIssueFilter(event.currentTarget.value)}
+              >
+                <option value="">All issues</option>
+                <option value="open">Open</option>
+                <option value="resolved">Resolved</option>
+              </Select>
+            )}
+          </Field>
           <Button type="submit">Apply filters</Button>
         </form>
         {status === "loading" ? (
@@ -322,16 +328,17 @@ export function ProductionOperationsScreen() {
             })}
           </ul>
           <div className="mt-component grid gap-3 rounded-card border border-border p-4 lg:grid-cols-2">
-            <label className="font-control">
-              Structured reason
-              <input
-                className="mt-1 w-full min-h-11 min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none"
-                minLength={3}
-                maxLength={500}
-                value={reason}
-                onChange={(event) => setReason(event.currentTarget.value)}
-              />
-            </label>
+            <Field label="Structured reason">
+              {(control) => (
+                <TextInput
+                  {...control}
+                  minLength={3}
+                  maxLength={500}
+                  value={reason}
+                  onChange={(event) => setReason(event.currentTarget.value)}
+                />
+              )}
+            </Field>
             <div className="flex flex-wrap items-end gap-2">
               <Button
                 variant="secondary"

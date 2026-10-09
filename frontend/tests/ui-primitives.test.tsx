@@ -131,6 +131,64 @@ test("TextInput, Select and Textarea share one frame and forward refs", () => {
   assert.equal(screen.getByLabelText("Notes").tagName, "TEXTAREA");
 });
 
+test("narrow controls keep the frame at 6rem instead of full width", () => {
+  render(
+    <>
+      <TextInput aria-label="Quantity" type="number" width="narrow" />
+      <Select aria-label="Choice" width="narrow">
+        <option>One</option>
+      </Select>
+      <Textarea aria-label="Notes" width="narrow" />
+      <TextInput aria-label="Default" />
+    </>,
+  );
+
+  const tokens = (element: HTMLElement) => element.className.split(" ");
+  for (const name of ["Quantity", "Choice", "Notes"]) {
+    const control = tokens(screen.getByLabelText(name));
+    assert.ok(control.includes("w-24"), name + " is 6rem wide");
+    assert.equal(
+      control.includes("w-full"),
+      false,
+      name + " is not full width",
+    );
+    // The frame is otherwise the same, so the 48px minimum still holds.
+    assert.ok(control.includes("min-h-12"), name + " keeps min-h-12");
+  }
+  const normal = tokens(screen.getByLabelText("Default"));
+  assert.ok(normal.includes("w-full"));
+  assert.equal(normal.includes("w-24"), false);
+  // width is a size keyword here, never the HTML width attribute.
+  assert.equal(screen.getByLabelText("Quantity").hasAttribute("width"), false);
+});
+
+test("only text inputs and textareas take the read-only look, never selects", () => {
+  // Browsers match :read-only on <select>, so a select carrying these classes
+  // would be filled like a locked field.
+  render(
+    <>
+      <TextInput aria-label="Text" />
+      <Textarea aria-label="Notes" />
+      <Select aria-label="Choice">
+        <option>One</option>
+      </Select>
+      <Select aria-label="Narrow choice" width="narrow">
+        <option>One</option>
+      </Select>
+    </>,
+  );
+
+  const readOnlyTokens = (name: string) =>
+    screen
+      .getByLabelText(name)
+      .className.split(" ")
+      .filter((token) => token.startsWith("read-only:"));
+  assert.ok(readOnlyTokens("Text").includes("read-only:bg-surface-subtle"));
+  assert.ok(readOnlyTokens("Notes").includes("read-only:bg-surface-subtle"));
+  assert.deepEqual(readOnlyTokens("Choice"), []);
+  assert.deepEqual(readOnlyTokens("Narrow choice"), []);
+});
+
 // Checkbox -------------------------------------------------------------------
 
 test("Checkbox is named by its wrapping label, which is a 44px target", () => {
