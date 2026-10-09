@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { Button } from "@/components/ui";
+import { Button, LoadingState } from "@/components/ui";
 import {
   getBuiltInPatternId,
   hasValidMeasurementsForShape,
@@ -38,12 +38,11 @@ import { WorkspaceConfigurationLoader } from "./workspace-configuration-loader";
 
 function StageLoading() {
   return (
-    <p
-      className="flex min-h-40 items-center justify-center rounded-panel border border-dashed border-border-strong bg-surface px-card py-layout text-supporting text-text-muted"
-      role="status"
-    >
-      Loading this configuration stage…
-    </p>
+    <LoadingState
+      framed
+      className="min-h-40 justify-center"
+      label="Loading this configuration stage…"
+    />
   );
 }
 

@@ -13,6 +13,7 @@ import {
   Surface,
   surfaceClasses,
   SectionHeader,
+  EmptyState,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
@@ -87,13 +88,10 @@ export function ProductionOperationsScreen() {
     auth.account.role !== "administrator"
   ) {
     return (
-      <p
-        className="rounded-card border border-error-border bg-error-surface p-4"
-        role="status"
-      >
+      <ErrorMessage role="status" aria-live="polite">
         Administrator authorization is required. Customers cannot view
         production work, packets, or readiness details.
-      </p>
+      </ErrorMessage>
     );
   }
 
@@ -237,12 +235,13 @@ export function ProductionOperationsScreen() {
           </ErrorMessage>
         ) : null}
         {status === "idle" && items.length === 0 ? (
-          <p
-            className="mt-4 rounded-card border border-border bg-surface p-4"
+          <EmptyState
+            align="start"
+            className="mt-4"
+            description="No verified paid-order work matches these filters."
             role="status"
-          >
-            No verified paid-order work matches these filters.
-          </p>
+            size="compact"
+          />
         ) : null}
         <ul className="mt-4 grid gap-3 md:grid-cols-2">
           {items.map((work) => (

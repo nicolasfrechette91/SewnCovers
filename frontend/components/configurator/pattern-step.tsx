@@ -14,13 +14,14 @@ import {
   Field,
   fieldErrorClasses,
   LoadingState,
-  noticeClasses,
   StitchDivider,
   TextInput,
   useDeferredFocus,
   Surface,
   surfaceClasses,
   SectionHeader,
+  EmptyState,
+  Notice,
 } from "@/components/ui";
 import {
   DEFAULT_SOLID_COLOR,
@@ -244,16 +245,15 @@ export function PatternStep({
 
   // The catalogue's contract issues are for developers, not customers.
   const errorState = (
-    <ErrorMessage className="mt-component">
-      <div>
-        <h3 className="text-body font-control">
-          Patterns couldn&apos;t be loaded
-        </h3>
-        <p className="mt-1">{catalogue.message}</p>
-        <Button className="mt-3" variant="secondary" onClick={onRetry}>
-          Try loading patterns again
-        </Button>
-      </div>
+    <ErrorMessage
+      className="mt-component"
+      heading="Patterns couldn't be loaded"
+      headingAs="h3"
+    >
+      <p>{catalogue.message}</p>
+      <Button className="mt-3" variant="secondary" onClick={onRetry}>
+        Try loading patterns again
+      </Button>
     </ErrorMessage>
   );
 
@@ -389,24 +389,27 @@ export function PatternStep({
 
         {!hasCompleteCatalogue ? (
           catalogue.phase === "loading" ? (
-            <div className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card">
-              <LoadingState label={catalogue.message} />
-            </div>
+            <LoadingState
+              framed
+              className="mt-component"
+              label={catalogue.message}
+            />
           ) : catalogue.phase === "error" ? (
             errorState
           ) : (
-            <div className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card">
-              <h3 className="text-body font-control text-text-primary">
-                No patterns are available right now
-              </h3>
-              <p className="mt-1 break-words text-supporting text-text-muted">
-                You can still choose a plain colour. Your other choices
-                haven&apos;t changed.
-              </p>
-              <Button className="mt-3" variant="secondary" onClick={onRetry}>
-                Check for patterns again
-              </Button>
-            </div>
+            <EmptyState
+              align="start"
+              className="mt-component"
+              size="compact"
+              title="No patterns are available right now"
+              titleAs="h3"
+              description="You can still choose a plain colour. Your other choices haven't changed."
+              action={
+                <Button variant="secondary" onClick={onRetry}>
+                  Check for patterns again
+                </Button>
+              }
+            />
           )
         ) : (
           <>
@@ -486,16 +489,16 @@ export function PatternStep({
             </Surface>
 
             {selectedPatternIsHiddenByCriteria ? (
-              <div
-                className={noticeClasses("info", "mt-component")}
+              <Notice
+                tone="info"
                 role="status"
                 aria-live="polite"
                 aria-atomic="true"
+                className="mt-component"
+                title="Your pattern is hidden by the filters"
+                titleAs="h3"
               >
-                <h3 className="text-body font-control text-text-primary">
-                  Your pattern is hidden by the filters
-                </h3>
-                <p className="mt-1 break-words text-supporting text-text-muted">
+                <p className="break-words">
                   {selectedPattern.name} is still selected.
                 </p>
                 <Button
@@ -505,50 +508,44 @@ export function PatternStep({
                 >
                   Show my pattern
                 </Button>
-              </div>
+              </Notice>
             ) : null}
 
             {selectedPatternIsUnavailable ? (
               <ErrorMessage
                 className="mt-component"
+                heading="Your pattern is no longer available"
+                headingAs="h3"
                 role="status"
                 aria-live="polite"
               >
-                <div>
-                  <h3 className="text-body font-control">
-                    Your pattern is no longer available
-                  </h3>
-                  <p className="mt-1">
-                    Choose another one below. Your other choices haven&apos;t
-                    changed.
-                  </p>
-                </div>
+                Choose another one below. Your other choices haven&apos;t
+                changed.
               </ErrorMessage>
             ) : null}
 
             {catalogue.phase === "loading" ? (
-              <div className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card">
-                <LoadingState label={catalogue.message} />
-              </div>
+              <LoadingState
+                framed
+                className="mt-component"
+                label={catalogue.message}
+              />
             ) : catalogue.phase === "error" ? (
               errorState
             ) : matchingPatterns.length === 0 ? (
-              <div className="mt-component rounded-card border border-dashed border-border-strong bg-surface p-card">
-                <h3 className="text-body font-control text-text-primary">
-                  No patterns match
-                </h3>
-                <p className="mt-1 break-words text-supporting text-text-muted">
-                  Try another search, or clear the search and filters to see
-                  every pattern.
-                </p>
-                <Button
-                  className="mt-3"
-                  variant="secondary"
-                  onClick={clearDiscoveryCriteria}
-                >
-                  Clear search and filters
-                </Button>
-              </div>
+              <EmptyState
+                align="start"
+                className="mt-component"
+                size="compact"
+                title="No patterns match"
+                titleAs="h3"
+                description="Try another search, or clear the search and filters to see every pattern."
+                action={
+                  <Button variant="secondary" onClick={clearDiscoveryCriteria}>
+                    Clear search and filters
+                  </Button>
+                }
+              />
             ) : (
               <div
                 id={`${generatedId}-pattern-results`}

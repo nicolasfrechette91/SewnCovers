@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import type { ComponentPropsWithRef, ReactNode } from "react";
 
 import { classNames } from "./class-names";
 
@@ -42,8 +42,9 @@ export function noticeTitleClasses(tone: NoticeTone = "info"): string {
 type NoticeElement = "aside" | "div" | "section";
 type NoticeHeading = "h2" | "h3" | "h4" | "p";
 
+// HTMLElement props, so a ref and handlers fit every element in `as`.
 export interface NoticeProps extends Omit<
-  ComponentPropsWithoutRef<"div">,
+  ComponentPropsWithRef<"section">,
   "title"
 > {
   as?: NoticeElement;
@@ -54,7 +55,7 @@ export interface NoticeProps extends Omit<
 }
 
 export function Notice({
-  as: Element = "div",
+  as: tagName = "div",
   children,
   className,
   title,
@@ -63,6 +64,9 @@ export function Notice({
   tone = "info",
   ...elementProps
 }: NoticeProps) {
+  // div, aside and section take the same props here; typing the element as a
+  // section keeps the HTMLElement ref and handlers valid for all three.
+  const Element = tagName as "section";
   return (
     <Element {...elementProps} className={noticeClasses(tone, className)}>
       {title ? (

@@ -11,6 +11,9 @@ import {
   eyebrowClasses,
   SpecList,
   Badge,
+  Notice,
+  EmptyState,
+  TextLink,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
@@ -289,14 +292,11 @@ export function OrdersScreen({
     <div className="space-y-component">
       <DemoBanner />
       {pollPending ? (
-        <p
-          className="rounded-card border border-border bg-surface-subtle px-5 py-3 text-text-primary"
-          role="status"
-        >
+        <Notice role="status" tone="info">
           Returning from checkout does not confirm payment. This page checks the
           fictional order and updates when the simulated payment result is
           available.
-        </p>
+        </Notice>
       ) : null}
       {error ? <CommerceError message={error} /> : null}
       {requestedOrder ? (
@@ -329,20 +329,15 @@ export function OrdersScreen({
           ))}
         </ul>
       ) : (
-        <section className="flex min-w-0 flex-col items-center rounded-panel border border-dashed border-border-strong bg-surface px-card py-layout text-center">
-          <h2 className="font-display text-section-title font-heading tracking-heading text-text-primary">
-            No demonstration orders yet
-          </h2>
-          <p className="mt-2 text-text-muted">
-            Paid access is never required for configuring, saving, or sharing.
-          </p>
-          <Link
-            href="/commerce/"
-            className="mt-4 inline-flex min-h-11 max-w-full items-center rounded-control text-button font-control break-words text-brand underline decoration-1 underline-offset-4 hover:text-brand-hover hover:decoration-2"
-          >
-            View optional demonstration pricing
-          </Link>
-        </section>
+        <EmptyState
+          title="No demonstration orders yet"
+          description="Paid access is never required for configuring, saving, or sharing."
+          action={
+            <TextLink href="/commerce/">
+              View optional demonstration pricing
+            </TextLink>
+          }
+        />
       )}
     </div>
   );

@@ -14,6 +14,9 @@ import {
   surfaceClasses,
   SectionHeader,
   SpecList,
+  Notice,
+  ErrorMessage,
+  EmptyState,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError, resolveAssetUrl } from "@/services/account-api";
@@ -205,7 +208,7 @@ export function AdminScreen() {
   const [status, setStatus] = useState<string | null>(null);
   const [confirmPublish, setConfirmPublish] = useState<string | null>(null);
   const [confirmRefund, setConfirmRefund] = useState(false);
-  const focusRef = useRef<HTMLParagraphElement>(null);
+  const focusRef = useRef<HTMLElement>(null);
   const focusLater = useDeferredFocus();
   const load = async (token: string) => {
     setLoading(true);
@@ -248,18 +251,10 @@ export function AdminScreen() {
     return (
       <div className="space-y-component">
         <DemoBanner />
-        <section
-          className="rounded-panel border border-error-border bg-error-surface p-card"
-          role="alert"
-        >
-          <h2 className="font-display text-section-title font-heading tracking-heading text-error-text">
-            Administrator access denied
-          </h2>
-          <p className="mt-2 text-error-text">
-            Roles are assigned only by the explicit server CLI. Registration and
-            browser requests cannot grant administrative access.
-          </p>
-        </section>
+        <ErrorMessage heading="Administrator access denied" headingAs="h2">
+          Roles are assigned only by the explicit server CLI. Registration and
+          browser requests cannot grant administrative access.
+        </ErrorMessage>
       </div>
     );
   const token = state.token;
@@ -306,14 +301,9 @@ export function AdminScreen() {
       <DemoBanner />
       {error ? <CommerceError message={error} /> : null}
       {status ? (
-        <p
-          ref={focusRef}
-          tabIndex={-1}
-          className="rounded-card border border-success-border bg-success-surface px-5 py-3 text-success-text"
-          role="status"
-        >
+        <Notice ref={focusRef} tabIndex={-1} role="status" tone="success">
           {status}
-        </p>
+        </Notice>
       ) : null}
       <section aria-labelledby="price-books-heading">
         <SectionHeader title="Price books" titleId="price-books-heading" />
@@ -563,9 +553,12 @@ export function AdminScreen() {
             ))}
           </ul>
         ) : (
-          <p className="mt-3 rounded-card border border-dashed border-border-strong bg-surface p-4 text-text-muted">
-            No paid demonstration orders need operational review.
-          </p>
+          <EmptyState
+            align="start"
+            className="mt-3"
+            description="No paid demonstration orders need operational review."
+            size="compact"
+          />
         )}
       </section>
       {selected ? (

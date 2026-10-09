@@ -13,6 +13,8 @@ export interface ErrorMessageProps {
   className?: string;
   /** Optional visible heading shown above the message. */
   heading?: ReactNode;
+  /** The element for the heading: a real heading when it belongs in the outline. */
+  headingAs?: "p" | "h2" | "h3" | "h4";
   id?: string;
   role?: "alert" | "status";
 }
@@ -22,6 +24,7 @@ export function ErrorMessage({
   children,
   className,
   heading,
+  headingAs: Heading = "p",
   id,
   role = "alert",
 }: ErrorMessageProps) {
@@ -43,7 +46,7 @@ export function ErrorMessage({
         !
       </span>
       <div className="min-w-0">
-        {heading ? <p className="font-control">{heading}</p> : null}
+        {heading ? <Heading className="font-control">{heading}</Heading> : null}
         {heading ? <div className="mt-1">{children}</div> : children}
       </div>
     </div>

@@ -19,6 +19,7 @@ import {
   useDeferredFocus,
   Surface,
   SectionHeader,
+  LoadingState,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import type { ConfigurationState } from "@/context/configuration";
@@ -432,9 +433,7 @@ export function PrivateProjectPanel({
       />
       <p className="mt-3 max-w-3xl text-body text-text-muted">{description}</p>
       {auth.status === "initializing" ? (
-        <p className="mt-3" role="status">
-          Restoring your session…
-        </p>
+        <LoadingState className="mt-3" label="Restoring your session…" />
       ) : null}
       <form
         className="mt-4"

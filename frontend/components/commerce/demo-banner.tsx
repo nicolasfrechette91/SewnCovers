@@ -1,6 +1,10 @@
 import { AccountRequired } from "@/components/account/account-required";
 import { GuestEmptyState } from "@/components/account/guest-empty-state";
-import { noticeClasses, noticeTitleClasses } from "@/components/ui";
+import {
+  noticeClasses,
+  noticeTitleClasses,
+  ErrorMessage,
+} from "@/components/ui";
 import type { AuthenticationReturnTarget } from "@/services/auth-navigation";
 
 export function DemoBanner() {
@@ -127,12 +131,5 @@ export function SignInForCommerce({
 }
 
 export function CommerceError({ message }: Readonly<{ message: string }>) {
-  return (
-    <p
-      className="wrap-anywhere rounded-card border border-error-border bg-error-surface px-5 py-3 text-supporting text-error-text"
-      role="alert"
-    >
-      {message}
-    </p>
-  );
+  return <ErrorMessage>{message}</ErrorMessage>;
 }

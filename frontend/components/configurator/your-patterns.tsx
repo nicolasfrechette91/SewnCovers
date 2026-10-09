@@ -24,6 +24,7 @@ import {
   TextInput,
   useDeferredFocus,
   Surface,
+  EmptyState,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useConfiguration } from "@/context/configuration";
@@ -738,9 +739,12 @@ export function YourPatterns() {
               })}
             </ul>
           ) : phase !== "loading" ? (
-            <p className="mt-4 rounded-card border border-dashed border-border-strong bg-surface px-4 py-3 text-supporting text-text-muted">
-              No custom patterns yet.
-            </p>
+            <EmptyState
+              align="start"
+              className="mt-4"
+              description="No custom patterns yet."
+              size="compact"
+            />
           ) : null}
         </>
       ) : null}

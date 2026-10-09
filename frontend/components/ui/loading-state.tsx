@@ -7,12 +7,15 @@ export interface LoadingStateProps extends Omit<
   ComponentPropsWithoutRef<"div">,
   "children"
 > {
+  /** A dashed frame around the spinner, for a panel that is still filling. */
+  framed?: boolean;
   label?: ReactNode;
 }
 
 export function LoadingState({
   "aria-live": ariaLive = "polite",
   className,
+  framed = false,
   label = "Loading…",
   role = "status",
   ...statusProps
@@ -24,7 +27,10 @@ export function LoadingState({
       aria-live={ariaLive}
       aria-atomic="true"
       className={classNames(
-        "inline-flex items-center gap-icon text-supporting text-text-muted",
+        framed
+          ? "flex rounded-card border border-dashed border-border-strong bg-surface p-card"
+          : "inline-flex",
+        "items-center gap-icon text-supporting text-text-muted",
         className,
       )}
     >

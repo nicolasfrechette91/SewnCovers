@@ -7,7 +7,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import {
   Badge,
   Checkbox,
+  EmptyState,
+  ErrorMessage,
   Field,
+  LoadingState,
+  Notice,
   SectionHeader,
   Select,
   SpecList,
@@ -452,6 +456,144 @@ test("Badge is a small non-interactive status tag", () => {
   ]) {
     assert.ok(tokens(badge).includes(token), "has " + token);
   }
+});
+
+// States ----------------------------------------------------------------------
+
+test("EmptyState default is a centred card with a stitch rule and a card title", () => {
+  const { container } = render(
+    <EmptyState
+      action={<a href="/commerce/">View pricing</a>}
+      description="Create a quote first."
+      title="Your cart is empty"
+    />,
+  );
+
+  const heading = screen.getByRole("heading", {
+    level: 2,
+    name: "Your cart is empty",
+  });
+  assert.ok(tokens(heading).includes("text-card-title"));
+  const root = tokens(container.firstElementChild as Element);
+  for (const token of [
+    "rounded-panel",
+    "items-center",
+    "text-center",
+    "border-dashed",
+  ]) {
+    assert.ok(root.includes(token), "has " + token);
+  }
+  assert.equal(container.querySelectorAll(".stitch-rule").length, 1);
+});
+
+test("EmptyState compact and start-aligned is the in-panel message", () => {
+  const { container } = render(
+    <EmptyState
+      action={<button type="button">Clear search</button>}
+      align="start"
+      description="Try another search."
+      size="compact"
+      title="No patterns match"
+      titleAs="h3"
+    />,
+  );
+
+  const root = tokens(container.firstElementChild as Element);
+  for (const token of ["rounded-card", "p-4", "items-start", "text-left"]) {
+    assert.ok(root.includes(token), "has " + token);
+  }
+  assert.equal(root.includes("py-layout"), false);
+  assert.equal(container.querySelectorAll(".stitch-rule").length, 0);
+  const heading = screen.getByRole("heading", {
+    level: 3,
+    name: "No patterns match",
+  });
+  assert.ok(
+    tokens(heading).includes("text-body") &&
+      tokens(heading).includes("font-control"),
+  );
+  assert.ok(screen.getByRole("button", { name: "Clear search" }));
+});
+
+test("EmptyState can be only a description and passes a live-region role through", () => {
+  render(
+    <EmptyState
+      description="No quotes yet."
+      role="status"
+      size="compact"
+      align="start"
+    />,
+  );
+
+  const status = screen.getByRole("status");
+  assert.equal(status.textContent, "No quotes yet.");
+  assert.equal(screen.queryAllByRole("heading").length, 0);
+});
+
+test("LoadingState framed draws the dashed frame, plain stays inline", () => {
+  render(
+    <>
+      <LoadingState framed label="Loading this stage…" className="min-h-40" />
+      <LoadingState label="Loading plain…" />
+    </>,
+  );
+
+  const [framed, plain] = screen.getAllByRole("status");
+  for (const token of [
+    "flex",
+    "border-dashed",
+    "rounded-card",
+    "p-card",
+    "min-h-40",
+  ]) {
+    assert.ok(tokens(framed).includes(token), "framed has " + token);
+  }
+  assert.equal(tokens(framed).includes("inline-flex"), false);
+  assert.ok(tokens(plain).includes("inline-flex"));
+  assert.equal(tokens(plain).includes("border-dashed"), false);
+});
+
+test("ErrorMessage heading can be a real heading and keeps its alert semantics", () => {
+  render(
+    <>
+      <ErrorMessage heading="Patterns couldn't be loaded" headingAs="h3">
+        Try again.
+      </ErrorMessage>
+      <ErrorMessage heading="Plain heading" role="status" aria-live="polite">
+        Quiet.
+      </ErrorMessage>
+    </>,
+  );
+
+  assert.ok(
+    screen.getByRole("heading", {
+      level: 3,
+      name: "Patterns couldn't be loaded",
+    }),
+  );
+  assert.equal(screen.getAllByRole("alert").length, 1);
+  assert.equal(screen.getByText("Plain heading").tagName, "P");
+  assert.equal(screen.getByRole("status").getAttribute("aria-live"), "polite");
+});
+
+test("Notice takes a ref and tabIndex for focus targets, in every tone", () => {
+  const ref = createRef<HTMLElement>();
+  render(
+    <>
+      <Notice ref={ref} role="status" tabIndex={-1} tone="success">
+        Saved.
+      </Notice>
+      <Notice tone="info" title="Heads up" titleAs="h3">
+        Details.
+      </Notice>
+    </>,
+  );
+
+  const success = screen.getByRole("status");
+  assert.equal(ref.current, success);
+  assert.equal(success.getAttribute("tabindex"), "-1");
+  assert.ok(tokens(success).includes("bg-success-surface"));
+  assert.ok(screen.getByRole("heading", { level: 3, name: "Heads up" }));
 });
 
 // Checkbox -------------------------------------------------------------------

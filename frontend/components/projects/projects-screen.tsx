@@ -151,7 +151,7 @@ function ProjectView({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const renameRef = useRef<HTMLInputElement>(null);
   const shareRef = useRef<HTMLInputElement>(null);
-  const actionStatusRef = useRef<HTMLParagraphElement>(null);
+  const actionStatusRef = useRef<HTMLElement>(null);
   const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const confirmDeleteButtonRef = useRef<HTMLButtonElement>(null);
   const load = async () => {
@@ -349,14 +349,14 @@ function ProjectView({
       ) : null}
       {actionError ? <ErrorMessage>{actionError}</ErrorMessage> : null}
       {actionStatus ? (
-        <p
+        <Notice
           ref={actionStatusRef}
           tabIndex={-1}
-          className="rounded-card border border-success-border bg-success-surface px-5 py-3 text-supporting font-emphasis text-success-text"
           aria-live="polite"
+          tone="success"
         >
           {actionStatus}
-        </p>
+        </Notice>
       ) : null}
 
       <section aria-labelledby="version-history-heading">

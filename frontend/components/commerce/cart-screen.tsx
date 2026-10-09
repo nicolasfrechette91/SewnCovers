@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -11,8 +10,11 @@ import {
   useDeferredFocus,
   Surface,
   eyebrowClasses,
+  Notice,
+  ErrorMessage,
+  EmptyState,
+  ButtonLink,
 } from "@/components/ui";
-import { buttonClasses } from "@/components/ui/button-styles";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
 import { commerceApi, type Cart } from "@/services/commerce-api";
@@ -45,7 +47,7 @@ export function CartScreen() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const focusRef = useRef<HTMLParagraphElement>(null);
+  const focusRef = useRef<HTMLElement>(null);
   const focusLater = useDeferredFocus();
   const load = async (token: string) => {
     setLoading(true);
@@ -108,39 +110,23 @@ export function CartScreen() {
       <DemoBanner />
       {error ? <CommerceError message={error} /> : null}
       {status ? (
-        <p
-          ref={focusRef}
-          tabIndex={-1}
-          role="status"
-          className="rounded-card border border-success-border bg-success-surface px-5 py-3 text-success-text"
-        >
+        <Notice ref={focusRef} tabIndex={-1} role="status" tone="success">
           {status}
-        </p>
+        </Notice>
       ) : null}
       {cart?.notices.map((notice) => (
-        <p
-          key={notice}
-          className="rounded-card border border-error-border bg-error-surface px-5 py-3 text-error-text"
-          role="status"
-        >
+        <ErrorMessage key={notice} role="status" aria-live="polite">
           {notice}
-        </p>
+        </ErrorMessage>
       ))}
       {!cart || cart.lines.length === 0 ? (
-        <section className="flex min-w-0 flex-col items-center rounded-panel border border-dashed border-border-strong bg-surface px-card py-layout text-center">
-          <h2 className="font-display text-section-title font-heading tracking-heading text-text-primary">
-            Your demonstration cart is empty
-          </h2>
-          <p className="mt-2 text-text-muted">
-            Create a fictional quote before starting the sandbox checkout.
-          </p>
-          <Link
-            href="/commerce/"
-            className={buttonClasses({ className: "mt-4", element: "link" })}
-          >
-            View pricing and quotes
-          </Link>
-        </section>
+        <EmptyState
+          title="Your demonstration cart is empty"
+          description="Create a fictional quote before starting the sandbox checkout."
+          action={
+            <ButtonLink href="/commerce/">View pricing and quotes</ButtonLink>
+          }
+        />
       ) : (
         <>
           <ul className="space-y-component">

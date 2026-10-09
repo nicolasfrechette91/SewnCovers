@@ -15,6 +15,7 @@ import {
   surfaceClasses,
   SectionHeader,
   eyebrowClasses,
+  Notice,
 } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { useAuth } from "@/context/auth";
@@ -375,10 +376,10 @@ export function AccountScreen({
         </ErrorMessage>
       ) : null}
       {returnTo ? (
-        <p className="rounded-card border border-border bg-surface-subtle px-5 py-3 text-supporting text-text-muted">
+        <Notice tone="info">
           After successful authentication, you will return to{" "}
           {RETURN_LABELS[returnTo]}.
-        </p>
+        </Notice>
       ) : null}
       <nav
         aria-label="Authentication options"

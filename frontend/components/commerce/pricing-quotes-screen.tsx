@@ -13,6 +13,8 @@ import {
   Surface,
   SectionHeader,
   eyebrowClasses,
+  Notice,
+  EmptyState,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
@@ -79,7 +81,7 @@ export function PrivatePricingWorkspace({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const statusRef = useRef<HTMLParagraphElement>(null);
+  const statusRef = useRef<HTMLElement>(null);
   const focusLater = useDeferredFocus();
 
   const load = async (token: string) => {
@@ -135,14 +137,9 @@ export function PrivatePricingWorkspace({
       <DemoBanner />
       {error ? <CommerceError message={error} /> : null}
       {status ? (
-        <p
-          ref={statusRef}
-          tabIndex={-1}
-          className="rounded-card border border-success-border bg-success-surface px-5 py-3 text-success-text"
-          role="status"
-        >
+        <Notice ref={statusRef} tabIndex={-1} role="status" tone="success">
           {status}
-        </p>
+        </Notice>
       ) : null}
       <Surface as="section">
         <SectionHeader
@@ -303,9 +300,12 @@ export function PrivatePricingWorkspace({
             ))}
           </ul>
         ) : (
-          <p className="mt-4 rounded-card border border-dashed border-border-strong bg-surface p-4 text-text-muted">
-            No quotes yet.
-          </p>
+          <EmptyState
+            align="start"
+            className="mt-4"
+            description="No quotes yet."
+            size="compact"
+          />
         )}
       </section>
     </div>

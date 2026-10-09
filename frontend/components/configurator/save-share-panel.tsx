@@ -15,6 +15,7 @@ import {
   TextInput,
   Surface,
   SectionHeader,
+  Notice,
 } from "@/components/ui";
 import type { ConfigurationState } from "@/context/configuration";
 import { apiClient } from "@/services/api-client";
@@ -131,11 +132,11 @@ export function SaveSharePanel({
       </p>
 
       {customPatternSelected ? (
-        <p className="mt-component rounded-card border border-border bg-surface-subtle px-5 py-4 text-supporting text-text-primary">
+        <Notice className="mt-component" tone="info">
           Public links work with our patterns and plain colours. To share a
           design that uses your own image, save it to a project and share it
           from there.
-        </p>
+        </Notice>
       ) : null}
 
       {saveState.phase === "idle" && !customPatternSelected ? (
