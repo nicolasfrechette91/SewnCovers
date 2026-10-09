@@ -181,6 +181,7 @@
 
   /* Spacing: a 4px "tape" with semantic, responsive steps for layout */
   --spacing: 0.25rem;
+  --spacing-nudge: 0.125rem;
   --spacing-icon: 0.5rem;
   --spacing-control-y: 0.75rem;
   --spacing-control-x: 1rem;

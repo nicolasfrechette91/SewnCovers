@@ -46,12 +46,23 @@ export interface CheckboxProps extends Omit<
   ComponentPropsWithRef<"input">,
   "type"
 > {
+  /** Shown under the label and wired into aria-describedby. */
+  error?: ReactNode;
+  help?: ReactNode;
   label: ReactNode;
   labelClassName?: string;
 }
 
+/**
+ * The label wraps the box, so the whole row is one 44px target and the box is
+ * named by its text. Help and error text sit under the row, outside the label.
+ */
 export function Checkbox({
+  "aria-describedby": ariaDescribedBy,
+  "aria-invalid": ariaInvalid,
   className,
+  error,
+  help,
   id,
   label,
   labelClassName,
@@ -59,24 +70,40 @@ export function Checkbox({
 }: CheckboxProps) {
   const generatedId = useId();
   const checkboxId = id ?? `checkbox-${generatedId}`;
+  const helpId = help ? `${checkboxId}-help` : undefined;
+  const errorId = error ? `${checkboxId}-error` : undefined;
+  const describedBy = [ariaDescribedBy, helpId, errorId]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div className={classNames("flex min-w-0 items-start gap-3", className)}>
-      <input
-        {...props}
-        id={checkboxId}
-        type="checkbox"
-        className={checkboxClasses}
-      />
+    <div className={classNames("min-w-0", className)}>
       <label
-        htmlFor={checkboxId}
         className={classNames(
-          "min-w-0 cursor-pointer text-supporting text-text-primary",
+          "flex min-h-11 min-w-0 cursor-pointer items-start gap-2 text-supporting text-text-primary",
           labelClassName,
         )}
       >
-        {label}
+        <input
+          {...props}
+          id={checkboxId}
+          type="checkbox"
+          aria-describedby={describedBy || undefined}
+          aria-invalid={error ? true : ariaInvalid}
+          className={checkboxClasses}
+        />
+        <span className="min-w-0">{label}</span>
       </label>
+      {help ? (
+        <p id={helpId} className={classNames("mt-2", fieldHelpClasses)}>
+          {help}
+        </p>
+      ) : null}
+      {error ? (
+        <p id={errorId} className={classNames("mt-2", fieldErrorClasses)}>
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -90,8 +117,14 @@ export interface FieldControlProps {
 export interface FieldProps {
   children: (control: FieldControlProps) => ReactNode;
   className?: string;
+  /** Extra ids appended to aria-describedby, for text outside the field. */
+  describedBy?: string;
   error?: ReactNode;
+  /** "alert" announces the error the moment it appears. */
+  errorRole?: "alert";
   help?: ReactNode;
+  /** Keeps the label for assistive technology and hides it visually. */
+  hideLabel?: boolean;
   id?: string;
   label: ReactNode;
 }
@@ -100,8 +133,11 @@ export interface FieldProps {
 export function Field({
   children,
   className,
+  describedBy: extraDescribedBy,
   error,
+  errorRole,
   help,
+  hideLabel = false,
   id,
   label,
 }: FieldProps) {
@@ -109,11 +145,16 @@ export function Field({
   const controlId = id ?? `field-${generatedId}`;
   const helpId = help ? `${controlId}-help` : undefined;
   const errorId = error ? `${controlId}-error` : undefined;
-  const describedBy = [helpId, errorId].filter(Boolean).join(" ");
+  const describedBy = [helpId, errorId, extraDescribedBy]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className={classNames("flex min-w-0 flex-col gap-2", className)}>
-      <label htmlFor={controlId} className={fieldLabelClasses}>
+      <label
+        htmlFor={controlId}
+        className={hideLabel ? "sr-only" : fieldLabelClasses}
+      >
         {label}
       </label>
       {children({
@@ -127,7 +168,7 @@ export function Field({
         </p>
       ) : null}
       {error ? (
-        <p id={errorId} className={fieldErrorClasses}>
+        <p id={errorId} role={errorRole} className={fieldErrorClasses}>
           {error}
         </p>
       ) : null}

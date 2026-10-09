@@ -12,10 +12,10 @@ import {
 import { InlineSignIn } from "@/components/account/inline-sign-in";
 import {
   Button,
-  controlClasses,
   ErrorMessage,
-  fieldLabelClasses,
+  Field,
   textLinkClasses,
+  TextInput,
   useDeferredFocus,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
@@ -447,23 +447,20 @@ export function PrivateProjectPanel({
       >
         {!link ? (
           <>
-            <label
-              htmlFor="private-project-name"
-              className={`block ${fieldLabelClasses}`}
-            >
-              Project name
-            </label>
-            <input
-              ref={nameRef}
-              id="private-project-name"
-              name="name"
-              required
-              maxLength={120}
-              value={name}
-              readOnly={busy !== null || signInFor !== null}
-              onChange={(event) => setName(event.target.value)}
-              className={`mt-2 ${controlClasses}`}
-            />
+            <Field id="private-project-name" label="Project name">
+              {(control) => (
+                <TextInput
+                  {...control}
+                  ref={nameRef}
+                  name="name"
+                  required
+                  maxLength={120}
+                  value={name}
+                  readOnly={busy !== null || signInFor !== null}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              )}
+            </Field>
           </>
         ) : null}
         {savedAndUnchanged && verified && !outcome && busy === null ? (

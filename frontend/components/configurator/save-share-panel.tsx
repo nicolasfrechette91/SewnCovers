@@ -8,7 +8,7 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { Button, ErrorMessage } from "@/components/ui";
+import { Button, ErrorMessage, Field, TextInput } from "@/components/ui";
 import type { ConfigurationState } from "@/context/configuration";
 import { apiClient } from "@/services/api-client";
 import { recordPublicDesign } from "@/services/draft-links";
@@ -181,29 +181,24 @@ export function SaveSharePanel({
           >
             {saveState.message}
           </p>
-          <label
-            htmlFor="configuration-share-url"
-            className="mt-4 block text-label font-control tracking-label text-text-primary"
-          >
-            Share URL
-          </label>
-          <input
-            ref={shareUrlInput}
+          <Field
+            className="mt-4"
+            help="Anyone with this link can view this design. It doesn't show your account or projects."
             id="configuration-share-url"
-            type="url"
-            value={saveState.shareUrl}
-            readOnly
-            aria-describedby="configuration-share-url-help"
-            onFocus={(event) => event.currentTarget.select()}
-            className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface-subtle px-control-x py-control-y font-mono text-body text-text-primary"
-          />
-          <p
-            id="configuration-share-url-help"
-            className="mt-2 break-words text-supporting text-text-muted"
+            label="Share URL"
           >
-            Anyone with this link can view this design. It doesn&apos;t show
-            your account or projects.
-          </p>
+            {(control) => (
+              <TextInput
+                {...control}
+                ref={shareUrlInput}
+                type="url"
+                value={saveState.shareUrl}
+                readOnly
+                onFocus={(event) => event.currentTarget.select()}
+                className="font-mono"
+              />
+            )}
+          </Field>
           <Button
             className="mt-3"
             variant="secondary"

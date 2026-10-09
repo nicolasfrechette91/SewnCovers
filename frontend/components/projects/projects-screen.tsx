@@ -17,8 +17,10 @@ import {
   ButtonLink,
   EmptyState,
   ErrorMessage,
+  Field,
   LoadingState,
   Notice,
+  TextInput,
   TextLink,
   useDeferredFocus,
 } from "@/components/ui";
@@ -273,18 +275,23 @@ function ProjectView({
           className="mt-4 flex min-w-0 flex-col gap-3 sm:flex-row"
           onSubmit={(event) => void rename(event)}
         >
-          <label htmlFor="project-name" className="sr-only">
-            New project name
-          </label>
-          <input
-            ref={renameRef}
+          <Field
+            className="flex-1"
+            hideLabel
             id="project-name"
-            name="name"
-            required
-            maxLength={120}
-            defaultValue={detail.name}
-            className="min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x py-control-y text-body text-text-primary hover:border-brand flex-1"
-          />
+            label="New project name"
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                ref={renameRef}
+                name="name"
+                required
+                maxLength={120}
+                defaultValue={detail.name}
+              />
+            )}
+          </Field>
           <Button type="submit" variant="secondary">
             Rename project
           </Button>
@@ -303,21 +310,19 @@ function ProjectView({
             Anyone with this link can view this version until you revoke the
             share. Copy it now; the complete link is shown only once.
           </p>
-          <label
-            htmlFor="project-share-url"
-            className="mt-4 block text-label font-control text-text-primary"
-          >
-            Share URL
-          </label>
-          <input
-            ref={shareRef}
-            id="project-share-url"
-            type="url"
-            readOnly
-            value={shareUrl}
-            onFocus={(event) => event.currentTarget.select()}
-            className="mt-2 min-h-12 w-full rounded-control border border-border-strong bg-surface-subtle px-control-x font-mono text-body"
-          />
+          <Field className="mt-4" id="project-share-url" label="Share URL">
+            {(control) => (
+              <TextInput
+                {...control}
+                ref={shareRef}
+                type="url"
+                readOnly
+                value={shareUrl}
+                onFocus={(event) => event.currentTarget.select()}
+                className="font-mono"
+              />
+            )}
+          </Field>
           <Button
             className="mt-3"
             variant="secondary"

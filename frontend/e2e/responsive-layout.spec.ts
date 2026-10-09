@@ -258,14 +258,20 @@ test("responsive configurator stages and touch controls", async ({
   await fixtures(page, "customer");
   await page.goto(`${base}/configure/?design=AbCdEfGhIjKlMnOpQrStUv`);
   await expect(page.getByText("Shared design restored.")).toBeVisible();
-  for (const stage of [
-    "Measurements",
-    "Cover details",
-    "Pattern",
-    "Preview",
-    "Review",
-  ]) {
+  // Each stage chunk loads lazily behind a "Loading this configuration stage…"
+  // fallback; wait for the stage's own h1 so captures never show the fallback.
+  const stageHeadings = {
+    Measurements: /^Measure your/,
+    "Cover details": "Choose cover details",
+    Pattern: "Choose a colour or pattern",
+    Preview: /^Preview your/,
+    Review: "SewnCovers configuration summary",
+  };
+  for (const [stage, heading] of Object.entries(stageHeadings)) {
     await page.getByRole("button", { name: `Continue to ${stage}` }).tap();
+    await expect(
+      page.getByRole("heading", { level: 1, name: heading }),
+    ).toBeVisible();
     await checkMatrix(page, stage, info.outputDir);
   }
 });

@@ -10,13 +10,13 @@ import {
 import {
   Button,
   cardTitleClasses,
-  controlClasses,
   ErrorMessage,
+  Field,
   fieldErrorClasses,
-  fieldLabelClasses,
   LoadingState,
   noticeClasses,
   StitchDivider,
+  TextInput,
   useDeferredFocus,
 } from "@/components/ui";
 import {
@@ -317,47 +317,42 @@ export function PatternStep({
               Pick your colour
             </h3>
             <div className="mt-3 grid min-w-0 gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-end">
-              <div>
-                <label
-                  htmlFor={`${generatedId}-native-color`}
-                  className={`block ${fieldLabelClasses}`}
-                >
-                  Colour
-                </label>
-                <input
-                  id={`${generatedId}-native-color`}
-                  type="color"
-                  value={solidColor}
-                  className="mt-2 h-12 w-20 cursor-pointer rounded-control border border-border-strong bg-surface p-1 transition-colors duration-(--duration-fast) hover:border-brand motion-reduce:transition-none"
-                  onChange={(event) =>
-                    updateSolidColor(event.currentTarget.value)
-                  }
-                />
-              </div>
-              <div className="min-w-0">
-                <label
-                  htmlFor={`${generatedId}-hex-color`}
-                  className={`block ${fieldLabelClasses}`}
-                >
-                  Colour code
-                </label>
-                <input
-                  id={`${generatedId}-hex-color`}
-                  type="text"
-                  inputMode="text"
-                  autoComplete="off"
-                  spellCheck={false}
-                  maxLength={7}
-                  value={displayedSolidColorDraft}
-                  aria-invalid={solidColorError !== null}
-                  aria-describedby={`${generatedId}-hex-help${solidColorError ? ` ${generatedId}-hex-error` : ""}`}
-                  className={`mt-2 ${controlClasses} font-mono uppercase tabular-nums`}
-                  onChange={(event) =>
-                    updateSolidColor(event.currentTarget.value)
-                  }
-                  onBlur={commitSolidColor}
-                />
-              </div>
+              <Field id={`${generatedId}-native-color`} label="Colour">
+                {(control) => (
+                  <input
+                    {...control}
+                    type="color"
+                    value={solidColor}
+                    className="h-12 w-20 cursor-pointer rounded-control border border-border-strong bg-surface p-1 transition-colors duration-(--duration-fast) hover:border-brand motion-reduce:transition-none"
+                    onChange={(event) =>
+                      updateSolidColor(event.currentTarget.value)
+                    }
+                  />
+                )}
+              </Field>
+              <Field
+                describedBy={`${generatedId}-hex-help${solidColorError ? ` ${generatedId}-hex-error` : ""}`}
+                id={`${generatedId}-hex-color`}
+                label="Colour code"
+              >
+                {(control) => (
+                  <TextInput
+                    {...control}
+                    type="text"
+                    inputMode="text"
+                    autoComplete="off"
+                    spellCheck={false}
+                    maxLength={7}
+                    value={displayedSolidColorDraft}
+                    aria-invalid={solidColorError !== null}
+                    className="font-mono uppercase tabular-nums"
+                    onChange={(event) =>
+                      updateSolidColor(event.currentTarget.value)
+                    }
+                    onBlur={commitSolidColor}
+                  />
+                )}
+              </Field>
             </div>
             <p
               id={`${generatedId}-hex-help`}
@@ -409,26 +404,25 @@ export function PatternStep({
         ) : (
           <>
             <div className="mt-4 rounded-card border border-border bg-surface-subtle p-4 sm:p-5">
-              <div className="max-w-2xl">
-                <label
-                  htmlFor={`${generatedId}-pattern-search`}
-                  className={`block ${fieldLabelClasses}`}
-                >
-                  Search patterns
-                </label>
-                <input
-                  ref={searchInputRef}
-                  id={`${generatedId}-pattern-search`}
-                  type="search"
-                  value={searchQuery}
-                  aria-describedby={resultCountId}
-                  className={`mt-2 ${controlClasses}`}
-                  placeholder="For example, stripe or green"
-                  onChange={(event) =>
-                    updateSearchQuery(event.currentTarget.value)
-                  }
-                />
-              </div>
+              <Field
+                className="max-w-2xl"
+                describedBy={resultCountId}
+                id={`${generatedId}-pattern-search`}
+                label="Search patterns"
+              >
+                {(control) => (
+                  <TextInput
+                    {...control}
+                    ref={searchInputRef}
+                    type="search"
+                    value={searchQuery}
+                    placeholder="For example, stripe or green"
+                    onChange={(event) =>
+                      updateSearchQuery(event.currentTarget.value)
+                    }
+                  />
+                )}
+              </Field>
               <div className="grid min-w-0 gap-component lg:grid-cols-2">
                 <PatternFilter
                   className="mt-component"

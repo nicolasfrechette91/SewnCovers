@@ -7,7 +7,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Button,
   ErrorMessage,
+  Field,
   LoadingState,
+  TextInput,
   useDeferredFocus,
 } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/button-styles";
@@ -289,23 +291,23 @@ function AuthenticatedAccount({
               }
             }}
           >
-            <label
-              htmlFor="delete-password"
-              className="block text-label font-control"
-            >
-              Re-enter your passphrase to confirm
-            </label>
-            <input
-              ref={passwordRef}
+            <Field
               id="delete-password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              minLength={12}
-              maxLength={128}
-              className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x py-control-y text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none aria-invalid:border-error-border aria-invalid:bg-error-surface"
-            />
+              label="Re-enter your passphrase to confirm"
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  ref={passwordRef}
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  minLength={12}
+                  maxLength={128}
+                />
+              )}
+            </Field>
             <div className="mt-3 flex flex-wrap gap-3">
               <Button
                 type="submit"

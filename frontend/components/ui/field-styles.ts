@@ -11,4 +11,4 @@ export const fieldErrorClasses =
   "text-supporting font-emphasis text-error-text";
 
 export const checkboxClasses =
-  "mt-0.5 size-5 shrink-0 cursor-pointer accent-brand disabled:cursor-not-allowed";
+  "mt-nudge size-5 shrink-0 cursor-pointer accent-brand disabled:cursor-not-allowed";

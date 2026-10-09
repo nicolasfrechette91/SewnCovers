@@ -331,7 +331,9 @@ test("save/share UI declares labeled, announced, retry, and manual-copy recovery
     saveSharePanelSource,
     /finally\(\(\) => onSavingChange\?\.\(false\)\)/,
   );
-  assert.match(saveSharePanelSource, /htmlFor="configuration-share-url"/);
+  // Field wires the label, the id and the help text of the share URL control.
+  assert.match(saveSharePanelSource, /<Field[^>]*id="configuration-share-url"/);
+  assert.match(saveSharePanelSource, /label="Share URL"/);
   assert.match(saveSharePanelSource, /readOnly/);
   assert.match(saveSharePanelSource, /Copy share link/);
   assert.match(saveSharePanelSource, /shareUrlInput\.current\?\.select/);

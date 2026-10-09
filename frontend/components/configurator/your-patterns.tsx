@@ -15,12 +15,13 @@ import { InlineSignIn } from "@/components/account/inline-sign-in";
 import {
   Button,
   cardTitleClasses,
-  checkboxClasses,
-  controlClasses,
+  Checkbox,
   ErrorMessage,
+  Field,
   fieldLabelClasses,
   LoadingState,
   StitchDivider,
+  TextInput,
   useDeferredFocus,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
@@ -487,23 +488,14 @@ export function YourPatterns() {
             external moderation is available, a processed copy may be checked
             before you can use the pattern.
           </p>
-          <label className="mt-3 flex min-h-11 items-start gap-2 text-supporting">
-            <input
-              className={checkboxClasses}
-              type="checkbox"
-              checked={rightsAcknowledged}
-              onChange={(event) =>
-                setRightsAcknowledged(event.currentTarget.checked)
-              }
-            />
-            <span>
-              I acknowledge upload notice version 1: I have permission to use
-              this image; configured external moderation may process it;
-              automated approval does not guarantee safety, legality, or
-              ownership; deletion stops project rendering while a protected
-              paid-order copy may be retained.
-            </span>
-          </label>
+          <Checkbox
+            className="mt-3"
+            checked={rightsAcknowledged}
+            onChange={(event) =>
+              setRightsAcknowledged(event.currentTarget.checked)
+            }
+            label="I acknowledge upload notice version 1: I have permission to use this image; configured external moderation may process it; automated approval does not guarantee safety, legality, or ownership; deletion stops project rendering while a protected paid-order copy may be retained."
+          />
           <div
             className="cutting-mat mt-4 rounded-card border border-dashed border-border-strong p-4 sm:p-5"
             onDragOver={(event) => event.preventDefault()}
@@ -512,45 +504,42 @@ export function YourPatterns() {
               void chooseFile(event.dataTransfer.files[0] ?? null);
             }}
           >
-            <label
-              htmlFor={`${id}-file`}
-              className={`block ${fieldLabelClasses}`}
-            >
-              Choose a pattern image
-            </label>
-            <input
-              ref={fileInput}
+            <Field
+              help="You can also drop one file in this bordered area."
               id={`${id}-file`}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="mt-2 block min-h-11 w-full max-w-full text-body text-text-primary file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-border-strong file:bg-surface file:px-4 file:font-control file:text-text-primary hover:file:border-brand hover:file:text-brand"
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                void chooseFile(event.target.files?.[0] ?? null)
-              }
-            />
-            <p className="mt-2 text-supporting text-text-muted">
-              You can also drop one file in this bordered area.
-            </p>
+              label="Choose a pattern image"
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  ref={fileInput}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="block min-h-11 w-full max-w-full text-body text-text-primary file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-control file:border file:border-border-strong file:bg-surface file:px-4 file:font-control file:text-text-primary hover:file:border-brand hover:file:text-brand"
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    void chooseFile(event.target.files?.[0] ?? null)
+                  }
+                />
+              )}
+            </Field>
           </div>
           {localPreview ? (
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
-                <label
-                  htmlFor={`${id}-label`}
-                  className={`block ${fieldLabelClasses}`}
-                >
-                  Pattern label
-                </label>
-                <input
+                <Field
+                  help={`${dimensions}. The complete image is used without cropping.`}
                   id={`${id}-label`}
-                  value={label}
-                  maxLength={120}
-                  className={`mt-2 ${controlClasses}`}
-                  onChange={(event) => setLabel(event.target.value)}
-                />
-                <p className="mt-2 text-supporting text-text-muted">
-                  {dimensions}. The complete image is used without cropping.
-                </p>
+                  label="Pattern label"
+                >
+                  {(control) => (
+                    <TextInput
+                      {...control}
+                      value={label}
+                      maxLength={120}
+                      onChange={(event) => setLabel(event.target.value)}
+                    />
+                  )}
+                </Field>
                 <Button
                   className="mt-3"
                   isLoading={phase === "uploading"}
@@ -644,25 +633,25 @@ export function YourPatterns() {
                         }}
                         onKeyDown={escapeToCancel("rename")}
                       >
-                        <label
-                          htmlFor={itemControlId("label", item)}
-                          className={`block ${fieldLabelClasses}`}
-                        >
-                          New pattern label
-                        </label>
-                        <input
+                        <Field
                           id={itemControlId("label", item)}
-                          value={question.draft}
-                          maxLength={120}
-                          required
-                          className={controlClasses}
-                          onChange={(event) =>
-                            setEditing({
-                              ...question,
-                              draft: event.target.value,
-                            })
-                          }
-                        />
+                          label="New pattern label"
+                        >
+                          {(control) => (
+                            <TextInput
+                              {...control}
+                              value={question.draft}
+                              maxLength={120}
+                              required
+                              onChange={(event) =>
+                                setEditing({
+                                  ...question,
+                                  draft: event.target.value,
+                                })
+                              }
+                            />
+                          )}
+                        </Field>
                         <div className="flex flex-wrap gap-2">
                           <Button type="submit" size="compact">
                             Save label

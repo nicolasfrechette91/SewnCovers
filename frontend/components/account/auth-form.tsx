@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { Button, ErrorMessage, useDeferredFocus } from "@/components/ui";
+import {
+  Button,
+  Checkbox,
+  ErrorMessage,
+  Field,
+  TextInput,
+  useDeferredFocus,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
 import type { AuthenticationMode } from "@/services/auth-navigation";
@@ -149,11 +156,6 @@ export function AuthForm({
     }
   };
 
-  const emailErrorId = id("email-error");
-  const passwordHelpId = id("password-help");
-  const passwordErrorId = id("password-error");
-  const termsErrorId = id("terms-error");
-
   return (
     <form
       ref={formRef}
@@ -182,97 +184,62 @@ export function AuthForm({
           </p>
         </>
       )}
-      <label
-        className={
-          isInline
-            ? "block text-label font-control text-text-primary"
-            : "mt-4 block text-label font-control text-text-primary"
-        }
-        htmlFor={id("email")}
-      >
-        Email
-      </label>
-      <input
-        ref={emailRef}
+      <Field
+        className={isInline ? undefined : "mt-4"}
+        error={fieldErrors.email}
         id={id("email")}
-        name="email"
-        type="email"
-        inputMode="email"
-        autoComplete="email"
-        required
-        maxLength={254}
-        aria-invalid={fieldErrors.email ? true : undefined}
-        aria-describedby={fieldErrors.email ? emailErrorId : undefined}
-        onChange={() => clearFieldError("email")}
-        className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x py-control-y text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none aria-invalid:border-error-border aria-invalid:bg-error-surface"
-      />
-      {fieldErrors.email ? (
-        <p id={emailErrorId} className="mt-2 text-supporting text-error-text">
-          {fieldErrors.email}
-        </p>
-      ) : null}
-      <label
-        className="mt-4 block text-label font-control text-text-primary"
-        htmlFor={id("password")}
+        label="Email"
       >
-        Passphrase
-      </label>
-      <input
-        ref={passwordRef}
+        {(control) => (
+          <TextInput
+            {...control}
+            ref={emailRef}
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            required
+            maxLength={254}
+            onChange={() => clearFieldError("email")}
+          />
+        )}
+      </Field>
+      <Field
+        className="mt-4"
+        error={fieldErrors.password}
+        help={
+          isRegister
+            ? "Use 12–128 characters. There is no composition rule."
+            : "Password recovery is unavailable in this portfolio prototype."
+        }
         id={id("password")}
-        name="password"
-        type="password"
-        autoComplete={isRegister ? "new-password" : "current-password"}
-        required
-        minLength={12}
-        maxLength={128}
-        aria-invalid={fieldErrors.password ? true : undefined}
-        aria-describedby={`${passwordHelpId}${fieldErrors.password ? ` ${passwordErrorId}` : ""}`}
-        onChange={() => clearFieldError("password")}
-        className="mt-2 min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-control-x py-control-y text-body text-text-primary transition-colors hover:border-brand motion-reduce:transition-none aria-invalid:border-error-border aria-invalid:bg-error-surface"
-      />
-      <p id={passwordHelpId} className="mt-2 text-supporting text-text-muted">
-        {isRegister
-          ? "Use 12–128 characters. There is no composition rule."
-          : "Password recovery is unavailable in this portfolio prototype."}
-      </p>
-      {fieldErrors.password ? (
-        <p
-          id={passwordErrorId}
-          className="mt-2 text-supporting text-error-text"
-        >
-          {fieldErrors.password}
-        </p>
-      ) : null}
+        label="Passphrase"
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            ref={passwordRef}
+            name="password"
+            type="password"
+            autoComplete={isRegister ? "new-password" : "current-password"}
+            required
+            minLength={12}
+            maxLength={128}
+            onChange={() => clearFieldError("password")}
+          />
+        )}
+      </Field>
       {isRegister ? (
-        <div className="mt-4">
-          <label className="flex items-start gap-2 text-supporting">
-            <input
-              ref={termsRef}
-              className="mt-0.5 size-5 shrink-0 cursor-pointer accent-brand"
-              type="checkbox"
-              name="acceptedTerms"
-              required
-              aria-invalid={fieldErrors.acceptedTerms ? true : undefined}
-              aria-describedby={
-                fieldErrors.acceptedTerms ? termsErrorId : undefined
-              }
-              onChange={() => clearFieldError("acceptedTerms")}
-            />
-            <span>
-              I acknowledge account terms version 1 and understand this is a
-              portfolio demonstration without commercial availability.
-            </span>
-          </label>
-          {fieldErrors.acceptedTerms ? (
-            <p
-              id={termsErrorId}
-              className="mt-2 text-supporting text-error-text"
-            >
-              {fieldErrors.acceptedTerms}
-            </p>
-          ) : null}
-        </div>
+        <Checkbox
+          ref={termsRef}
+          className="mt-4"
+          id={id("terms")}
+          name="acceptedTerms"
+          required
+          error={fieldErrors.acceptedTerms}
+          label="I acknowledge account terms version 1 and understand this is a portfolio demonstration without commercial availability."
+          onChange={() => clearFieldError("acceptedTerms")}
+        />
       ) : null}
       {error ? (
         <div ref={errorRef} tabIndex={-1} className="mt-3 rounded-control">
