@@ -1,4 +1,8 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import type {
+  ComponentPropsWithoutRef,
+  ComponentPropsWithRef,
+  ReactNode,
+} from "react";
 
 import { classNames } from "./class-names";
 
@@ -105,6 +109,15 @@ export function PageHeader({
 
 type HeadingLevel = 2 | 3 | 4;
 
+/** section and card are display headings; subhead is the quiet sans heading. */
+export type SectionHeaderSize = "section" | "card" | "subhead";
+
+const headingSizeClasses: Record<SectionHeaderSize, string> = {
+  section: sectionTitleClasses,
+  card: cardTitleClasses,
+  subhead: subheadClasses,
+};
+
 export interface SectionHeaderProps extends Omit<
   ComponentPropsWithoutRef<"div">,
   "title"
@@ -113,10 +126,15 @@ export interface SectionHeaderProps extends Omit<
   eyebrow?: ReactNode;
   lede?: ReactNode;
   level?: HeadingLevel;
-  size?: "section" | "card";
+  size?: SectionHeaderSize;
   title: ReactNode;
   titleClassName?: string;
   titleId?: string;
+  /** For the heading itself: a ref and tabIndex={-1} when script focuses it. */
+  titleProps?: Omit<
+    ComponentPropsWithRef<"h2">,
+    "children" | "className" | "id"
+  >;
 }
 
 /** A section or card heading block with optional eyebrow, lede and actions. */
@@ -130,6 +148,7 @@ export function SectionHeader({
   title,
   titleClassName,
   titleId,
+  titleProps,
   ...divProps
 }: SectionHeaderProps) {
   const Heading = `h${level}` as const;
@@ -145,9 +164,10 @@ export function SectionHeader({
       <div className="min-w-0 max-w-3xl">
         {eyebrow ? <p className={eyebrowClasses}>{eyebrow}</p> : null}
         <Heading
+          {...titleProps}
           id={titleId}
           className={classNames(
-            size === "section" ? sectionTitleClasses : cardTitleClasses,
+            headingSizeClasses[size],
             eyebrow ? "mt-3" : null,
             titleClassName,
           )}

@@ -1,6 +1,6 @@
 import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
-import { Surface } from "@/components/ui";
+import { Surface, SectionHeader } from "@/components/ui";
 
 export interface ConfigurationSummaryItem {
   id: string;
@@ -46,12 +46,7 @@ export function ConfigurationSummary({
       aria-labelledby={ariaLabel ? undefined : headingId}
       className={className}
     >
-      <h2
-        id={headingId}
-        className="break-words font-display text-section-title font-heading tracking-heading text-text-primary"
-      >
-        {title}
-      </h2>
+      <SectionHeader title={title} titleId={headingId} />
       {items.length === 0 ? (
         <p className="mt-component break-words text-supporting text-text-muted">
           {emptyMessage}

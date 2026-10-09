@@ -20,6 +20,7 @@ import {
   useDeferredFocus,
   Surface,
   surfaceClasses,
+  SectionHeader,
 } from "@/components/ui";
 import {
   DEFAULT_SOLID_COLOR,
@@ -316,12 +317,12 @@ export function PatternStep({
             role="group"
             aria-labelledby={`${generatedId}-solid-color-heading`}
           >
-            <h3
-              id={`${generatedId}-solid-color-heading`}
-              className="text-subhead font-control text-text-primary"
-            >
-              Pick your colour
-            </h3>
+            <SectionHeader
+              level={3}
+              size="subhead"
+              title="Pick your colour"
+              titleId={`${generatedId}-solid-color-heading`}
+            />
             <div className="mt-3 grid min-w-0 gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-end">
               <Field id={`${generatedId}-native-color`} label="Colour">
                 {(control) => (

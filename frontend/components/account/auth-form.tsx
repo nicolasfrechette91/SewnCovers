@@ -10,6 +10,7 @@ import {
   TextInput,
   useDeferredFocus,
   surfaceClasses,
+  SectionHeader,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
@@ -167,13 +168,10 @@ export function AuthForm({
     >
       {isInline ? null : (
         <>
-          <h2
-            ref={headingRef}
-            tabIndex={-1}
-            className="font-display text-section-title font-heading tracking-heading text-text-primary"
-          >
-            {isRegister ? "Create account" : "Sign in"}
-          </h2>
+          <SectionHeader
+            title={isRegister ? "Create account" : "Sign in"}
+            titleProps={{ ref: headingRef, tabIndex: -1 }}
+          />
           <p className="mt-2 text-supporting text-text-muted">
             {isRegister
               ? "Create a private workspace for projects, version history, custom patterns, and demonstration commerce records."

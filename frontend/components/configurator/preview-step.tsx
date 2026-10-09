@@ -19,7 +19,10 @@ import { getCushionShapeDefinition } from "@/data/shapes";
 
 import { CushionPreview } from "./cushion-preview";
 import { CushionModel } from "./cushion-model";
-import { Button, buttonClasses, noticeClasses, Surface } from "../ui";
+import { Button, buttonClasses, noticeClasses, Surface, SpecList } from "../ui";
+
+/** Value text for the specification list: the details panel sets the size. */
+const inheritedValue = "break-words text-text-primary";
 
 export interface SelectedPatternPresentation {
   readonly name: string;
@@ -296,84 +299,80 @@ function PreviewStepContent({
                 {statusText}
               </p>
               {patternProbe}
-              <dl className="mt-4 grid min-w-0 grid-cols-2 gap-x-component gap-y-4 border-y border-dashed border-border-strong py-4 @xl:grid-cols-3">
-                <div className="min-w-0">
-                  <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                    Shape
-                  </dt>
-                  <dd className="mt-1 break-words text-text-primary">
-                    {definition.name}
-                  </dd>
-                </div>
-                <div className="min-w-0">
-                  <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                    Fit
-                  </dt>
-                  <dd className="mt-1 break-words text-text-primary">
-                    {findCoverOption(fitOptions, state.fitPreference).name}
-                  </dd>
-                </div>
-                <div className="min-w-0">
-                  <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                    Edge finish
-                  </dt>
-                  <dd className="mt-1 break-words text-text-primary">
-                    {findCoverOption(seamOptions, state.seamStyle).name}
-                  </dd>
-                </div>
-                <div className="min-w-0">
-                  <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                    Fabric
-                  </dt>
-                  <dd className="mt-1 flex min-w-0 items-center gap-2 break-words text-text-primary">
-                    {selectedPattern?.solidColor ? (
-                      <span
-                        aria-hidden="true"
-                        className="fabric-swatch inline-block size-3 shrink-0 rounded-pill border border-border-strong"
-                        style={{ backgroundColor: selectedPattern.solidColor }}
-                      />
-                    ) : null}
-                    <span className="min-w-0">
-                      {selectedPattern?.name ??
-                        (state.pattern === null
-                          ? "Not selected"
-                          : "No longer available")}
-                      {state.pattern?.kind === "custom" ? (
-                        <span className="block text-supporting">
-                          Your own pattern
+              <SpecList
+                className="mt-4"
+                columns="container"
+                framed
+                items={[
+                  {
+                    label: "Shape",
+                    value: definition.name,
+                    valueClassName: inheritedValue,
+                  },
+                  {
+                    label: "Fit",
+                    value: findCoverOption(fitOptions, state.fitPreference)
+                      .name,
+                    valueClassName: inheritedValue,
+                  },
+                  {
+                    label: "Edge finish",
+                    value: findCoverOption(seamOptions, state.seamStyle).name,
+                    valueClassName: inheritedValue,
+                  },
+                  {
+                    label: "Fabric",
+                    valueClassName:
+                      "flex min-w-0 items-center gap-2 break-words text-text-primary",
+                    value: (
+                      <>
+                        {selectedPattern?.solidColor ? (
+                          <span
+                            aria-hidden="true"
+                            className="fabric-swatch inline-block size-3 shrink-0 rounded-pill border border-border-strong"
+                            style={{
+                              backgroundColor: selectedPattern.solidColor,
+                            }}
+                          />
+                        ) : null}
+                        <span className="min-w-0">
+                          {selectedPattern?.name ??
+                            (state.pattern === null
+                              ? "Not selected"
+                              : "No longer available")}
+                          {state.pattern?.kind === "custom" ? (
+                            <span className="block text-supporting">
+                              Your own pattern
+                            </span>
+                          ) : null}
+                          {state.pattern && !previewIsComplete ? (
+                            <span className="block text-supporting">
+                              {patternIsLoading
+                                ? "Loading preview…"
+                                : "Preview unavailable"}
+                            </span>
+                          ) : null}
                         </span>
-                      ) : null}
-                      {state.pattern && !previewIsComplete ? (
-                        <span className="block text-supporting">
-                          {patternIsLoading
-                            ? "Loading preview…"
-                            : "Preview unavailable"}
-                        </span>
-                      ) : null}
-                    </span>
-                  </dd>
-                </div>
-                {dimensionDetails.map((detail) => (
-                  <div className="min-w-0" key={detail.label}>
-                    <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                      {detail.label}
-                    </dt>
-                    <dd className="mt-1 break-words text-text-primary">
-                      {detail.value}
-                    </dd>
-                  </div>
-                ))}
-                {selectedPattern?.solidColor ? null : (
-                  <div className="min-w-0">
-                    <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                      Pattern size
-                    </dt>
-                    <dd className="mt-1 break-words text-text-primary">
-                      {formattedScale}
-                    </dd>
-                  </div>
-                )}
-              </dl>
+                      </>
+                    ),
+                  },
+                  ...dimensionDetails.map((detail) => ({
+                    key: detail.label,
+                    label: detail.label,
+                    value: detail.value,
+                    valueClassName: inheritedValue,
+                  })),
+                  ...(selectedPattern?.solidColor
+                    ? []
+                    : [
+                        {
+                          label: "Pattern size",
+                          value: formattedScale,
+                          valueClassName: inheritedValue,
+                        },
+                      ]),
+                ]}
+              />
               <p className="mt-3 hidden forced-colors:block">
                 High-contrast mode may hide the pattern. Its name and size are
                 listed above.

@@ -11,6 +11,8 @@ import {
   TextInput,
   useDeferredFocus,
   Surface,
+  SectionHeader,
+  eyebrowClasses,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
@@ -31,7 +33,7 @@ function message(error: unknown) {
 function PricingCard({ pricing }: Readonly<{ pricing: Pricing }>) {
   return (
     <Surface as="section" aria-labelledby="estimate-heading">
-      <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
+      <p className={eyebrowClasses}>
         Demonstration estimate · Price book v{pricing.priceBookVersion}
       </p>
       <p
@@ -143,9 +145,11 @@ export function PrivatePricingWorkspace({
         </p>
       ) : null}
       <Surface as="section">
-        <h3 className="font-display text-section-title font-heading tracking-heading text-text-primary">
-          Price a saved project version
-        </h3>
+        <SectionHeader
+          level={3}
+          size="card"
+          title="Price a saved project version"
+        />
         {projects.length ? (
           <form
             className="responsive-form mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_8rem_auto_auto] sm:items-end"
@@ -235,12 +239,12 @@ export function PrivatePricingWorkspace({
       </Surface>
       {pricing ? <PricingCard pricing={pricing} /> : null}
       <section aria-labelledby="quotes-heading">
-        <h3
-          id="quotes-heading"
-          className="font-display text-section-title font-heading tracking-heading text-text-primary"
-        >
-          Quote history
-        </h3>
+        <SectionHeader
+          level={3}
+          size="card"
+          title="Quote history"
+          titleId="quotes-heading"
+        />
         <p className="mt-1 text-text-muted">
           Expired quotes remain readable. Repricing creates a new quote and
           leaves the earlier one unchanged.
@@ -249,9 +253,7 @@ export function PrivatePricingWorkspace({
           <ul className="mt-4 grid gap-component lg:grid-cols-2">
             {quotes.map((quote) => (
               <Surface as="li" key={quote.id}>
-                <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-                  Demo quote · {quote.status}
-                </p>
+                <p className={eyebrowClasses}>Demo quote · {quote.status}</p>
                 <p className="mt-2 font-display text-section-title font-heading tracking-heading text-text-primary">
                   <span className="sr-only">Quote subtotal: </span>
                   {quote.subtotalFormatted}

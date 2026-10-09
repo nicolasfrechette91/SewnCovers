@@ -12,6 +12,7 @@ import {
   useDeferredFocus,
   Surface,
   surfaceClasses,
+  SectionHeader,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
@@ -163,12 +164,10 @@ export function ProductionOperationsScreen() {
       <section aria-labelledby="production-queue-heading">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2
-              id="production-queue-heading"
-              className="font-display text-section-title font-heading tracking-heading text-text-primary"
-            >
-              Production operations
-            </h2>
+            <SectionHeader
+              title="Production operations"
+              titleId="production-queue-heading"
+            />
             <p className="mt-2 text-supporting text-text-muted">
               Local sandbox workspace. Work is created only by a verified paid
               order and preserves its immutable specification.
@@ -275,14 +274,11 @@ export function ProductionOperationsScreen() {
 
       {selected ? (
         <Surface as="section" aria-labelledby="work-detail-heading">
-          <h2
-            id="work-detail-heading"
-            ref={detailHeading}
-            tabIndex={-1}
-            className="font-display text-section-title font-heading tracking-heading text-text-primary"
-          >
-            Work {selected.id}
-          </h2>
+          <SectionHeader
+            title={<>Work {selected.id}</>}
+            titleId="work-detail-heading"
+            titleProps={{ ref: detailHeading, tabIndex: -1 }}
+          />
           <p className="mt-2 text-supporting text-text-muted">
             {selected.orderReference} · line {selected.lineIndex + 1} · state{" "}
             {selected.state.replaceAll("_", " ")} · quality{" "}
@@ -303,9 +299,12 @@ export function ProductionOperationsScreen() {
               {JSON.stringify(selected.specification, null, 2)}
             </pre>
           </details>
-          <h3 className="mt-component text-subhead font-control text-text-primary">
-            Checklist
-          </h3>
+          <SectionHeader
+            level={3}
+            size="subhead"
+            title="Checklist"
+            className="mt-component"
+          />
           <ul className="mt-2 grid gap-2 sm:grid-cols-2">
             {selected.checklist.map((item) => {
               const key = String(item.itemKey);
@@ -490,9 +489,12 @@ export function ProductionOperationsScreen() {
               Download safe packet
             </Button>
           </div>
-          <h3 className="mt-component text-subhead font-control text-text-primary">
-            Append-only history
-          </h3>
+          <SectionHeader
+            level={3}
+            size="subhead"
+            title="Append-only history"
+            className="mt-component"
+          />
           <ol className="mt-2 space-y-2">
             {selected.history.map((entry, index) => (
               <Surface

@@ -18,6 +18,7 @@ import {
   TextInput,
   useDeferredFocus,
   Surface,
+  SectionHeader,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import type { ConfigurationState } from "@/context/configuration";
@@ -424,15 +425,11 @@ export function PrivateProjectPanel({
       aria-labelledby="private-project-heading"
       className="print-hidden mt-layout"
     >
-      <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-        Your account
-      </p>
-      <h2
-        id="private-project-heading"
-        className="mt-3 font-display text-section-title font-heading tracking-heading text-text-primary"
-      >
-        {heading}
-      </h2>
+      <SectionHeader
+        eyebrow="Your account"
+        title={heading}
+        titleId="private-project-heading"
+      />
       <p className="mt-3 max-w-3xl text-body text-text-muted">{description}</p>
       {auth.status === "initializing" ? (
         <p className="mt-3" role="status">

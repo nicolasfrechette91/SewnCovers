@@ -2,7 +2,12 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-import { Button, useDeferredFocus, surfaceClasses } from "@/components/ui";
+import {
+  Button,
+  useDeferredFocus,
+  surfaceClasses,
+  SectionHeader,
+} from "@/components/ui";
 import { useConfiguration, type CushionShape } from "@/context/configuration";
 import {
   cushionShapeDefinitions,
@@ -147,12 +152,12 @@ export function ShapeSelectionStep({
             }
           }}
         >
-          <h3
-            id={`${generatedId}-shape-change-heading`}
-            className="text-subhead font-control text-text-primary"
-          >
-            Use the same width and height?
-          </h3>
+          <SectionHeader
+            level={3}
+            size="subhead"
+            title="Use the same width and height?"
+            titleId={`${generatedId}-shape-change-heading`}
+          />
           <p className="mt-2 text-supporting text-text-muted">
             A {getCushionShapeDefinition(pendingShape).name.toLowerCase()}{" "}
             cushion has one face size, so its height will match your width (

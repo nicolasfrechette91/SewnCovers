@@ -24,6 +24,7 @@ import {
   TextLink,
   useDeferredFocus,
   Surface,
+  SectionHeader,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
@@ -109,14 +110,15 @@ function ProjectList({ token }: Readonly<{ token: string }>) {
           key={project.id}
           className="flex flex-col transition-[border-color,box-shadow] duration-(--duration-base) hover:border-border-strong hover:shadow-card motion-reduce:transition-none"
         >
-          <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-            {project.privacy === "shared"
-              ? "Shared by revocable link"
-              : "Private"}
-          </p>
-          <h2 className="mt-3 break-words font-display text-card-title font-heading tracking-heading text-text-primary">
-            {project.name}
-          </h2>
+          <SectionHeader
+            size="card"
+            eyebrow={
+              project.privacy === "shared"
+                ? "Shared by revocable link"
+                : "Private"
+            }
+            title={project.name}
+          />
           <p className="mt-2 font-mono text-supporting text-text-muted">
             {project.versionCount}{" "}
             {project.versionCount === 1 ? "version" : "versions"} · Updated{" "}
@@ -260,14 +262,14 @@ function ProjectView({
         ← All projects
       </Link>
       <Surface as="section">
-        <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-          {detail.privacy === "shared"
-            ? "Shared — one or more revocable links are active"
-            : "Private — no active project share links"}
-        </p>
-        <h2 className="mt-3 break-words font-display text-section-title font-heading tracking-heading text-text-primary">
-          {detail.name}
-        </h2>
+        <SectionHeader
+          eyebrow={
+            detail.privacy === "shared"
+              ? "Shared — one or more revocable links are active"
+              : "Private — no active project share links"
+          }
+          title={detail.name}
+        />
         <p className="mt-2 font-mono text-supporting text-text-muted">
           {detail.versionCount} saved{" "}
           {detail.versionCount === 1 ? "version" : "versions"} · Updated{" "}
@@ -307,9 +309,7 @@ function ProjectView({
           elevation="card"
           aria-live="polite"
         >
-          <h2 className="font-display text-card-title font-heading tracking-heading text-text-primary">
-            Read-only share created
-          </h2>
+          <SectionHeader title="Read-only share created" />
           <p className="mt-2 text-body text-text-muted">
             Anyone with this link can view this version until you revoke the
             share. Copy it now; the complete link is shown only once.
@@ -360,12 +360,10 @@ function ProjectView({
       ) : null}
 
       <section aria-labelledby="version-history-heading">
-        <h2
-          id="version-history-heading"
-          className="font-display text-section-title font-heading tracking-heading text-text-primary"
-        >
-          Version history
-        </h2>
+        <SectionHeader
+          title="Version history"
+          titleId="version-history-heading"
+        />
         <p className="mt-2 text-body text-text-muted">
           Earlier snapshots stay unchanged. Opening one and saving creates the
           next sequential version.
@@ -375,10 +373,16 @@ function ProjectView({
             <Surface as="li" key={version.id}>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h3 className="font-display text-card-title font-heading tracking-heading text-text-primary">
-                    Version {version.versionNumber}{" "}
-                    {version.isCurrent ? "— Current" : "— Historical"}
-                  </h3>
+                  <SectionHeader
+                    level={3}
+                    size="card"
+                    title={
+                      <>
+                        Version {version.versionNumber}{" "}
+                        {version.isCurrent ? "— Current" : "— Historical"}
+                      </>
+                    }
+                  />
                   <p className="mt-1 font-mono text-supporting text-text-muted">
                     Created {new Date(version.createdAt).toLocaleString()}
                   </p>
@@ -430,9 +434,7 @@ function ProjectView({
 
       {detail.activeShares.length ? (
         <Surface as="section">
-          <h2 className="font-display text-card-title font-heading tracking-heading text-text-primary">
-            Active read-only shares
-          </h2>
+          <SectionHeader title="Active read-only shares" />
           <ul className="mt-3 divide-y divide-dashed divide-border-strong">
             {detail.activeShares.map((grant) => (
               <li
@@ -471,9 +473,7 @@ function ProjectView({
       ) : null}
 
       <Surface as="section" tone="danger" elevation="flat">
-        <h2 className="font-display text-card-title font-heading tracking-heading text-text-primary">
-          Delete project
-        </h2>
+        <SectionHeader title="Delete project" />
         <p className="mt-2 text-body text-text-muted">
           This permanently deletes the project, every saved version, and every
           project share. It does not delete your account or public designs

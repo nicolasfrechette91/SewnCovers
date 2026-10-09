@@ -10,6 +10,7 @@ import {
   TextInput,
   useDeferredFocus,
   Surface,
+  eyebrowClasses,
 } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { useAuth } from "@/context/auth";
@@ -147,9 +148,7 @@ export function CartScreen() {
               <Surface as="li" key={line.id}>
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-                      Fictional quote · CAD
-                    </p>
+                    <p className={eyebrowClasses}>Fictional quote · CAD</p>
                     <p className="mt-1 font-display text-card-title font-heading tracking-heading text-text-primary">
                       <span className="sr-only">Quote subtotal: </span>
                       {line.quote.subtotalFormatted}
@@ -232,9 +231,7 @@ export function CartScreen() {
             ))}
           </ul>
           <Surface as="section" tone="emphasis" elevation="card">
-            <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-              Estimated subtotal
-            </p>
+            <p className={eyebrowClasses}>Estimated subtotal</p>
             <p className="mt-1 font-display text-section-title font-heading tabular-nums text-text-primary">
               {cart.subtotalFormatted}
             </p>

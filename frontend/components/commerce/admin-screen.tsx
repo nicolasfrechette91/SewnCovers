@@ -12,6 +12,8 @@ import {
   useDeferredFocus,
   Surface,
   surfaceClasses,
+  SectionHeader,
+  SpecList,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError, resolveAssetUrl } from "@/services/account-api";
@@ -47,12 +49,12 @@ function ProductionSpecification({
 }: Readonly<{ order: Order; onAsset: (lineIndex: number) => void }>) {
   return (
     <section className="mt-component" aria-labelledby="production-spec-heading">
-      <h3
-        id="production-spec-heading"
-        className="font-display text-section-title font-heading tracking-heading text-text-primary"
-      >
-        Immutable production specifications
-      </h3>
+      <SectionHeader
+        level={3}
+        size="card"
+        title="Immutable production specifications"
+        titleId="production-spec-heading"
+      />
       <ul className="mt-3 space-y-3">
         {order.lines.map((line, index) => {
           const specification =
@@ -94,62 +96,72 @@ function ProductionSpecification({
                 Line {index + 1} ·{" "}
                 {String(specification.shape ?? "Configured cover")}
               </h4>
-              <dl className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                <div>
-                  <dt className="text-label font-control">
-                    Original measurements
-                  </dt>
-                  <dd>
-                    {String(measurements.width ?? "—")} ×{" "}
-                    {String(measurements.height ?? "—")} ×{" "}
-                    {String(measurements.thickness ?? "—")}{" "}
-                    {String(measurements.unit ?? "")}
-                    {measurements.backWidth
-                      ? ` · back ${String(measurements.backWidth)}`
-                      : ""}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-label font-control">Material and fit</dt>
-                  <dd>
-                    {String(specification.material ?? "—")} ·{" "}
-                    {String(specification.fit ?? "—")}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-label font-control">Finish</dt>
-                  <dd>
-                    {String(specification.closureAccess ?? "—")} ·{" "}
-                    {String(specification.edgeFinish ?? "—")}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-label font-control">Fabric</dt>
-                  <dd>{fabricLabel}</dd>
-                </div>
-                <div>
-                  <dt className="text-label font-control">Pattern scale</dt>
-                  <dd>
-                    {fabric.kind === "solid"
-                      ? "Not applicable"
-                      : String(specification.patternScale ?? "—")}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-label font-control">Version reference</dt>
-                  <dd className="break-all">
-                    {String(specification.configurationVersionReference ?? "—")}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-label font-control">Quote / pricing</dt>
-                  <dd className="break-all">
-                    {String(specification.quoteReference ?? "—")} · $
-                    {(Number(line.extendedAmountMinor ?? 0) / 100).toFixed(2)}{" "}
-                    CAD
-                  </dd>
-                </div>
-              </dl>
+              <SpecList
+                className="mt-2"
+                columns={3}
+                items={[
+                  {
+                    label: "Original measurements",
+                    value: (
+                      <>
+                        {String(measurements.width ?? "—")} ×{" "}
+                        {String(measurements.height ?? "—")} ×{" "}
+                        {String(measurements.thickness ?? "—")}{" "}
+                        {String(measurements.unit ?? "")}
+                        {measurements.backWidth
+                          ? ` · back ${String(measurements.backWidth)}`
+                          : ""}
+                      </>
+                    ),
+                  },
+                  {
+                    label: "Material and fit",
+                    value: (
+                      <>
+                        {String(specification.material ?? "—")} ·{" "}
+                        {String(specification.fit ?? "—")}
+                      </>
+                    ),
+                  },
+                  {
+                    label: "Finish",
+                    value: (
+                      <>
+                        {String(specification.closureAccess ?? "—")} ·{" "}
+                        {String(specification.edgeFinish ?? "—")}
+                      </>
+                    ),
+                  },
+                  { label: "Fabric", value: fabricLabel },
+                  {
+                    label: "Pattern scale",
+                    value:
+                      fabric.kind === "solid"
+                        ? "Not applicable"
+                        : String(specification.patternScale ?? "—"),
+                  },
+                  {
+                    label: "Version reference",
+                    value: String(
+                      specification.configurationVersionReference ?? "—",
+                    ),
+                    valueClassName: "text-body break-all text-text-primary",
+                  },
+                  {
+                    label: "Quote / pricing",
+                    value: (
+                      <>
+                        {String(specification.quoteReference ?? "—")} · $
+                        {(Number(line.extendedAmountMinor ?? 0) / 100).toFixed(
+                          2,
+                        )}{" "}
+                        CAD
+                      </>
+                    ),
+                    valueClassName: "text-body break-all text-text-primary",
+                  },
+                ]}
+              />
               {customAsset ? (
                 <div className="mt-2">
                   <p className="break-all text-supporting">
@@ -304,12 +316,7 @@ export function AdminScreen() {
         </p>
       ) : null}
       <section aria-labelledby="price-books-heading">
-        <h2
-          id="price-books-heading"
-          className="font-display text-section-title font-heading tracking-heading text-text-primary"
-        >
-          Price books
-        </h2>
+        <SectionHeader title="Price books" titleId="price-books-heading" />
         <p className="mt-1 text-text-muted">
           Published versions are immutable. Drafting copies the current
           demonstration configuration into a new version.
@@ -517,12 +524,10 @@ export function AdminScreen() {
         </ul>
       </section>
       <section aria-labelledby="queue-heading">
-        <h2
-          id="queue-heading"
-          className="font-display text-section-title font-heading tracking-heading text-text-primary"
-        >
-          Paid-order manufacturing queue
-        </h2>
+        <SectionHeader
+          title="Paid-order manufacturing queue"
+          titleId="queue-heading"
+        />
         {orders.length ? (
           <ul className="mt-3 grid gap-3 lg:grid-cols-2">
             {orders.map((order) => (
@@ -761,12 +766,10 @@ export function AdminScreen() {
         </Surface>
       ) : null}
       <section aria-labelledby="audit-heading">
-        <h2
-          id="audit-heading"
-          className="font-display text-section-title font-heading tracking-heading text-text-primary"
-        >
-          Append-only audit history
-        </h2>
+        <SectionHeader
+          title="Append-only audit history"
+          titleId="audit-heading"
+        />
         <ul className="mt-3 space-y-2">
           {audit.map((entry) => (
             <Surface

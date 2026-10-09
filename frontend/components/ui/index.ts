@@ -38,6 +38,7 @@ export type {
   PageShellProps,
   PageWidth,
   SectionHeaderProps,
+  SectionHeaderSize,
 } from "./headers";
 export { ButtonLink, TextLink } from "./links";
 export type { ButtonLinkProps, TextLinkProps } from "./links";
@@ -48,7 +49,12 @@ export type { NoticeProps, NoticeTone } from "./notice";
 export { NumberInput } from "./number-input";
 export type { NumberInputProps } from "./number-input";
 export { SpecList, specLabelClasses, specValueClasses } from "./spec-list";
-export type { SpecListItem, SpecListLayout, SpecListProps } from "./spec-list";
+export type {
+  SpecListColumns,
+  SpecListItem,
+  SpecListLayout,
+  SpecListProps,
+} from "./spec-list";
 export { StitchDivider } from "./stitch-divider";
 export type { StitchDividerProps } from "./stitch-divider";
 export { Surface, surfaceClasses } from "./surface";

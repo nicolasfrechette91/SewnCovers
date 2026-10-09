@@ -5,9 +5,12 @@ import { createRef } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 
 import {
+  Badge,
   Checkbox,
   Field,
+  SectionHeader,
   Select,
+  SpecList,
   Surface,
   surfaceClasses,
   Textarea,
@@ -297,6 +300,157 @@ test("surfaceClasses puts the same recipe on elements Surface does not render", 
     "shadow-hairline",
   ]) {
     assert.ok(tokens(group).includes(token), "has " + token);
+  }
+});
+
+// SectionHeader --------------------------------------------------------------
+
+test("SectionHeader renders the level, size, eyebrow and id on the heading", () => {
+  render(
+    <SectionHeader
+      eyebrow="Your account"
+      level={3}
+      size="card"
+      title="Version history"
+      titleId="history-heading"
+    />,
+  );
+
+  const heading = screen.getByRole("heading", {
+    level: 3,
+    name: "Version history",
+  });
+  assert.equal(heading.id, "history-heading");
+  const classes = tokens(heading);
+  assert.ok(
+    classes.includes("text-card-title") && classes.includes("font-display"),
+  );
+  // The eyebrow sits above the heading and the heading leaves room for it.
+  assert.ok(classes.includes("mt-3"));
+  assert.equal(screen.getByText("Your account").tagName, "P");
+});
+
+test("SectionHeader subhead is the quiet sans heading", () => {
+  render(
+    <SectionHeader
+      level={3}
+      size="subhead"
+      title="Checklist"
+      className="mt-component"
+    />,
+  );
+
+  const heading = screen.getByRole("heading", { level: 3, name: "Checklist" });
+  const classes = tokens(heading);
+  assert.ok(
+    classes.includes("text-subhead") && classes.includes("font-control"),
+  );
+  assert.equal(classes.includes("font-display"), false);
+  // className lands on the wrapper, so margins sit outside the heading.
+  assert.ok(
+    tokens(heading.parentElement?.parentElement as Element).includes(
+      "mt-component",
+    ),
+  );
+});
+
+test("SectionHeader passes a ref and tabIndex to the heading for focus targets", () => {
+  const ref = createRef<HTMLHeadingElement>();
+  render(<SectionHeader title="Sign in" titleProps={{ ref, tabIndex: -1 }} />);
+
+  const heading = screen.getByRole("heading", { name: "Sign in" });
+  assert.equal(ref.current, heading);
+  assert.equal(heading.getAttribute("tabindex"), "-1");
+});
+
+// SpecList --------------------------------------------------------------------
+
+const specItems = [
+  { label: "Payment", value: "Paid" },
+  {
+    label: "Final total",
+    value: "$131.65 CAD",
+    valueClassName: "text-card-title text-brand",
+  },
+];
+
+test("SpecList pairs mono labels with values and takes a column preset", () => {
+  const { container } = render(<SpecList columns={4} items={specItems} />);
+
+  const list = container.querySelector("dl") as Element;
+  for (const token of ["grid", "sm:grid-cols-2", "lg:grid-cols-4"]) {
+    assert.ok(tokens(list).includes(token), "has " + token);
+  }
+  const labels = [...container.querySelectorAll("dt")];
+  assert.deepEqual(
+    labels.map((label) => label.textContent),
+    ["Payment", "Final total"],
+  );
+  assert.ok(
+    tokens(labels[0]).includes("font-mono") &&
+      tokens(labels[0]).includes("uppercase"),
+  );
+});
+
+test("SpecList valueClassName replaces the default value text, other items keep it", () => {
+  const { container } = render(<SpecList items={specItems} />);
+
+  const [plain, total] = [...container.querySelectorAll("dd")];
+  assert.ok(
+    tokens(plain).includes("text-body") &&
+      tokens(plain).includes("text-text-primary"),
+  );
+  assert.ok(
+    tokens(total).includes("text-brand") &&
+      tokens(total).includes("text-card-title"),
+  );
+  assert.equal(tokens(total).includes("text-text-primary"), false);
+  // The spacing under the label is the list's, not the item's.
+  assert.ok(tokens(total).includes("mt-1"));
+});
+
+test("SpecList can be framed and follow its container's width", () => {
+  const { container } = render(
+    <SpecList columns="container" framed items={specItems} />,
+  );
+
+  const list = tokens(container.querySelector("dl") as Element);
+  for (const token of [
+    "border-y",
+    "border-dashed",
+    "py-4",
+    "grid-cols-2",
+    "@xl:grid-cols-3",
+  ]) {
+    assert.ok(list.includes(token), "has " + token);
+  }
+  assert.equal(list.includes("sm:grid-cols-2"), false);
+});
+
+test("SpecList columns={1} stays a single column", () => {
+  const { container } = render(<SpecList columns={1} items={specItems} />);
+
+  const list = tokens(container.querySelector("dl") as Element);
+  assert.equal(
+    list.some((token) => token.includes("grid-cols")),
+    false,
+  );
+});
+
+// Badge ------------------------------------------------------------------------
+
+test("Badge is a small non-interactive status tag", () => {
+  render(<Badge>Paid</Badge>);
+
+  const badge = screen.getByText("Paid");
+  assert.equal(badge.tagName, "SPAN");
+  for (const token of [
+    "font-mono",
+    "uppercase",
+    "rounded-control-small",
+    "border",
+  ]) {
+    assert.ok(tokens(badge).includes(token), "has " + token);
   }
 });
 

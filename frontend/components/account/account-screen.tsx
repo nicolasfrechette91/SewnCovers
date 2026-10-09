@@ -13,6 +13,8 @@ import {
   useDeferredFocus,
   Surface,
   surfaceClasses,
+  SectionHeader,
+  eyebrowClasses,
 } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { useAuth } from "@/context/auth";
@@ -146,9 +148,7 @@ function AuthenticatedAccount({
     <div className="space-y-layout">
       <AccountNavigation currentHref="/account/" />
       <Surface as="section">
-        <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-          Signed in
-        </p>
+        <p className={eyebrowClasses}>Signed in</p>
         <p className="mt-3 break-all font-display text-section-title font-heading tracking-heading text-text-primary">
           <span className="sr-only">Account email: </span>
           {account.email}
@@ -186,9 +186,7 @@ function AuthenticatedAccount({
       </Surface>
 
       <Surface as="section">
-        <h2 className="font-display text-section-title font-heading tracking-heading text-text-primary">
-          Active sessions
-        </h2>
+        <SectionHeader title="Active sessions" />
         {sessions === null ? (
           <LoadingState className="mt-3" label="Loading sessions…" />
         ) : (
@@ -249,9 +247,7 @@ function AuthenticatedAccount({
       </Surface>
 
       <Surface as="section">
-        <h2 className="font-display text-section-title font-heading tracking-heading text-text-primary">
-          Your data
-        </h2>
+        <SectionHeader title="Your data" />
         <p className="mt-2 text-body text-text-muted">
           Export downloads a JSON file containing your account information,
           projects, and saved versions. It does not include your password or
@@ -268,9 +264,7 @@ function AuthenticatedAccount({
       </Surface>
 
       <Surface as="section" tone="danger" elevation="flat">
-        <h2 className="font-display text-section-title font-heading tracking-heading text-text-primary">
-          Delete account
-        </h2>
+        <SectionHeader title="Delete account" />
         <p className="mt-2 text-body text-text-primary">
           This permanently deletes this account, every signed-in session,
           private project, saved project version, and project share link. Public
@@ -422,12 +416,10 @@ export function AccountScreen({
         aria-labelledby="account-guest-heading"
         className="min-w-0 rounded-panel border border-dashed border-border-strong bg-surface-subtle p-card"
       >
-        <h2
-          id="account-guest-heading"
-          className="font-display text-card-title font-heading tracking-heading text-text-primary"
-        >
-          You can keep designing as a guest
-        </h2>
+        <SectionHeader
+          title="You can keep designing as a guest"
+          titleId="account-guest-heading"
+        />
         <p className="mt-2 max-w-3xl text-body text-text-muted">
           Every configurator step, the preview, the review summary, printing,
           downloading and public design links work without an account. Your

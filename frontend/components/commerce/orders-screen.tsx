@@ -4,7 +4,14 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 
-import { Button, LoadingState, Surface } from "@/components/ui";
+import {
+  Button,
+  LoadingState,
+  Surface,
+  eyebrowClasses,
+  SpecList,
+  Badge,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
 import { commerceApi, type Order } from "@/services/commerce-api";
@@ -82,9 +89,7 @@ export function OrderCard({
       aria-labelledby={referenceId}
       className="wrap-anywhere"
     >
-      <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-        Sandbox demonstration order
-      </p>
+      <p className={eyebrowClasses}>Sandbox demonstration order</p>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p
@@ -98,46 +103,41 @@ export function OrderCard({
             Created {new Date(order.createdAt).toLocaleString()}
           </p>
         </div>
-        <p className="inline-flex items-center rounded-control-small border border-border-strong bg-surface px-2 py-1 font-mono text-eyebrow uppercase tracking-eyebrow text-text-primary">
-          {label(order.state)}
-        </p>
+        <Badge>{label(order.state)}</Badge>
       </div>
-      <dl className="mt-component grid gap-3 border-y border-dashed border-border-strong py-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-            Payment
-          </dt>
-          <dd className="mt-0.5">{label(order.paymentStatus)}</dd>
-        </div>
-        <div>
-          <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-            Subtotal
-          </dt>
-          <dd className="mt-0.5 tabular-nums">
-            ${(order.subtotalAmountMinor / 100).toFixed(2)} CAD
-          </dd>
-        </div>
-        <div>
-          <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-            Tax + shipping
-          </dt>
-          <dd className="mt-0.5 tabular-nums">
-            $
-            {((order.taxAmountMinor + order.shippingAmountMinor) / 100).toFixed(
-              2,
-            )}{" "}
-            CAD
-          </dd>
-        </div>
-        <div>
-          <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-            Final total
-          </dt>
-          <dd className="mt-0.5 font-display text-card-title font-heading tabular-nums text-brand">
-            {order.totalFormatted}
-          </dd>
-        </div>
-      </dl>
+      <SpecList
+        className="mt-component"
+        columns={4}
+        framed
+        items={[
+          { label: "Payment", value: label(order.paymentStatus) },
+          {
+            label: "Subtotal",
+            value: <>${(order.subtotalAmountMinor / 100).toFixed(2)} CAD</>,
+            valueClassName: "text-body tabular-nums text-text-primary",
+          },
+          {
+            label: "Tax + shipping",
+            value: (
+              <>
+                $
+                {(
+                  (order.taxAmountMinor + order.shippingAmountMinor) /
+                  100
+                ).toFixed(2)}{" "}
+                CAD
+              </>
+            ),
+            valueClassName: "text-body tabular-nums text-text-primary",
+          },
+          {
+            label: "Final total",
+            value: order.totalFormatted,
+            valueClassName:
+              "font-display text-card-title font-heading tabular-nums text-brand",
+          },
+        ]}
+      />
       {detail ? (
         <>
           <section className="mt-layout">

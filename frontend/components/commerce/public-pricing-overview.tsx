@@ -5,6 +5,8 @@ import {
   noticeClasses,
   noticeTitleClasses,
   Surface,
+  SectionHeader,
+  SpecList,
 } from "@/components/ui";
 
 import examples from "@/data/public-pricing-examples.json";
@@ -22,15 +24,11 @@ export function PublicPricingOverview() {
   return (
     <div className="space-y-component">
       <Surface as="section" aria-labelledby="public-pricing-heading">
-        <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-          Public illustrative pricing
-        </p>
-        <h2
-          id="public-pricing-heading"
-          className="mt-3 font-display text-section-title font-heading tracking-heading text-text-primary"
-        >
-          How demonstration prices work
-        </h2>
+        <SectionHeader
+          eyebrow="Public illustrative pricing"
+          title="How demonstration prices work"
+          titleId="public-pricing-heading"
+        />
         <p className="mt-2 max-w-3xl text-body text-text-muted">
           SewnCovers applies a fictional Canadian-dollar model to a cushion’s
           size, construction, material, and pattern source. These examples
@@ -46,12 +44,10 @@ export function PublicPricingOverview() {
 
       <section aria-labelledby="examples-heading">
         <div className="max-w-3xl">
-          <h2
-            id="examples-heading"
-            className="font-display text-section-title font-heading tracking-heading text-text-primary"
-          >
-            Illustrative examples
-          </h2>
+          <SectionHeader
+            title="Illustrative examples"
+            titleId="examples-heading"
+          />
           <p className="mt-2 text-body text-text-muted">
             One cover each, calculated from demonstration price book v
             {examples.priceBookVersion}. Fictional tax and shipping are excluded
@@ -70,55 +66,61 @@ export function PublicPricingOverview() {
                 aria-labelledby={`${example.id}-heading`}
                 className="flex flex-1 flex-col p-card"
               >
-                <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-                  Fictional example · not a quote
-                </p>
-                <h3
-                  id={`${example.id}-heading`}
-                  className="mt-3 font-display text-card-title font-heading tracking-heading text-text-primary"
-                >
-                  {example.name}
-                </h3>
+                <SectionHeader
+                  level={3}
+                  size="card"
+                  eyebrow="Fictional example · not a quote"
+                  title={example.name}
+                  titleId={`${example.id}-heading`}
+                />
                 <p className="mt-4 border-y border-dashed border-border-strong py-3 font-display text-section-title font-heading tabular-nums text-brand">
                   <data value={(example.amountMinor / 100).toFixed(2)}>
                     {formatPublicCad(example.amountMinor)}
                   </data>
                   <span className="sr-only"> illustrative price</span>
                 </p>
-                <dl className="mt-4 grid gap-3 text-supporting">
-                  <div>
-                    <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                      Shape and size
-                    </dt>
-                    <dd className="mt-0.5 text-text-primary">
-                      {example.shapeLabel} · {example.dimensionLabel}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                      Material and fit
-                    </dt>
-                    <dd className="mt-0.5 text-text-primary">
-                      {example.materialLabel} · {example.fitLabel}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                      Construction
-                    </dt>
-                    <dd className="mt-0.5 text-text-primary">
-                      {example.closureLabel} · {example.edgeLabel}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
-                      Pattern source
-                    </dt>
-                    <dd className="mt-0.5 text-text-primary">
-                      {example.patternLabel}
-                    </dd>
-                  </div>
-                </dl>
+                <SpecList
+                  className="mt-4"
+                  columns={1}
+                  items={[
+                    {
+                      label: "Shape and size",
+                      value: (
+                        <>
+                          {example.shapeLabel} · {example.dimensionLabel}
+                        </>
+                      ),
+                      valueClassName:
+                        "text-supporting break-words text-text-primary",
+                    },
+                    {
+                      label: "Material and fit",
+                      value: (
+                        <>
+                          {example.materialLabel} · {example.fitLabel}
+                        </>
+                      ),
+                      valueClassName:
+                        "text-supporting break-words text-text-primary",
+                    },
+                    {
+                      label: "Construction",
+                      value: (
+                        <>
+                          {example.closureLabel} · {example.edgeLabel}
+                        </>
+                      ),
+                      valueClassName:
+                        "text-supporting break-words text-text-primary",
+                    },
+                    {
+                      label: "Pattern source",
+                      value: example.patternLabel,
+                      valueClassName:
+                        "text-supporting break-words text-text-primary",
+                    },
+                  ]}
+                />
                 <p className="mt-auto pt-component text-supporting text-text-muted">
                   Includes the configured cover only. Excludes fictional tax and
                   shipping.
@@ -137,12 +139,10 @@ export function PublicPricingOverview() {
         aria-labelledby="factors-heading"
       >
         <div>
-          <h2
-            id="factors-heading"
-            className="font-display text-section-title font-heading tracking-heading text-text-primary"
-          >
-            What changes the demonstration price
-          </h2>
+          <SectionHeader
+            title="What changes the demonstration price"
+            titleId="factors-heading"
+          />
           <ul className="mt-3 list-disc space-y-2 pl-5 text-body text-text-muted marker:text-accent">
             <li>Shape, face area, and the configured dimensions</li>
             <li>Material, fit, closure or access, and edge finish</li>
@@ -153,9 +153,11 @@ export function PublicPricingOverview() {
           </ul>
         </div>
         <div>
-          <h3 className="font-display text-card-title font-heading tracking-heading text-text-primary">
-            What does not change these examples
-          </h3>
+          <SectionHeader
+            level={3}
+            size="card"
+            title="What does not change these examples"
+          />
           <p className="mt-3 text-body text-text-muted">
             The specific built-in artwork and its display scale are visual
             choices, not price factors. Fictional tax and shipping are excluded

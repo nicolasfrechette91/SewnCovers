@@ -1,4 +1,8 @@
-import { noticeClasses, noticeTitleClasses } from "@/components/ui";
+import {
+  noticeClasses,
+  noticeTitleClasses,
+  eyebrowClasses,
+} from "@/components/ui";
 import type { ConfigurationState } from "@/context/configuration";
 import { getCushionShapeDefinition } from "@/data/shapes";
 import type { SelectedPatternPresentation } from "./preview-step";
@@ -48,9 +52,7 @@ export function ReviewScreen({
       className="configuration-review-screen mt-layout min-w-0"
     >
       <header className="configuration-review-title">
-        <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-          Review
-        </p>
+        <p className={eyebrowClasses}>Review</p>
         <h1
           id="configuration-review-heading"
           tabIndex={-1}

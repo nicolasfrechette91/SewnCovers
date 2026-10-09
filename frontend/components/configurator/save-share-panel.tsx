@@ -14,6 +14,7 @@ import {
   Field,
   TextInput,
   Surface,
+  SectionHeader,
 } from "@/components/ui";
 import type { ConfigurationState } from "@/context/configuration";
 import { apiClient } from "@/services/api-client";
@@ -119,15 +120,11 @@ export function SaveSharePanel({
       aria-labelledby="configuration-save-share-heading"
       className="print-hidden mt-layout"
     >
-      <p className="eyebrow font-mono text-eyebrow uppercase tracking-eyebrow text-accent-strong">
-        Save and share
-      </p>
-      <h2
-        id="configuration-save-share-heading"
-        className="mt-3 break-words font-display text-section-title font-heading tracking-heading text-text-primary"
-      >
-        Create a public link
-      </h2>
+      <SectionHeader
+        eyebrow="Save and share"
+        title="Create a public link"
+        titleId="configuration-save-share-heading"
+      />
       <p className="mt-3 max-w-3xl break-words text-body text-text-muted">
         Get a link to this design. Anyone with the link can view it, and a saved
         design can&apos;t be changed.

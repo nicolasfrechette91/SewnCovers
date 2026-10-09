@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-import { Button, ErrorMessage, LoadingState, Surface } from "@/components/ui";
+import {
+  Button,
+  ErrorMessage,
+  LoadingState,
+  Surface,
+  SectionHeader,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { assuranceApi, type ReadinessReport } from "@/services/assurance-api";
 
@@ -38,12 +44,10 @@ export function ReadinessSummary() {
 
   return (
     <section className="mt-layout" aria-labelledby="readiness-heading">
-      <h2
-        id="readiness-heading"
-        className="font-display text-section-title font-heading tracking-heading text-text-primary"
-      >
-        Read-only readiness summary
-      </h2>
+      <SectionHeader
+        title="Read-only readiness summary"
+        titleId="readiness-heading"
+      />
       <p className="mt-2 text-supporting text-text-muted">
         Validates configuration without revealing secret values, changing state,
         or calling live providers. It is evidence, not certification.
