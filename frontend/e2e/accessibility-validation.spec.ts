@@ -6,6 +6,8 @@ import {
   type Route,
 } from "@playwright/test";
 
+import { expectStageFocused } from "./support/keyboard";
+
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
@@ -272,6 +274,7 @@ test("gates stages and preserves compatible downstream choices when revisiting",
     })
     .click();
   await expect(width).toHaveValue("80");
+  await expectStageFocused(page, "Measurements");
   await page.getByRole("radio", { name: "Inches (in)" }).focus();
   await page.keyboard.press("Space");
   await expect(page.getByRole("textbox", { name: "Width (in)" })).toHaveValue(
@@ -295,6 +298,7 @@ test("gates stages and preserves compatible downstream choices when revisiting",
     0,
   );
   await page.getByRole("button", { name: "Continue to Measurements" }).click();
+  await expectStageFocused(page, "Measurements");
   await page.getByRole("textbox", { name: "Back width (in)" }).fill("20");
   await progress
     .getByRole("button", {
@@ -540,6 +544,7 @@ test("gives every stage one h1, a matching tab title and announcement, and the f
   for (const [stage, index, heading] of stages) {
     await page.getByRole("button", { name: `Continue to ${stage}` }).click();
     if (stage === "Measurements") {
+      await expectStageFocused(page, "Measurements");
       await page.getByRole("textbox", { name: "Width (cm)" }).fill("80");
       await page.getByRole("textbox", { name: "Height (cm)" }).fill("40");
       await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("10");

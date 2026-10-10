@@ -205,6 +205,12 @@ function authenticationOptions(page: Page) {
   return page.getByRole("navigation", { name: "Authentication options" });
 }
 
+// The sign-in form takes focus on its heading a frame after it mounts (when
+// the page was opened in a mode, or after switching modes); typing waits.
+async function expectFormHeadingFocused(page: Page, name: string) {
+  await expect(page.getByRole("heading", { name, exact: true })).toBeFocused();
+}
+
 async function completeSignIn(page: Page, email = "fixture@example.invalid") {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Passphrase").fill(passphrase);
@@ -304,12 +310,12 @@ test("authentication failures, registration, and duplicate submission recover sa
   await expect(credentialAlert.locator("..")).toBeFocused();
 
   await completeSignIn(page, "unavailable@example.invalid");
-  await expect(
-    page
-      .getByRole("alert")
-      .filter({ hasText: "may be waking up or temporarily unavailable" }),
-  ).toBeVisible();
+  const unavailableAlert = page
+    .getByRole("alert")
+    .filter({ hasText: "may be waking up or temporarily unavailable" });
+  await expect(unavailableAlert).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  await expect(unavailableAlert.locator("..")).toBeFocused();
 
   await completeSignIn(page, "server@example.invalid");
   await expect(
@@ -323,6 +329,7 @@ test("authentication failures, registration, and duplicate submission recover sa
   await expect(
     page.getByRole("heading", { name: "Create account" }),
   ).toBeVisible();
+  await expectFormHeadingFocused(page, "Create account");
   await page.getByLabel("Email").fill("existing@example.invalid");
   await page.getByLabel("Passphrase").fill(passphrase);
   await page
@@ -342,6 +349,7 @@ test("authentication failures, registration, and duplicate submission recover sa
     .getByRole("link", { name: "Sign in" })
     .click();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await expectFormHeadingFocused(page, "Sign in");
   const beforeSlowRequest = loginRequests;
   await page.getByLabel("Email").fill("slow@example.invalid");
   await page.getByLabel("Passphrase").fill(passphrase);
@@ -360,6 +368,7 @@ test("authentication failures, registration, and duplicate submission recover sa
   await expect(
     page.getByRole("heading", { name: "Create account" }),
   ).toBeVisible();
+  await expectFormHeadingFocused(page, "Create account");
   await page.locator("#register-email").fill("new-fixture@example.invalid");
   await page.getByLabel("Passphrase").fill(passphrase);
   await page
@@ -431,6 +440,7 @@ test("safe return identifiers restore known destinations and reject redirect att
   for (const [target, expected] of valid) {
     await page.goto(`${accountPath}?mode=login&returnTo=${target}`);
     await expect(page.getByText(new RegExp(`return to`))).toBeVisible();
+    await expectFormHeadingFocused(page, "Sign in");
     await completeSignIn(page);
     await expect(page).toHaveURL(`${appOrigin}${expected}`);
     await page.evaluate(() => sessionStorage.clear());
@@ -446,6 +456,7 @@ test("safe return identifiers restore known destinations and reject redirect att
     "%E0%A4%A",
   ]) {
     await page.goto(`${accountPath}?mode=login&returnTo=${value}`);
+    await expectFormHeadingFocused(page, "Sign in");
     await completeSignIn(page);
     await expect(page.getByText("fixture@example.invalid")).toBeVisible();
     expect(new URL(page.url()).origin).toBe(appOrigin);

@@ -1,5 +1,7 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+import { expectStageFocused } from "./support/keyboard";
+
 // Every API call is answered here; nothing reaches a real service.
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
@@ -131,6 +133,7 @@ async function reachPatternStep(page: Page) {
   await page.goto(`${basePath}/configure/`);
   await page.getByText("Box / bench cushion", { exact: true }).click();
   await page.getByRole("button", { name: "Continue to Measurements" }).click();
+  await expectStageFocused(page, "Measurements");
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("72.25");
   await page.getByRole("textbox", { name: "Depth (cm)" }).fill("48.5");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("12.75");
@@ -145,6 +148,10 @@ test("creating an account on /account POSTs /auth/register once, then records th
   const mock = await mockApi(page);
 
   await page.goto(`${basePath}/account/?mode=register`);
+  // The form takes focus on its heading a frame after it mounts.
+  await expect(
+    page.getByRole("heading", { name: "Create account", exact: true }),
+  ).toBeFocused();
   await page.locator("#register-email").fill(account.email);
   await page.locator("#register-password").fill(passphrase);
   await page
@@ -228,6 +235,11 @@ test("a missing register route reads clearly, is announced, and keeps the design
   const create = page.getByRole("region", {
     name: "Create an account to upload your own pattern",
   });
+  await expect(
+    create.getByRole("heading", {
+      name: "Create an account to upload your own pattern",
+    }),
+  ).toBeFocused();
   await create.getByLabel("Email").fill(account.email);
   await create.getByLabel("Passphrase").fill(passphrase);
   await create
@@ -311,6 +323,7 @@ test("offers no upload until availability answers enabled, and none if it fails"
   await page.goto(`${basePath}/configure/`);
   await page.getByText("Box / bench cushion", { exact: true }).click();
   await page.getByRole("button", { name: "Continue to Measurements" }).click();
+  await expectStageFocused(page, "Measurements");
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("72.25");
   await page.getByRole("textbox", { name: "Depth (cm)" }).fill("48.5");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("12.75");

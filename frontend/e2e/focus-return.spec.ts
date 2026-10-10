@@ -90,6 +90,7 @@ test("starting a new design returns focus: Escape, cancel and confirm", async ({
   await expect(startNew).toBeFocused();
 
   await startNew.press("Enter");
+  await expect(keepDesigning).toBeFocused();
   await clear.press("Enter");
   await expect(
     page.getByRole("heading", { name: "Choose your cushion shape" }),
@@ -202,6 +203,7 @@ test("renaming and deleting an uploaded pattern return focus: Escape, cancel and
   await expect(rename).toBeFocused();
 
   await rename.press("Enter");
+  await expect(label).toBeFocused();
   await page.getByRole("button", { name: "Cancel" }).press("Enter");
   await expect(rename).toBeFocused();
 
@@ -228,6 +230,7 @@ test("renaming and deleting an uploaded pattern return focus: Escape, cancel and
   await expect(remove).toBeFocused();
 
   await remove.press("Enter");
+  await expect(cancel).toBeFocused();
   await page.getByRole("button", { name: "Delete pattern" }).press("Enter");
   await expect(
     page.getByRole("status").filter({ hasText: "Custom pattern deleted." }),
@@ -248,6 +251,7 @@ test("account deletion returns focus: Escape and cancel", async ({ page }) => {
   await expect(review).toBeFocused();
 
   await review.press("Enter");
+  await expect(passphrase).toBeFocused();
   await page.getByRole("button", { name: "Cancel" }).press("Enter");
   await expect(review).toBeFocused();
 });
@@ -278,6 +282,7 @@ test("project deletion returns focus: Escape, cancel and confirm", async ({
   await expect(review).toBeFocused();
 
   await review.press("Enter");
+  await expect(confirm).toBeFocused();
   await page.getByRole("button", { name: "Cancel" }).press("Enter");
   await expect(review).toBeFocused();
 
@@ -328,6 +333,7 @@ test("administrator confirmations return focus: Escape, cancel and confirm", asy
   await expect(review).toBeFocused();
 
   await review.press("Enter");
+  await expect(cancel).toBeFocused();
   await page.getByRole("button", { name: "Confirm publish" }).press("Enter");
   await expect(
     page.getByRole("status").filter({ hasText: "published and frozen" }),
@@ -336,6 +342,10 @@ test("administrator confirmations return focus: Escape, cancel and confirm", asy
   await page
     .getByRole("button", { name: "Review specification" })
     .press("Enter");
+  // Opening the order moves focus to its status once the order has loaded.
+  await expect(
+    page.getByRole("status").filter({ hasText: "Opened SC-DEMO-ORDER0001." }),
+  ).toBeFocused();
   const reviewRefund = page.getByRole("button", { name: "Review refund" });
   const cancelRefund = page
     .getByRole("group", { name: "Confirm full refund" })

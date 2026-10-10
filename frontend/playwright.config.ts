@@ -19,6 +19,8 @@ export default defineConfig({
         ["line"],
         ["github"],
         ["html", { open: "never", outputFolder: ".playwright/report" }],
+        // The job summary names any test that passed only on the retry.
+        ["./e2e/support/retry-summary-reporter.ts"],
       ]
     : "line",
   use: {

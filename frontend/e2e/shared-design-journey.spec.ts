@@ -1,5 +1,7 @@
 import { expect, test, type Route } from "@playwright/test";
 
+import { expectStageFocused } from "./support/keyboard";
+
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
@@ -151,6 +153,7 @@ test("restores the exact shared design after a duplicate-safe save", async ({
     await page
       .getByRole("button", { name: "Continue to Measurements" })
       .click();
+    await expectStageFocused(page, "Measurements");
 
     await page.getByRole("textbox", { name: "Width (cm)" }).fill("72.25");
     await page.getByRole("textbox", { name: "Depth (cm)" }).fill("48.5");

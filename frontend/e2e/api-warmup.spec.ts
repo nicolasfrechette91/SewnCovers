@@ -6,6 +6,8 @@ import {
   type Route,
 } from "@playwright/test";
 
+import { expectStageFocused } from "./support/keyboard";
+
 // Every API call is answered here, so nothing depends on the real hosted API
 // waking up.
 const appOrigin = "http://127.0.0.1:3100";
@@ -123,6 +125,7 @@ async function openConfigureFromHome(page: Page) {
 async function reachPatternStep(page: Page) {
   await page.getByText("Box / bench cushion", { exact: true }).click();
   await page.getByRole("button", { name: "Continue to Measurements" }).click();
+  await expectStageFocused(page, "Measurements");
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("72.25");
   await page.getByRole("textbox", { name: "Depth (cm)" }).fill("48.5");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("12.75");

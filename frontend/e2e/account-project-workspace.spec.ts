@@ -305,6 +305,10 @@ test("account workspace preserves immutable history and revocable sharing", asyn
 
   await page.goto(accountPath);
   await page.getByRole("link", { name: "Create account" }).click();
+  // The form takes focus on its heading a frame after it mounts.
+  await expect(
+    page.getByRole("heading", { name: "Create account", exact: true }),
+  ).toBeFocused();
   await page.locator("#register-email").fill("person@example.com");
   await page.locator("#register-password").fill("correct horse battery staple");
   await page
@@ -335,6 +339,8 @@ test("account workspace preserves immutable history and revocable sharing", asyn
   await expect(
     page.getByRole("heading", { name: "Patio bench renamed" }),
   ).toBeVisible();
+  // The project view reloads after a rename and puts focus back in the field.
+  await expect(page.locator("#project-name")).toBeFocused();
 
   await page
     .getByRole("link", { name: "Open as editing basis" })
@@ -402,6 +408,7 @@ test("account workspace preserves immutable history and revocable sharing", asyn
   await expect(
     page.getByText(/Private — no active project share links/),
   ).toBeVisible();
+  await expectFocusOn(page, /^Share for version \d+ revoked\.$/);
   await guest.reload();
   await expect(
     guest.getByText("Shared configuration not found."),
@@ -428,6 +435,9 @@ test("account workspace preserves immutable history and revocable sharing", asyn
     .getByRole("button", { name: "Sign out", exact: true })
     .press("Enter");
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Sign in", exact: true }),
+  ).toBeFocused();
   await page.locator("#login-email").fill("person@example.com");
   await page.locator("#login-password").fill("correct horse battery staple");
   await page.locator("#login-password").press("Enter");

@@ -1,5 +1,7 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+import { expectStageFocused } from "./support/keyboard";
+
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
@@ -279,6 +281,7 @@ async function buildDesign(page: Page, stopAt: "pattern" | "review") {
   await page.getByText("Box / bench cushion", { exact: true }).click();
   await expectNoSignInPrompt(page);
   await page.getByRole("button", { name: "Continue to Measurements" }).click();
+  await expectStageFocused(page, "Measurements");
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("72.25");
   await page.getByRole("textbox", { name: "Depth (cm)" }).fill("48.5");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("12.75");
@@ -562,6 +565,10 @@ test("signing in from the header returns to the same stage with the design intac
   await expect(
     page.getByText(/you will return to the configurator/),
   ).toBeVisible();
+  // The form takes focus on its heading a frame after it mounts.
+  await expect(
+    page.getByRole("heading", { name: "Sign in", exact: true }),
+  ).toBeFocused();
   await page.locator("#login-email").fill("guest@example.invalid");
   await page.locator("#login-password").fill(passphrase);
   await page.locator("#login-password").press("Enter");

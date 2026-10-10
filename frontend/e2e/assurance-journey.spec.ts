@@ -1,5 +1,7 @@
 import { expect, test, type Route } from "@playwright/test";
 
+import { expectStageFocused } from "./support/keyboard";
+
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
@@ -78,11 +80,13 @@ test("preview and legal content stay keyboard-accessible", async ({ page }) => {
   await page
     .getByRole("button", { name: "Continue to Measurements" })
     .press("Enter");
+  await expectStageFocused(page, "Measurements");
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("80");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("12");
   await page
     .getByRole("button", { name: "Continue to Cover details" })
     .press("Enter");
+  await expectStageFocused(page, "Cover details");
   await page
     .getByRole("button", { name: "Continue to Pattern" })
     .press("Enter");

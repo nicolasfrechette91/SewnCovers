@@ -64,7 +64,7 @@ Many actions end by moving focus: to a status message when a request finishes, o
 
 Everything the runner writes stays under the git-ignored `frontend/.playwright/`: test output and traces in `test-results/`, and the full-page captures `responsive-layout.spec.ts` takes when `RESPONSIVE_CAPTURE=true`. A run never modifies tracked files.
 
-CI runs the suite in both layouts (see [Continuous integration](#continuous-integration)). When `CI` is set, each test gets one retry, the whole run may take 10 minutes instead of 4, and Playwright also writes GitHub annotations and an HTML report to `.playwright/report/`; a failing job uploads `frontend/.playwright/` as an artifact. Locally there are no retries and the 4-minute limit stands.
+CI runs the suite in both layouts (see [Continuous integration](#continuous-integration)). When `CI` is set, each test gets one retry, the whole run may take 10 minutes instead of 4, and Playwright also writes GitHub annotations and an HTML report to `.playwright/report/`; a failing job uploads `frontend/.playwright/` as an artifact. A test that fails and then passes on the retry leaves the job green, so `e2e/support/retry-summary-reporter.ts` adds a section to the job summary that names every such test with its first error (and any test that failed on both attempts). It only reports; it never changes the result. Locally there are no retries and the 4-minute limit stands.
 
 ## Backend tests
 

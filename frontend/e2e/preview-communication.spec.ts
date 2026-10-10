@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+
+import { expectStageFocused, type ConfiguratorStage } from "./support/keyboard";
 const base =
   process.env.SEWNCOVERS_GITHUB_PAGES === "true" ? "/SewnCovers" : "";
 const patternRecords = [
@@ -155,8 +157,10 @@ test("preview stays synchronized through contextual edits and accessible at all 
   });
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
-  const next = async (name: string) => {
+  // Each stage takes focus once it has loaded; the next key waits for that.
+  const next = async (name: ConfiguratorStage) => {
     await button(`Continue to ${name}`).click();
+    await expectStageFocused(page, name);
   };
   await page.goto(`${base}/configure/`);
   await page.getByRole("radio", { name: "Rectangle cushion" }).press("Space");

@@ -1,5 +1,7 @@
 import { expect, test, type Route } from "@playwright/test";
 
+import { expectFocusOn, expectStageFocused } from "./support/keyboard";
+
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
@@ -200,15 +202,18 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   await page
     .getByRole("button", { name: "Continue to Measurements" })
     .press("Enter");
+  await expectStageFocused(page, "Measurements");
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("73.25");
   await page.getByRole("textbox", { name: "Depth (cm)" }).fill("49.75");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("13.5");
   await page
     .getByRole("button", { name: "Continue to Cover details" })
     .press("Enter");
+  await expectStageFocused(page, "Cover details");
   await page
     .getByRole("button", { name: "Continue to Pattern" })
     .press("Enter");
+  await expectStageFocused(page, "Pattern");
   const input = page.getByLabel("Choose a pattern image");
   await expect(input).toHaveAttribute(
     "accept",
@@ -246,6 +251,10 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   await expect(
     page.getByText("Processing failed", { exact: true }),
   ).toBeVisible();
+  await expectFocusOn(
+    page,
+    "Upload received. Processing and moderation will continue in the background.",
+  );
   await page
     .getByRole("radio", { name: "Select custom pattern My garden repeat" })
     .press("Space");
@@ -293,6 +302,7 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   await page
     .getByRole("button", { name: "Change pattern", exact: true })
     .press("Enter");
+  await expectStageFocused(page, "Pattern");
 
   // Deleting asks inline, in the list item. Focus enters on Cancel, and
   // Escape puts it back on Delete without deleting anything.
@@ -312,6 +322,9 @@ test("authenticated customer uploads, selects, previews, and deletes a moderated
   await expect(deleteButton).toBeFocused();
 
   await deleteButton.press("Enter");
+  await expect(
+    confirmation.getByRole("button", { name: "Cancel" }),
+  ).toBeFocused();
   await confirmation
     .getByRole("button", { name: "Delete pattern" })
     .press("Enter");

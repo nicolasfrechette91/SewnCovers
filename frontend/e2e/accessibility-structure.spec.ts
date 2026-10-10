@@ -11,7 +11,7 @@ import {
   routes,
 } from "./support/api-fixtures";
 import { auditDocument } from "./support/document-audit";
-import { chooseRadio } from "./support/keyboard";
+import { chooseRadio, expectStageFocused } from "./support/keyboard";
 
 // Structural checks on every route and every configurator stage, run in a real
 // browser against the exported site: one h1 and no skipped heading levels,
@@ -127,6 +127,9 @@ test("every configurator stage, and the panels that open on it, keep the outline
     page.getByRole("heading", { name: "Use the same width and height?" }),
   ).toBeVisible();
   await expectStructure(page, "shape change question");
+  await expect(
+    page.getByRole("button", { name: "Use the width for both" }),
+  ).toBeFocused();
   await page.keyboard.press("Escape");
   await page.getByText("Rectangle cushion", { exact: true }).click();
 
@@ -135,6 +138,7 @@ test("every configurator stage, and the panels that open on it, keep the outline
     page.getByRole("heading", { level: 1, name: /^Measure your/ }),
   ).toBeVisible();
   await expectStructure(page, "measurements stage");
+  await expectStageFocused(page, "Measurements");
   await page.getByRole("textbox", { name: /^Width/ }).fill("1");
   await page.getByRole("textbox", { name: /^Width/ }).blur();
   await expect(
@@ -154,6 +158,7 @@ test("every configurator stage, and the panels that open on it, keep the outline
     page.getByRole("heading", { level: 1, name: "Choose a colour or pattern" }),
   ).toBeVisible();
   await expectStructure(page, "pattern stage");
+  await expectStageFocused(page, "Pattern");
   await chooseRadio(page, "Solid colour");
   await expect(
     page.getByRole("heading", { name: "Pick your colour" }),
@@ -167,6 +172,9 @@ test("every configurator stage, and the panels that open on it, keep the outline
   await page
     .getByRole("button", { name: "Continue with our patterns" })
     .click();
+  await expect(
+    page.getByRole("button", { name: "Upload your own pattern" }),
+  ).toBeFocused();
   await page.getByRole("searchbox", { name: "Search patterns" }).fill("zzzz");
   await expect(
     page.getByRole("heading", { name: "No patterns match" }),
@@ -214,15 +222,23 @@ test("a signed-in visitor's configurator panels keep the outline sound", async (
   for (const stage of ["Measurements", "Cover details", "Pattern"]) {
     await page.getByRole("button", { name: `Continue to ${stage}` }).click();
   }
+  await expectStageFocused(page, "Pattern");
   await expect(page.getByText("Garden repeat", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Rename" }).click();
   await expectStructure(page, "pattern stage, rename question");
+  await expect(
+    page.getByRole("textbox", { name: "New pattern label" }),
+  ).toBeFocused();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   await expectStructure(page, "pattern stage, delete question");
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expectStructure(page, "pattern stage, uploads");
 
+  await expect(
+    page.getByRole("button", { name: "Delete", exact: true }),
+  ).toBeFocused();
   await chooseRadio(page, "Terrace wave");
   for (const stage of ["Preview", "Review"]) {
     await page.getByRole("button", { name: `Continue to ${stage}` }).click();

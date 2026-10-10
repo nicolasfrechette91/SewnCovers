@@ -6,6 +6,8 @@ import {
   type Route,
 } from "@playwright/test";
 
+import { expectStageFocused } from "./support/keyboard";
+
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
@@ -212,6 +214,7 @@ async function reachPatternStage(page: Page) {
   await expect(
     page.getByRole("searchbox", { name: "Search patterns" }),
   ).toBeVisible();
+  await expectStageFocused(page, "Pattern");
 }
 
 test("shows every built-in pattern and narrows them without losing selection", async ({
@@ -295,6 +298,7 @@ test("shows every built-in pattern and narrows them without losing selection", a
   await expect(page.getByRole("radio", { name: "All styles" })).toBeChecked();
   await expect(page.getByRole("radio", { name: "All colours" })).toBeChecked();
   await expect(page.locator(".pattern-card-input")).toHaveCount(16);
+  await expect(search).toBeFocused();
 
   await page.getByRole("radio", { name: "Pebble drift" }).focus();
   await page.keyboard.press("Space");
@@ -336,6 +340,7 @@ test("keeps Continue validation and native selection semantics", async ({
   await page.goto(configurePath);
   await page.getByText("Square cushion", { exact: true }).click();
   await page.getByRole("button", { name: "Continue to Measurements" }).click();
+  await expectStageFocused(page, "Measurements");
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("50");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("10");
   await page.getByRole("button", { name: "Continue to Cover details" }).click();
@@ -345,6 +350,7 @@ test("keeps Continue validation and native selection semantics", async ({
     name: "Continue to Preview",
   });
   await expect(continueButton).toBeDisabled();
+  await expectStageFocused(page, "Pattern");
   await page.getByRole("radio", { name: "Fern trail" }).focus();
   await page.keyboard.press("Space");
   await expect(page.getByRole("radio", { name: "Fern trail" })).toBeChecked();
@@ -369,10 +375,12 @@ test("selects, edits, previews, and preserves a solid fabric colour", async ({
   expect(new URL(page.url()).pathname).toBe(configurePath);
   await page.getByText("Square cushion", { exact: true }).click();
   await page.getByRole("button", { name: "Continue to Measurements" }).click();
+  await expectStageFocused(page, "Measurements");
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("50");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("10");
   await page.getByRole("button", { name: "Continue to Cover details" }).click();
   await page.getByRole("button", { name: "Continue to Pattern" }).click();
+  await expectStageFocused(page, "Pattern");
 
   const solid = page.getByRole("radio", { name: "Solid colour" });
   await expect(solid).toBeVisible();
@@ -433,6 +441,7 @@ test("selects, edits, previews, and preserves a solid fabric colour", async ({
   await page.getByRole("button", { name: "Back to Pattern" }).click();
   await expect(solid).toBeChecked();
   await expect(hex).toHaveValue("#111827");
+  await expectStageFocused(page, "Pattern");
 
   await search.fill("");
   await page.getByRole("radio", { name: "Fern trail" }).focus();

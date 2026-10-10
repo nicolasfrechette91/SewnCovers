@@ -122,6 +122,9 @@ test("every configurator stage reflows at 320 CSS px", async ({ page }) => {
     page.getByRole("heading", { name: "Use the same width and height?" }),
   ).toBeVisible();
   await expectReflow(page, "shape change question");
+  await expect(
+    page.getByRole("button", { name: "Use the width for both" }),
+  ).toBeFocused();
   await page.keyboard.press("Escape");
 
   for (const stage of [

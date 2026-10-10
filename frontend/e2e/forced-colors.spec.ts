@@ -8,7 +8,7 @@ import {
   project,
   quote,
 } from "./support/api-fixtures";
-import { chooseRadio } from "./support/keyboard";
+import { chooseRadio, expectStageFocused } from "./support/keyboard";
 
 // In forced-colours (high-contrast) mode the browser replaces author colours
 // with the system palette. A fabric swatch exists to show the customer's own
@@ -64,6 +64,7 @@ test("keeps the chosen fabric colour on every swatch in the configurator", async
   await page.getByRole("button", { name: "Continue to Measurements" }).click();
   await page.getByRole("button", { name: "Continue to Cover details" }).click();
   await page.getByRole("button", { name: "Continue to Pattern" }).click();
+  await expectStageFocused(page, "Pattern");
 
   // The Plain colour card and the "Current selections" ticket.
   await chooseSolidColour(page);
@@ -164,6 +165,7 @@ test("outlines a swatch in the system text colour so it stays visible", async ({
   for (const stage of ["Measurements", "Cover details", "Pattern"]) {
     await page.getByRole("button", { name: `Continue to ${stage}` }).click();
   }
+  await expectStageFocused(page, "Pattern");
   await chooseSolidColour(page);
 
   const border = await page
@@ -207,6 +209,7 @@ test("tells the customer what high-contrast mode does to the preview, for a patt
   await expect(colourNote).toHaveCount(0);
 
   await page.getByRole("button", { name: "Back to Pattern" }).click();
+  await expectStageFocused(page, "Pattern");
   await chooseSolidColour(page);
   await page.getByRole("textbox", { name: "Colour code" }).fill(chosen);
   await page.getByRole("button", { name: "Continue to Preview" }).click();
