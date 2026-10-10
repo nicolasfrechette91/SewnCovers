@@ -2,11 +2,11 @@
 
 Every suite runs offline: no test contacts Render, Neon, a payment provider or any other external service, and none needs a populated environment file.
 
-| Suite | Count (October 2026) | Runs in CI | Command |
+| Suite | Size (rounded) | Runs in CI | Command |
 | --- | --- | --- | --- |
-| Frontend unit, component and service tests | 232 in two `tsx --test` runs | Yes | `npm test` |
-| Playwright browser journeys (Chromium) | 63 | Yes, in the root and GitHub Pages layouts | `npm run test:e2e` |
-| Backend tests | 372 | Yes | `python -m pytest` |
+| Frontend unit, component and service tests | Over 250, in two `tsx --test` runs | Yes | `npm test` |
+| Playwright browser journeys (Chromium) | About 90 | Yes, in the root and GitHub Pages layouts | `npm run test:e2e` |
+| Backend tests | Over 350 | Yes | `python -m pytest` |
 | Lint, formatting and type checks | n/a | Yes | see below |
 | Static-export verification | n/a | Yes | `npm run verify:export` |
 | First-load JavaScript budgets | n/a | Yes | `npm run verify:performance` |
@@ -16,8 +16,8 @@ Every suite runs offline: no test contacts Render, Neon, a payment provider or a
 
 `npm test` runs `tsx --test` twice in sequence, each over a glob:
 
-1. **`npm run test:node`**, over `config/*.test.mjs` and `services/*.test.mjs` (73 tests). They cover environment validation, base-path and URL construction, the typed API clients (exact response contracts, timeout, retry and cold-start policy, malformed and backend errors, request ids and limit responses), the pattern catalogue, duplicate-safe saving, share-link generation and exact restoration for every shape. The `.mjs` files import the TypeScript sources through tsx, so there is no separate build step. A test that needs a private copy of a module and its project imports, because the module reads `process.env` when it loads, uses `importFresh` from `tests/fresh-import.mjs`.
-2. **`npm run test:dom`**, the same runner with jsdom (`tests/setup-dom.mjs`) and React Testing Library, over `tests/*.test.ts` and `tests/*.test.tsx` (194 tests). They cover the configurator components for all five shapes, measurement and unit behaviour, review and summary output, the draft and sign-in flow, account, project and commerce screens, the landing page, navigation and site metadata, the shared UI primitives, and the design-token and composition guards. Three files guard accessibility: `document-audit.test.tsx` proves the audit that the browser specs run (below) against deliberately broken markup, `accessibility-contracts.test.tsx` holds the component-level contracts (names that start with the visible label, labelled groups instead of navigation landmarks, the cushion figure named by its heading, the `ErrorMessage` props allow-list, swatches in forced-colours mode) and `focus-return.test.tsx` checks that closing an inline question returns focus to its opener, that every way of ending a session lands focus on the sign-in heading, and that a work step button that is replaced hands focus to the work heading.
+1. **`npm run test:node`**, over `config/*.test.mjs` and `services/*.test.mjs` (about 70 tests). They cover environment validation, base-path and URL construction, the typed API clients (exact response contracts, timeout, retry and cold-start policy, malformed and backend errors, request ids and limit responses), the pattern catalogue, duplicate-safe saving, share-link generation and exact restoration for every shape. The `.mjs` files import the TypeScript sources through tsx, so there is no separate build step. A test that needs a private copy of a module and its project imports, because the module reads `process.env` when it loads, uses `importFresh` from `tests/fresh-import.mjs`.
+2. **`npm run test:dom`**, the same runner with jsdom (`tests/setup-dom.mjs`) and React Testing Library, over `tests/*.test.ts` and `tests/*.test.tsx` (about 190 tests). They cover the configurator components for all five shapes, measurement and unit behaviour, review and summary output, the draft and sign-in flow, account, project and commerce screens, the landing page, navigation and site metadata, the shared UI primitives, and the design-token and composition guards. Three files guard accessibility: `document-audit.test.tsx` proves the audit that the browser specs run (below) against deliberately broken markup, `accessibility-contracts.test.tsx` holds the component-level contracts (names that start with the visible label, labelled groups instead of navigation landmarks, the cushion figure named by its heading, the `ErrorMessage` props allow-list, swatches in forced-colours mode) and `focus-return.test.tsx` checks that closing an inline question returns focus to its opener, that every way of ending a session lands focus on the sign-in heading, and that a work step button that is replaced hands focus to the work heading.
 
 Assertions prefer accessible roles, names and visible recovery text. Requests are mocked, promises are controlled by the test and timers are deterministic, so races (stale responses, edits during restoration, duplicate saves) are tested directly.
 
@@ -27,7 +27,7 @@ Assertions prefer accessible roles, names and visible recovery text. Requests ar
 
 ## Browser journeys (Playwright)
 
-The 92 tests in `frontend/e2e/` use accessible locators and are offline by construction: the runner builds the real static export with the API origin set to the reserved `http://api.sewncovers.test`, serves `out/` from a single-process loopback server, and blocks every other origin. Playwright intercepts the API origin and answers patterns, designs, accounts, projects, uploads, commerce and operations from memory.
+About 90 tests in `frontend/e2e/` use accessible locators and are offline by construction: the runner builds the real static export with the API origin set to the reserved `http://api.sewncovers.test`, serves `out/` from a single-process loopback server, and blocks every other origin. Playwright intercepts the API origin and answers patterns, designs, accounts, projects, uploads, commerce and operations from memory.
 
 ```powershell
 cd frontend
@@ -64,7 +64,7 @@ CI runs the suite in both layouts (see [Continuous integration](#continuous-inte
 
 ## Backend tests
 
-`python -m pytest` runs 372 tests in 19 files under `backend/tests/`. Each file that needs a database creates its own SQLite database and migrates it with Alembic, so the tests exercise the real migrations. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic. `conftest.py` undoes the process-wide logging changes that application start-up makes, and `support.py` holds the shared error-envelope assertion.
+`python -m pytest` runs over 350 tests in about 20 files under `backend/tests/`. Each file that needs a database creates its own SQLite database and migrates it with Alembic, so the tests exercise the real migrations. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic. `conftest.py` undoes the process-wide logging changes that application start-up makes, and `support.py` holds the shared error-envelope assertion.
 
 They cover:
 
@@ -134,8 +134,7 @@ In branch protection, require only **CI result**. A job skipped because its side
 
 The audits can fail on a newly published advisory even when nothing in the repository changed; that is deliberate. Dependencies are updated manually: npm and Python packages and GitHub Actions stay at their pinned versions until someone bumps them, and the CI audits block known vulnerabilities in the meantime (`npm audit` fails on high or critical advisories in production npm dependencies, `pip-audit --strict` on any advisory in the runtime Python dependencies). Development-only npm advisories are not gated; at the time of writing that is `braces` under `eslint-config-next`, which has no fix within Next.js 16. `pip-audit` (pinned in the workflow) runs from its own virtual environment, so it is not a project dependency.
 
-Actions are pinned by commit SHA with version comments, every job has least-privilege permissions, and checkouts never persist credentials. The scheduled [keep-warm](deployment.md#free-tier-behaviour) workflow is not part of CI.
-
+Actions are pinned by commit SHA with version comments, every job has least-privilege permissions, and checkouts never persist credentials.
 ## Before you push
 
 ```powershell

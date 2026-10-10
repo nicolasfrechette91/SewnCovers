@@ -52,7 +52,7 @@ Tests run offline by construction: frontend units use mocked requests and determ
 
 ## Trade-offs and known limits
 
-- The live site runs on free tiers. A scheduled ping keeps the API awake during the day; otherwise the first request after idle can take up to a minute.
+- The live site runs on free tiers. The API sleeps when idle, so the first request after a pause can take up to a minute; the site warms it on page load and shows a waking notice.
 - Uploads and commerce cannot be tried on the live site (by design); they run locally in a few steps.
 - Authentication is portfolio-grade: no email verification or recovery.
 - Backend dependencies are pinned directly but not locked transitively.

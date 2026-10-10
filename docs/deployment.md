@@ -125,7 +125,7 @@ Enabling either in production needs, at minimum, private S3-compatible storage a
 ## Free-tier behaviour
 
 - **Cold starts.** Render's free instances spin down after about 15 minutes without traffic and take around a minute to wake (see Render's current documentation). The frontend handles this: the home page sends one quiet `/health` request per browser session, the configurator's first catalogue request wakes the service if needed, and the UI reports "the API may be waking" after two seconds with bounded retries for reads. Warm responses are typically a few hundred milliseconds. The instance filesystem is ephemeral, so no application data is stored on it.
-- **Keep-warm.** `.github/workflows/keep-warm.yml` sends `GET /health` every 12 minutes from 07:03 to 22:51 Toronto time, so the API is awake from the first ping until about 23:05. The schedule uses GitHub's `timezone: America/Toronto`, so daylight saving needs no UTC arithmetic. That is about 16 instance-hours a day, inside Render's 750 free hours a month if this is the workspace's only free service. Each ping also runs one database query, so Neon stays awake during those hours as well. Two limits to know: GitHub can start scheduled runs late, most often at the top of the hour (hence minute 3), so a cold start remains possible; and GitHub disables scheduled workflows in a public repository after 60 days without repository activity. Re-enable it from the Actions tab, or run it by hand with **Run workflow**. A failed ping (the API not answering `200` within about three and a half minutes) shows as a failed run.
+- **Nothing keeps the API awake.** No timer pings it: the project is used rarely, so an idle instance is allowed to sleep, and the warm-up on page load plus the waking notice cover the first visit. Expect a slow first request after any idle period.
 - **Neon.** Compute scales to zero on the free plan, so the first query after idle is slower. Check Neon's usage panel for the current allowances.
 
 ## After a deploy
@@ -148,7 +148,6 @@ The deploy workflow already checks both. `/health` should return `{"process":"he
 | "Ask Render to deploy this commit" fails with HTTP 404 | The hook URL is stale (regenerate it in Render and update the secret) or Render cannot see that commit in the repository. |
 | "Wait for /health to report this commit" times out | Render accepted the deploy but the new instance never became healthy. The error shows the commit still serving; read that deploy's logs in Render. |
 | The Pages smoke check fails after a successful deploy | Check that Pages is set to deploy from GitHub Actions and open the two URLs it names. |
-| The keep-warm workflow stopped running | GitHub disabled it after 60 days without activity; re-enable it in the Actions tab. |
 | The API restarts and never becomes healthy | Read the deploy log in Render: a failed migration or schema verification stops the process before Uvicorn starts, and the line before the exit names the cause. |
 | Someone reports an error | Ask for the reference (`requestId`) and search Render's logs for it. |
 | Many visitors get `429` at once | The per-network limits are keyed on the address Render reports. Check that access lines show varied `client` networks; if they all show one, review [Client address](#client-address). |

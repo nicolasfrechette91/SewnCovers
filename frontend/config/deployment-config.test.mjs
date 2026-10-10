@@ -12,7 +12,6 @@ const [
   pagesWorkflow,
   ciWorkflow,
   backendWorkflow,
-  keepWarmWorkflow,
   renderBlueprint,
   rootReadme,
 ] = await Promise.all([
@@ -25,7 +24,6 @@ const [
     new URL(".github/workflows/deploy-backend.yml", repositoryRoot),
     "utf8",
   ),
-  readFile(new URL(".github/workflows/keep-warm.yml", repositoryRoot), "utf8"),
   readFile(new URL("render.yaml", repositoryRoot), "utf8"),
   readFile(new URL("README.md", repositoryRoot), "utf8"),
 ]);
@@ -60,12 +58,7 @@ test("Render production declares only the exact path-free Pages browser origin",
 });
 
 test("public deployment configuration remains secret-free", () => {
-  for (const source of [
-    pagesWorkflow,
-    ciWorkflow,
-    backendWorkflow,
-    keepWarmWorkflow,
-  ]) {
+  for (const source of [pagesWorkflow, ciWorkflow, backendWorkflow]) {
     assert.doesNotMatch(
       source,
       /postgres(?:ql)?(:|%3A)|private[-_](?:key|token)|password\s*[:=]/i,
