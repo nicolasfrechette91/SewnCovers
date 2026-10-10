@@ -16,6 +16,7 @@ import {
   SectionHeader,
   eyebrowClasses,
   Notice,
+  classNames,
 } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { useAuth } from "@/context/auth";
@@ -398,7 +399,12 @@ export function AccountScreen({
                 <Link
                   href={buildAccountHref(item, returnTo)}
                   aria-current={active ? "page" : undefined}
-                  className={`inline-flex min-h-11 w-full items-center justify-center rounded-control px-3 py-2 text-center text-button font-control break-words no-underline ${active ? "bg-brand text-on-brand shadow-card" : "text-text-primary hover:bg-surface hover:text-brand"}`}
+                  className={classNames(
+                    "inline-flex min-h-11 w-full items-center justify-center rounded-control px-3 py-2 text-center text-button font-control break-words no-underline",
+                    active
+                      ? "bg-brand text-on-brand shadow-card"
+                      : "text-text-primary hover:bg-surface hover:text-brand",
+                  )}
                 >
                   {item === "login" ? "Sign in" : "Create account"}
                 </Link>
@@ -421,7 +427,7 @@ export function AccountScreen({
           title="You can keep designing as a guest"
           titleId="account-guest-heading"
         />
-        <p className="mt-2 max-w-3xl text-body text-text-muted">
+        <p className="mt-2 max-w-reading text-body text-text-muted">
           Every configurator step, the preview, the review summary, printing,
           downloading and public design links work without an account. Your
           design in progress is kept in this browser.

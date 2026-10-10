@@ -33,7 +33,7 @@ export default function CommercePage() {
         <h2 id="private-pricing-heading" className={sectionTitleClasses}>
           Your private quote workspace
         </h2>
-        <p className="mt-2 mb-component max-w-3xl text-body text-text-muted">
+        <p className="mt-2 mb-component max-w-reading text-body text-text-muted">
           Owned estimates, saved quotes, quote history, and cart actions are
           private to an account.
         </p>

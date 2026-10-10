@@ -7,6 +7,7 @@ import {
   useDeferredFocus,
   surfaceClasses,
   SectionHeader,
+  Surface,
 } from "@/components/ui";
 import { useConfiguration, type CushionShape } from "@/context/configuration";
 import {
@@ -117,7 +118,7 @@ export function ShapeSelectionStep({
                   <span className="flex min-w-0 items-start gap-2 sm:gap-3">
                     <span
                       aria-hidden="true"
-                      className="shape-option-control-indicator choice-indicator mt-0.5"
+                      className="shape-option-control-indicator choice-indicator mt-nudge"
                     >
                       {isSelected ? "✓" : ""}
                     </span>
@@ -142,15 +143,20 @@ export function ShapeSelectionStep({
       </div>
 
       {pendingShape !== null ? (
-        <section
+        <Surface
+          as="section"
           aria-labelledby={`${generatedId}-shape-change-heading`}
-          className="mt-component rounded-card border border-accent bg-surface p-4 shadow-raised sm:p-5"
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.preventDefault();
               closePendingChange(pendingShape);
             }
           }}
+          className="mt-component sm:p-5"
+          elevation="raised"
+          padding="compact"
+          radius="card"
+          tone="accent"
         >
           <SectionHeader
             level={3}
@@ -183,7 +189,7 @@ export function ShapeSelectionStep({
           <p className="mt-2 text-supporting text-text-muted">
             Press Escape to keep the current shape.
           </p>
-        </section>
+        </Surface>
       ) : null}
     </fieldset>
   );

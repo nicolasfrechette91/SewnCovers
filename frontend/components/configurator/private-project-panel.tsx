@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   useEffect,
   useRef,
@@ -14,12 +13,12 @@ import {
   Button,
   ErrorMessage,
   Field,
-  textLinkClasses,
   TextInput,
   useDeferredFocus,
   Surface,
   SectionHeader,
   LoadingState,
+  TextLink,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import type { ConfigurationState } from "@/context/configuration";
@@ -431,7 +430,9 @@ export function PrivateProjectPanel({
         title={heading}
         titleId="private-project-heading"
       />
-      <p className="mt-3 max-w-3xl text-body text-text-muted">{description}</p>
+      <p className="mt-3 max-w-reading text-body text-text-muted">
+        {description}
+      </p>
       {auth.status === "initializing" ? (
         <LoadingState className="mt-3" label="Restoring your session…" />
       ) : null}
@@ -462,7 +463,7 @@ export function PrivateProjectPanel({
           </>
         ) : null}
         {savedAndUnchanged && verified && !outcome && busy === null ? (
-          <p className="mt-3 max-w-3xl text-supporting text-text-muted">
+          <p className="mt-3 max-w-reading text-supporting text-text-muted">
             This design matches version {verified.versionNumber}, the current
             version.
           </p>
@@ -479,19 +480,16 @@ export function PrivateProjectPanel({
         </p>
         {outcome?.projectId || (savedAndUnchanged && verified) ? (
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-            <Link
+            <TextLink
               href={{
                 pathname: "/projects/",
                 query: { project: outcome?.projectId ?? verified?.projectId },
               }}
-              className={textLinkClasses}
             >
               Open saved project
-            </Link>
+            </TextLink>
             {outcome?.cart ? (
-              <Link href="/cart/" className={textLinkClasses}>
-                View cart
-              </Link>
+              <TextLink href="/cart/">View cart</TextLink>
             ) : null}
           </div>
         ) : null}
@@ -521,7 +519,7 @@ export function PrivateProjectPanel({
           </div>
         ) : null}
         {auth.status === "guest" && signInFor === null ? (
-          <p className="mt-3 max-w-3xl text-supporting text-text-muted">
+          <p className="mt-3 max-w-reading text-supporting text-text-muted">
             You&apos;ll be asked to sign in or create an account next. Your
             design stays in this browser either way.
           </p>

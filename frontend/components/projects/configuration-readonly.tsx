@@ -8,7 +8,7 @@ import {
   resolveAssetUrl,
   type ProjectConfigurationRequest,
 } from "@/services/account-api";
-import { Surface } from "@/components/ui";
+import { Surface, classNames } from "@/components/ui";
 
 const labels: Readonly<Record<string, string>> = {
   "cotton-canvas": "Cotton canvas",
@@ -104,7 +104,7 @@ export function ConfigurationReadonly({
         {fields.map(([label, value]) => (
           <div
             key={label}
-            className="min-w-0 border-b border-dashed border-border py-2.5"
+            className="min-w-0 border-b border-dashed border-border py-3"
           >
             <dt className="font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted">
               {label}
@@ -133,7 +133,11 @@ export function ConfigurationReadonly({
         >
           {configuration.pattern.kind === "built-in" ? (
             <div
-              className={`prototype-pattern ${artworkClassName ?? ""} h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised`}
+              className={classNames(
+                "prototype-pattern",
+                artworkClassName,
+                "h-2/3 w-3/4 rounded-panel border-2 border-border-strong shadow-raised",
+              )}
               style={
                 {
                   "--pattern-scale": configuration.patternScale,

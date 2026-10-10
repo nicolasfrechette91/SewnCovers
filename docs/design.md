@@ -3,7 +3,7 @@
 The visual direction of the SewnCovers frontend: a tailor's workroom laid out like a clean editorial spread. This page records the audit that motivated it, the principles and tokens that came out of it, and how the system is applied and enforced in code.
 
 - **Source of truth:** [`frontend/app/globals.css`](../frontend/app/globals.css) (tokens, textile details, accessibility rules, print rules).
-- **Enforced by:** [`frontend/tests/design-tokens.test.ts`](../frontend/tests/design-tokens.test.ts), which fails when components use Tailwind's default scales, arbitrary colours or raw colour literals, and [`frontend/e2e/accessibility-validation.spec.ts`](../frontend/e2e/accessibility-validation.spec.ts), which derives its contrast ratios from the computed CSS variables.
+- **Enforced by:** [`frontend/tests/design-tokens.test.ts`](../frontend/tests/design-tokens.test.ts), which fails when components use Tailwind's default scales, arbitrary colours or `rgb()` literals; [`frontend/tests/design-system-guard.test.ts`](../frontend/tests/design-system-guard.test.ts), which fails when a screen builds a form control, description list or panel by hand, uses a hex literal, an off-ladder spacing step or `max-w-3xl`; and [`frontend/e2e/accessibility-validation.spec.ts`](../frontend/e2e/accessibility-validation.spec.ts), which derives its contrast ratios from the computed CSS variables.
 
 The audit was based on the static export reviewed at 375, 768 and 1440 px on every route and configurator stage, plus the components, `globals.css` and the unit and browser suites that constrain markup.
 
@@ -122,7 +122,7 @@ Semantic tokens stay as 6-digit hex because `e2e/accessibility-validation.spec.t
 | error surface / border / text | `#FAE8E4` / `#A63A32` / `#86261F` | text 7.67, border 5.42 |
 | success surface / border / text | `#E7EFE8` / `#24513B` / `#1D432F` | text 9.45, border 7.74 |
 
-**Fabric "dye" tokens** (`--dye-*`) colour the pattern artwork independently of the UI theme, so a future theme cannot recolour a fabric preview. Cushion shading uses its own `--shade-*` tokens.
+**Fabric "dye" tokens** (`--dye-*`) colour the pattern artwork independently of the UI theme, so a future theme cannot recolour a fabric preview. Cushion shading uses its own `--shade-*` tokens: the weave, fold, seam, edge, band and crease strokes, and the eight cloth, sheen and shadow colours (`--shade-cloth-*`, `--shade-sheen`, `--shade-glint`, `--shade-penumbra`, `--shade-umbra`, `--shade-cast`) that the preview's SVG gradients use. No hex literal remains in `cushion-model.tsx`.
 
 ### Colour (dark, deferred)
 
@@ -140,10 +140,10 @@ Dark mode is token-ready but not shipped; `:root` declares `color-scheme: light`
 
 ### Spacing, containers, radius, shadow
 
-- **Spacing:** Tailwind's 4 px base plus named steps (`icon`, `control-x/y`, `component`, `card`, `gutter`, `layout`, `section`) on a 4 px "tape" ladder of 4, 8, 12, 16, 24, 32, 48, 64 and 96.
-- **Containers:** `page` (72rem) for workspaces, `content` (56rem) for forms and account screens, `reading` (48rem) for legal copy.
+- **Spacing:** Tailwind's 4 px base plus named steps (`nudge`, `icon`, `control-x/y`, `component`, `card`, `gutter`, `layout`, `section`) on a 4 px "tape" ladder of 4, 8, 12, 16, 20, 24, 32, 48, 64 and 96. For padding, margins and gaps that means the Tailwind steps 1, 2, 3, 4, 5, 6, 8, 12, 16 and 24 (and 0). `nudge` (2 px, `mt-nudge`) is the one sub-step: it lines a checkbox, radio or indicator up with the first line of text beside it. Half steps such as `mt-0.5` and `py-2.5` are not used.
+- **Containers:** `page` (72rem) for workspaces, `content` (56rem) for forms and account screens, `reading` (48rem) for legal copy and for the measure of body copy, headings and ledes (`max-w-reading`, never `max-w-3xl`).
 - **Radius:** `control-small` 4 px, `control` 6 px, `card` 8 px, `panel` 12 px, and `pill`. Fabric illustrations keep their soft corners.
-- **Shadows:** flat, like pressed paper: `hairline`, `card`, `raised` (hover and selected lift only), `overlay`, `focus` (a 2 px surface gap plus a 3 px ring), `selected` (an inset 2 px brand ring, so selection never shifts layout) and `current`.
+- **Shadows:** flat, like pressed paper: `hairline`, `card`, `raised` (hover and selected lift only), `focus` (a 2 px surface gap plus a 3 px ring), `selected` (an inset 2 px brand ring, so selection never shifts layout) and `current`. There is no overlay shadow yet; add one with the first overlay that needs it.
 
 ### Textile details, used sparingly
 
@@ -176,7 +176,8 @@ Anything that paints the customer's own colour (the Plain colour card, the Curre
 ## 3. Constraints the tests freeze
 
 - Routes, copy, headings, accessible names and landmark labels are covered by unit and browser tests, as are the class hooks and `data-*` attributes they use: `.landing-*`, `.shape-option-*`, `.cover-option-*`, `.pattern-card-*`, `.pattern-filter-*`, `.unit-selector-*`, `.cushion-preview-*`, `.prototype-notice`, `.print-hidden`, and `#site-navigation-menu`, which toggles `hidden`/`block`.
-- The cushion preview SVG internals are frozen by tests and are not restyled.
+- The cushion preview SVG internals are frozen by tests and are not restyled. Its colours come from the `--shade-*` tokens.
+- Screens compose the primitives: outside `components/ui/`, a hand-built form control, description list or panel, a hex literal, an off-ladder spacing step or `max-w-3xl` fails `design-system-guard.test.ts` unless it is one of the listed exceptions (see Composition guard below).
 - Targets are at least 44 px, input text at least 16 px, and adjacent buttons at least 8 px apart. There is no horizontal overflow from 320 px up.
 - Fonts are self-hosted and served under the `/SewnCovers` base path. The frontend has no third-party runtime dependencies.
 
@@ -197,11 +198,19 @@ Typed primitives live in `frontend/components/ui/` and are exported from the `@/
 | Group | Components | Notes |
 | --- | --- | --- |
 | Actions | `Button`, `ButtonLink`, `TextLink` | Share `buttonClasses()`; primary, secondary and ghost variants, default and compact sizes; disabled buttons use a dashed "unavailable" frame. `ButtonLink` wraps `next/link`. |
-| Layout and headers | `PageShell`, `PageHeader`, `SectionHeader`, `Surface`, `StitchDivider` | `Surface` offers default, subtle, page, emphasis and danger tones. |
-| Form controls | `NumberInput`, `UnitSelector`, `Field`, `TextInput`, `Select`, `Textarea`, `Checkbox` | One shared control frame; `NumberInput` takes an optional unit suffix; `UnitSelector` is a segmented control for cm and in. |
-| Status | `Badge`, `Notice`, `ErrorMessage`, `LoadingState`, `EmptyState`, `SpecList` | `Notice` covers prototype, sandbox, info and success tones; `ErrorMessage` keeps assertive alert semantics and takes an optional visible `heading`; its props are an allow-list (`children`, `heading`, `className`, `id`, `role`, `aria-live`), so a mistyped `title=` is a type error. |
+| Layout and headers | `PageShell`, `PageHeader`, `SectionHeader`, `Surface`, `StitchDivider` | `Surface` offers default, subtle, page, emphasis, strong, accent and danger tones, a card, compact, tight or no padding, and renders as `section`, `article`, `aside`, `div`, `figure`, `header` or `li`. `surfaceClasses()` gives the same recipe to an element `Surface` cannot render, such as a `fieldset`. `SectionHeader` takes a `size` (section, card or subhead) and a heading `level`. |
+| Form controls | `NumberInput`, `UnitSelector`, `Field`, `TextInput`, `Select`, `Textarea`, `Checkbox` | One shared control frame at the 48 px control size; `Field` wires the label, help and error text to the control; `NumberInput` takes an optional unit suffix; `UnitSelector` is a segmented control for cm and in. Read-only styling applies to text fields only, because browsers also match `:read-only` on a `<select>`. |
+| Status | `Badge`, `Notice`, `ErrorMessage`, `LoadingState`, `EmptyState`, `SpecList` | `Notice` covers prototype, sandbox, info and success tones; `ErrorMessage` keeps assertive alert semantics and takes an optional visible `heading`; its props are an allow-list (`children`, `heading`, `className`, `id`, `role`, `aria-live`), so a mistyped `title=` is a type error. `EmptyState` is centred and card-sized by default, or `align="start"` and `size="compact"` inside a panel; `LoadingState` can be `framed`. `SpecList` lays labelled values out in two, three or four columns, or by container width. |
 
-**Adoption is partial.** Buttons, page headers, notices, error and loading states are used across the app. `Surface`, `SectionHeader`, `SpecList` and the form primitives `Field`, `TextInput`, `Select`, `Textarea` and `Checkbox` are defined and tested but not yet used by any screen; most inputs outside the configurator's measurement controls are still styled by hand with token utilities. The token test still guarantees that those hand-written classes resolve to design tokens.
+**Heading size follows the heading's role, not its level.** A page-level section is `section`, a panel inside a section is `card`, and a sub-block inside a card is `subhead`. Sibling panels on one screen share a size. The level (`h2` to `h4`) only sets the document outline.
+
+**Adoption is broad.** Screens build their buttons, text links, headers, panels, forms, banners, empty and loading states, and label-and-value lists from these primitives. The exceptions are the elements the composition guard lists below, each with a reason.
+
+### Composition guard
+
+[`frontend/tests/design-system-guard.test.ts`](../frontend/tests/design-system-guard.test.ts) reads every file under `app/` and `components/` with the TypeScript parser. Outside `components/ui/`, it flags a raw `<input>`, `<select>` or `<textarea>` (other than `type="hidden"`), a `<dl>`, a class string that pairs `rounded-panel` or `rounded-card` with a border width, and a hex colour. It also checks every class string in the app for spacing steps off the ladder and for `max-w-3xl`.
+
+A legitimate exception is an entry in the test's `allowlist`: the file, a pattern that picks out that one element, an optional `count` (default 1) and a one-line reason. The test fails when something is flagged and not listed, and when an entry no longer matches exactly its `count` of elements, so exceptions cannot go stale or quietly widen. The current list is 27 entries: eight form controls with no primitive (five selection-card radios and chips, plus the colour, range and file inputs), four description lists whose rows are not `SpecList` rows, thirteen entries for fifteen boxes that are not `Surface` panels (dashed containers, a clickable card, swatch and image tiles, and frames on the cutting-mat backdrop), and two lines of copy that show the `#B8AFA3` colour-code format. Prefer a primitive; add an entry only when the element is genuinely a different kind of thing.
 
 ## 5. Current behaviour notes
 

@@ -7,6 +7,7 @@ import {
   cardTitleClasses,
   Notice,
   StitchDivider,
+  classNames,
 } from "@/components/ui";
 import type { AuthenticationMode } from "@/services/auth-navigation";
 
@@ -64,11 +65,13 @@ export function InlineSignIn({
         id={headingId}
         ref={headingRef}
         tabIndex={-1}
-        className={`${cardTitleClasses} scroll-mt-layout`}
+        className={classNames(cardTitleClasses, "scroll-mt-layout")}
       >
         {titles[mode]}
       </Heading>
-      <div className="mt-2 max-w-3xl text-body text-text-muted">{reason}</div>
+      <div className="mt-2 max-w-reading text-body text-text-muted">
+        {reason}
+      </div>
       {sessionNotice ? (
         <Notice className="mt-3" role="status" aria-live="polite">
           {sessionNotice}

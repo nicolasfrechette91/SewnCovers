@@ -239,7 +239,7 @@ function ShapeMeasurementForm({
           Measure your {definition.name.toLowerCase()} cushion
         </h1>
       </legend>
-      <p className="mt-2 max-w-3xl break-words text-body text-text-muted">
+      <p className="mt-2 max-w-reading break-words text-body text-text-muted">
         Measure the cushion itself, not its current cover.
       </p>
 

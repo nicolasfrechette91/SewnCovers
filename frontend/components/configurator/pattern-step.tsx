@@ -22,6 +22,7 @@ import {
   SectionHeader,
   EmptyState,
   Notice,
+  classNames,
 } from "@/components/ui";
 import {
   DEFAULT_SOLID_COLOR,
@@ -274,7 +275,7 @@ export function PatternStep({
         </legend>
         <p
           id={supportingTextId}
-          className="mt-2 max-w-3xl break-words text-body text-text-muted"
+          className="mt-2 max-w-reading break-words text-body text-text-muted"
         >
           Pick a plain colour or one of our patterns. You can change the pattern
           size on the next step.
@@ -286,8 +287,10 @@ export function PatternStep({
         />
 
         <StitchDivider className="mt-component" />
-        <h2 className={`mt-component ${cardTitleClasses}`}>Plain colour</h2>
-        <div className={`mt-4 ${patternGridClasses}`}>
+        <h2 className={classNames("mt-component", cardTitleClasses)}>
+          Plain colour
+        </h2>
+        <div className={classNames("mt-4", patternGridClasses)}>
           <PatternCard
             id={`${generatedId}-solid-color`}
             name="solid-fabric-choice"
@@ -370,7 +373,7 @@ export function PatternStep({
             {solidColorError ? (
               <p
                 id={`${generatedId}-hex-error`}
-                className={`mt-2 ${fieldErrorClasses}`}
+                className={classNames("mt-2", fieldErrorClasses)}
                 role="alert"
               >
                 {solidColorError}
@@ -385,7 +388,9 @@ export function PatternStep({
         <YourPatterns />
 
         <StitchDivider className="mt-layout" />
-        <h2 className={`mt-component ${cardTitleClasses}`}>Patterns</h2>
+        <h2 className={classNames("mt-component", cardTitleClasses)}>
+          Patterns
+        </h2>
 
         {!hasCompleteCatalogue ? (
           catalogue.phase === "loading" ? (
@@ -550,7 +555,7 @@ export function PatternStep({
               <div
                 id={`${generatedId}-pattern-results`}
                 aria-describedby={resultCountId}
-                className={`mt-component ${patternGridClasses}`}
+                className={classNames("mt-component", patternGridClasses)}
               >
                 {matchingPatterns.map((pattern) => {
                   const optionId = `${generatedId}-${pattern.id}`;
@@ -572,7 +577,11 @@ export function PatternStep({
                       description={pattern.description}
                       preview={
                         <span
-                          className={`prototype-pattern ${pattern.previewClassName} block size-full`}
+                          className={classNames(
+                            "prototype-pattern",
+                            pattern.previewClassName,
+                            "block size-full",
+                          )}
                         />
                       }
                       onChange={() =>

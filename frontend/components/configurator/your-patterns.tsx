@@ -419,7 +419,7 @@ export function YourPatterns() {
         <h2 id={`${id}-heading`} className={cardTitleClasses}>
           Your patterns
         </h2>
-        <p className="mt-3 max-w-3xl text-supporting text-text-muted">
+        <p className="mt-3 max-w-reading text-supporting text-text-muted">
           Custom uploads aren&apos;t enabled in this demo.
         </p>
       </section>
@@ -434,7 +434,7 @@ export function YourPatterns() {
       </h2>
       {auth.status === "guest" && !signInOpen ? (
         <div className="mt-3 flex min-w-0 flex-col items-start gap-3">
-          <p className="max-w-3xl text-supporting text-text-muted">
+          <p className="max-w-reading text-supporting text-text-muted">
             Upload your own image to use as a pattern. You&apos;ll need an
             account.
           </p>

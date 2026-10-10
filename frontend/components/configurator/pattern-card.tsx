@@ -105,7 +105,7 @@ export function PatternCard({
         <span className="flex min-w-0 flex-1 items-start gap-3 p-3 sm:px-4 sm:pt-3 sm:pb-4">
           <span
             aria-hidden="true"
-            className="pattern-card-control-indicator choice-indicator mt-0.5"
+            className="pattern-card-control-indicator choice-indicator mt-nudge"
           >
             ✓
           </span>

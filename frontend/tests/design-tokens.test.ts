@@ -24,11 +24,10 @@ const files = [...sourceFiles("app"), ...sourceFiles("components")].map(
   (file) => ({ file, source: readFileSync(path.join(root, file), "utf8") }),
 );
 
-function offenders(pattern: RegExp, allow: readonly string[] = []) {
-  return files.flatMap(({ file, source }) => {
-    if (allow.includes(file.replaceAll("\\", "/"))) return [];
-    return [...source.matchAll(pattern)].map((match) => `${file}: ${match[0]}`);
-  });
+function offenders(pattern: RegExp) {
+  return files.flatMap(({ file, source }) =>
+    [...source.matchAll(pattern)].map((match) => `${file}: ${match[0]}`),
+  );
 }
 
 test("uses no default Tailwind palette colours", () => {
@@ -64,18 +63,8 @@ test("uses no arbitrary colour values in class names", () => {
   );
 });
 
-test("keeps raw colour literals out of components", () => {
-  assert.deepEqual(
-    offenders(
-      /(?<![\w&])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g,
-      [
-        // SVG gradient stops describe light on cloth; unit tests freeze this SVG.
-        "components/configurator/cushion-model.tsx",
-        // Copy shows the hexadecimal colour format to the user.
-        "components/configurator/pattern-step.tsx",
-      ],
-    ),
-    [],
-  );
+// Hex literals are checked in design-system-guard.test.ts, which can name the
+// few lines of copy that show a colour code.
+test("keeps rgb() colour literals out of components", () => {
   assert.deepEqual(offenders(/\brgba?\(\s*\d/g), []);
 });

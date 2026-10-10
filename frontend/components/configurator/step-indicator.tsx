@@ -130,7 +130,7 @@ export function StepIndicator({
                     >
                       {step.label}
                     </span>
-                    <span className="sr-only lg:not-sr-only lg:mt-0.5 lg:block lg:font-mono lg:text-eyebrow lg:uppercase lg:tracking-eyebrow lg:text-text-muted">
+                    <span className="sr-only lg:not-sr-only lg:mt-nudge lg:block lg:font-mono lg:text-eyebrow lg:uppercase lg:tracking-eyebrow lg:text-text-muted">
                       {statusLabel}
                     </span>
                   </span>

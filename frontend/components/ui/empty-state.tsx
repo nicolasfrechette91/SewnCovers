@@ -6,7 +6,7 @@ import { cardTitleClasses } from "./headers";
 export type EmptyStateSize = "default" | "compact";
 export type EmptyStateAlign = "center" | "start";
 
-export function emptyStateClasses(
+function emptyStateClasses(
   className?: string | false | null,
   size: EmptyStateSize = "default",
   align: EmptyStateAlign = "center",

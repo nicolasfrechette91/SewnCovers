@@ -180,3 +180,37 @@ test("outlines a swatch in the system text colour so it stays visible", async ({
     });
   expect(border.actual).toBe(border.systemText);
 });
+
+test("tells the customer what high-contrast mode does to the preview, for a pattern and for a colour", async ({
+  page,
+}) => {
+  await fixtures(page, "guest");
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.goto(`${base}/configure/?design=${publicId}`);
+  await expect(page.getByText("Shared design restored.")).toBeVisible();
+  const previewHeading = page.getByRole("heading", {
+    level: 1,
+    name: /^Preview your/,
+  });
+  const patternNote = page.getByText(
+    "High-contrast mode may hide the pattern. Its name and size are listed above.",
+  );
+  const colourNote = page.getByText(
+    "High-contrast mode may not show your colour in the illustration. The swatch above keeps it.",
+  );
+
+  for (const stage of ["Measurements", "Cover details", "Pattern", "Preview"]) {
+    await page.getByRole("button", { name: `Continue to ${stage}` }).click();
+  }
+  await expect(previewHeading).toBeVisible();
+  await expect(patternNote).toBeVisible();
+  await expect(colourNote).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Back to Pattern" }).click();
+  await chooseSolidColour(page);
+  await page.getByRole("textbox", { name: "Colour code" }).fill(chosen);
+  await page.getByRole("button", { name: "Continue to Preview" }).click();
+  await expect(previewHeading).toBeVisible();
+  await expect(colourNote).toBeVisible();
+  await expect(patternNote).toHaveCount(0);
+});

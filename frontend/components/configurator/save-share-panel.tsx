@@ -126,7 +126,7 @@ export function SaveSharePanel({
         title="Create a public link"
         titleId="configuration-save-share-heading"
       />
-      <p className="mt-3 max-w-3xl break-words text-body text-text-muted">
+      <p className="mt-3 max-w-reading break-words text-body text-text-muted">
         Get a link to this design. Anyone with the link can view it, and a saved
         design can&apos;t be changed.
       </p>

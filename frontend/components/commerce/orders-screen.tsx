@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 
@@ -14,6 +13,7 @@ import {
   Notice,
   EmptyState,
   TextLink,
+  textLinkClasses,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { AccountApiError } from "@/services/account-api";
@@ -219,7 +219,7 @@ export function OrderCard({
                   href={safeTracking}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex min-h-11 max-w-full items-center rounded-control text-button font-control break-words text-brand underline decoration-1 underline-offset-4 hover:text-brand-hover hover:decoration-2"
+                  className={textLinkClasses}
                 >
                   Track on carrier website
                 </a>
@@ -228,12 +228,12 @@ export function OrderCard({
           ) : null}
         </>
       ) : (
-        <Link
+        <TextLink
           href={{ pathname: "/orders/", query: { order: order.id } }}
-          className="mt-4 inline-flex min-h-11 max-w-full items-center rounded-control text-button font-control break-words text-brand underline decoration-1 underline-offset-4 hover:text-brand-hover hover:decoration-2"
+          className="mt-4"
         >
           View order details and timeline
-        </Link>
+        </TextLink>
       )}
     </Surface>
   );
@@ -303,12 +303,7 @@ export function OrdersScreen({
         <>
           {selected ? <OrderCard order={selected} detail /> : null}
           <div className="flex flex-wrap gap-3">
-            <Link
-              href="/orders/"
-              className="inline-flex min-h-11 max-w-full items-center rounded-control text-button font-control break-words text-brand underline decoration-1 underline-offset-4 hover:text-brand-hover hover:decoration-2"
-            >
-              All orders
-            </Link>
+            <TextLink href="/orders/">All orders</TextLink>
             <Button
               variant="secondary"
               onClick={() => {

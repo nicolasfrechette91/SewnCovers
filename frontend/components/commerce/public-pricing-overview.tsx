@@ -29,7 +29,7 @@ export function PublicPricingOverview() {
           title="How demonstration prices work"
           titleId="public-pricing-heading"
         />
-        <p className="mt-2 max-w-3xl text-body text-text-muted">
+        <p className="mt-2 max-w-reading text-body text-text-muted">
           SewnCovers applies a fictional Canadian-dollar model to a cushion’s
           size, construction, material, and pattern source. These examples
           explain the model without creating a quote, cart, or account record.
@@ -43,7 +43,7 @@ export function PublicPricingOverview() {
       </Surface>
 
       <section aria-labelledby="examples-heading">
-        <div className="max-w-3xl">
+        <div className="max-w-reading">
           <SectionHeader
             title="Illustrative examples"
             titleId="examples-heading"

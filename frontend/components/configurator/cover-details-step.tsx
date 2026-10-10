@@ -66,7 +66,7 @@ function OptionGroup<Id extends string>({
             >
               <input
                 id={optionId}
-                className="cover-option-input mt-0.5 size-5 shrink-0 cursor-pointer accent-brand"
+                className="cover-option-input mt-nudge size-5 shrink-0 cursor-pointer accent-brand"
                 type="radio"
                 name={name}
                 value={option.id}
@@ -115,7 +115,7 @@ export function CoverDetailsStep({
       >
         Choose cover details
       </h1>
-      <p className="mt-2 max-w-3xl text-body text-text-muted">
+      <p className="mt-2 max-w-reading text-body text-text-muted">
         Choose the fabric, fit, opening and edge. You&apos;ll pick a colour or
         pattern next.
       </p>

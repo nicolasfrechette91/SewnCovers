@@ -1,3 +1,4 @@
+import { classNames } from "@/components/ui/class-names";
 import type { CushionShape } from "@/context/configuration";
 
 export function ShapeIllustration({
@@ -7,7 +8,7 @@ export function ShapeIllustration({
   return (
     <svg
       aria-hidden="true"
-      className={`shape-illustration block ${className}`}
+      className={classNames("shape-illustration block", className)}
       viewBox="0 0 192 112"
       preserveAspectRatio="xMidYMid meet"
       focusable="false"

@@ -84,6 +84,16 @@
   --shade-band-side: rgb(48 38 29 / 0.26);
   --shade-crease: rgb(62 49 38 / 0.26);
 
+  /* Cushion preview gradients: cloth tones, then the light and shadow laid over them */
+  --shade-cloth-light: #e8dfd0;
+  --shade-cloth-mid: #d8cbbb;
+  --shade-cloth-dark: #bbae9d;
+  --shade-sheen: #fffaf0;
+  --shade-glint: #ffffff;
+  --shade-penumbra: #594c3e;
+  --shade-umbra: #30271f;
+  --shade-cast: #4b3b2c;
+
   /* Motion */
   --duration-fast: 120ms;
   --duration-base: 180ms;
@@ -170,7 +180,6 @@
   --text-readout: 1.0625rem;
   --text-readout--line-height: 1.3;
 
-  --font-weight-body: 400;
   --font-weight-emphasis: 500;
   --font-weight-control: 600;
   --font-weight-heading: 580;
@@ -211,9 +220,6 @@
   --shadow-raised:
     0 1px 2px rgb(var(--umber-shadow) / 0.08),
     0 10px 24px rgb(var(--umber-shadow) / 0.09);
-  --shadow-overlay:
-    0 8px 18px rgb(var(--umber-shadow) / 0.1),
-    0 24px 60px rgb(var(--umber-shadow) / 0.14);
   --shadow-focus:
     0 0 0 2px var(--color-focus-contrast), 0 0 0 5px var(--color-focus);
   --shadow-selected: inset 0 0 0 2px var(--color-brand);

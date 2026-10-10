@@ -19,10 +19,10 @@ export const sectionTitleClasses =
 export const cardTitleClasses =
   "font-display text-card-title font-heading tracking-heading break-words text-text-primary";
 
-export const subheadClasses =
+const subheadClasses =
   "text-subhead font-control break-words text-text-primary";
 
-export const ledeClasses = "text-lede text-text-muted";
+const ledeClasses = "text-lede text-text-muted";
 
 export type PageWidth = "page" | "content" | "reading";
 
@@ -99,7 +99,7 @@ export function PageHeader({
         {title}
       </h1>
       {lede ? (
-        <p className={classNames("mt-4 max-w-3xl", ledeClasses)}>{lede}</p>
+        <p className={classNames("mt-4 max-w-reading", ledeClasses)}>{lede}</p>
       ) : null}
       {children}
       <span aria-hidden="true" className="ruler mt-component max-w-60" />
@@ -161,7 +161,7 @@ export function SectionHeader({
         className,
       )}
     >
-      <div className="min-w-0 max-w-3xl">
+      <div className="min-w-0 max-w-reading">
         {eyebrow ? <p className={eyebrowClasses}>{eyebrow}</p> : null}
         <Heading
           {...titleProps}

@@ -374,8 +374,9 @@ function PreviewStepContent({
                 ]}
               />
               <p className="mt-3 hidden forced-colors:block">
-                High-contrast mode may hide the pattern. Its name and size are
-                listed above.
+                {selectedPattern?.solidColor
+                  ? "High-contrast mode may not show your colour in the illustration. The swatch above keeps it."
+                  : "High-contrast mode may hide the pattern. Its name and size are listed above."}
               </p>
             </>
           )

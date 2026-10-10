@@ -1,5 +1,6 @@
 import { useId, type CSSProperties } from "react";
 
+import { classNames } from "@/components/ui/class-names";
 import type { CushionShape } from "@/context/configuration";
 
 import {
@@ -89,30 +90,46 @@ export function CushionModel({
           <path d={geometry.outline} />
         </clipPath>
         <linearGradient id={bodyGradientId} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor="#e8dfd0" />
-          <stop offset="0.5" stopColor="#d8cbbb" />
-          <stop offset="1" stopColor="#bbae9d" />
+          <stop offset="0" stopColor="var(--shade-cloth-light)" />
+          <stop offset="0.5" stopColor="var(--shade-cloth-mid)" />
+          <stop offset="1" stopColor="var(--shade-cloth-dark)" />
         </linearGradient>
         <linearGradient id={shadeGradientId} x1="0" x2="0.92" y1="0" y2="1">
-          <stop offset="0" stopColor="#fffaf0" stopOpacity="0.22" />
-          <stop offset="0.48" stopColor="#fffaf0" stopOpacity="0" />
-          <stop offset="0.82" stopColor="#594c3e" stopOpacity="0.14" />
-          <stop offset="1" stopColor="#30271f" stopOpacity="0.25" />
+          <stop offset="0" stopColor="var(--shade-sheen)" stopOpacity="0.22" />
+          <stop offset="0.48" stopColor="var(--shade-sheen)" stopOpacity="0" />
+          <stop
+            offset="0.82"
+            stopColor="var(--shade-penumbra)"
+            stopOpacity="0.14"
+          />
+          <stop offset="1" stopColor="var(--shade-umbra)" stopOpacity="0.25" />
         </linearGradient>
         <radialGradient id={highlightGradientId} cx="48%" cy="42%" r="62%">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.26" />
-          <stop offset="0.55" stopColor="#fff" stopOpacity="0.07" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
+          <stop offset="0" stopColor="var(--shade-glint)" stopOpacity="0.26" />
+          <stop
+            offset="0.55"
+            stopColor="var(--shade-glint)"
+            stopOpacity="0.07"
+          />
+          <stop offset="1" stopColor="var(--shade-glint)" stopOpacity="0" />
         </radialGradient>
         <linearGradient id={foldGradientId} x1="0" x2="1">
-          <stop offset="0" stopColor="#30271f" stopOpacity="0" />
-          <stop offset="0.5" stopColor="#30271f" stopOpacity="0.18" />
-          <stop offset="1" stopColor="#30271f" stopOpacity="0" />
+          <stop offset="0" stopColor="var(--shade-umbra)" stopOpacity="0" />
+          <stop
+            offset="0.5"
+            stopColor="var(--shade-umbra)"
+            stopOpacity="0.18"
+          />
+          <stop offset="1" stopColor="var(--shade-umbra)" stopOpacity="0" />
         </linearGradient>
         <radialGradient id={shadowGradientId}>
-          <stop offset="0" stopColor="#4b3b2c" stopOpacity="0.3" />
-          <stop offset="0.72" stopColor="#4b3b2c" stopOpacity="0.12" />
-          <stop offset="1" stopColor="#4b3b2c" stopOpacity="0" />
+          <stop offset="0" stopColor="var(--shade-cast)" stopOpacity="0.3" />
+          <stop
+            offset="0.72"
+            stopColor="var(--shade-cast)"
+            stopOpacity="0.12"
+          />
+          <stop offset="1" stopColor="var(--shade-cast)" stopOpacity="0" />
         </radialGradient>
       </defs>
 
@@ -144,7 +161,11 @@ export function CushionModel({
           clipPath={`url(#${clipId})`}
         >
           <div
-            className={`${solidColor ? "cushion-preview-solid" : `prototype-pattern ${patternClassName}`} cushion-preview-face cushion-preview-pattern`}
+            className={classNames(
+              solidColor ? "cushion-preview-solid" : "prototype-pattern",
+              !solidColor && patternClassName,
+              "cushion-preview-face cushion-preview-pattern",
+            )}
             style={patternStyle}
           />
         </foreignObject>
@@ -152,7 +173,10 @@ export function CushionModel({
       {geometry.bands.map((band) => (
         <path
           key={band.tone}
-          className={`cushion-preview-band cushion-preview-band-${band.tone}`}
+          className={classNames(
+            "cushion-preview-band",
+            `cushion-preview-band-${band.tone}`,
+          )}
           d={band.d}
           clipPath={`url(#${clipId})`}
         />

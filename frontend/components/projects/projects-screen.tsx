@@ -124,12 +124,12 @@ function ProjectList({ token }: Readonly<{ token: string }>) {
             {project.versionCount === 1 ? "version" : "versions"} · Updated{" "}
             {new Date(project.updatedAt).toLocaleString()}
           </p>
-          <Link
+          <TextLink
             href={{ pathname: "/projects/", query: { project: project.id } }}
-            className="mt-auto pt-4 inline-flex min-h-11 max-w-full items-center rounded-control text-button font-control break-words text-brand underline decoration-1 underline-offset-4 hover:text-brand-hover hover:decoration-2"
+            className="mt-auto pt-4"
           >
             Open project
-          </Link>
+          </TextLink>
         </Surface>
       ))}
     </ul>
@@ -255,12 +255,7 @@ function ProjectView({
 
   return (
     <div className="min-w-0 wrap-anywhere space-y-layout">
-      <Link
-        href="/projects/"
-        className="inline-flex min-h-11 max-w-full items-center rounded-control text-button font-control break-words text-brand underline decoration-1 underline-offset-4 hover:text-brand-hover hover:decoration-2"
-      >
-        ← All projects
-      </Link>
+      <TextLink href="/projects/">← All projects</TextLink>
       <Surface as="section">
         <SectionHeader
           eyebrow={

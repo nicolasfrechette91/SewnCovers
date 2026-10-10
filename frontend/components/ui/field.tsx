@@ -54,7 +54,7 @@ export function Select({
       {...props}
       className={classNames(
         selectWidthClasses[width],
-        "cursor-pointer pr-10",
+        "cursor-pointer pr-12",
         className,
       )}
     />

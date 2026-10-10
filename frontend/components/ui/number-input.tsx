@@ -66,7 +66,7 @@ export function NumberInput({
           className={classNames(
             controlClasses,
             "font-mono tabular-nums",
-            unit ? "pr-14" : null,
+            unit ? "pr-12" : null,
             className,
           )}
         />

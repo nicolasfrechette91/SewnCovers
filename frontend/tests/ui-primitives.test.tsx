@@ -260,6 +260,15 @@ test("Surface tones, elevation and radius map to the design tokens", () => {
       />
       <Surface data-testid="page" tone="page" elevation="flat" padding="none" />
       <Surface data-testid="emphasis" tone="emphasis" elevation="card" />
+      <Surface data-testid="strong" tone="strong" elevation="card" />
+      <Surface
+        data-testid="accent"
+        tone="accent"
+        radius="card"
+        padding="compact"
+        elevation="raised"
+        className="sm:p-5"
+      />
       <Surface data-testid="danger" tone="danger" padding="tight" />
     </>,
   );
@@ -283,6 +292,21 @@ test("Surface tones, elevation and radius map to the design tokens", () => {
   assert.ok(
     emphasis.includes("border-brand") && emphasis.includes("shadow-card"),
   );
+  const strong = tokens(screen.getByTestId("strong"));
+  assert.ok(
+    strong.includes("border-border-strong") && strong.includes("bg-surface"),
+  );
+  const accent = tokens(screen.getByTestId("accent"));
+  for (const token of [
+    "border-accent",
+    "bg-surface",
+    "rounded-card",
+    "p-4",
+    "shadow-raised",
+    "sm:p-5",
+  ]) {
+    assert.ok(accent.includes(token), "accent has " + token);
+  }
   assert.ok(
     tokens(screen.getByTestId("danger")).includes("border-error-border"),
   );

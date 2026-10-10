@@ -60,7 +60,7 @@ export function ReviewScreen({
         >
           SewnCovers configuration summary
         </h1>
-        <p className="mt-3 max-w-3xl break-words text-body text-text-muted">
+        <p className="mt-3 max-w-reading break-words text-body text-text-muted">
           Check the details below, then print, download, save or share your
           design.
         </p>

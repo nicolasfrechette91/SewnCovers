@@ -2,7 +2,8 @@ import type { ComponentPropsWithoutRef } from "react";
 
 import { classNames } from "./class-names";
 
-export type SurfaceTone = "default" | "subtle" | "page" | "emphasis" | "danger";
+export type SurfaceTone =
+  "default" | "subtle" | "page" | "emphasis" | "strong" | "accent" | "danger";
 export type SurfaceElevation = "flat" | "hairline" | "card" | "raised";
 export type SurfacePadding = "card" | "compact" | "tight" | "none";
 export type SurfaceRadius = "panel" | "card";
@@ -12,6 +13,8 @@ const toneClasses: Record<SurfaceTone, string> = {
   subtle: "border border-border bg-surface-subtle",
   page: "border border-border bg-page",
   emphasis: "border border-brand bg-surface",
+  strong: "border border-border-strong bg-surface",
+  accent: "border border-accent bg-surface",
   danger: "border border-error-border bg-surface",
 };
 

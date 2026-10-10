@@ -50,10 +50,10 @@ export function AccountRequired({
       >
         {title}
       </Heading>
-      <p className="mt-2 max-w-3xl break-words text-body text-text-muted">
+      <p className="mt-2 max-w-reading break-words text-body text-text-muted">
         {description}
       </p>
-      <p className="mt-3 max-w-3xl break-words text-supporting text-text-primary">
+      <p className="mt-3 max-w-reading break-words text-supporting text-text-primary">
         {unlocks}
       </p>
       {sessionNotice ? (
@@ -75,7 +75,7 @@ export function AccountRequired({
       {guestAlternative ? (
         <div className="mt-component">
           <StitchDivider />
-          <p className="mt-4 max-w-3xl break-words text-supporting text-text-muted">
+          <p className="mt-4 max-w-reading break-words text-supporting text-text-muted">
             {guestAlternative.description}
           </p>
           <TextLink href={guestAlternative.href} className="mt-1">

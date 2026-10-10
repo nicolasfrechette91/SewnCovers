@@ -33,7 +33,7 @@ const documents = [
     title: "Custom upload and moderation notice",
     body: [
       "Upload only an image you have permission to use. A configured external moderation provider may process it; automated moderation does not guarantee safety or legality, and approval does not establish copyright ownership.",
-      "Private originals are never used as public preview URLs. Approved derivatives use short-lived access. Deleted, expired, rejected, revoked, or unauthorized assets stop rendering in projects and advanced previews.",
+      "Private originals are never used as public preview URLs. Approved derivatives use short-lived access. Deleted, expired, rejected, revoked, or unauthorized assets stop rendering in projects and in the preview.",
       "After verified payment, a protected production derivative copy may be retained with the immutable order even when the account upload is later deleted. This portfolio behaviour requires professional and operational review.",
     ],
   },
@@ -43,7 +43,7 @@ const documents = [
     body: [
       "CAD prices, quotes, cart totals, checkout, tax, shipping, refunds, production, quality control, and fulfilment are fictional sandbox workflows unless a production adapter is explicitly and completely configured.",
       "The server owns amounts, currency, immutable configuration snapshots, webhook state, production specifications, and transition authority. Redirects do not prove payment.",
-      "Approximate previews and production packets do not supply seam allowances, cutting instructions, tolerances, manufacturing accuracy, delivery estimates, or guarantees.",
+      "The illustrative preview and production packets do not supply seam allowances, cutting instructions, tolerances, manufacturing accuracy, delivery estimates, or guarantees.",
     ],
   },
   {
@@ -51,7 +51,7 @@ const documents = [
     title: "Accessibility statement",
     body: [
       "The repository includes semantic form controls, visible focus, keyboard workflows, status announcements, reduced-motion handling, high-contrast (forced colours) treatment for HTML controls, and responsive checks.",
-      "The illustrative 2D cushion preview has an equivalent textual configuration summary, but high-contrast mode may hide pattern colours and motifs. Automated checks do not establish WCAG conformance.",
+      "The illustrative 2D cushion preview has an equivalent textual configuration summary. In high-contrast mode, colour swatches keep the colour you chose, while pattern artwork and the preview illustration may be simplified to outlines in the system colours; the pattern's name and size stay listed as text. Automated checks do not establish WCAG conformance.",
       "Manual screen-reader, browser, touch-device, zoom, and assistive-technology verification remains required before production use.",
     ],
   },
@@ -89,7 +89,7 @@ export default function LegalPage() {
             {documents.map((document, index) => (
               <li key={document.type}>
                 <a
-                  className="flex min-h-11 items-baseline gap-3 rounded-control-small py-2.5 text-supporting font-emphasis text-brand underline-offset-4 transition-colors duration-(--duration-fast) hover:text-brand-hover hover:underline motion-reduce:transition-none"
+                  className="flex min-h-11 items-baseline gap-3 rounded-control-small py-2 text-supporting font-emphasis text-brand underline-offset-4 transition-colors duration-(--duration-fast) hover:text-brand-hover hover:underline motion-reduce:transition-none"
                   href={"#" + document.type}
                 >
                   <span

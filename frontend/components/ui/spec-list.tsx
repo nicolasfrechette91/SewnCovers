@@ -30,10 +30,10 @@ const columnClasses: Record<SpecListColumns, string> = {
   container: "grid-cols-2 @xl:grid-cols-3",
 };
 
-export const specLabelClasses =
+const specLabelClasses =
   "font-mono text-eyebrow uppercase tracking-eyebrow text-text-muted";
 
-export const specValueClasses = "text-body break-words text-text-primary";
+const specValueClasses = "text-body break-words text-text-primary";
 
 export interface SpecListProps extends ComponentPropsWithoutRef<"dl"> {
   columns?: SpecListColumns;

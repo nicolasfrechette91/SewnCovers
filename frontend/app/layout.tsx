@@ -7,6 +7,7 @@ import {
   RouteAwareSiteFooter,
   RouteAwareSiteHeader,
 } from "@/components/layout/route-aware-site-layout";
+import { classNames } from "@/components/ui/class-names";
 import { parsePublicApiOrigin } from "@/config/environment";
 import {
   DEFAULT_DESCRIPTION,
@@ -100,7 +101,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${geist.variable} ${geistMono.variable} h-full antialiased`}
+      className={classNames(
+        fraunces.variable,
+        geist.variable,
+        geistMono.variable,
+        "h-full antialiased",
+      )}
     >
       <head>
         <meta

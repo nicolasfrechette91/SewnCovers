@@ -6,7 +6,13 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { Button, sectionTitleClasses, useDeferredFocus } from "@/components/ui";
+import {
+  Button,
+  sectionTitleClasses,
+  useDeferredFocus,
+  classNames,
+  Surface,
+} from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import {
   isInitialConfiguration,
@@ -188,22 +194,25 @@ export function DraftReplaceConfirmation({
   }, []);
 
   return (
-    <section
+    <Surface
+      as="section"
       aria-labelledby="draft-replace-heading"
-      className="print-hidden mt-layout min-w-0 rounded-panel border border-border-strong bg-surface p-card shadow-card"
+      className="print-hidden mt-layout"
+      elevation="card"
+      tone="strong"
     >
       <Title
         id="draft-replace-heading"
         ref={headingRef}
         tabIndex={-1}
         aria-describedby="draft-replace-description"
-        className={`${sectionTitleClasses} scroll-mt-layout`}
+        className={classNames(sectionTitleClasses, "scroll-mt-layout")}
       >
         Keep your unsaved design?
       </Title>
       <p
         id="draft-replace-description"
-        className="mt-3 max-w-3xl break-words text-body text-text-muted"
+        className="mt-3 max-w-reading break-words text-body text-text-muted"
       >
         {copy.description}
       </p>
@@ -213,7 +222,7 @@ export function DraftReplaceConfirmation({
           {copy.replace}
         </Button>
       </div>
-    </section>
+    </Surface>
   );
 }
 

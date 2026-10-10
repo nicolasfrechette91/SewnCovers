@@ -38,7 +38,7 @@ export default function Home() {
           <div className="min-w-0">
             <h1
               id="landing-title"
-              className="max-w-3xl font-display text-display font-heading tracking-heading text-text-primary"
+              className="max-w-reading font-display text-display font-heading tracking-heading text-text-primary"
             >
               Design a cover that fits the cushion you already have.
             </h1>
@@ -63,7 +63,7 @@ export default function Home() {
               elevation="flat"
               padding="none"
               radius="card"
-              className="cutting-mat flex min-h-80 items-center justify-center overflow-hidden px-card py-10"
+              className="cutting-mat flex min-h-80 items-center justify-center overflow-hidden px-card py-8"
             >
               <span className="landing-measured">
                 <span className="landing-cushion landing-pattern-botanical block w-full" />
@@ -142,7 +142,7 @@ export default function Home() {
         <div className="mx-auto w-full max-w-page min-w-0 px-gutter">
           <aside
             aria-labelledby="prototype-status-title"
-            className={noticeClasses("prototype", "max-w-3xl")}
+            className={noticeClasses("prototype", "max-w-reading")}
           >
             <h2
               id="prototype-status-title"

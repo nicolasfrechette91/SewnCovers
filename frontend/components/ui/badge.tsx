@@ -24,7 +24,7 @@ const solidTones: Record<BadgeTone, string> = {
   danger: "border-error-text bg-error-text text-on-brand",
 };
 
-export function badgeClasses(
+function badgeClasses(
   tone: BadgeTone = "neutral",
   variant: BadgeVariant = "outline",
   className?: string | false | null,

@@ -41,7 +41,7 @@ export function ErrorMessage({
     >
       <span
         aria-hidden="true"
-        className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-pill border-[1.5px] border-current font-mono text-label font-control"
+        className="mt-nudge flex size-5 shrink-0 items-center justify-center rounded-pill border-[1.5px] border-current font-mono text-label font-control"
       >
         !
       </span>
