@@ -115,6 +115,9 @@ export function YourPatterns() {
   const [phase, setPhase] = useState<"idle" | "loading" | "uploading">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Kept apart from `error`: a list that arrives late must not clear a
+  // message about the chosen file or an action.
+  const [listError, setListError] = useState<string | null>(null);
   const [rightsAcknowledged, setRightsAcknowledged] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
   const uploadActionRef = useRef<HTMLButtonElement>(null);
@@ -139,9 +142,9 @@ export function YourPatterns() {
     setPhase("loading");
     try {
       setUploads(await accountApi.listUploads(auth.token));
-      setError(null);
+      setListError(null);
     } catch (caught) {
-      setError(
+      setListError(
         caught instanceof AccountApiError
           ? caught.message
           : "Your patterns could not be loaded.",
@@ -568,6 +571,9 @@ export function YourPatterns() {
           ) : null}
           {phase === "loading" ? (
             <LoadingState className="mt-4" label="Loading your patterns…" />
+          ) : null}
+          {listError ? (
+            <ErrorMessage className="mt-4">{listError}</ErrorMessage>
           ) : null}
           {error ? <ErrorMessage className="mt-4">{error}</ErrorMessage> : null}
           {message ? (

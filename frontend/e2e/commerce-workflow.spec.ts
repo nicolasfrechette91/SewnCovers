@@ -1,5 +1,7 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+import { expectFocusOn } from "./support/keyboard";
+
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
@@ -468,17 +470,27 @@ test("sandbox quote-to-delivery workflow stays authoritative and role protected"
     page.getByRole("heading", { name: "Price a saved project version" }),
   ).toBeVisible();
   await noOverflow(page);
+  // Each action ends by moving focus to its status message, so the next
+  // press waits for that.
   await page.getByRole("button", { name: "Preview price" }).press("Enter");
   await expect(
     page.getByRole("region", { name: /Estimated subtotal: \$104.50 CAD/ }),
   ).toBeVisible();
+  await expectFocusOn(page, "Fictional estimate refreshed.");
   await page.getByRole("button", { name: "Create quote" }).press("Enter");
+  await expectFocusOn(page, /^Quote created; valid until /);
   await page.getByRole("button", { name: "Add to cart" }).press("Enter");
+  await expectFocusOn(page, "Quote added to your demonstration cart.");
   await page.getByRole("button", { name: "Menu" }).press("Enter");
   await page.getByRole("link", { name: "Cart" }).press("Enter");
+  // The pricing page has a Quantity field too; wait until it is gone.
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Cart", exact: true }),
+  ).toBeVisible();
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.getByRole("spinbutton", { name: "Quantity" }).fill("2");
   await page.getByRole("button", { name: "Update" }).press("Enter");
+  await expectFocusOn(page, "Quantity changed and a new quote was created.");
   await expect(page.getByText("$209.00 CAD").first()).toBeVisible();
   await page
     .getByRole("button", { name: "Continue to hosted sandbox checkout" })

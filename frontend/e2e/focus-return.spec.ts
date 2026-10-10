@@ -9,7 +9,11 @@ import {
   id,
   work,
 } from "./support/api-fixtures";
-import { chooseRadio } from "./support/keyboard";
+import {
+  chooseRadio,
+  expectStageFocused,
+  type ConfiguratorStage,
+} from "./support/keyboard";
 
 // When an inline question, sign-in panel or menu closes (Escape, its cancel
 // button, or its confirm button), keyboard focus goes to the control that
@@ -25,8 +29,9 @@ async function expectNotOnBody(page: Page) {
   ).toBe(false);
 }
 
-async function openStage(page: Page, stage: string) {
+async function openStage(page: Page, stage: ConfiguratorStage) {
   await page.getByRole("button", { name: `Continue to ${stage}` }).click();
+  await expectStageFocused(page, stage);
 }
 
 test("the shape question returns focus to the shape: cancel, Escape and confirm", async ({
@@ -147,7 +152,7 @@ test("sign-in panels in the configurator return focus to what opened them", asyn
   await enableUploads(page);
   await page.goto(`${base}/configure/?design=${publicId}`);
   await expect(page.getByText("Shared design restored.")).toBeVisible();
-  for (const stage of ["Measurements", "Cover details", "Pattern"])
+  for (const stage of ["Measurements", "Cover details", "Pattern"] as const)
     await openStage(page, stage);
 
   const upload = page.getByRole("button", { name: "Upload your own pattern" });
@@ -161,7 +166,8 @@ test("sign-in panels in the configurator return focus to what opened them", asyn
   await expect(upload).toBeFocused();
 
   await chooseRadio(page, "Terrace wave");
-  for (const stage of ["Preview", "Review"]) await openStage(page, stage);
+  for (const stage of ["Preview", "Review"] as const)
+    await openStage(page, stage);
 
   for (const opener of ["Save to My projects", "Save and add to cart"]) {
     const button = page.getByRole("button", { name: opener, exact: true });
@@ -183,7 +189,7 @@ test("renaming and deleting an uploaded pattern return focus: Escape, cancel and
   await enableUploads(page);
   await page.goto(`${base}/configure/?design=${publicId}`);
   await expect(page.getByText("Shared design restored.")).toBeVisible();
-  for (const stage of ["Measurements", "Cover details", "Pattern"])
+  for (const stage of ["Measurements", "Cover details", "Pattern"] as const)
     await openStage(page, stage);
   await expect(page.getByText("Garden repeat", { exact: true })).toBeVisible();
 

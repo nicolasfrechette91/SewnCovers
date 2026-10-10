@@ -1,5 +1,7 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
+import { expectFocusOn, expectStageFocused } from "./support/keyboard";
+
 const appOrigin = "http://127.0.0.1:3100";
 const apiOrigin = "http://api.sewncovers.test";
 const basePath =
@@ -344,18 +346,25 @@ test("account workspace preserves immutable history and revocable sharing", asyn
   await page
     .getByRole("button", { name: "Continue to Measurements" })
     .press("Enter");
+  await expectStageFocused(page, "Measurements");
   await expect(page.getByRole("textbox", { name: "Width (cm)" })).toHaveValue(
     "73.25",
   );
-  for (const nextStage of ["Cover details", "Pattern", "Preview", "Review"]) {
+  for (const nextStage of [
+    "Cover details",
+    "Pattern",
+    "Preview",
+    "Review",
+  ] as const) {
     await page
       .getByRole("button", { name: `Continue to ${nextStage}` })
       .press("Enter");
+    await expectStageFocused(page, nextStage);
   }
   await page
     .getByRole("button", { name: "Save as new version" })
     .press("Enter");
-  await expect(page.getByText(/Version 3 saved/)).toBeVisible();
+  await expectFocusOn(page, /^Version 3 saved/);
   expect(capturedVersion).toEqual({
     configuration: { ...configuration, patternScale: 1 },
   });

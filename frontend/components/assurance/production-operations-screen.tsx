@@ -101,17 +101,19 @@ export function ProductionOperationsScreen() {
   ) => {
     setMessage("");
     // A step button (Approve work, Start production, ...) is replaced by the
-    // next step's button once the state changes. If the one that was pressed
-    // is gone, focus goes to the work heading, which names what changed.
+    // next step's button once the state changes, and its focus is lost with
+    // it. Then focus goes to the work heading, which names what changed.
+    // Focus that is still on a control stays there: the pressed one, or one
+    // the visitor moved to while the request ran.
     const pressed = document.activeElement;
-    const focusHeadingIfPressedIsGone = () =>
-      focusLater(() =>
-        pressed instanceof HTMLElement &&
-        pressed.isConnected &&
-        document.activeElement === pressed
-          ? null
-          : detailHeading.current,
-      );
+    const hadFocus = pressed !== null && pressed !== document.body;
+    const focusHeadingIfFocusIsLost = () =>
+      focusLater(() => {
+        const focused = document.activeElement;
+        const lost =
+          focused === null || focused === document.body || !focused.isConnected;
+        return hadFocus && lost ? detailHeading.current : null;
+      });
     try {
       const work = await action();
       setSelected(work);
@@ -119,7 +121,7 @@ export function ProductionOperationsScreen() {
         current.map((item) => (item.id === work.id ? work : item)),
       );
       setMessage(success);
-      focusHeadingIfPressedIsGone();
+      focusHeadingIfFocusIsLost();
     } catch (error) {
       // Only a revision conflict (409) is fixed by reloading; permission,
       // rate-limit, and availability messages already say what to do.
@@ -131,7 +133,7 @@ export function ProductionOperationsScreen() {
             : "The production action failed.",
       );
       await load();
-      focusHeadingIfPressedIsGone();
+      focusHeadingIfFocusIsLost();
     }
   };
 

@@ -227,18 +227,25 @@ test("administrator production, packet, and readiness workflow is isolated", asy
   await expect(
     page.getByRole("heading", { name: `Work ${workId}` }),
   ).toBeFocused();
-  await page.getByRole("button", { name: "Complete" }).press("Enter");
+  // Each step waits for the one before it to finish, as an administrator
+  // would: the API rejects a step sent with an outdated revision.
+  const step = async (button: string, outcome: string) => {
+    await page.getByRole("button", { name: button }).press("Enter");
+    await expect(page.getByText(outcome, { exact: true })).toBeVisible();
+  };
+  await step("Complete", "Checklist specification_review updated.");
   await page
     .getByRole("textbox", { name: "Structured reason" })
     .fill("Fictional manual review");
-  await page.getByRole("button", { name: "Add issue" }).press("Enter");
-  await page.getByRole("button", { name: "Approve work" }).press("Enter");
-  await page.getByRole("button", { name: "Start production" }).press("Enter");
-  await page
-    .getByRole("button", { name: "Start quality check" })
-    .press("Enter");
-  await page.getByRole("button", { name: "Pass quality" }).press("Enter");
-  await page.getByRole("button", { name: "Fulfilment handoff" }).press("Enter");
+  await step(
+    "Add issue",
+    "Manual-review issue created and retained in history.",
+  );
+  await step("Approve work", "Work approved.");
+  await step("Start production", "Production started.");
+  await step("Start quality check", "Moved to quality check.");
+  await step("Pass quality", "Quality control passed.");
+  await step("Fulfilment handoff", "Handed off to fulfilment.");
   await page
     .getByRole("button", { name: "Download safe packet" })
     .press("Enter");

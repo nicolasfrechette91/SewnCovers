@@ -44,6 +44,7 @@ import {
   writeDraft,
 } from "../services/configurator-draft";
 import { resetUploadAvailability } from "../services/upload-availability";
+import { assertFocused } from "./focus-assertions";
 
 const configuration: CreateDesignRequest = {
   shape: "tapered",
@@ -250,7 +251,7 @@ test("associates local authentication errors and focuses the first invalid field
   await screen.findByRole("heading", { name: "Sign in" });
   fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
   const email = screen.getByLabelText("Email") as HTMLInputElement;
-  assert.equal(document.activeElement, email);
+  assertFocused(email);
   assert.equal(email.getAttribute("aria-invalid"), "true");
   assert.equal(email.getAttribute("aria-describedby"), "login-email-error");
   assert.ok(screen.getByText("Enter your email address."));
@@ -333,7 +334,7 @@ test("rejects missing registration terms before making an API request", async ()
     const terms = screen.getByRole("checkbox", {
       name: /account terms version 1/i,
     });
-    assert.equal(document.activeElement, terms);
+    assertFocused(terms);
     assert.equal(
       terms.getAttribute("aria-describedby"),
       "register-terms-error",
@@ -469,7 +470,7 @@ test("offers private saving to guests as an optional inline step", async () => {
   const cartHeading = await screen.findByRole("heading", {
     name: "Sign in to add this design to your cart",
   });
-  await waitFor(() => assert.equal(document.activeElement, cartHeading));
+  await waitFor(() => assertFocused(cartHeading));
   assert.equal(screen.queryByText("Enter a project name."), null);
   assert.equal(
     JSON.parse(
@@ -482,7 +483,7 @@ test("offers private saving to guests as an optional inline step", async () => {
   const cart = await screen.findByRole("button", {
     name: "Save and add to cart",
   });
-  await waitFor(() => assert.equal(document.activeElement, cart));
+  await waitFor(() => assertFocused(cart));
 
   // An emptied name falls back to the suggestion instead of stopping.
   fireEvent.change(screen.getByLabelText("Project name"), {
@@ -492,7 +493,7 @@ test("offers private saving to guests as an optional inline step", async () => {
   const heading = await screen.findByRole("heading", {
     name: "Sign in to save this design",
   });
-  await waitFor(() => assert.equal(document.activeElement, heading));
+  await waitFor(() => assertFocused(heading));
   assert.ok(screen.getByText(/Projects are kept in your account/));
   assert.equal(
     JSON.parse(
@@ -515,7 +516,7 @@ test("offers private saving to guests as an optional inline step", async () => {
   const save = await screen.findByRole("button", {
     name: "Save to My projects",
   });
-  await waitFor(() => assert.equal(document.activeElement, save));
+  await waitFor(() => assertFocused(save));
   assert.equal(
     window.sessionStorage.getItem("sewncovers.pending-account-action"),
     null,
@@ -531,9 +532,7 @@ test("still asks for a name when there is nothing to suggest", async () => {
   await screen.findByText(/asked to sign in or create an account next/);
   fireEvent.click(screen.getByRole("button", { name: "Save to My projects" }));
   assert.ok(screen.getByText("Enter a project name."));
-  await waitFor(() =>
-    assert.equal(document.activeElement, screen.getByLabelText("Project name")),
-  );
+  await waitFor(() => assertFocused(screen.getByLabelText("Project name")));
 });
 
 test("signs in at save, saves the design once, and links the draft to the project", async () => {
@@ -608,7 +607,7 @@ test("signs in at save, saves the design once, and links the draft to the projec
     const status = await screen.findByText(
       "Private project created with version 1.",
     );
-    await waitFor(() => assert.equal(document.activeElement, status));
+    await waitFor(() => assertFocused(status));
     assert.equal(projectPosts, 1);
     assert.deepEqual(created, {
       name: "Patio bench",
@@ -801,7 +800,7 @@ test("offers private custom patterns to guests as an optional inline step", asyn
     const reopened = await screen.findByRole("button", {
       name: "Upload your own pattern",
     });
-    await waitFor(() => assert.equal(document.activeElement, reopened));
+    await waitFor(() => assertFocused(reopened));
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -1334,6 +1333,103 @@ test("revokes a temporary upload URL when image decoding fails", async () => {
     });
     await screen.findByText("The browser could not preview this image.");
     assert.deepEqual(revoked, ["blob:failed-pattern"]);
+  } finally {
+    cleanup();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "Image", {
+      configurable: true,
+      value: originalImage,
+    });
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: originalCreate,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: originalRevoke,
+    });
+  }
+});
+
+test("a pattern list that answers late keeps the chosen file's error", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalImage = globalThis.Image;
+  const originalCreate = URL.createObjectURL;
+  const originalRevoke = URL.revokeObjectURL;
+  let answerList!: () => void;
+  const listAnswered = new Promise<void>((resolve) => {
+    answerList = resolve;
+  });
+  class FailedPreviewImage {
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    set src(_value: string) {
+      this.onerror?.();
+    }
+  }
+  Object.defineProperty(globalThis, "Image", {
+    configurable: true,
+    value: FailedPreviewImage,
+  });
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: () => "blob:late-list-pattern",
+  });
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: () => undefined,
+  });
+  globalThis.fetch = withUploadAvailability(true, async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/login"))
+      return json({
+        account: {
+          email: "preview@example.com",
+          createdAt: "2026-08-18T00:00:00Z",
+          role: "customer",
+        },
+        token: "Q".repeat(43),
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+      });
+    if (url.endsWith("/uploads")) {
+      await listAnswered;
+      return json([]);
+    }
+    throw new Error(`Unexpected request GET ${url}`);
+  });
+  try {
+    render(
+      <AuthProvider>
+        <SignInForTest>
+          <ConfigurationProvider>
+            <YourPatterns />
+          </ConfigurationProvider>
+        </SignInForTest>
+      </AuthProvider>,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Enter test account" }),
+    );
+    const input = (await screen.findByLabelText(
+      "Choose a pattern image",
+    )) as HTMLInputElement;
+    await screen.findByText("Loading your patterns…");
+    await act(async () => {
+      fireEvent.change(input, {
+        target: {
+          files: [
+            new File([new Uint8Array([1])], "broken.png", {
+              type: "image/png",
+            }),
+          ],
+        },
+      });
+    });
+    await screen.findByText("The browser could not preview this image.");
+
+    await act(async () => answerList());
+    await screen.findByText("No custom patterns yet.");
+    assert.ok(screen.getByText("The browser could not preview this image."));
   } finally {
     cleanup();
     globalThis.fetch = originalFetch;

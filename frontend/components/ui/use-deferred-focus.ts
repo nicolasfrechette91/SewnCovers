@@ -11,17 +11,23 @@ type FocusTarget = () => HTMLElement | null | undefined;
  * it. Nothing depends on animation-frame timing.
  */
 export function useDeferredFocus(): (target: FocusTarget) => void {
-  const queued = useRef<FocusTarget | null>(null);
+  const queued = useRef<{ request: number; target: FocusTarget } | null>(null);
+  const requests = useRef(0);
   const [request, setRequest] = useState(0);
 
   useEffect(() => {
-    const target = queued.current;
+    // Only the render that carries the request may take it. An earlier
+    // render's effects can still be waiting when a request comes in (a press
+    // right after mount), before the element to focus exists.
+    const pending = queued.current;
+    if (pending === null || pending.request !== request) return;
     queued.current = null;
-    target?.()?.focus();
+    pending.target()?.focus();
   }, [request]);
 
   return useCallback((target: FocusTarget) => {
-    queued.current = target;
-    setRequest((count) => count + 1);
+    requests.current += 1;
+    queued.current = { request: requests.current, target };
+    setRequest(requests.current);
   }, []);
 }

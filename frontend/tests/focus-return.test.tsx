@@ -3,6 +3,7 @@ import { afterEach, test } from "node:test";
 
 import React, { useEffect } from "react";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -24,6 +25,7 @@ import {
 import { storeSessionToken } from "../services/account-api";
 import { reloadDraftFromStorage } from "../services/configurator-draft";
 import { resetUploadAvailability } from "../services/upload-availability";
+import { assertFocused } from "./focus-assertions";
 
 // When an inline question closes (Escape, its cancel button or its confirm
 // button) the control that was pressed is gone. Focus must land on the control
@@ -88,12 +90,9 @@ test("the shape question returns focus to the chosen shape: cancel, Escape and c
     screen.getByRole("heading", { name: "Use the same width and height?" });
 
   fireEvent.click(round());
-  assert.equal(
-    active(),
-    screen.getByRole("button", { name: "Use the width for both" }),
-  );
+  assertFocused(screen.getByRole("button", { name: "Use the width for both" }));
   fireEvent.click(screen.getByRole("button", { name: "Keep current shape" }));
-  assert.equal(active(), round());
+  assertFocused(round());
   assert.equal(round().checked, false);
 
   fireEvent.click(round());
@@ -102,13 +101,13 @@ test("the shape question returns focus to the chosen shape: cancel, Escape and c
     screen.queryByRole("heading", { name: "Use the same width and height?" }),
     null,
   );
-  assert.equal(active(), round());
+  assertFocused(round());
 
   fireEvent.click(round());
   fireEvent.click(
     screen.getByRole("button", { name: "Use the width for both" }),
   );
-  assert.equal(active(), round());
+  assertFocused(round());
   assert.equal(round().checked, true);
 });
 
@@ -129,17 +128,14 @@ test("the start-again question returns focus: Escape, cancel and confirm", () =>
     screen.getByRole("button", { name: "Start a new design" });
 
   fireEvent.click(startNew());
-  assert.equal(
-    active(),
-    screen.getByRole("button", { name: "Keep designing" }),
-  );
+  assertFocused(screen.getByRole("button", { name: "Keep designing" }));
   fireEvent.keyDown(active()!, { key: "Escape" });
-  assert.equal(active(), startNew());
+  assertFocused(startNew());
   assert.equal(startedOver, 0);
 
   fireEvent.click(startNew());
   fireEvent.click(screen.getByRole("button", { name: "Keep designing" }));
-  assert.equal(active(), startNew());
+  assertFocused(startNew());
 
   fireEvent.click(startNew());
   fireEvent.click(
@@ -197,17 +193,17 @@ test("account deletion returns focus to its button on Escape and Cancel", async 
     const passphrase = screen.getByLabelText(
       "Re-enter your passphrase to confirm",
     );
-    assert.equal(active(), passphrase);
+    assertFocused(passphrase);
     fireEvent.keyDown(passphrase, { key: "Escape" });
     assert.equal(
       screen.queryByLabelText("Re-enter your passphrase to confirm"),
       null,
     );
-    assert.equal(active(), review());
+    assertFocused(review());
 
     fireEvent.click(review());
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    assert.equal(active(), review());
+    assertFocused(review());
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -304,17 +300,17 @@ test("renaming and deleting an uploaded pattern return focus: Escape, cancel and
 
     fireEvent.click(rename());
     const label = screen.getByRole("textbox", { name: "New pattern label" });
-    assert.equal(active(), label);
+    assertFocused(label);
     fireEvent.keyDown(label, { key: "Escape" });
     assert.equal(
       screen.queryByRole("textbox", { name: "New pattern label" }),
       null,
     );
-    assert.equal(active(), rename());
+    assertFocused(rename());
 
     fireEvent.click(rename());
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    assert.equal(active(), rename());
+    assertFocused(rename());
 
     fireEvent.click(rename());
     fireEvent.change(
@@ -329,17 +325,17 @@ test("renaming and deleting an uploaded pattern return focus: Escape, cancel and
 
     fireEvent.click(remove());
     const cancel = screen.getByRole("button", { name: "Cancel" });
-    assert.equal(active(), cancel);
+    assertFocused(cancel);
     assert.match(
       screen.getByRole("group").textContent ?? "",
       /referenced by 2 saved versions/,
     );
     fireEvent.keyDown(cancel, { key: "Escape" });
-    assert.equal(active(), remove());
+    assertFocused(remove());
 
     fireEvent.click(remove());
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    assert.equal(active(), remove());
+    assertFocused(remove());
 
     fireEvent.click(remove());
     fireEvent.click(screen.getByRole("button", { name: "Delete pattern" }));
@@ -431,7 +427,7 @@ for (const route of [
       fireEvent.click(pressed);
 
       const heading = await screen.findByRole("heading", { name: "Sign in" });
-      await waitFor(() => assert.equal(active(), heading));
+      await waitFor(() => assertFocused(heading));
       assert.notEqual(active(), document.body);
     } finally {
       globalThis.fetch = originalFetch;
@@ -439,38 +435,47 @@ for (const route of [
   });
 }
 
-test("a work step button that is replaced hands focus to the work heading", async () => {
-  const work = {
-    id: "W".repeat(22),
-    orderReference: "SC-DEMO-WORK0001",
-    lineIndex: 0,
-    state: "review",
-    qualityState: "pending",
-    revision: 1,
-    specification: { shape: "box" },
-    checklist: [{ itemKey: "specification_review", status: "pending" }],
-    issues: [],
-    history: [
-      {
-        action: "created",
-        toState: "review",
-        createdAt: "2026-10-01T00:00:00Z",
-      },
-    ],
-    demonstration: true,
-  };
-  const originalFetch = globalThis.fetch;
+const work = {
+  id: "W".repeat(22),
+  orderReference: "SC-DEMO-WORK0001",
+  lineIndex: 0,
+  state: "review",
+  qualityState: "pending",
+  revision: 1,
+  specification: { shape: "box" },
+  checklist: [{ itemKey: "specification_review", status: "pending" }],
+  issues: [],
+  history: [
+    {
+      action: "created",
+      toState: "review",
+      createdAt: "2026-10-01T00:00:00Z",
+    },
+  ],
+  demonstration: true,
+};
+
+// The production queue holds `work`; approving it answers once `answered`
+// settles.
+function productionFetch(answered: Promise<void> = Promise.resolve()) {
   const account = accountFetch("administrator");
-  globalThis.fetch = async (input, init) => {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input));
     const method = init?.method ?? "GET";
     if (url.pathname === "/admin/production-work" && method === "GET") {
       return json({ items: [work], page: 1, pageSize: 20, total: 1 });
     }
-    if (url.pathname.endsWith("/transition"))
+    if (url.pathname.endsWith("/transition")) {
+      await answered;
       return json({ ...work, state: "approved", revision: 2 });
+    }
     return account(input, init);
   };
+}
+
+test("a work step button that is replaced hands focus to the work heading", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = productionFetch();
   storeSessionToken("A".repeat(43));
   try {
     render(
@@ -487,13 +492,52 @@ test("a work step button that is replaced hands focus to the work heading", asyn
 
     const approve = screen.getByRole("button", { name: "Approve work" });
     approve.focus();
-    assert.equal(active(), approve);
+    assertFocused(approve);
     fireEvent.click(approve);
 
     await screen.findByRole("button", { name: "Start production" });
     assert.equal(screen.queryByRole("button", { name: "Approve work" }), null);
-    await waitFor(() => assert.equal(active(), heading));
+    await waitFor(() => assertFocused(heading));
     assert.notEqual(active(), document.body);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a work step leaves focus where the visitor moved it while the step ran", async () => {
+  const originalFetch = globalThis.fetch;
+  let answer!: () => void;
+  globalThis.fetch = productionFetch(
+    new Promise<void>((resolve) => {
+      answer = resolve;
+    }),
+  );
+  storeSessionToken("A".repeat(43));
+  try {
+    render(
+      <AuthProvider>
+        <ProductionOperationsScreen />
+      </AuthProvider>,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: /SC-DEMO-WORK0001/ }),
+    );
+    await screen.findByRole("heading", { name: `Work ${work.id}` });
+
+    const approve = screen.getByRole("button", { name: "Approve work" });
+    approve.focus();
+    fireEvent.click(approve);
+    const download = screen.getByRole("button", {
+      name: "Download safe packet",
+    });
+    download.focus();
+    answer();
+
+    await screen.findByRole("button", { name: "Start production" });
+    // React runs the step's effects in a setImmediate task queued before this
+    // one, so focus is final once it resolves.
+    await act(() => new Promise((resolve) => setImmediate(resolve)));
+    assertFocused(download);
   } finally {
     globalThis.fetch = originalFetch;
   }

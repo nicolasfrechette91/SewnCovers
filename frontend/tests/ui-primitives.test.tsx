@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
-import { createRef } from "react";
+import { createRef, useLayoutEffect, useRef, useState } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 
 import {
@@ -19,7 +19,9 @@ import {
   surfaceClasses,
   Textarea,
   TextInput,
+  useDeferredFocus,
 } from "../components/ui";
+import { assertFocused } from "./focus-assertions";
 
 afterEach(() => {
   cleanup();
@@ -682,4 +684,24 @@ test("Checkbox generates an id when none is given", () => {
   render(<Checkbox label="Remember me" />);
   const box = screen.getByRole("checkbox", { name: "Remember me" });
   assert.ok(box.id.length > 0);
+});
+
+// useDeferredFocus -----------------------------------------------------------
+
+test("useDeferredFocus waits for the render it asked for, even right after mount", () => {
+  // Asks before its own first effects have run, for an element that only
+  // the next render adds: what a press right after a form appears does.
+  function OpensAtOnce() {
+    const focusLater = useDeferredFocus();
+    const target = useRef<HTMLButtonElement>(null);
+    const [open, setOpen] = useState(false);
+    useLayoutEffect(() => {
+      setOpen(true);
+      focusLater(() => target.current);
+    }, [focusLater]);
+    return open ? <button ref={target}>Opened</button> : null;
+  }
+
+  render(<OpensAtOnce />);
+  assertFocused(screen.getByRole("button", { name: "Opened" }));
 });

@@ -19,6 +19,7 @@ import {
 } from "../components/layout";
 import { AuthProvider } from "../context/auth";
 import { storeSessionToken } from "../services/account-api";
+import { assertFocused } from "./focus-assertions";
 
 // Mirrors app/layout.tsx.
 const primaryItems = [
@@ -138,7 +139,7 @@ test("opens and closes the mobile disclosure with state and focus restoration", 
   screen.getByRole("link", { name: "Pricing" }).focus();
   fireEvent.keyDown(navigation, { key: "Escape" });
   assert.equal(button.getAttribute("aria-expanded"), "false");
-  assert.equal(document.activeElement, button);
+  assertFocused(button);
 
   fireEvent.click(button);
   view.rerender(header("/projects/"));

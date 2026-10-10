@@ -43,6 +43,7 @@ import type {
 } from "../services/api-client";
 import type { PatternCatalogueState } from "../services/pattern-catalogue";
 import { resetUploadAvailability } from "../services/upload-availability";
+import { assertFocused } from "./focus-assertions";
 
 const originalFetch = globalThis.fetch;
 
@@ -736,7 +737,7 @@ test("clears all discovery criteria without clearing selection", () => {
   );
 
   assert.equal(search.value, "");
-  assert.equal(document.activeElement, search);
+  assertFocused(search);
   assert.equal(container.querySelectorAll(".pattern-card-input").length, 16);
   assert.equal(screen.getByTestId("current-pattern").textContent, "fern-trail");
   assert.deepEqual(filterChanges, []);
