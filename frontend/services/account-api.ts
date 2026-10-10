@@ -1,5 +1,13 @@
 import { publicEnvironment } from "../config/environment";
 import type { CreateDesignRequest } from "./api-client";
+import {
+  retryAfterSeconds,
+  send,
+  TransportError,
+  type HttpMethod,
+  type HttpRequest,
+  type HttpResponse,
+} from "./http";
 
 export type ProjectPatternChoice =
   | { readonly kind: "built-in"; readonly patternId: string }
@@ -155,14 +163,6 @@ export class AccountApiError extends Error {
     this.retryAfterSeconds = details.retryAfterSeconds;
     this.requestId = details.requestId;
   }
-}
-
-/** Parse a delay-seconds Retry-After header; dates and junk are ignored. */
-export function retryAfterSeconds(response: Response): number | undefined {
-  const value = response.headers.get("Retry-After")?.trim() ?? "";
-  if (!/^\d{1,6}$/.test(value)) return undefined;
-  const seconds = Number(value);
-  return seconds > 0 ? seconds : undefined;
 }
 
 /** Describe a wait for people, rounding up as the API's own messages do. */
@@ -349,7 +349,7 @@ function isUploadOperation(value: unknown): value is UploadOperation {
   );
 }
 
-type Parser<T> = (value: unknown) => value is T;
+export type Parser<T> = (value: unknown) => value is T;
 
 // Browsers that block site storage throw on access; treat that as no session.
 function tokenStorage(): Storage | null {
@@ -391,104 +391,129 @@ export function removeSessionToken(): void {
   clearStoredToken();
 }
 
-async function request<T>(
-  path: string,
-  options: {
-    readonly method?: "DELETE" | "GET" | "PATCH" | "POST";
-    readonly body?: unknown;
-    readonly token?: string | null;
-    readonly parser?: Parser<T>;
-    readonly empty?: boolean;
-  } = {},
-): Promise<T> {
-  if (!publicEnvironment.apiUrl) {
-    throw new AccountApiError("The public API URL is not configured.");
+/** Wording for failures that carry no message from the server. */
+export interface FailureWording {
+  readonly network: string;
+  readonly timeout: string;
+  readonly unreadable: string;
+  readonly malformed: string;
+}
+
+const ACCOUNT_WORDING: FailureWording = {
+  network: "The service could not be reached. Try again.",
+  timeout: "The request timed out. Try again.",
+  unreadable: "The API returned an unreadable response.",
+  malformed: "The API response did not match its documented format.",
+};
+
+export interface AccountRequestOptions<T> {
+  readonly method?: HttpMethod;
+  readonly query?: HttpRequest["query"];
+  readonly body?: unknown;
+  readonly token?: string | null;
+  readonly parser?: Parser<T>;
+  /** The response has no body worth checking (sign-out, revoke, delete). */
+  readonly empty?: boolean;
+  readonly cache?: RequestCache;
+  readonly signal?: AbortSignal;
+  /** Defaults to the account client's wording. */
+  readonly wording?: FailureWording;
+}
+
+function transportFailure(
+  error: TransportError,
+  wording: FailureWording,
+): AccountApiError {
+  switch (error.kind) {
+    case "configuration":
+      return new AccountApiError("The public API URL is not configured.");
+    case "aborted":
+      // Only a caller that cancelled sees this, and it never shows it.
+      return new AccountApiError("The request was cancelled.", 0, "aborted");
+    case "timeout":
+      return new AccountApiError(wording.timeout, 0, "timeout");
+    case "network":
+      return new AccountApiError(wording.network, 0, "network_error");
   }
-  const controller = new AbortController();
-  const timeout = globalThis.setTimeout(() => controller.abort(), 20_000);
+}
+
+/**
+ * The request path shared by the account, commerce and assurance clients.
+ * A failure becomes an `AccountApiError` that carries the server's own
+ * message (the API writes them for people) or the client's wording. Nothing
+ * is retried: these requests include sign-in, checkout and uploads.
+ */
+export async function accountRequest<T>(
+  path: string,
+  options: AccountRequestOptions<T> = {},
+): Promise<T> {
+  const wording = options.wording ?? ACCOUNT_WORDING;
+  let response: HttpResponse;
   try {
-    const headers: Record<string, string> = {};
-    if (options.body !== undefined)
-      headers["Content-Type"] = "application/json";
-    if (options.token) headers.Authorization = `Bearer ${options.token}`;
-    const response = await fetch(
-      `${publicEnvironment.apiUrl}/${path.replace(/^\/+/, "")}`,
+    response = await send({
+      path,
+      method: options.method,
+      query: options.query,
+      body: options.body,
+      token: options.token,
+      cache: options.cache,
+      signal: options.signal,
+    });
+  } catch (error) {
+    if (error instanceof TransportError) throw transportFailure(error, wording);
+    throw error;
+  }
+  if (response.unreadable) {
+    throw new AccountApiError(
+      wording.unreadable,
+      response.status,
+      "unreadable_response",
+    );
+  }
+  const { body } = response;
+  const error =
+    !response.ok &&
+    isRecord(body) &&
+    Array.isArray(body.errors) &&
+    isRecord(body.errors[0])
+      ? body.errors[0]
+      : undefined;
+  const code =
+    error && typeof error.code === "string" ? error.code : "request_failed";
+  // A wrong passphrase re-entered to confirm account deletion is also a 401,
+  // but the session is still valid, so only other 401s end it.
+  if (
+    response.status === 401 &&
+    options.token &&
+    code !== "authentication_failed"
+  ) {
+    clearStoredToken();
+  }
+  if (!response.ok) {
+    throw new AccountApiError(
+      error && typeof error.message === "string"
+        ? error.message
+        : "The request could not be completed.",
+      response.status,
+      code,
       {
-        method: options.method ?? "GET",
-        headers,
-        body:
-          options.body === undefined ? undefined : JSON.stringify(options.body),
-        signal: controller.signal,
+        retryAfterSeconds: retryAfterSeconds(response.headers),
+        requestId:
+          isRecord(body) && typeof body.requestId === "string"
+            ? body.requestId
+            : undefined,
       },
     );
-    const text = await response.text();
-    let body: unknown;
-    try {
-      body = text ? JSON.parse(text) : undefined;
-    } catch {
-      throw new AccountApiError(
-        "The API returned an unreadable response.",
-        response.status,
-        "unreadable_response",
-      );
-    }
-    const error =
-      !response.ok &&
-      isRecord(body) &&
-      Array.isArray(body.errors) &&
-      isRecord(body.errors[0])
-        ? body.errors[0]
-        : undefined;
-    const code =
-      error && typeof error.code === "string" ? error.code : "request_failed";
-    // A wrong passphrase re-entered to confirm account deletion is also a 401,
-    // but the session is still valid, so only other 401s end it.
-    if (
-      response.status === 401 &&
-      options.token &&
-      code !== "authentication_failed"
-    ) {
-      clearStoredToken();
-    }
-    if (!response.ok) {
-      throw new AccountApiError(
-        error && typeof error.message === "string"
-          ? error.message
-          : "The request could not be completed.",
-        response.status,
-        code,
-        {
-          retryAfterSeconds: retryAfterSeconds(response),
-          requestId:
-            isRecord(body) && typeof body.requestId === "string"
-              ? body.requestId
-              : undefined,
-        },
-      );
-    }
-    if (options.empty) return undefined as T;
-    if (!options.parser?.(body)) {
-      throw new AccountApiError(
-        "The API response did not match its documented format.",
-        response.status,
-        "malformed_response",
-      );
-    }
-    return body;
-  } catch (error) {
-    if (error instanceof AccountApiError) throw error;
-    const timedOut =
-      error instanceof DOMException && error.name === "AbortError";
-    throw new AccountApiError(
-      timedOut
-        ? "The request timed out. Try again."
-        : "The service could not be reached. Try again.",
-      0,
-      timedOut ? "timeout" : "network_error",
-    );
-  } finally {
-    globalThis.clearTimeout(timeout);
   }
+  if (options.empty) return undefined as T;
+  if (!options.parser?.(body)) {
+    throw new AccountApiError(
+      wording.malformed,
+      response.status,
+      "malformed_response",
+    );
+  }
+  return body;
 }
 
 const isAuthSession: Parser<AuthSession> = (value): value is AuthSession =>
@@ -535,54 +560,57 @@ const isAssetAccess: Parser<AssetAccess> = (value): value is AssetAccess =>
 
 export const accountApi = {
   register(email: string, password: string) {
-    return request("/auth/register", {
+    return accountRequest("/auth/register", {
       method: "POST",
       body: { email, password },
       parser: isAuthSession,
     });
   },
   login(email: string, password: string) {
-    return request("/auth/login", {
+    return accountRequest("/auth/login", {
       method: "POST",
       body: { email, password },
       parser: isAuthSession,
     });
   },
   current(token: string) {
-    return request("/account", { token, parser: isAccount });
+    return accountRequest("/account", { token, parser: isAccount });
   },
   logout(token: string) {
-    return request<void>("/auth/logout", {
+    return accountRequest<void>("/auth/logout", {
       method: "POST",
       token,
       empty: true,
     });
   },
   logoutAll(token: string) {
-    return request<void>("/auth/logout-all", {
+    return accountRequest<void>("/auth/logout-all", {
       method: "POST",
       token,
       empty: true,
     });
   },
   sessions(token: string) {
-    return request("/account/sessions", { token, parser: isSessionList });
+    return accountRequest("/account/sessions", {
+      token,
+      parser: isSessionList,
+    });
   },
   revokeSession(token: string, id: number) {
-    return request<void>(`/account/sessions/${id}`, {
+    return accountRequest<void>(`/account/sessions/${id}`, {
       method: "DELETE",
       token,
       empty: true,
     });
   },
   export(token: string) {
-    return request<Record<string, unknown>>("/account/export", {
+    return accountRequest<Record<string, unknown>>("/account/export", {
       token,
       parser: isRecord,
     });
   },
   deleteAccount(token: string, password: string) {
-    return request<Record<string, unknown>>("/account/delete", {
+    return accountRequest<Record<string, unknown>>("/account/delete", {
       method: "POST",
       token,
       body: { password },
@@ -590,14 +618,14 @@ export const accountApi = {
     });
   },
   listProjects(token: string) {
-    return request("/projects", { token, parser: isProjectList });
+    return accountRequest("/projects", { token, parser: isProjectList });
   },
   createProject(
     token: string,
     name: string,
     configuration: ProjectConfigurationRequest,
   ) {
-    return request("/projects", {
+    return accountRequest("/projects", {
       method: "POST",
       token,
       body: { name, configuration },
@@ -605,13 +633,13 @@ export const accountApi = {
     });
   },
   getProject(token: string, projectId: string) {
-    return request(`/projects/${encodeURIComponent(projectId)}`, {
+    return accountRequest(`/projects/${encodeURIComponent(projectId)}`, {
       token,
       parser: isProjectDetail,
     });
   },
   renameProject(token: string, projectId: string, name: string) {
-    return request(`/projects/${encodeURIComponent(projectId)}`, {
+    return accountRequest(`/projects/${encodeURIComponent(projectId)}`, {
       method: "PATCH",
       token,
       body: { name },
@@ -619,20 +647,23 @@ export const accountApi = {
     });
   },
   deleteProject(token: string, projectId: string) {
-    return request<void>(`/projects/${encodeURIComponent(projectId)}`, {
+    return accountRequest<void>(`/projects/${encodeURIComponent(projectId)}`, {
       method: "DELETE",
       token,
       empty: true,
     });
   },
   listVersions(token: string, projectId: string) {
-    return request(`/projects/${encodeURIComponent(projectId)}/versions`, {
-      token,
-      parser: isVersionList,
-    });
+    return accountRequest(
+      `/projects/${encodeURIComponent(projectId)}/versions`,
+      {
+        token,
+        parser: isVersionList,
+      },
+    );
   },
   getVersion(token: string, projectId: string, versionId: string) {
-    return request(
+    return accountRequest(
       `/projects/${encodeURIComponent(projectId)}/versions/${encodeURIComponent(versionId)}`,
       { token, parser: isVersion },
     );
@@ -642,23 +673,26 @@ export const accountApi = {
     projectId: string,
     configuration: ProjectConfigurationRequest,
   ) {
-    return request(`/projects/${encodeURIComponent(projectId)}/versions`, {
-      method: "POST",
-      token,
-      body: { configuration },
-      parser: isVersion,
-    });
+    return accountRequest(
+      `/projects/${encodeURIComponent(projectId)}/versions`,
+      {
+        method: "POST",
+        token,
+        body: { configuration },
+        parser: isVersion,
+      },
+    );
   },
   createShare(token: string, projectId: string, versionId: string) {
     const parser: Parser<CreatedShare> = (value): value is CreatedShare =>
       isRecord(value) && isShare(value) && typeof value.shareToken === "string";
-    return request(
+    return accountRequest(
       `/projects/${encodeURIComponent(projectId)}/versions/${encodeURIComponent(versionId)}/shares`,
       { method: "POST", token, parser },
     );
   },
   revokeShare(token: string, projectId: string, grantId: string) {
-    return request<void>(
+    return accountRequest<void>(
       `/projects/${encodeURIComponent(projectId)}/shares/${encodeURIComponent(grantId)}`,
       { method: "DELETE", token, empty: true },
     );
@@ -672,13 +706,15 @@ export const accountApi = {
       isRecord(value) &&
       Object.keys(value).length === 1 &&
       isConfiguration(value.configuration);
-    return request(`/shares/${encodeURIComponent(shareToken)}`, { parser });
+    return accountRequest(`/shares/${encodeURIComponent(shareToken)}`, {
+      parser,
+    });
   },
   listUploads(token: string) {
-    return request("/uploads", { token, parser: isUploadList });
+    return accountRequest("/uploads", { token, parser: isUploadList });
   },
   createUploadIntent(token: string, label: string, file: File) {
-    return request("/uploads", {
+    return accountRequest("/uploads", {
       method: "POST",
       token,
       body: {
@@ -691,13 +727,13 @@ export const accountApi = {
     });
   },
   getUpload(token: string, uploadId: string) {
-    return request(`/uploads/${encodeURIComponent(uploadId)}`, {
+    return accountRequest(`/uploads/${encodeURIComponent(uploadId)}`, {
       token,
       parser: isUpload,
     });
   },
   confirmUpload(token: string, uploadId: string, checksum: string) {
-    return request(`/uploads/${encodeURIComponent(uploadId)}/complete`, {
+    return accountRequest(`/uploads/${encodeURIComponent(uploadId)}/complete`, {
       method: "POST",
       token,
       body: { checksum },
@@ -705,7 +741,7 @@ export const accountApi = {
     });
   },
   renameUpload(token: string, uploadId: string, label: string) {
-    return request(`/uploads/${encodeURIComponent(uploadId)}`, {
+    return accountRequest(`/uploads/${encodeURIComponent(uploadId)}`, {
       method: "PATCH",
       token,
       body: { label },
@@ -713,7 +749,7 @@ export const accountApi = {
     });
   },
   retryUpload(token: string, uploadId: string) {
-    return request(`/uploads/${encodeURIComponent(uploadId)}/retry`, {
+    return accountRequest(`/uploads/${encodeURIComponent(uploadId)}/retry`, {
       method: "POST",
       token,
       parser: isUpload,
@@ -735,14 +771,14 @@ export const accountApi = {
       typeof value.id === "string" &&
       value.state === "deleted" &&
       typeof value.referencedByVersions === "number";
-    return request(`/uploads/${encodeURIComponent(uploadId)}`, {
+    return accountRequest(`/uploads/${encodeURIComponent(uploadId)}`, {
       method: "DELETE",
       token,
       parser,
     });
   },
   assetAccess(token: string, uploadId: string, kind: "thumbnail" | "tile") {
-    return request(
+    return accountRequest(
       `/uploads/${encodeURIComponent(uploadId)}/assets/${kind}/access`,
       {
         method: "POST",

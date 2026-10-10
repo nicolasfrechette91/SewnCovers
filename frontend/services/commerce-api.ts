@@ -1,5 +1,9 @@
-import { publicEnvironment } from "../config/environment";
-import { AccountApiError, removeSessionToken } from "./account-api";
+import {
+  accountRequest,
+  type AccountRequestOptions,
+  type FailureWording,
+  type Parser,
+} from "./account-api";
 
 export interface PricingComponent {
   readonly code: string;
@@ -147,8 +151,6 @@ export interface ProductionAssetAccess {
   readonly checksum: string;
   readonly processingVersion: string;
 }
-
-type Parser<T> = (value: unknown) => value is T;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -361,78 +363,20 @@ const isProductionAssetAccess: Parser<ProductionAssetAccess> = (
   typeof value.checksum === "string" &&
   typeof value.processingVersion === "string";
 
-async function commerceRequest<T>(
+const COMMERCE_WORDING: FailureWording = {
+  network: "The commerce service could not be reached. Try again.",
+  timeout: "The commerce request timed out. Try again.",
+  unreadable: "The API returned an unreadable response.",
+  malformed: "The commerce API response was malformed.",
+};
+
+function commerceRequest<T>(
   path: string,
-  options: {
-    readonly method?: "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
-    readonly body?: unknown;
-    readonly token?: string;
+  options: Omit<AccountRequestOptions<T>, "empty" | "parser" | "wording"> & {
     readonly parser: Parser<T>;
   },
 ): Promise<T> {
-  if (!publicEnvironment.apiUrl)
-    throw new AccountApiError("The public API URL is not configured.");
-  const controller = new AbortController();
-  const timeout = globalThis.setTimeout(() => controller.abort(), 20_000);
-  try {
-    const response = await fetch(
-      `${publicEnvironment.apiUrl}/${path.replace(/^\/+/, "")}`,
-      {
-        method: options.method ?? "GET",
-        headers: {
-          ...(options.body === undefined
-            ? {}
-            : { "Content-Type": "application/json" }),
-          ...(options.token
-            ? { Authorization: `Bearer ${options.token}` }
-            : {}),
-        },
-        body:
-          options.body === undefined ? undefined : JSON.stringify(options.body),
-        signal: controller.signal,
-      },
-    );
-    const text = await response.text();
-    let body: unknown;
-    try {
-      body = text ? JSON.parse(text) : undefined;
-    } catch {
-      throw new AccountApiError(
-        "The API returned an unreadable response.",
-        response.status,
-      );
-    }
-    if (response.status === 401 && options.token) removeSessionToken();
-    if (!response.ok) {
-      const error =
-        isRecord(body) && Array.isArray(body.errors) && isRecord(body.errors[0])
-          ? body.errors[0]
-          : undefined;
-      throw new AccountApiError(
-        error && typeof error.message === "string"
-          ? error.message
-          : "The request could not be completed.",
-        response.status,
-        error && typeof error.code === "string" ? error.code : "request_failed",
-      );
-    }
-    if (!options.parser(body))
-      throw new AccountApiError(
-        "The commerce API response was malformed.",
-        response.status,
-        "malformed_response",
-      );
-    return body;
-  } catch (error) {
-    if (error instanceof AccountApiError) throw error;
-    throw new AccountApiError(
-      error instanceof DOMException && error.name === "AbortError"
-        ? "The commerce request timed out. Try again."
-        : "The commerce service could not be reached. Try again.",
-    );
-  } finally {
-    globalThis.clearTimeout(timeout);
-  }
+  return accountRequest(path, { ...options, wording: COMMERCE_WORDING });
 }
 
 export const commerceApi = {

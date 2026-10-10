@@ -1,5 +1,8 @@
-import { publicEnvironment } from "../config/environment";
-import { AccountApiError, removeSessionToken } from "./account-api";
+import {
+  accountRequest,
+  type FailureWording,
+  type Parser,
+} from "./account-api";
 
 export interface LegalDocument {
   readonly id: string;
@@ -46,57 +49,29 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-async function request<T>(
+const ASSURANCE_WORDING: FailureWording = {
+  network: "The service could not be reached. Try again.",
+  timeout: "The request timed out. Try again.",
+  unreadable: "The API returned an unreadable response.",
+  malformed: "The API response was malformed.",
+};
+
+// Operations data is never served from the browser cache (the API also sends
+// no-store on these responses).
+function request<T>(
   path: string,
   options: {
     readonly method?: "GET" | "POST" | "PUT";
     readonly body?: unknown;
     readonly token?: string;
-    readonly validate: (value: unknown) => value is T;
+    readonly parser: Parser<T>;
   },
 ): Promise<T> {
-  if (!publicEnvironment.apiUrl) {
-    throw new AccountApiError("The public API URL is not configured.");
-  }
-  const response = await fetch(
-    `${publicEnvironment.apiUrl}/${path.replace(/^\/+/, "")}`,
-    {
-      method: options.method ?? "GET",
-      headers: {
-        ...(options.body === undefined
-          ? {}
-          : { "Content-Type": "application/json" }),
-        ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
-      },
-      body:
-        options.body === undefined ? undefined : JSON.stringify(options.body),
-      cache: "no-store",
-    },
-  );
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    throw new AccountApiError("The API returned an unreadable response.");
-  }
-  if (response.status === 401 && options.token) removeSessionToken();
-  if (!response.ok) {
-    const first =
-      isRecord(body) && Array.isArray(body.errors) && isRecord(body.errors[0])
-        ? body.errors[0]
-        : undefined;
-    throw new AccountApiError(
-      first && typeof first.message === "string"
-        ? first.message
-        : "The request could not be completed.",
-      response.status,
-      first && typeof first.code === "string" ? first.code : "request_failed",
-    );
-  }
-  if (!options.validate(body)) {
-    throw new AccountApiError("The API response was malformed.");
-  }
-  return body;
+  return accountRequest(path, {
+    ...options,
+    cache: "no-store",
+    wording: ASSURANCE_WORDING,
+  });
 }
 
 const isWork = (value: unknown): value is ProductionWork =>
@@ -120,7 +95,7 @@ export const assuranceApi = {
       method: "POST",
       token,
       body: { documentType, documentVersion: 1, purpose },
-      validate: (
+      parser: (
         value,
       ): value is {
         id: number;
@@ -140,7 +115,7 @@ export const assuranceApi = {
   productionQueue(token: string, query = "") {
     return request(`admin/production-work${query}`, {
       token,
-      validate: (value): value is ProductionQueue =>
+      parser: (value): value is ProductionQueue =>
         isRecord(value) &&
         Array.isArray(value.items) &&
         value.items.every(isWork) &&
@@ -150,7 +125,7 @@ export const assuranceApi = {
   work(token: string, id: string) {
     return request(`admin/production-work/${encodeURIComponent(id)}`, {
       token,
-      validate: isWork,
+      parser: isWork,
     });
   },
   checklist(
@@ -165,7 +140,7 @@ export const assuranceApi = {
         method: "PUT",
         token,
         body: { status, expectedRevision: work.revision },
-        validate: isWork,
+        parser: isWork,
       },
     );
   },
@@ -181,7 +156,7 @@ export const assuranceApi = {
         method: "POST",
         token,
         body: { code, reason, expectedRevision: work.revision },
-        validate: isWork,
+        parser: isWork,
       },
     );
   },
@@ -202,7 +177,7 @@ export const assuranceApi = {
           reasonCode: reason ? "manual_review" : undefined,
           reason,
         },
-        validate: isWork,
+        parser: isWork,
       },
     );
   },
@@ -222,7 +197,7 @@ export const assuranceApi = {
           reason,
           expectedRevision: work.revision,
         },
-        validate: isWork,
+        parser: isWork,
       },
     );
   },
@@ -230,7 +205,7 @@ export const assuranceApi = {
     return request(`admin/production-work/${encodeURIComponent(id)}/packet`, {
       method: "POST",
       token,
-      validate: (
+      parser: (
         value,
       ): value is {
         content: string;
@@ -245,7 +220,7 @@ export const assuranceApi = {
   },
   readiness() {
     return request("readiness", {
-      validate: (value): value is ReadinessReport =>
+      parser: (value): value is ReadinessReport =>
         isRecord(value) &&
         typeof value.ready === "boolean" &&
         typeof value.disclaimer === "string" &&
