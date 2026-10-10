@@ -111,8 +111,7 @@ async function mockApi(
   };
 }
 
-async function openConfigureFromHome(page: Page) {
-  await page.goto(`${basePath}/`);
+async function openConfigure(page: Page) {
   await page
     .getByRole("navigation", { name: "Primary navigation" })
     .getByRole("link", { name: "Configure" })
@@ -122,10 +121,23 @@ async function openConfigureFromHome(page: Page) {
   ).toBeVisible();
 }
 
-async function reachPatternStep(page: Page) {
+async function openConfigureFromHome(page: Page) {
+  await page.goto(`${basePath}/`);
+  await openConfigure(page);
+}
+
+// While the clock is stopped nothing moves focus, so a stage that is visible is
+// as ready as one that is focused.
+async function reachPatternStep(page: Page, { clockStopped = false } = {}) {
   await page.getByText("Box / bench cushion", { exact: true }).click();
   await page.getByRole("button", { name: "Continue to Measurements" }).click();
-  await expectStageFocused(page, "Measurements");
+  if (clockStopped) {
+    await expect(
+      page.getByRole("heading", { level: 1, name: /^Measure your / }),
+    ).toBeVisible();
+  } else {
+    await expectStageFocused(page, "Measurements");
+  }
   await page.getByRole("textbox", { name: "Width (cm)" }).fill("72.25");
   await page.getByRole("textbox", { name: "Depth (cm)" }).fill("48.5");
   await page.getByRole("textbox", { name: "Thickness (cm)" }).fill("12.75");
@@ -134,6 +146,63 @@ async function reachPatternStep(page: Page) {
   await expect(
     page.getByRole("heading", { name: "Patterns", exact: true }),
   ).toBeVisible();
+}
+
+interface IdleHold {
+  count(): number;
+  release(): void;
+}
+
+// The warm-up starts in an idle callback, and the browser decides when the page
+// is idle. A test that needs the warm-up to begin at a known moment holds idle
+// callbacks from the start, as a busy page would, and releases them itself.
+async function holdIdleCallbacks(page: Page) {
+  await page.addInitScript(() => {
+    let nextHandle = 1;
+    const held = new Map<number, IdleRequestCallback>();
+
+    window.requestIdleCallback = (callback) => {
+      held.set(nextHandle, callback);
+      return nextHandle++;
+    };
+    window.cancelIdleCallback = (handle) => {
+      held.delete(handle);
+    };
+    const hold: IdleHold = {
+      count: () => held.size,
+      release: () => {
+        const deadline = { didTimeout: false, timeRemaining: () => 0 };
+        const callbacks = [...held.values()];
+
+        held.clear();
+        callbacks.forEach((callback) => callback(deadline));
+      },
+    };
+    Object.assign(window, { idleHold: hold });
+  });
+
+  return {
+    /** Resolves once the page has asked for an idle period. */
+    asked: () =>
+      page.waitForFunction(
+        () =>
+          (window as unknown as { idleHold: IdleHold }).idleHold.count() > 0,
+      ),
+    release: () =>
+      page.evaluate(() =>
+        (window as unknown as { idleHold: IdleHold }).idleHold.release(),
+      ),
+  };
+}
+
+// Stops the timers the app arms from here on. Install the clock only after the
+// page has loaded: React captured its own timers at load, so lazy stages still
+// appear in real time, while the app's calls to `setTimeout` (the two-second
+// "waking up" notice, the retry delay, the request time limit) wait until the
+// test runs the clock. Resume it when the test no longer cares about those.
+async function freezeClock(page: Page) {
+  await page.clock.install();
+  await page.clock.pauseAt(Date.now() + 1_000);
 }
 
 // The warm-up is scheduled by an effect after hydration and decides in the
@@ -201,15 +270,26 @@ test("a visitor reaching the Pattern step mid warm-up reuses the in-flight reque
     },
   });
 
-  await openConfigureFromHome(page);
+  // "Connecting" gives way to the waking-up message two seconds after the
+  // warm-up's request starts, whatever the visitor is doing. So the warm-up
+  // starts only once the clock is stopped, and the whole walk to the Pattern
+  // step happens inside those two seconds, however slow this machine is.
+  const idle = await holdIdleCallbacks(page);
+  await page.goto(`${basePath}/`);
+  await idle.asked();
+  await freezeClock(page);
+  await idle.release();
   await expect.poll(() => api.count("/health"), { timeout: 15_000 }).toBe(1);
-  await reachPatternStep(page);
+
+  await openConfigure(page);
+  await reachPatternStep(page, { clockStopped: true });
   await expect(
     page.getByRole("status").filter({ hasText: "Connecting" }),
   ).toBeVisible();
   expect(api.count("/patterns")).toBe(0);
 
   releaseHealth();
+  await page.clock.resume();
   await expect(builtInPatternsReady(page)).toBeVisible();
   expect(api.count("/health")).toBe(1);
   expect(api.count("/patterns")).toBe(1);
@@ -219,7 +299,7 @@ test("keeps the waking-up fallback when the warm-up fails and the API is slow", 
   context,
   page,
 }) => {
-  // The retry stays in flight until the test has seen the waking-up notice.
+  // The retry stays in flight until the test has seen it there.
   let releaseRetry!: () => void;
   const retryGate = new Promise<void>((resolve) => {
     releaseRetry = resolve;
@@ -235,19 +315,33 @@ test("keeps the waking-up fallback when the warm-up fails and the API is slow", 
       await fulfillJson(route, patterns);
     },
   });
+  const wakingUpNotice = page.getByText(
+    "The SewnCovers API may be waking up. Retrying (1 of 2)…",
+  );
 
-  await openConfigureFromHome(page);
+  await page.goto(`${basePath}/`);
   await expect.poll(() => api.count("/health"), { timeout: 15_000 }).toBe(1);
   await expect(unavailableNotice(page)).toHaveCount(0);
 
-  await reachPatternStep(page);
-  await expect(
-    page.getByText("The SewnCovers API may be waking up. Retrying (1 of 2)…"),
-  ).toBeVisible();
+  // The pattern request fails with 503 as the visitor arrives and is retried
+  // after a short delay. Stop the clock so the delay, and the time limit on
+  // the retry, pass only when the test says.
+  await freezeClock(page);
+  await openConfigure(page);
+  await reachPatternStep(page, { clockStopped: true });
+  await expect(wakingUpNotice).toBeVisible();
+  expect(api.count("/patterns")).toBe(1);
+
+  // A second is longer than the first retry delay and far shorter than the
+  // time limit on a request.
+  await page.clock.runFor(1_000);
+  await expect.poll(() => api.count("/patterns")).toBe(2);
+  await expect(wakingUpNotice).toBeVisible();
   await expect(builtInPatternsReady(page)).toHaveCount(0);
 
   releaseRetry();
-  await expect(builtInPatternsReady(page)).toBeVisible({ timeout: 15_000 });
+  await page.clock.resume();
+  await expect(builtInPatternsReady(page)).toBeVisible();
 });
 
 test("skips the warm-up entirely when the browser asks to save data", async ({

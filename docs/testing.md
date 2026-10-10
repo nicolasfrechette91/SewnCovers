@@ -58,7 +58,7 @@ Coverage includes:
 - forced colours (`forced-colors.spec.ts`): every fabric swatch keeps the customer's colour and gets an outline in the system text colour;
 - reflow (`reflow.spec.ts`): no sideways page scroll at 320 × 256 CSS px, the viewport WCAG 1.4.10 names (400 percent zoom of a 1280 × 1024 window), on every route and stage.
 
-These accessibility checks are hand-written; there is no automated axe audit. The API warm-up tests wait on conditions (the app's idle callback, then a probe request through the mocked API) rather than fixed sleeps.
+These accessibility checks are hand-written; there is no automated axe audit. The API warm-up tests wait on conditions (the app's idle callback, then a probe request through the mocked API) rather than fixed sleeps. The two that depend on elapsed time, the two-second "Connecting" notice and the retry delay, stop the page's timers with `page.clock` and run them only when the test says, so a slow machine cannot change what they see.
 
 Many actions end by moving focus: to a status message when a request finishes, or to a configurator stage once its lazily loaded chunk mounts. `locator.press()` focuses its target and then sends the key, so a focus move that lands in between takes the key, and the press is lost. That made several journeys fail intermittently under load. After an action like that, wait for focus to arrive before the next press, with `expectFocusOn` or `expectStageFocused` from `e2e/support/keyboard.ts`, or wait for the action's visible outcome. After a client-side navigation, wait for the new page's heading before using a field the old page also had.
 
