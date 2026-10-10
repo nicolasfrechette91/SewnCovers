@@ -1,12 +1,17 @@
-import { publicEnvironment } from "../config/environment";
 import {
   DEFAULT_CLOSURE_TYPE,
   DEFAULT_FIT_PREFERENCE,
   DEFAULT_MATERIAL_ID,
   DEFAULT_SEAM_STYLE,
 } from "../data/cover-options";
+import {
+  REQUEST_TIMEOUT_MS,
+  send,
+  TransportError,
+  type HttpResponse,
+} from "./http";
 
-export const API_REQUEST_TIMEOUT_MS = 20_000;
+export const API_REQUEST_TIMEOUT_MS = REQUEST_TIMEOUT_MS;
 export const API_RETRY_LIMIT = 2;
 export const API_COLD_START_DELAY_MS = 2_000;
 
@@ -550,130 +555,90 @@ function emitStatus(
   }
 }
 
-function buildUrl(path: string, query?: PatternQuery): string {
-  const baseUrl = publicEnvironment.apiUrl;
-
-  if (!baseUrl) {
-    throw configurationError();
+function transportFailure(error: unknown): ApiClientError {
+  if (error instanceof TransportError && error.kind === "configuration") {
+    return configurationError();
   }
 
-  const url = new URL(`${baseUrl}/${path.replace(/^\/+/, "")}`);
-
-  if (query?.category !== undefined) {
-    url.searchParams.set("category", query.category);
-  }
-  if (query?.color !== undefined) {
-    url.searchParams.set("color", query.color);
+  if (error instanceof TransportError && error.kind === "timeout") {
+    return new ApiClientError(
+      "timeout",
+      "The API request exceeded its time limit.",
+    );
   }
 
-  return url.toString();
+  return new ApiClientError(
+    "network",
+    "The API request could not reach the service.",
+  );
 }
 
-async function parseResponseJson(response: Response): Promise<unknown> {
-  const responseText = await response.text();
-
-  if (!responseText) {
-    return undefined;
-  }
-
-  try {
-    return JSON.parse(responseText) as unknown;
-  } catch {
-    return undefined;
-  }
-}
-
+// One attempt through the shared transport, which owns the URL, the time
+// limit and reading the body. An unreadable body counts as no body here.
 async function performAttempt<ResponseBody>(
   definition: RequestDefinition<ResponseBody>,
 ): Promise<ResponseBody> {
-  const controller = new AbortController();
-  let timedOut = false;
-  const timeout = globalThis.setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, API_REQUEST_TIMEOUT_MS);
+  let response: HttpResponse;
 
   try {
-    const response = await globalThis.fetch(
-      buildUrl(definition.path, definition.query),
-      {
-        body:
-          definition.body === undefined
-            ? undefined
-            : JSON.stringify(definition.body),
-        headers:
-          definition.body === undefined
-            ? undefined
-            : { "Content-Type": "application/json" },
-        method: definition.method,
-        signal: controller.signal,
+    response = await send({
+      body: definition.body,
+      method: definition.method,
+      path: definition.path,
+      query: {
+        category: definition.query?.category,
+        color: definition.query?.color,
       },
-    );
-    const body = await parseResponseJson(response);
-
-    if (definition.expectedStatuses.includes(response.status)) {
-      const parsed = definition.parse(body);
-
-      if (parsed !== undefined) {
-        return parsed;
-      }
-    }
-
-    if (response.status < 200 || response.status >= 300) {
-      const backendError = parseApiErrorResponse(body);
-
-      if (backendError) {
-        throw new ApiClientError(
-          "backend-contract",
-          "The API returned a documented request failure.",
-          {
-            errors: backendError.errors,
-            requestId: backendError.requestId,
-            status: response.status,
-          },
-        );
-      }
-
-      throw new ApiClientError(
-        "http",
-        "The API returned an unexpected HTTP response.",
-        { status: response.status },
-      );
-    }
-
-    if (!definition.expectedStatuses.includes(response.status)) {
-      throw new ApiClientError(
-        "http",
-        "The API returned an unexpected HTTP response.",
-        { status: response.status },
-      );
-    }
-
-    throw new ApiClientError(
-      "malformed-response",
-      "The API response did not match its public schema.",
-      { status: response.status },
-    );
+    });
   } catch (error) {
-    if (error instanceof ApiClientError) {
-      throw error;
-    }
+    throw transportFailure(error);
+  }
 
-    if (timedOut) {
+  const { body, status } = response;
+
+  if (definition.expectedStatuses.includes(status)) {
+    const parsed = definition.parse(body);
+
+    if (parsed !== undefined) {
+      return parsed;
+    }
+  }
+
+  if (status < 200 || status >= 300) {
+    const backendError = parseApiErrorResponse(body);
+
+    if (backendError) {
       throw new ApiClientError(
-        "timeout",
-        "The API request exceeded its time limit.",
+        "backend-contract",
+        "The API returned a documented request failure.",
+        {
+          errors: backendError.errors,
+          requestId: backendError.requestId,
+          status,
+        },
       );
     }
 
     throw new ApiClientError(
-      "network",
-      "The API request could not reach the service.",
+      "http",
+      "The API returned an unexpected HTTP response.",
+      { status },
     );
-  } finally {
-    globalThis.clearTimeout(timeout);
-    controller.abort();
   }
+
+  if (!definition.expectedStatuses.includes(status)) {
+    throw new ApiClientError(
+      "http",
+      "The API returned an unexpected HTTP response.",
+      { status },
+    );
+  }
+
+  throw new ApiClientError(
+    "malformed-response",
+    "The API response did not match its public schema.",
+    { status },
+  );
 }
 
 function shouldRetry(

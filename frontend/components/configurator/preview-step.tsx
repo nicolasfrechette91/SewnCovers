@@ -16,6 +16,7 @@ import {
 } from "@/context/configuration";
 import { findCoverOption, fitOptions, seamOptions } from "@/data/cover-options";
 import { getCushionShapeDefinition } from "@/data/shapes";
+import { fetchPatternImage } from "@/services/pattern-image";
 
 import { CushionPreview } from "./cushion-preview";
 import { CushionModel } from "./cushion-model";
@@ -129,25 +130,21 @@ function PreviewStepContent({
     patternImage?.source === patternSourceUrl ? patternImage?.url : undefined;
   useEffect(() => {
     if (!patternSourceUrl) return;
-    let cancelled = false;
+    const controller = new AbortController();
     let objectUrl: string | undefined;
     // Consume only the derivative already authorized by the existing selection
     // flow. A local object URL respects the image CSP without broadening it.
-    void fetch(patternSourceUrl, { credentials: "omit", cache: "no-store" })
-      .then((response) => {
-        if (!response.ok) throw new Error("Pattern unavailable");
-        return response.blob();
-      })
+    void fetchPatternImage(patternSourceUrl, controller.signal)
       .then((blob) => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         objectUrl = URL.createObjectURL(blob);
         setPatternImage({ source: patternSourceUrl, url: objectUrl });
       })
       .catch(() => {
-        if (!cancelled) setFailedPatternUrl(patternSourceUrl);
+        if (!controller.signal.aborted) setFailedPatternUrl(patternSourceUrl);
       });
     return () => {
-      cancelled = true;
+      controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [patternSourceUrl]);

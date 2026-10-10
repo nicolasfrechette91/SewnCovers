@@ -1500,3 +1500,24 @@ test("custom preview reports denied derivatives without substitution and ignores
   });
   assert.equal(createMock.mock.callCount(), 0);
 });
+
+test("custom preview cancels its image request when it unmounts", async (t) => {
+  let signal: AbortSignal | null | undefined;
+  t.mock.method(globalThis, "fetch", (_url: string, init?: RequestInit) => {
+    signal = init?.signal;
+    return new Promise<Response>(() => undefined);
+  });
+  const view = renderWithConfiguration(
+    <PreviewStep
+      selectedPattern={{
+        name: "Private drawing",
+        previewClassName: "",
+        previewUrl: "https://assets.example.test/authorized-tile",
+      }}
+    />,
+    completeConfiguration,
+  );
+  assert.equal(signal?.aborted, false);
+  view.unmount();
+  assert.equal(signal?.aborted, true);
+});
