@@ -375,6 +375,16 @@ function clearStoredToken(): void {
   window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }
 
+/**
+ * Calls `listener` whenever this tab's stored token is set or removed (for
+ * `useSyncExternalStore`). Session storage is per tab, so other tabs are
+ * never notified: each tab keeps its own session.
+ */
+export function subscribeToSessionToken(listener: () => void): () => void {
+  window.addEventListener(AUTH_CHANGED_EVENT, listener);
+  return () => window.removeEventListener(AUTH_CHANGED_EVENT, listener);
+}
+
 export function readSessionToken(): string | null {
   try {
     const value = tokenStorage()?.getItem(TOKEN_KEY);
@@ -578,8 +588,8 @@ export const accountApi = {
       parser: isAuthSession,
     });
   },
-  current(token: string) {
-    return accountRequest("/account", { token, parser: isAccount });
+  current(token: string, { signal }: CallOptions = {}) {
+    return accountRequest("/account", { token, parser: isAccount, signal });
   },
   logout(token: string) {
     return accountRequest<void>("/auth/logout", {
@@ -674,10 +684,15 @@ export const accountApi = {
       },
     );
   },
-  getVersion(token: string, projectId: string, versionId: string) {
+  getVersion(
+    token: string,
+    projectId: string,
+    versionId: string,
+    { signal }: CallOptions = {},
+  ) {
     return accountRequest(
       `/projects/${encodeURIComponent(projectId)}/versions/${encodeURIComponent(versionId)}`,
-      { token, parser: isVersion },
+      { token, parser: isVersion, signal },
     );
   },
   createVersion(
@@ -709,7 +724,7 @@ export const accountApi = {
       { method: "DELETE", token, empty: true },
     );
   },
-  restoreShare(shareToken: string) {
+  restoreShare(shareToken: string, { signal }: CallOptions = {}) {
     const parser: Parser<{
       readonly configuration: ProjectConfigurationRequest;
     }> = (
@@ -720,6 +735,7 @@ export const accountApi = {
       isConfiguration(value.configuration);
     return accountRequest(`/shares/${encodeURIComponent(shareToken)}`, {
       parser,
+      signal,
     });
   },
   listUploads(token: string, { signal }: CallOptions = {}) {

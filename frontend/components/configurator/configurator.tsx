@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import {
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useRef,
   useState,
@@ -317,18 +318,21 @@ export function Configurator({ documentTitle, intro }: ConfiguratorProps = {}) {
     if (returningFromSignIn) focusWhenReady(focusTargetIds[stepId ?? "shape"]);
   };
 
+  // Runs once on arrival, with the latest state; later changes come from the
+  // stage actions.
+  const onArrival = useEffectEvent((loaded: DraftSession) => {
+    setSession(loaded);
+    arrive(loaded);
+  });
   useEffect(() => {
     let active = true;
     void (draftSessionRequest ?? loadDraftSession()).then((loaded) => {
-      if (!active) return;
-      setSession(loaded);
-      arrive(loaded);
+      if (active) onArrival(loaded);
     });
     return () => {
       active = false;
     };
-    // Runs once on arrival; later changes come from the stage actions.
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Keeps the design and stage in this browser. Nothing is written until
   // something has been chosen, or while a replace decision is pending.

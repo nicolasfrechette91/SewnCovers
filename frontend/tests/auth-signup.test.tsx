@@ -138,17 +138,9 @@ const signUpCalls = () =>
     path: url,
   }));
 
-// After the session is stored the provider re-verifies it with two GETs.
-const SESSION_CHECKS = [
-  { authorized: true, bodyKeys: [], method: "GET", path: `${API}/account` },
-  {
-    authorized: true,
-    bodyKeys: [],
-    method: "GET",
-    path: `${API}/account/sessions`,
-  },
-];
-
+// A session that a sign-in in this tab started needs no check, so nothing
+// follows these requests. (Only a token stored by an earlier page is checked,
+// with GET /account and GET /account/sessions.)
 const EXPECTED_SIGN_UP = [
   {
     authorized: false,
@@ -162,7 +154,6 @@ const EXPECTED_SIGN_UP = [
     method: "POST",
     path: `${API}/account/acknowledgements`,
   },
-  ...SESSION_CHECKS,
 ];
 
 test("the /account create-account form POSTs /auth/register, then records the terms", async () => {
@@ -238,7 +229,6 @@ test("sign-in uses POST /auth/login and does not record terms", async () => {
       method: "POST",
       path: `${API}/auth/login`,
     },
-    ...SESSION_CHECKS,
   ]);
 });
 

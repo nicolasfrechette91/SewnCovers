@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Button, ErrorMessage, LoadingState, Surface } from "@/components/ui";
-import { useAuth } from "@/context/auth";
+import { useAuth, type AuthState } from "@/context/auth";
 import {
   useConfiguration,
   type ConfigurationState,
@@ -16,6 +16,7 @@ import {
   resolveAssetUrl,
   type ProjectConfigurationRequest,
 } from "@/services/account-api";
+import { useResource, type Resource } from "@/services/use-resource";
 
 // Loaded only when a guest opens a private project version link.
 const PrivateVersionSignIn = dynamic(() =>
@@ -30,6 +31,104 @@ type LoaderState =
   | { status: "restored"; label: string }
   | { status: "signin" }
   | { status: "error"; label: string };
+
+// What the link asks for, decided from the URL and the session alone.
+type LinkPlan =
+  | { readonly kind: "idle" }
+  | { readonly kind: "error"; readonly label: string }
+  | { readonly kind: "signin" }
+  | { readonly kind: "session" }
+  | { readonly kind: "share"; readonly share: string }
+  | {
+      readonly kind: "version";
+      readonly project: string;
+      readonly version: string;
+      readonly token: string;
+    };
+
+const SHARE_LABEL = "Loading the read-only shared configuration…";
+const VERSION_LABEL = "Loading the private project version…";
+
+/** A newer edit than the saved version being loaded; nothing was replaced. */
+class ConfigurationChangedError extends Error {}
+
+function planFor(search: string, auth: AuthState): LinkPlan {
+  const searchParams = new URLSearchParams(search);
+  if (searchParams.has("design")) return { kind: "idle" };
+  const share = searchParams.get("share");
+  const project = searchParams.get("project");
+  const version = searchParams.get("version");
+  if (!share && !project && !version) return { kind: "idle" };
+  if (share && (project || version)) {
+    return {
+      kind: "error",
+      label: "This URL combines incompatible sharing modes.",
+    };
+  }
+  if (project && version && auth.status === "guest") return { kind: "signin" };
+  if (project && version && auth.status === "initializing") {
+    return { kind: "session" };
+  }
+  if (
+    (!share && (!project || !version)) ||
+    (share && !/^[A-Za-z0-9_-]{43}$/.test(share)) ||
+    (project && !/^[A-Za-z0-9_-]{22}$/.test(project)) ||
+    (version && !/^[A-Za-z0-9_-]{22}$/.test(version))
+  ) {
+    return {
+      kind: "error",
+      label: "The saved-configuration link is malformed.",
+    };
+  }
+  if (share) return { kind: "share", share };
+  return project && version && auth.status === "authenticated"
+    ? { kind: "version", project, version, token: auth.token }
+    : { kind: "idle" };
+}
+
+function failureLabel(error: unknown): string {
+  if (error instanceof ConfigurationChangedError) {
+    return "Your configuration changed while the saved version was loading, so it was not overwritten.";
+  }
+  return error instanceof AccountApiError
+    ? error.message
+    : "The saved configuration could not be loaded.";
+}
+
+function loaderState(
+  plan: LinkPlan,
+  restoring: Resource<"share" | "version">,
+): LoaderState {
+  switch (plan.kind) {
+    case "idle":
+      return { status: "idle" };
+    case "error":
+      return { status: "error", label: plan.label };
+    case "signin":
+      return { status: "signin" };
+    case "session":
+      return { status: "loading", label: "Restoring your session…" };
+  }
+  const label = plan.kind === "share" ? SHARE_LABEL : VERSION_LABEL;
+  if (restoring.loading) return { status: "loading", label };
+  if (restoring.error !== undefined) {
+    return { status: "error", label: failureLabel(restoring.error) };
+  }
+  if (restoring.data === undefined) return { status: "loading", label };
+  return {
+    status: "restored",
+    label:
+      restoring.data === "share"
+        ? "Read-only project share restored. Changes affect only your current configurator unless you save them separately."
+        : "Private project version restored for editing. Saving adds a new version and leaves this one unchanged.",
+  };
+}
+
+// The page's query, read in the browser only: the prerendered page and the
+// first render after hydration see none, as before any link is acted on.
+const subscribeToNothing = () => () => undefined;
+const readSearch = () => window.location.search;
+const noSearch = () => "";
 
 function removeWorkspaceParameters(): void {
   const url = new URL(window.location.href);
@@ -47,6 +146,7 @@ async function restoreState(
   configuration: ProjectConfigurationRequest,
   token: string | null,
   share: string | null,
+  signal: AbortSignal,
 ): Promise<ConfigurationState> {
   let pattern: ConfigurationState["pattern"];
   if (configuration.pattern.kind === "built-in") {
@@ -64,12 +164,18 @@ async function restoreState(
         const upload = await accountApi.getUpload(
           token,
           configuration.pattern.assetId,
+          { signal },
         );
         label = upload.label;
         if (upload.state === "deleted") unavailableReason = "deleted";
         else if (upload.state !== "approved") unavailableReason = "unavailable";
         else {
-          const access = await accountApi.assetAccess(token, upload.id, "tile");
+          const access = await accountApi.assetAccess(
+            token,
+            upload.id,
+            "tile",
+            { signal },
+          );
           previewUrl = resolveAssetUrl(access.url);
         }
       }
@@ -103,11 +209,61 @@ export function WorkspaceConfigurationLoader({
 }> = {}) {
   const { state: auth } = useAuth();
   const { dispatch, getRevision } = useConfiguration();
-  const [state, setState] = useState<LoaderState>({ status: "idle" });
-  const generation = useRef(0);
+  const search = useSyncExternalStore(subscribeToNothing, readSearch, noSearch);
+  const [dismissed, setDismissed] = useState(false);
+  const plan: LinkPlan = dismissed ? { kind: "idle" } : planFor(search, auth);
   const focusRestored = useRef(false);
   const restoredRef = useRef<HTMLParagraphElement>(null);
   const Title = asHeading ? "h2" : "p";
+
+  // Restores the linked version once per link (and session, for a private
+  // version). A newer edit made while it loads is never overwritten.
+  const restoring = useResource(
+    plan.kind === "share"
+      ? `share\u0000${plan.share}`
+      : plan.kind === "version"
+        ? `version\u0000${plan.token}\u0000${plan.project}\u0000${plan.version}`
+        : null,
+    async (_key, signal) => {
+      if (plan.kind !== "share" && plan.kind !== "version") {
+        throw new Error("There is no saved configuration to load.");
+      }
+      const revision = getRevision();
+      const snapshot =
+        plan.kind === "share"
+          ? (await accountApi.restoreShare(plan.share, { signal }))
+              .configuration
+          : (
+              await accountApi.getVersion(
+                plan.token,
+                plan.project,
+                plan.version,
+                { signal },
+              )
+            ).configuration;
+      const configuration = await restoreState(
+        snapshot,
+        plan.kind === "version" ? plan.token : null,
+        plan.kind === "share" ? plan.share : null,
+        signal,
+      );
+      signal.throwIfAborted();
+      if (getRevision() !== revision) throw new ConfigurationChangedError();
+      onRestored?.(
+        plan.kind === "share"
+          ? `share:${plan.share}`
+          : `project:${plan.project}:${plan.version}`,
+        configuration,
+        plan.kind === "share"
+          ? null
+          : { projectId: plan.project, versionId: plan.version },
+      );
+      dispatch({ type: "restoreConfiguration", configuration });
+      return plan.kind;
+    },
+  );
+
+  const state = loaderState(plan, restoring);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -142,116 +298,17 @@ export function WorkspaceConfigurationLoader({
     };
   }, []);
 
-  const load = useCallback(async () => {
-    const url = new URL(window.location.href);
-    if (url.searchParams.has("design")) {
-      setState({ status: "idle" });
-      return;
-    }
-    const share = url.searchParams.get("share");
-    const project = url.searchParams.get("project");
-    const version = url.searchParams.get("version");
-    if (!share && !project && !version) {
-      setState({ status: "idle" });
-      return;
-    }
-    if (share && (project || version)) {
-      setState({
-        status: "error",
-        label: "This URL combines incompatible sharing modes.",
-      });
-      return;
-    }
-    if (project && version && auth.status === "guest") {
-      setState({ status: "signin" });
-      return;
-    }
-    if (project && version && auth.status === "initializing") {
-      setState({ status: "loading", label: "Restoring your session…" });
-      return;
-    }
-    if (
-      (!share && (!project || !version)) ||
-      (share && !/^[A-Za-z0-9_-]{43}$/.test(share)) ||
-      (project && !/^[A-Za-z0-9_-]{22}$/.test(project)) ||
-      (version && !/^[A-Za-z0-9_-]{22}$/.test(version))
-    ) {
-      setState({
-        status: "error",
-        label: "The saved-configuration link is malformed.",
-      });
-      return;
-    }
-    const active = ++generation.current;
-    const revision = getRevision();
-    setState({
-      status: "loading",
-      label: share
-        ? "Loading the read-only shared configuration…"
-        : "Loading the private project version…",
-    });
-    try {
-      const snapshot = share
-        ? (await accountApi.restoreShare(share)).configuration
-        : auth.status === "authenticated"
-          ? (await accountApi.getVersion(auth.token, project!, version!))
-              .configuration
-          : null;
-      if (active !== generation.current || snapshot === null) return;
-      const configuration = await restoreState(
-        snapshot,
-        auth.status === "authenticated" ? auth.token : null,
-        share,
-      );
-      if (getRevision() !== revision) {
-        setState({
-          status: "error",
-          label:
-            "Your configuration changed while the saved version was loading, so it was not overwritten.",
-        });
-        return;
-      }
-      onRestored?.(
-        share ? `share:${share}` : `project:${project}:${version}`,
-        configuration,
-        share ? null : { projectId: project!, versionId: version! },
-      );
-      dispatch({ type: "restoreConfiguration", configuration });
-      setState({
-        status: "restored",
-        label: share
-          ? "Read-only project share restored. Changes affect only your current configurator unless you save them separately."
-          : "Private project version restored for editing. Saving adds a new version and leaves this one unchanged.",
-      });
-    } catch (error) {
-      if (active !== generation.current) return;
-      setState({
-        status: "error",
-        label:
-          error instanceof AccountApiError
-            ? error.message
-            : "The saved configuration could not be loaded.",
-      });
-    }
-  }, [auth, dispatch, getRevision, onRestored]);
-
+  const restored = state.status === "restored";
   useEffect(() => {
-    const timer = globalThis.setTimeout(() => void load(), 0);
-    return () => {
-      globalThis.clearTimeout(timer);
-      generation.current += 1;
-    };
-  }, [load]);
-  useEffect(() => {
-    if (state.status !== "restored" || !focusRestored.current) return;
+    if (!restored || !focusRestored.current) return;
     focusRestored.current = false;
     const frame = requestAnimationFrame(() => restoredRef.current?.focus());
     return () => cancelAnimationFrame(frame);
-  }, [state.status]);
+  }, [restored]);
 
   const continueWithMine = () => {
     removeWorkspaceParameters();
-    setState({ status: "idle" });
+    setDismissed(true);
     onDismiss?.();
   };
 
@@ -299,7 +356,7 @@ export function WorkspaceConfigurationLoader({
       ) : null}
       {state.status === "error" ? (
         <div className="mt-3 flex flex-wrap gap-3">
-          <Button variant="secondary" onClick={() => void load()}>
+          <Button variant="secondary" onClick={() => void restoring.reload()}>
             Try loading again
           </Button>
           <Button variant="secondary" onClick={continueWithMine}>

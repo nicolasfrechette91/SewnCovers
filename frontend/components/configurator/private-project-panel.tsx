@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useEffectEvent,
   useRef,
   useState,
   useSyncExternalStore,
@@ -353,16 +354,20 @@ export function PrivateProjectPanel({
 
   // Resume the Save or Add to cart that asked for sign-in, exactly once:
   // the pending record is removed as it is read. The timer is not cancelled
-  // on cleanup, so a taken action always runs.
-  useEffect(() => {
-    if (!token) return;
+  // on cleanup, so a taken action always runs (it also keeps the action's
+  // state changes out of the effect itself). It runs when a session starts,
+  // with the design as it is then.
+  const resumePendingAction = useEffectEvent((sessionToken: string) => {
     const action = takePendingAccountAction(fingerprint);
     if (!action) return;
     globalThis.setTimeout(() => {
       setSignInFor(null);
-      void run(action.kind, action.name, token);
+      void run(action.kind, action.name, sessionToken);
     }, 0);
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    if (token) resumePendingAction(token);
+  }, [token]);
 
   const start = (kind: PendingAccountActionKind) => {
     if (auth.status === "initializing" || busy !== null) return;

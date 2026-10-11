@@ -4,7 +4,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
 
 import { useAuth } from "@/context/auth";
-import { AUTH_CHANGED_EVENT, readSessionToken } from "@/services/account-api";
+import {
+  readSessionToken,
+  subscribeToSessionToken,
+} from "@/services/account-api";
 import {
   buildAccountHref,
   returnTargetForPath,
@@ -19,11 +22,6 @@ import { SiteFooter, type SiteFooterProps } from "./site-footer";
 import { SiteHeader, type SiteHeaderProps } from "./site-header";
 
 const ACCOUNT_HREF = "/account/";
-
-function subscribeToStoredSession(listener: () => void): () => void {
-  window.addEventListener(AUTH_CHANGED_EVENT, listener);
-  return () => window.removeEventListener(AUTH_CHANGED_EVENT, listener);
-}
 
 function hasStoredSession(): boolean {
   try {
@@ -49,7 +47,7 @@ export function RouteAwareSiteHeader({
   const pathname = usePathname() ?? "/";
   const { state } = useAuth();
   const storedSession = useSyncExternalStore(
-    subscribeToStoredSession,
+    subscribeToSessionToken,
     hasStoredSession,
     () => false,
   );

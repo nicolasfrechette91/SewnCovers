@@ -76,15 +76,29 @@ afterEach(() => {
   window.sessionStorage.clear();
 });
 
-test("waits for the session, then asks nothing for a guest", async () => {
+test("asks nothing for a guest", async () => {
   render(
     <AuthProvider>
       <Probe />
     </AuthProvider>,
   );
-  assert.equal(probe(), "initializing|||no token");
 
   await waitFor(() => assert.equal(probe(), "guest|||no token"));
+  assert.deepEqual(loads, []);
+});
+
+test("waits while a stored session is checked, asking nothing", async () => {
+  storeSessionToken(TOKEN);
+  globalThis.fetch = () => new Promise<Response>(() => undefined);
+  render(
+    <AuthProvider>
+      <Probe />
+    </AuthProvider>,
+  );
+
+  assert.equal(probe(), "initializing|||no token");
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(probe(), "initializing|||no token");
   assert.deepEqual(loads, []);
 });
 
