@@ -3,7 +3,7 @@
 | Layer | Host | Source | Trigger |
 | --- | --- | --- | --- |
 | Frontend | GitHub Pages, <https://nicolasfrechette91.github.io/SewnCovers/> | `frontend/out`, built and verified by CI | `.github/workflows/deploy-pages.yml` on pushes to `main` that touch `frontend/**`, `ci.yml` or the workflow itself, or manually |
-| API | Render Free web service, <https://sewncovers-api.onrender.com> | `backend/`, described by [`render.yaml`](../render.yaml) | `.github/workflows/deploy-backend.yml` on pushes to `main` that touch `backend/**`, `render.yaml`, `ci.yml` or the workflow itself, or manually |
+| API | Render Free web service, <https://sewncovers-api.onrender.com> | `backend/`, recorded in [`render.yaml`](../render.yaml) (configured in the dashboard) | `.github/workflows/deploy-backend.yml` on pushes to `main` that touch `backend/**`, `render.yaml`, `ci.yml` or the workflow itself, or manually |
 | Database | Neon PostgreSQL, Ohio | Alembic migrations run by the API at start-up | Every API start |
 
 Both deploy workflows start with the matching half of [CI](testing.md#continuous-integration) (`ci.yml`, called as a reusable workflow) and deploy only if it passes, so every check runs once per push. A push that touches only `docs/` or the README deploys nothing.
@@ -35,7 +35,7 @@ Changing `NEXT_PUBLIC_API_URL` after a build changes nothing; rebuild.
 
 ## API on Render
 
-[`render.yaml`](../render.yaml) is the repository record of the service. It contains no secret.
+The service is configured in the Render dashboard. It is not managed by a Blueprint, so Render does **not** apply [`render.yaml`](../render.yaml): the file records the intended settings and contains no secret, but a change to the build command, start command or environment only takes effect when it is made by hand in the dashboard. Change both, so they do not drift apart.
 
 | Setting | Value |
 | --- | --- |
@@ -62,15 +62,11 @@ Every package the API runs on is pinned to an exact version and a set of hashes,
 
 CI installs `requirements-dev.txt`, then proves the runtime lock on its own: it installs `requirements.txt` into an empty environment, starts the API from it and requests `/health`, `/patterns` and the two flag-off features (`tools/smoke_runtime_install.py`). It also audits `requirements-features.txt` with `pip-audit` and fails if a committed file no longer matches `pyproject.toml`.
 
-#### Does the Render service use `render.yaml`?
+#### The build command is set in the dashboard
 
-`render.yaml` only changes a service that is attached to a Blueprint; a service that was created by hand in the dashboard ignores the file, and its build command is whatever the dashboard says. To find out, in the Render Dashboard:
+The locked install does not happen until the build command is changed by hand: in the Render Dashboard open `sewncovers-api`, **Settings**, **Build & Deploy**, **Build Command**, set it to `python -m pip install --require-hashes -r requirements.txt` and save. Saving does not deploy; the workflow does. Every later change to it (for example to `requirements-features.txt`) is made the same way.
 
-1. Open the **Blueprints** page from the sidebar. If it lists a Blueprint whose repository is this one, and its resources include `sewncovers-api`, the service is Blueprint-managed (its row in the dashboard also carries a Blueprint icon). Open that Blueprint's **Settings**: with **Auto Sync** set to **Yes**, Render applies every push of `render.yaml` to the linked branch to the service by itself, and the next sync overwrites any hand-made difference. With **Auto Sync** set to **No**, press **Manual Sync** on the Blueprint's page after pushing.
-2. If **Blueprints** is empty, or does not contain `sewncovers-api`, the service is not managed, and you change the build command by hand: open the service, **Settings**, **Build & Deploy**, **Build Command**, edit it to `python -m pip install --require-hashes -r requirements.txt` and save. Do not use **Manual Deploy**; the workflow deploys.
-3. Either way, confirm it from the first deploy's build log (service, **Logs**, the deploy): a locked install lists `Collecting alembic==1.18.5 (from -r requirements.txt` and its final `Successfully installed` line names 28 packages and none of `stripe`, `boto3`, `pillow` or `sewncovers-api`. The old command instead builds and installs `sewncovers-api` itself and resolves unpinned versions.
-
-The old command keeps working after this change (`pyproject.toml` still declares the runtime dependencies), so a late or forgotten edit never fails a deploy; it only means that deploy was not locked.
+The old command (`python -m pip install .`) keeps working (`pyproject.toml` still declares the runtime dependencies), so a late or forgotten edit never fails a deploy; it only means that deploy was not locked. Read which one a deploy used in its build log (service, **Logs**): a locked install lists `Collecting alembic==1.18.5 (from -r requirements.txt` and its final `Successfully installed` line names 28 packages and none of `stripe`, `boto3`, `pillow` or `sewncovers-api`. The old command builds and installs `sewncovers-api` itself and resolves unpinned versions.
 
 ### Server settings
 
@@ -93,7 +89,7 @@ Render's proxies append to `X-Forwarded-For` and keep whatever entries the clien
 | `CLIENT_IP_HEADER` | `x-forwarded-for`, `cf-connecting-ip`, `none` (socket peer) | `x-forwarded-for` in production, `none` elsewhere |
 | `CLIENT_IP_INDEX` | `0` for the first entry, `-N` for the Nth from the right | `-3` in production when the header is `x-forwarded-for`, `0` otherwise |
 
-Production sets `CLIENT_IP_INDEX=-3` explicitly, in the Render dashboard and in `render.yaml`, so a service rebuilt from the blueprint keeps it. The code default is the same value, so a missing variable does not change the behaviour. Both describe Render's current proxy chain: if the chain gains or loses a hop, the third entry from the right is no longer the client, and the setting has to change with it.
+Production sets `CLIENT_IP_INDEX=-3` explicitly, in the Render dashboard, where it takes effect, and in `render.yaml`, so a service recreated from that file keeps it. The code default is the same value, so a missing variable does not change the behaviour. Both describe Render's current proxy chain: if the chain gains or loses a hop, the third entry from the right is no longer the client, and the setting has to change with it.
 
 At start-up the production entry point logs `Client address source` with the effective `clientIpHeader` and `clientIpIndex` (the settings, never an address). Each access log line records the resolved `client` network and `forwardedEntries`, the number of entries the header had (never the addresses); a change in the usual count for ordinary requests is the first sign that the chain has changed. `none` makes every request share the proxy's address, so it is only for local use. Changing either variable in Render takes effect on the next deploy ("Save and deploy").
 

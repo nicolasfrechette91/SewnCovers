@@ -1,3 +1,7 @@
+# A record of the settings the Render service should have. Render does not apply
+# this file: sewncovers-api is configured in the Render dashboard and is not
+# managed by a Blueprint, so a change here takes effect only once the same
+# change is made by hand there (docs/deployment.md, "API on Render").
 services:
   - type: web
     name: sewncovers-api
@@ -6,9 +10,10 @@ services:
     region: ohio
     branch: main
     rootDir: backend
-    # Installs exactly the packages and hashes in backend/requirements.txt (the
-    # runtime lock; no Pillow, boto3 or stripe while uploads and commerce are
-    # off). The application runs from the source tree, so it is not installed.
+    # The build command the dashboard should have: it installs exactly the
+    # packages and hashes in backend/requirements.txt (the runtime lock; no
+    # Pillow, boto3 or stripe while uploads and commerce are off). The
+    # application runs from the source tree, so it is not installed.
     buildCommand: python -m pip install --require-hashes -r requirements.txt
     startCommand: python -m app.production
     healthCheckPath: /health

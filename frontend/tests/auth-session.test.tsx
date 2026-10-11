@@ -23,6 +23,10 @@ import {
 } from "../services/account-api";
 import { assuranceApi } from "../services/assurance-api";
 import { commerceApi } from "../services/commerce-api";
+import {
+  loadUploadAvailability,
+  resetUploadAvailability,
+} from "../services/upload-availability";
 
 // The session lifecycle: restoring a stored session on page load, signing in
 // and out, a 401 from any client, the page while the session is checked, and
@@ -367,6 +371,30 @@ for (const [name, call] of clients) {
     assert.equal(readSessionToken(), null);
   });
 }
+
+test("a 401 from the public upload-availability request keeps the session", async () => {
+  // An API from before that endpoint was public answers it with 401. The
+  // request carries no token, so the answer says nothing about the session.
+  storeSessionToken(STORED);
+  resetUploadAvailability();
+  serve(({ path }) =>
+    path === "/uploads/availability"
+      ? envelope(401, "authentication_required")
+      : undefined,
+  );
+  renderProbe();
+  await waitFor(() => assert.equal(auth(), signedIn));
+
+  assert.equal(await loadUploadAvailability(), null);
+
+  assert.deepEqual(
+    calls.filter(({ path }) => path === "/uploads/availability"),
+    [{ method: "GET", path: "/uploads/availability", authorization: null }],
+  );
+  assert.equal(auth(), signedIn);
+  assert.equal(readSessionToken(), STORED);
+  resetUploadAvailability();
+});
 
 test("a wrong passphrase (401 authentication_failed) keeps the session", async () => {
   storeSessionToken(STORED);

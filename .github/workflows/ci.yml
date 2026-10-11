@@ -285,8 +285,9 @@ jobs:
         env:
           UV_VERSION: 0.12.10
 
-      # Installs requirements.txt alone, the way render.yaml does, in a new
-      # environment (so no extra, no test tool) and starts the API from it:
+      # Installs requirements.txt alone, the way Render's build command does
+      # (that command is a dashboard setting; render.yaml only records it), in a
+      # new environment (so no extra, no test tool) and starts the API from it:
       # proves the runtime lock is complete, the optional extras are not
       # needed, and the flag-off features still answer 503.
       - name: Smoke-test the runtime-only install

@@ -15,7 +15,7 @@ from app.accounts.schema import (
     SessionCreatedResponse,
     SessionResponse,
 )
-from app.accounts.service import AccountService, AuthenticatedAccount
+from app.accounts.service import TOKEN_PATTERN, AccountService, AuthenticatedAccount
 from app.client_ip import network_key
 from app.errors import authentication_required
 from app.persistence.database import DatabaseSession
@@ -48,9 +48,26 @@ def bearer_token(
     return credentials.credentials
 
 
-def get_authenticated_account(
-    service: AccountServiceDependency,
+def require_bearer_token(
     token: Annotated[str | None, Depends(bearer_token)],
+) -> str:
+    """Refuse a request that cannot carry one of our tokens, without the database.
+
+    A missing token, a wrong scheme and a value of the wrong shape get the same
+    401 whatever the state of the database; only a well-formed token needs the
+    lookup in ``AccountService.authenticate``.
+    """
+    if token is None or TOKEN_PATTERN.fullmatch(token) is None:
+        raise authentication_required()
+    return token
+
+
+def get_authenticated_account(
+    # Listed first on purpose: FastAPI resolves parameters in order, and the
+    # service's session opens the database, which an unauthenticated request
+    # must never depend on.
+    token: Annotated[str, Depends(require_bearer_token)],
+    service: AccountServiceDependency,
 ) -> AuthenticatedAccount:
     return service.authenticate(token)
 

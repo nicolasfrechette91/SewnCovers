@@ -1,13 +1,61 @@
-"""Isolation for process-wide state that application startup changes."""
+"""Isolation for configuration and process-wide state around every test."""
 
 import logging
+import os
 from collections.abc import Iterator
 
 import pytest
 
 import app.observability as observability
+from app.health import RUNNING_COMMIT_VARIABLE
+from app.settings import Settings, reset_settings_cache
 
 _SERVER_LOGGERS = ("uvicorn", "uvicorn.error", "uvicorn.access")
+# Every variable the application reads. A test that needs one sets it itself.
+_CONFIGURATION_VARIABLES = frozenset(
+    {
+        str(field.validation_alias)
+        for field in Settings.model_fields.values()
+        if isinstance(field.validation_alias, str)
+    }
+    | {RUNNING_COMMIT_VARIABLE}
+)
+
+
+def _isolate_configuration() -> None:
+    """Keep the machine that runs the tests out of the tests.
+
+    ``Settings`` reads ``.env`` from the working directory and then the process
+    environment, so a developer's ``backend/.env`` (a DATABASE_URL, an
+    ENVIRONMENT) made tests pass on that machine and fail on a clean checkout:
+    CI saw two failures nobody had seen locally. Reading ``.env`` is switched
+    off for the whole session, and the variables the application reads are
+    removed from the environment. This runs when the file is imported, before
+    any test module imports ``app.main``, which builds an application (and so
+    reads the settings) at import time.
+    """
+    Settings.model_config["env_file"] = None
+    for name in _CONFIGURATION_VARIABLES:
+        os.environ.pop(name, None)
+    reset_settings_cache()
+
+
+_isolate_configuration()
+
+
+@pytest.fixture(autouse=True)
+def hermetic_configuration(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Start each test without configuration, and leave none behind.
+
+    The session-wide isolation above covers the machine; this covers the
+    previous test (a variable set directly rather than through ``monkeypatch``,
+    or settings cached from one that did).
+    """
+    for name in _CONFIGURATION_VARIABLES:
+        monkeypatch.delenv(name, raising=False)
+    reset_settings_cache()
+    yield
+    reset_settings_cache()
 
 
 @pytest.fixture(autouse=True)

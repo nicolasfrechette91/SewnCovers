@@ -1,11 +1,14 @@
 name: Deploy backend to Render
 
-# Render's own auto-deploy is off (render.yaml: autoDeployTrigger: off). This
-# workflow is the only thing that deploys the API: it runs the backend half of
-# CI (ci.yml), asks Render to deploy exactly this commit, waits until /health
-# reports that commit, then smoke-checks the live API. An old instance keeps
-# serving until the new one passes Render's health check, so waiting for the
-# commit, not for a route, is what proves the new code is live.
+# The Render service is configured in the Render dashboard, not by render.yaml
+# (it is not managed by a Blueprint, so Render never applies that file; see
+# docs/deployment.md, "API on Render"). Its own auto-deploy has to stay off
+# there, because this workflow is the only thing that may deploy the API: it
+# runs the backend half of CI (ci.yml), asks Render to deploy exactly this
+# commit, waits until /health reports that commit, then smoke-checks the live
+# API. An old instance keeps serving until the new one passes Render's health
+# check, so waiting for the commit, not for a route, is what proves the new
+# code is live.
 
 on:
   push:
@@ -13,6 +16,8 @@ on:
       - main
     paths:
       - backend/**
+      # Not applied by Render, but kept in step with the dashboard, so a change
+      # to it is reviewed and tested like the code it describes.
       - render.yaml
       - .github/workflows/ci.yml
       - .github/workflows/deploy-backend.yml

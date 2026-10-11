@@ -101,7 +101,7 @@ macOS and Linux commands, PostgreSQL, and how to switch on commerce and custom u
 | `backend/` | FastAPI service, Alembic migrations, pytest suite ([readme](backend/README.md)) |
 | `docs/` | Guides, ADRs, design system, case study and screenshots |
 | `.github/` | One reusable CI workflow, the Pages and Render deploys that call it |
-| `render.yaml` | Render service definition (no secrets) |
+| `render.yaml` | Record of the Render service settings (not applied by Render; no secrets) |
 | `AGENTS.md`, `SECURITY.md` | Contributor and agent notes; vulnerability reporting |
 
 ## Documentation

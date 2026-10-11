@@ -68,7 +68,7 @@ CI runs the suite in both layouts (see [Continuous integration](#continuous-inte
 
 ## Backend tests
 
-`python -m pytest` runs over 350 tests in about 20 files under `backend/tests/`. Each file that needs a database creates its own SQLite database and migrates it with Alembic, so the tests exercise the real migrations. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic. `conftest.py` undoes the process-wide logging changes that application start-up makes, and `support.py` holds the shared error-envelope assertion.
+`python -m pytest` runs over 350 tests in about 20 files under `backend/tests/`. Each file that needs a database creates its own SQLite database and migrates it with Alembic, so the tests exercise the real migrations. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic. `conftest.py` undoes the process-wide logging changes that application start-up makes, and `support.py` holds the shared error-envelope assertion. It also keeps the tests independent of the machine: reading `backend/.env` is switched off for the whole run and every variable the application reads (`DATABASE_URL`, `ENVIRONMENT` and the rest) is removed from the environment, so a test that needs one sets it itself. Before that, two tests passed with a local `.env` and failed on a clean checkout, which is all CI is. `tests/test_unauthenticated_requests.py` walks every route that needs an account and checks that a missing or unusable token is refused with the same `401` without a database session ever being opened.
 
 They cover:
 

@@ -62,7 +62,11 @@ def main() -> int:
     present = [n for n in OPTIONAL_MODULES if importlib.util.find_spec(n) is not None]
     expect("optional extras are not installed", present, [])
 
-    with tempfile.TemporaryDirectory(prefix="sewncovers-smoke-") as directory:
+    # On Windows the killed server can hold the database file for a moment
+    # longer; failing to delete a throwaway directory is not a failed check.
+    with tempfile.TemporaryDirectory(
+        prefix="sewncovers-smoke-", ignore_cleanup_errors=True
+    ) as directory:
         environment = {
             name: os.environ[name] for name in INHERITED_VARIABLES if name in os.environ
         }
