@@ -1448,6 +1448,118 @@ test("a pattern list that answers late keeps the chosen file's error", async () 
   }
 });
 
+test("a pattern list that answers during an upload leaves the upload busy", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalImage = globalThis.Image;
+  const originalCreate = URL.createObjectURL;
+  const originalRevoke = URL.revokeObjectURL;
+  let answerList!: () => void;
+  const listAnswered = new Promise<void>((resolve) => {
+    answerList = resolve;
+  });
+  class PreviewImage {
+    naturalWidth = 128;
+    naturalHeight = 96;
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    set src(_value: string) {
+      queueMicrotask(() => this.onload?.());
+    }
+  }
+  Object.defineProperty(globalThis, "Image", {
+    configurable: true,
+    value: PreviewImage,
+  });
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: () => "blob:busy-upload-pattern",
+  });
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: () => undefined,
+  });
+  globalThis.fetch = withUploadAvailability(true, async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/login"))
+      return json({
+        account: {
+          email: "preview@example.com",
+          createdAt: "2026-08-18T00:00:00Z",
+          role: "customer",
+        },
+        token: "Q".repeat(43),
+        expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+      });
+    if (url.endsWith("/uploads")) {
+      await listAnswered;
+      return json([]);
+    }
+    // The upload's first step never answers, so the upload stays in progress.
+    if (url.endsWith("/account/acknowledgements"))
+      return new Promise<Response>(() => undefined);
+    throw new Error(`Unexpected request GET ${url}`);
+  });
+  try {
+    render(
+      <AuthProvider>
+        <SignInForTest>
+          <ConfigurationProvider>
+            <YourPatterns />
+          </ConfigurationProvider>
+        </SignInForTest>
+      </AuthProvider>,
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Enter test account" }),
+    );
+    const input = (await screen.findByLabelText(
+      "Choose a pattern image",
+    )) as HTMLInputElement;
+    await screen.findByText("Loading your patterns…");
+    fireEvent.change(input, {
+      target: {
+        files: [
+          new File([new Uint8Array([1, 2, 3])], "calm.png", {
+            type: "image/png",
+          }),
+        ],
+      },
+    });
+    await screen.findByLabelText(
+      "Repeating preview of the selected local image",
+      {},
+      { timeout: 3_000 },
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /I acknowledge upload notice/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Upload for review" }));
+    const busy = await screen.findByRole("button", {
+      name: "Uploading pattern…",
+    });
+
+    await act(async () => answerList());
+    await screen.findByText("No custom patterns yet.");
+    assert.equal(busy.getAttribute("aria-busy"), "true");
+    assert.equal((busy as HTMLButtonElement).disabled, true);
+  } finally {
+    cleanup();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "Image", {
+      configurable: true,
+      value: originalImage,
+    });
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: originalCreate,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      value: originalRevoke,
+    });
+  }
+});
+
 test("revokes replaced, stale, and unmounted upload previews exactly once", async () => {
   const originalFetch = globalThis.fetch;
   const originalImage = globalThis.Image;

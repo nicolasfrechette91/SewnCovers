@@ -722,8 +722,12 @@ export const accountApi = {
       parser,
     });
   },
-  listUploads(token: string) {
-    return accountRequest("/uploads", { token, parser: isUploadList });
+  listUploads(token: string, { signal }: CallOptions = {}) {
+    return accountRequest("/uploads", {
+      token,
+      parser: isUploadList,
+      signal,
+    });
   },
   createUploadIntent(token: string, label: string, file: File) {
     return accountRequest("/uploads", {

@@ -10,11 +10,15 @@ import {
 
 /**
  * Server data a screen shows, loaded for a key. `data` and `error` belong to
- * the current key only: when the key changes they reset, and a response for
- * an earlier key is discarded.
+ * the current key only: when the key changes they reset (unless
+ * `keepPreviousData`), and a response for an earlier key is discarded.
  */
 export interface Resource<T> {
-  /** The last successful result for this key, kept through reloads and failures. */
+  /**
+   * The last successful result for this key, kept through reloads and
+   * failures. With `keepPreviousData`, the previous key's result stands in
+   * until the new key has one, including when the new key fails.
+   */
   readonly data: T | undefined;
   /** The last failure for this key, until the next success or `clearError()`. */
   readonly error: unknown;
@@ -28,8 +32,13 @@ export interface Resource<T> {
   readonly reload: (options?: {
     readonly background?: boolean;
   }) => Promise<void>;
-  /** Replaces the data locally, after a mutation that returned the new value. */
-  readonly update: (change: (data: T) => T) => void;
+  /**
+   * Replaces the data shown, after a mutation that returned the new value.
+   * `fallback` is the value to change when this key failed to load (a list
+   * that failed can still show an item just added); without one, or before
+   * anything settled, nothing changes.
+   */
+  readonly update: (change: (data: T) => T, fallback?: T) => void;
   /** Forgets the failure, for a screen whose banner an action replaces. */
   readonly clearError: () => void;
 }
@@ -50,6 +59,7 @@ interface Settled<T> {
 export function useResource<Key extends string, T>(
   key: Key | null,
   load: (key: Key, signal: AbortSignal) => Promise<T>,
+  { keepPreviousData = false }: { readonly keepPreviousData?: boolean } = {},
 ): Resource<T> {
   const [request, setRequest] = useState({ generation: 0, background: false });
   const [settled, setSettled] = useState<Settled<T> | null>(null);
@@ -90,7 +100,10 @@ export function useResource<Key extends string, T>(
           setSettled((previous) => ({
             key,
             generation,
-            data: previous?.key === key ? previous.data : undefined,
+            data:
+              previous?.key === key || keepPreviousData
+                ? previous?.data
+                : undefined,
             error,
           }));
         },
@@ -100,7 +113,7 @@ export function useResource<Key extends string, T>(
       controller.abort();
       finish();
     };
-  }, [key, generation]);
+  }, [key, generation, keepPreviousData]);
 
   const reload = useCallback(
     (options: { readonly background?: boolean } = {}) => {
@@ -116,14 +129,17 @@ export function useResource<Key extends string, T>(
   );
 
   const update = useCallback(
-    (change: (data: T) => T) => {
-      setSettled((previous) =>
-        previous !== null && previous.key === key && previous.data !== undefined
-          ? { ...previous, data: change(previous.data) }
-          : previous,
-      );
+    (change: (data: T) => T, fallback?: T) => {
+      setSettled((previous) => {
+        if (previous === null || (previous.key !== key && !keepPreviousData))
+          return previous;
+        const base = previous.data ?? fallback;
+        return base === undefined
+          ? previous
+          : { ...previous, data: change(base) };
+      });
     },
-    [key],
+    [key, keepPreviousData],
   );
 
   const clearError = useCallback(() => {
@@ -137,7 +153,9 @@ export function useResource<Key extends string, T>(
   const current = settled !== null && settled.key === key ? settled : null;
   const upToDate = current !== null && current.generation === generation;
   return {
-    data: current?.data,
+    data:
+      current?.data ??
+      (keepPreviousData && key !== null ? settled?.data : undefined),
     error: current?.error,
     loading:
       key !== null &&

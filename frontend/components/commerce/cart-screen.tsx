@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   Button,
@@ -15,7 +15,7 @@ import {
   EmptyState,
   ButtonLink,
 } from "@/components/ui";
-import { useAuth } from "@/context/auth";
+import { useAccountResource } from "@/context/auth/use-account-resource";
 import { AccountApiError } from "@/services/account-api";
 import { commerceApi, type Cart } from "@/services/commerce-api";
 
@@ -41,38 +41,35 @@ function fabricSummary(configuration: Readonly<Record<string, unknown>>) {
 }
 
 export function CartScreen() {
-  const { state } = useAuth();
-  const [cart, setCart] = useState<Cart | null>(null);
-  const [loading, setLoading] = useState(true);
+  const resource = useAccountResource((token, signal) =>
+    commerceApi.cart(token, { signal }),
+  );
+  const cart = resource.data;
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // One banner for the cart and its actions: an action replaces whatever the
+  // banner said, including a failed load.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const error =
+    actionError ??
+    (resource.error === undefined ? null : explain(resource.error));
+  const setError = (next: string | null) => {
+    setActionError(next);
+    if (next === null) resource.clearError();
+  };
   const [status, setStatus] = useState<string | null>(null);
   const focusRef = useRef<HTMLElement>(null);
   const focusLater = useDeferredFocus();
-  const load = async (token: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      setCart(await commerceApi.cart(token));
-    } catch (caught) {
-      setError(explain(caught));
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    if (state.status !== "authenticated") {
-      const timer = globalThis.setTimeout(() => setLoading(false), 0);
-      return () => globalThis.clearTimeout(timer);
-    }
-    const timer = globalThis.setTimeout(() => void load(state.token), 0);
-    return () => globalThis.clearTimeout(timer);
-  }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (state.status === "initializing" || loading)
+  if (resource.access === "initializing" || resource.loading)
     return <LoadingState label="Loading your demonstration cart…" />;
-  if (state.status === "guest")
-    return <SignInForCommerce context="cart" sessionNotice={state.notice} />;
-  const token = state.token;
+  const { auth, token } = resource;
+  if (token === null)
+    return (
+      <SignInForCommerce
+        context="cart"
+        sessionNotice={auth.status === "guest" ? auth.notice : undefined}
+      />
+    );
+  const setCart = (next: Cart) => resource.update(() => next);
   const mutate = async (
     name: string,
     task: () => Promise<Cart>,

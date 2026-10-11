@@ -220,3 +220,44 @@ test("a load that throws before returning a promise is reported as a failure", a
   await waitFor(() => assert.equal(result.current.error, failure));
   assert.equal(result.current.loading, false);
 });
+
+test("keepPreviousData shows the last result while a new key loads and when it fails", async () => {
+  const { calls, load } = controlledLoad();
+  const { result, rerender } = renderHook(
+    ({ key }: { key: string }) =>
+      useResource(key, load, { keepPreviousData: true }),
+    { initialProps: { key: "all" } },
+  );
+  await settle(calls[0], "all work");
+
+  rerender({ key: "open issues" });
+  assert.equal(result.current.loading, true);
+  assert.equal(result.current.data, "all work");
+  act(() => result.current.update((data) => `${data}, updated`));
+  assert.equal(result.current.data, "all work, updated");
+  await fail(calls[1], new Error("unavailable"));
+
+  assert.equal(result.current.loading, false);
+  assert.equal(result.current.data, "all work, updated");
+  assert.ok(result.current.error instanceof Error);
+
+  rerender({ key: "resolved" });
+  assert.equal(result.current.error, undefined, "an error stays with its key");
+  await settle(calls[2], "resolved work");
+  assert.equal(result.current.data, "resolved work");
+});
+
+test("update starts from the fallback when the key failed to load", async () => {
+  const { calls, load } = controlledLoad();
+  const { result } = renderHook(() => useResource("uploads", load));
+
+  act(() => result.current.update((data) => `${data} + new`, "nothing"));
+  assert.equal(result.current.data, undefined, "nothing settled yet");
+  await fail(calls[0], new Error("unavailable"));
+  act(() => result.current.update((data) => `${data} + new`));
+  assert.equal(result.current.data, undefined, "no fallback, no change");
+  act(() => result.current.update((data) => `${data} + new`, "nothing"));
+
+  assert.equal(result.current.data, "nothing + new");
+  assert.ok(result.current.error instanceof Error, "the failure still shows");
+});

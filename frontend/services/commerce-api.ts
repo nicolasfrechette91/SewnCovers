@@ -397,8 +397,12 @@ export const commerceApi = {
       parser: isQuote,
     });
   },
-  quotes(token: string) {
-    return commerceRequest("/commerce/quotes", { token, parser: isQuoteList });
+  quotes(token: string, { signal }: CallOptions = {}) {
+    return commerceRequest("/commerce/quotes", {
+      token,
+      parser: isQuoteList,
+      signal,
+    });
   },
   quote(token: string, quoteId: string) {
     return commerceRequest(`/commerce/quotes/${encodeURIComponent(quoteId)}`, {
@@ -412,8 +416,8 @@ export const commerceApi = {
       { method: "POST", token, body: { quantity }, parser: isQuote },
     );
   },
-  cart(token: string) {
-    return commerceRequest("/commerce/cart", { token, parser: isCart });
+  cart(token: string, { signal }: CallOptions = {}) {
+    return commerceRequest("/commerce/cart", { token, parser: isCart, signal });
   },
   addQuote(token: string, quoteId: string) {
     return commerceRequest("/commerce/cart/lines", {
@@ -450,13 +454,18 @@ export const commerceApi = {
       parser: isCheckout,
     });
   },
-  orders(token: string) {
-    return commerceRequest("/commerce/orders", { token, parser: isOrderList });
+  orders(token: string, { signal }: CallOptions = {}) {
+    return commerceRequest("/commerce/orders", {
+      token,
+      parser: isOrderList,
+      signal,
+    });
   },
-  order(token: string, orderId: string) {
+  order(token: string, orderId: string, { signal }: CallOptions = {}) {
     return commerceRequest(`/commerce/orders/${encodeURIComponent(orderId)}`, {
       token,
       parser: isOrder,
+      signal,
     });
   },
   sandboxCheckout(sessionId: string, { signal }: CallOptions = {}) {
@@ -485,8 +494,12 @@ export const commerceApi = {
       },
     );
   },
-  adminOrders(token: string) {
-    return commerceRequest("/admin/orders", { token, parser: isOrderList });
+  adminOrders(token: string, { signal }: CallOptions = {}) {
+    return commerceRequest("/admin/orders", {
+      token,
+      parser: isOrderList,
+      signal,
+    });
   },
   adminOrder(token: string, orderId: string) {
     return commerceRequest(`/admin/orders/${encodeURIComponent(orderId)}`, {
@@ -527,10 +540,11 @@ export const commerceApi = {
       { method: "POST", token, parser: isProductionAssetAccess },
     );
   },
-  priceBooks(token: string) {
+  priceBooks(token: string, { signal }: CallOptions = {}) {
     return commerceRequest("/admin/price-books", {
       token,
       parser: isPriceBookList,
+      signal,
     });
   },
   createPriceBook(
@@ -564,7 +578,11 @@ export const commerceApi = {
       { method: "POST", token, body: { confirm: true }, parser: isPriceBook },
     );
   },
-  audit(token: string) {
-    return commerceRequest("/admin/audit", { token, parser: isAuditList });
+  audit(token: string, { signal }: CallOptions = {}) {
+    return commerceRequest("/admin/audit", {
+      token,
+      parser: isAuditList,
+      signal,
+    });
   },
 };

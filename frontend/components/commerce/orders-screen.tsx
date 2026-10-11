@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId } from "react";
 
 import {
   Button,
@@ -15,7 +15,7 @@ import {
   TextLink,
   textLinkClasses,
 } from "@/components/ui";
-import { useAuth } from "@/context/auth";
+import { useAccountResource } from "@/context/auth/use-account-resource";
 import { AccountApiError } from "@/services/account-api";
 import { commerceApi, type Order } from "@/services/commerce-api";
 
@@ -242,50 +242,48 @@ export function OrderCard({
 export function OrdersScreen({
   pollPending = false,
 }: Readonly<{ pollPending?: boolean }>) {
-  const { state } = useAuth();
   const requestedOrder = useSearchParams().get("order");
-  const [orders, setOrders] = useState<readonly Order[]>([]);
-  const [selected, setSelected] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const load = async (token: string) => {
-    try {
-      if (requestedOrder)
-        setSelected(await commerceApi.order(token, requestedOrder));
-      else setOrders(await commerceApi.orders(token));
-      setError(null);
-    } catch (caught) {
-      setError(explain(caught));
-    } finally {
-      setLoading(false);
-    }
-  };
+  // The list and one order are separate resources; switching between them
+  // shows the loading state, as Refresh does.
+  const list = useAccountResource(
+    (token, signal) => commerceApi.orders(token, { signal }),
+    { key: requestedOrder === null ? "" : null },
+  );
+  const detail = useAccountResource(
+    (token, signal, orderId) => commerceApi.order(token, orderId, { signal }),
+    { key: requestedOrder },
+  );
+  const current = requestedOrder === null ? list : detail;
+  const orders = list.data ?? [];
+  const selected = detail.data ?? null;
+  const error = current.error === undefined ? null : explain(current.error);
+  // After checkout, ask again 2 s after each answer until the simulated
+  // payment settles. A failed answer keeps polling, and the error shows.
+  // Nothing is scheduled while a request is still out, so a slow answer is
+  // never cancelled by the next poll.
+  const polling =
+    pollPending &&
+    requestedOrder !== null &&
+    detail.token !== null &&
+    !detail.loading &&
+    (selected === null || selected.paymentStatus === "pending");
+  const { reload: reloadDetail } = detail;
   useEffect(() => {
-    if (state.status !== "authenticated") {
-      const timer = globalThis.setTimeout(() => setLoading(false), 0);
-      return () => globalThis.clearTimeout(timer);
-    }
-    const timer = globalThis.setTimeout(() => void load(state.token), 0);
+    if (!polling) return;
+    const timer = globalThis.setTimeout(
+      () => void reloadDetail({ background: true }),
+      2_000,
+    );
     return () => globalThis.clearTimeout(timer);
-  }, [state.status, requestedOrder]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (
-      !pollPending ||
-      state.status !== "authenticated" ||
-      !requestedOrder ||
-      (selected && selected.paymentStatus !== "pending")
-    )
-      return;
-    const timer = globalThis.setInterval(() => void load(state.token), 2_000);
-    return () => globalThis.clearInterval(timer);
-  }, [pollPending, requestedOrder, selected, state]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (state.status === "initializing" || loading)
+  }, [polling, reloadDetail, detail.data, detail.error]);
+  if (current.access === "initializing" || current.loading)
     return <LoadingState label="Checking order status…" />;
-  if (state.status === "guest")
+  const { auth } = current;
+  if (auth.status !== "authenticated")
     return (
       <SignInForCommerce
         context={pollPending ? "checkout" : "orders"}
-        sessionNotice={state.notice}
+        sessionNotice={auth.status === "guest" ? auth.notice : undefined}
       />
     );
   return (
@@ -304,13 +302,7 @@ export function OrdersScreen({
           {selected ? <OrderCard order={selected} detail /> : null}
           <div className="flex flex-wrap gap-3">
             <TextLink href="/orders/">All orders</TextLink>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setLoading(true);
-                void load(state.token);
-              }}
-            >
+            <Button variant="secondary" onClick={() => void detail.reload()}>
               Refresh order status
             </Button>
           </div>

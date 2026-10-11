@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   Button,
@@ -16,8 +16,13 @@ import {
   EmptyState,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
+import { useAccountResource } from "@/context/auth/use-account-resource";
 import { AccountApiError } from "@/services/account-api";
-import { assuranceApi, type ProductionWork } from "@/services/assurance-api";
+import {
+  assuranceApi,
+  type ProductionQueueFilters,
+  type ProductionWork,
+} from "@/services/assurance-api";
 
 const states = [
   "",
@@ -32,53 +37,45 @@ const states = [
 
 export function ProductionOperationsScreen() {
   const { state: auth } = useAuth();
-  const [items, setItems] = useState<readonly ProductionWork[]>([]);
-  const [selected, setSelected] = useState<ProductionWork | null>(null);
   const [stateFilter, setStateFilter] = useState("");
   const [issueFilter, setIssueFilter] = useState("");
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [message, setMessage] = useState("");
+  // Only the filters that reach the request: a one-letter search or extra
+  // spaces ask nothing new.
+  const filters: ProductionQueueFilters = {
+    state: stateFilter || undefined,
+    issueState: issueFilter || undefined,
+    search: search.trim().length >= 2 ? search.trim() : undefined,
+  };
+  // The list stays in view while new filters load, and when they fail.
+  const queue = useAccountResource(
+    (token, signal) => assuranceApi.productionQueue(token, filters, { signal }),
+    {
+      key: JSON.stringify(filters),
+      role: "administrator",
+      keepPreviousData: true,
+    },
+  );
+  const items = queue.data?.items ?? [];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = items.find((item) => item.id === selectedId) ?? null;
+  const queueError =
+    queue.loading || queue.error === undefined
+      ? null
+      : queue.error instanceof Error
+        ? queue.error.message
+        : "Production queue unavailable.";
+  // What the last action said. A reload keeps it, so a failed action's
+  // advice stays readable; changing filters or refreshing clears it.
+  const [actionMessage, setActionMessage] = useState("");
+  const message = actionMessage || (queueError ?? "");
+  const load = () => {
+    setActionMessage("");
+    return queue.reload();
+  };
   const [reason, setReason] = useState("");
   const detailHeading = useRef<HTMLHeadingElement>(null);
   const focusLater = useDeferredFocus();
-
-  const load = useCallback(async () => {
-    if (
-      auth.status !== "authenticated" ||
-      auth.account.role !== "administrator"
-    ) {
-      return;
-    }
-    setStatus("loading");
-    setMessage("");
-    try {
-      const query = new URLSearchParams({ page: "1", pageSize: "20" });
-      if (stateFilter) query.set("state", stateFilter);
-      if (issueFilter) query.set("issueState", issueFilter);
-      if (search.trim().length >= 2) query.set("search", search.trim());
-      const queue = await assuranceApi.productionQueue(auth.token, "?" + query);
-      setItems(queue.items);
-      setSelected((current) =>
-        current
-          ? (queue.items.find((item) => item.id === current.id) ?? null)
-          : null,
-      );
-      setStatus("idle");
-    } catch (error) {
-      setStatus("error");
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Production queue unavailable.",
-      );
-    }
-  }, [auth, issueFilter, search, stateFilter]);
-
-  useEffect(() => {
-    const timer = globalThis.setTimeout(() => void load(), 0);
-    return () => globalThis.clearTimeout(timer);
-  }, [load]);
 
   if (auth.status === "initializing") {
     return <LoadingState label="Checking administrator authorization…" />;
@@ -99,7 +96,7 @@ export function ProductionOperationsScreen() {
     action: () => Promise<ProductionWork>,
     success: string,
   ) => {
-    setMessage("");
+    setActionMessage("");
     // A step button (Approve work, Start production, ...) is replaced by the
     // next step's button once the state changes, and its focus is lost with
     // it. Then focus goes to the work heading, which names what changed.
@@ -116,23 +113,24 @@ export function ProductionOperationsScreen() {
       });
     try {
       const work = await action();
-      setSelected(work);
-      setItems((current) =>
-        current.map((item) => (item.id === work.id ? work : item)),
-      );
-      setMessage(success);
+      setSelectedId(work.id);
+      queue.update((data) => ({
+        ...data,
+        items: data.items.map((item) => (item.id === work.id ? work : item)),
+      }));
+      setActionMessage(success);
       focusHeadingIfFocusIsLost();
     } catch (error) {
       // Only a revision conflict (409) is fixed by reloading; permission,
       // rate-limit, and availability messages already say what to do.
-      setMessage(
+      setActionMessage(
         error instanceof AccountApiError && error.status === 409
           ? error.message + " Reload the current revision and retry."
           : error instanceof Error
             ? error.message
             : "The production action failed.",
       );
-      await load();
+      await queue.reload();
       focusHeadingIfFocusIsLost();
     }
   };
@@ -149,11 +147,11 @@ export function ProductionOperationsScreen() {
       anchor.download = "production-packet-" + selected.id + ".txt";
       anchor.click();
       URL.revokeObjectURL(objectUrl);
-      setMessage(
+      setActionMessage(
         "Packet checksum " + packet.checksum + " verified and downloaded.",
       );
     } catch (error) {
-      setMessage(
+      setActionMessage(
         error instanceof Error ? error.message : "Packet unavailable.",
       );
     }
@@ -194,7 +192,10 @@ export function ProductionOperationsScreen() {
               <TextInput
                 {...control}
                 value={search}
-                onChange={(event) => setSearch(event.currentTarget.value)}
+                onChange={(event) => {
+                  setActionMessage("");
+                  setSearch(event.currentTarget.value);
+                }}
               />
             )}
           </Field>
@@ -203,7 +204,10 @@ export function ProductionOperationsScreen() {
               <Select
                 {...control}
                 value={stateFilter}
-                onChange={(event) => setStateFilter(event.currentTarget.value)}
+                onChange={(event) => {
+                  setActionMessage("");
+                  setStateFilter(event.currentTarget.value);
+                }}
               >
                 {states.map((value) => (
                   <option key={value || "all"} value={value}>
@@ -218,7 +222,10 @@ export function ProductionOperationsScreen() {
               <Select
                 {...control}
                 value={issueFilter}
-                onChange={(event) => setIssueFilter(event.currentTarget.value)}
+                onChange={(event) => {
+                  setActionMessage("");
+                  setIssueFilter(event.currentTarget.value);
+                }}
               >
                 <option value="">All issues</option>
                 <option value="open">Open</option>
@@ -228,15 +235,15 @@ export function ProductionOperationsScreen() {
           </Field>
           <Button type="submit">Apply filters</Button>
         </form>
-        {status === "loading" ? (
+        {queue.loading ? (
           <LoadingState label="Loading production work…" />
         ) : null}
-        {status === "error" ? (
+        {queueError !== null ? (
           <ErrorMessage heading="Production queue unavailable">
-            {message}
+            {queueError}
           </ErrorMessage>
         ) : null}
-        {status === "idle" && items.length === 0 ? (
+        {!queue.loading && queueError === null && items.length === 0 ? (
           <EmptyState
             align="start"
             className="mt-4"
@@ -252,7 +259,7 @@ export function ProductionOperationsScreen() {
                 type="button"
                 className="min-h-24 w-full rounded-card border border-border-strong bg-surface p-4 text-left transition-[border-color,box-shadow] hover:border-brand hover:shadow-card motion-reduce:transition-none"
                 onClick={() => {
-                  setSelected(work);
+                  setSelectedId(work.id);
                   globalThis.setTimeout(
                     () => detailHeading.current?.focus(),
                     0,

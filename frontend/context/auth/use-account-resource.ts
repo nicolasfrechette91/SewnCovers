@@ -22,14 +22,16 @@ export interface AccountResource<T> extends Resource<T> {
 /**
  * `useResource` for data that belongs to the signed-in account. Nothing is
  * requested unless access is granted; the token is part of the key, so a
- * different session loads again. `key` adds to it (a project id, an order id);
- * null waits without requesting.
+ * different session loads again. `key` adds to it (a project id, an order id)
+ * and is passed to `load`; null waits without requesting. `keepPreviousData`
+ * is passed to `useResource`.
  */
 export function useAccountResource<T>(
-  load: (token: string, signal: AbortSignal) => Promise<T>,
+  load: (token: string, signal: AbortSignal, key: string) => Promise<T>,
   options: {
     readonly key?: string | null;
     readonly role?: Account["role"];
+    readonly keepPreviousData?: boolean;
   } = {},
 ): AccountResource<T> {
   const { state } = useAuth();
@@ -49,9 +51,10 @@ export function useAccountResource<T>(
   const resource = useResource(
     token === null || extra === null ? null : `${token}\u0000${extra}`,
     (_key, signal) =>
-      token === null
+      token === null || extra === null
         ? Promise.reject(new Error("There is no session to load with."))
-        : load(token, signal),
+        : load(token, signal, extra),
+    { keepPreviousData: options.keepPreviousData },
   );
   return { ...resource, access, auth: state, token };
 }

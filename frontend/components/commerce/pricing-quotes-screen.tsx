@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   Button,
@@ -16,12 +16,8 @@ import {
   Notice,
   EmptyState,
 } from "@/components/ui";
-import { useAuth } from "@/context/auth";
-import {
-  AccountApiError,
-  accountApi,
-  type ProjectDetail,
-} from "@/services/account-api";
+import { useAccountResource } from "@/context/auth/use-account-resource";
+import { AccountApiError, accountApi } from "@/services/account-api";
 import { commerceApi, type Pricing, type Quote } from "@/services/commerce-api";
 
 import { CommerceError, DemoBanner, SignInForCommerce } from "./demo-banner";
@@ -71,53 +67,52 @@ export function PricingQuotesScreen() {
 export function PrivatePricingWorkspace({
   requestedVersion,
 }: Readonly<{ requestedVersion: string | null }>) {
-  const { state } = useAuth();
-  const [projects, setProjects] = useState<readonly ProjectDetail[]>([]);
-  const [quotes, setQuotes] = useState<readonly Quote[]>([]);
-  const [versionId, setVersionId] = useState(requestedVersion ?? "");
+  const workspace = useAccountResource(async (token, signal) => {
+    const summaries = await accountApi.listProjects(token, { signal });
+    const [projects, quotes] = await Promise.all([
+      Promise.all(
+        summaries.map((project) =>
+          accountApi.getProject(token, project.id, { signal }),
+        ),
+      ),
+      commerceApi.quotes(token, { signal }),
+    ]);
+    return { projects, quotes };
+  });
+  const projects = workspace.data?.projects ?? [];
+  const quotes = workspace.data?.quotes ?? [];
+  const setQuotes = (change: (current: readonly Quote[]) => readonly Quote[]) =>
+    workspace.update((data) => ({ ...data, quotes: change(data.quotes) }));
+  // The requested version, or the one chosen, or else the first project's.
+  const [chosenVersion, setVersionId] = useState(requestedVersion ?? "");
+  const versionId = chosenVersion || projects[0]?.currentVersion.id || "";
   const [quantity, setQuantity] = useState(1);
   const [pricing, setPricing] = useState<Pricing | null>(null);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // One banner for the workspace and its actions: an action replaces
+  // whatever the banner said, including a failed load.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const error =
+    actionError ??
+    (workspace.error === undefined ? null : message(workspace.error));
+  const setError = (next: string | null) => {
+    setActionError(next);
+    if (next === null) workspace.clearError();
+  };
   const [status, setStatus] = useState<string | null>(null);
   const statusRef = useRef<HTMLElement>(null);
   const focusLater = useDeferredFocus();
 
-  const load = async (token: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const summaries = await accountApi.listProjects(token);
-      const [details, quoteHistory] = await Promise.all([
-        Promise.all(
-          summaries.map((project) => accountApi.getProject(token, project.id)),
-        ),
-        commerceApi.quotes(token),
-      ]);
-      setProjects(details);
-      setQuotes(quoteHistory);
-      if (!versionId && details[0]) setVersionId(details[0].currentVersion.id);
-    } catch (caught) {
-      setError(message(caught));
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    if (state.status !== "authenticated") {
-      const timer = globalThis.setTimeout(() => setLoading(false), 0);
-      return () => globalThis.clearTimeout(timer);
-    }
-    const timer = globalThis.setTimeout(() => void load(state.token), 0);
-    return () => globalThis.clearTimeout(timer);
-  }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (state.status === "initializing" || loading)
+  if (workspace.access === "initializing" || workspace.loading)
     return <LoadingState label="Loading demonstration prices and quotes…" />;
-  if (state.status === "guest")
-    return <SignInForCommerce context="pricing" sessionNotice={state.notice} />;
-  const token = state.token;
+  const { auth, token } = workspace;
+  if (token === null)
+    return (
+      <SignInForCommerce
+        context="pricing"
+        sessionNotice={auth.status === "guest" ? auth.notice : undefined}
+      />
+    );
   const act = async (name: string, task: () => Promise<void>) => {
     setBusy(name);
     setError(null);

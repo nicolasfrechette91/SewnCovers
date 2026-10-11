@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
 import {
   Button,
@@ -18,11 +18,10 @@ import {
   ErrorMessage,
   EmptyState,
 } from "@/components/ui";
-import { useAuth } from "@/context/auth";
+import { useAccountResource } from "@/context/auth/use-account-resource";
 import { AccountApiError, resolveAssetUrl } from "@/services/account-api";
 import {
   commerceApi,
-  type AuditEntry,
   type Order,
   type OrderState,
   type PriceBook,
@@ -197,57 +196,52 @@ function ProductionSpecification({
 }
 
 export function AdminScreen() {
-  const { state } = useAuth();
-  const [orders, setOrders] = useState<readonly Order[]>([]);
-  const [books, setBooks] = useState<readonly PriceBook[]>([]);
-  const [audit, setAudit] = useState<readonly AuditEntry[]>([]);
+  const workspace = useAccountResource(
+    async (token, signal) => {
+      const [orders, books, audit] = await Promise.all([
+        commerceApi.adminOrders(token, { signal }),
+        commerceApi.priceBooks(token, { signal }),
+        commerceApi.audit(token, { signal }),
+      ]);
+      return { orders, books, audit };
+    },
+    { role: "administrator" },
+  );
+  const orders = workspace.data?.orders ?? [];
+  const books = workspace.data?.books ?? [];
+  const audit = workspace.data?.audit ?? [];
+  const setOrders = (change: (current: readonly Order[]) => readonly Order[]) =>
+    workspace.update((data) => ({ ...data, orders: change(data.orders) }));
+  const setBooks = (
+    change: (current: readonly PriceBook[]) => readonly PriceBook[],
+  ) => workspace.update((data) => ({ ...data, books: change(data.books) }));
   const [selected, setSelected] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // One banner for the workspace and its actions: an action replaces
+  // whatever the banner said, including a failed load.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const error =
+    actionError ??
+    (workspace.error === undefined ? null : explain(workspace.error));
+  const setError = (next: string | null) => {
+    setActionError(next);
+    if (next === null) workspace.clearError();
+  };
   const [status, setStatus] = useState<string | null>(null);
   const [confirmPublish, setConfirmPublish] = useState<string | null>(null);
   const [confirmRefund, setConfirmRefund] = useState(false);
   const focusRef = useRef<HTMLElement>(null);
   const focusLater = useDeferredFocus();
-  const load = async (token: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [nextOrders, nextBooks, nextAudit] = await Promise.all([
-        commerceApi.adminOrders(token),
-        commerceApi.priceBooks(token),
-        commerceApi.audit(token),
-      ]);
-      setOrders(nextOrders);
-      setBooks(nextBooks);
-      setAudit(nextAudit);
-    } catch (caught) {
-      setError(explain(caught));
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    if (
-      state.status !== "authenticated" ||
-      state.account.role !== "administrator"
-    ) {
-      const timer = globalThis.setTimeout(() => setLoading(false), 0);
-      return () => globalThis.clearTimeout(timer);
-    }
-    const timer = globalThis.setTimeout(() => void load(state.token), 0);
-    return () => globalThis.clearTimeout(timer);
-  }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (state.status === "initializing" || loading)
+  if (workspace.access === "initializing" || workspace.loading)
     return (
       <LoadingState label="Loading protected demonstration administration…" />
     );
-  if (state.status === "guest")
+  const { auth, token } = workspace;
+  if (auth.status === "guest")
     return (
-      <SignInForCommerce context="administrator" sessionNotice={state.notice} />
+      <SignInForCommerce context="administrator" sessionNotice={auth.notice} />
     );
-  if (state.account.role !== "administrator")
+  if (token === null)
     return (
       <div className="space-y-component">
         <DemoBanner />
@@ -257,7 +251,6 @@ export function AdminScreen() {
         </ErrorMessage>
       </div>
     );
-  const token = state.token;
   const action = async (name: string, task: () => Promise<void>) => {
     setBusy(name);
     setError(null);

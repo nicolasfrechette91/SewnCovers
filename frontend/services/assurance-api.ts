@@ -1,5 +1,7 @@
 import {
   accountRequest,
+  type AccountRequestOptions,
+  type CallOptions,
   type FailureWording,
   type Parser,
 } from "./account-api";
@@ -45,6 +47,13 @@ export interface ReadinessReport {
   readonly disclaimer: string;
 }
 
+/** Queue filters; a missing one means all. */
+export interface ProductionQueueFilters {
+  readonly state?: string;
+  readonly issueState?: string;
+  readonly search?: string;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -60,10 +69,11 @@ const ASSURANCE_WORDING: FailureWording = {
 // no-store on these responses).
 function request<T>(
   path: string,
-  options: {
+  options: Omit<
+    AccountRequestOptions<T>,
+    "cache" | "empty" | "parser" | "wording"
+  > & {
     readonly method?: "GET" | "POST" | "PUT";
-    readonly body?: unknown;
-    readonly token?: string;
     readonly parser: Parser<T>;
   },
 ): Promise<T> {
@@ -112,9 +122,21 @@ export const assuranceApi = {
         typeof value.acknowledgedAt === "string",
     });
   },
-  productionQueue(token: string, query = "") {
-    return request(`admin/production-work${query}`, {
+  productionQueue(
+    token: string,
+    filters: ProductionQueueFilters = {},
+    { signal }: CallOptions = {},
+  ) {
+    return request("admin/production-work", {
       token,
+      query: {
+        page: "1",
+        pageSize: "20",
+        state: filters.state,
+        issueState: filters.issueState,
+        search: filters.search,
+      },
+      signal,
       parser: (value): value is ProductionQueue =>
         isRecord(value) &&
         Array.isArray(value.items) &&

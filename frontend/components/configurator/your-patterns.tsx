@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
   useId,
   useRef,
@@ -27,6 +26,7 @@ import {
   EmptyState,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
+import { useAccountResource } from "@/context/auth/use-account-resource";
 import { useConfiguration } from "@/context/configuration";
 import {
   accountApi,
@@ -107,17 +107,31 @@ export function YourPatterns() {
   const statusRef = useRef<HTMLParagraphElement>(null);
   const pendingValidationUrls = useRef(new Set<string>());
   const currentValidationUrl = useRef<string | null>(null);
-  const [uploads, setUploads] = useState<readonly CustomUpload[]>([]);
+  const list = useAccountResource(
+    (token, signal) => accountApi.listUploads(token, { signal }),
+    { key: uploadsOffered ? "" : null },
+  );
+  const uploads = list.data ?? [];
+  // Added uploads show even when the list itself failed to load.
+  const setUploads = (
+    change: (items: readonly CustomUpload[]) => readonly CustomUpload[],
+  ) => list.update(change, []);
+  // Kept apart from `error`: a list that arrives late must not clear a
+  // message about the chosen file or an action.
+  const listError =
+    list.error === undefined
+      ? null
+      : list.error instanceof AccountApiError
+        ? list.error.message
+        : "Your patterns could not be loaded.";
   const [file, setFile] = useState<File | null>(null);
   const [label, setLabel] = useState("");
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [dimensions, setDimensions] = useState<string | null>(null);
-  const [phase, setPhase] = useState<"idle" | "loading" | "uploading">("idle");
+  // Separate from the list's loading: one never ends the other.
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Kept apart from `error`: a list that arrives late must not clear a
-  // message about the chosen file or an action.
-  const [listError, setListError] = useState<string | null>(null);
   const [rightsAcknowledged, setRightsAcknowledged] = useState(false);
   const [signInOpen, setSignInOpen] = useState(false);
   const uploadActionRef = useRef<HTMLButtonElement>(null);
@@ -137,27 +151,6 @@ export function YourPatterns() {
     uploadActionRef.current?.focus();
   }, [signInOpen]);
 
-  const load = useCallback(async () => {
-    if (auth.status !== "authenticated" || !uploadsOffered) return;
-    setPhase("loading");
-    try {
-      setUploads(await accountApi.listUploads(auth.token));
-      setListError(null);
-    } catch (caught) {
-      setListError(
-        caught instanceof AccountApiError
-          ? caught.message
-          : "Your patterns could not be loaded.",
-      );
-    } finally {
-      setPhase("idle");
-    }
-  }, [auth, uploadsOffered]);
-
-  useEffect(() => {
-    const timer = globalThis.setTimeout(() => void load(), 0);
-    return () => globalThis.clearTimeout(timer);
-  }, [load]);
   useEffect(
     () => () => {
       if (localPreview) URL.revokeObjectURL(localPreview);
@@ -238,7 +231,7 @@ export function YourPatterns() {
       setError("Acknowledge upload notice version 1 before uploading.");
       return;
     }
-    setPhase("uploading");
+    setUploading(true);
     setError(null);
     setMessage("Preparing your private upload…");
     try {
@@ -280,7 +273,7 @@ export function YourPatterns() {
       );
       focusLater(() => fileInput.current);
     } finally {
-      setPhase("idle");
+      setUploading(false);
     }
   };
 
@@ -395,7 +388,7 @@ export function YourPatterns() {
           },
         });
       }
-      await load();
+      await list.reload();
       setEditing(null);
       setMessage(
         "Custom pattern deleted. It will no longer appear in saved projects or previews.",
@@ -547,7 +540,7 @@ export function YourPatterns() {
                 </Field>
                 <Button
                   className="mt-3"
-                  isLoading={phase === "uploading"}
+                  isLoading={uploading}
                   loadingLabel="Uploading pattern…"
                   onClick={() => void upload()}
                 >
@@ -569,7 +562,7 @@ export function YourPatterns() {
               </div>
             </div>
           ) : null}
-          {phase === "loading" ? (
+          {list.loading ? (
             <LoadingState className="mt-4" label="Loading your patterns…" />
           ) : null}
           {listError ? (
@@ -744,7 +737,7 @@ export function YourPatterns() {
                 );
               })}
             </ul>
-          ) : phase !== "loading" ? (
+          ) : !list.loading ? (
             <EmptyState
               align="start"
               className="mt-4"
