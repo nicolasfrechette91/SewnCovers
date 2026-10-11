@@ -71,7 +71,10 @@ export function ReadinessSummary() {
           <ul className="mt-3 grid gap-2">
             {report.checks.map((check) => (
               <li key={check.code}>
-                <strong>{check.level}:</strong> {check.message}
+                <strong>
+                  {check.level === "unknown" ? "Unknown level" : check.level}:
+                </strong>{" "}
+                {check.message}
               </li>
             ))}
           </ul>

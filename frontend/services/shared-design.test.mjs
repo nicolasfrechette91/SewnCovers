@@ -356,7 +356,6 @@ test("rejects malformed or mismatched retrieval responses without exposing field
   const { SharedDesignController } = await loadSharedDesign();
   const malformedResponses = [
     design({ publicId: "ZbCdEfGhIjKlMnOpQrSt_1" }),
-    design({ internalDatabaseId: 42 }),
     design({ shape: "square", width: 40, height: 39 }),
     design({ width: 45.123 }),
     design({ patternScale: 1.23 }),
@@ -368,12 +367,23 @@ test("rejects malformed or mismatched retrieval responses without exposing field
     await settle();
 
     assert.equal(harness.controller.getSnapshot().phase, "malformed-response");
-    assert.doesNotMatch(
-      harness.controller.getSnapshot().message,
-      /internalDatabaseId|42/,
-    );
     assert.deepEqual(harness.restored, []);
   }
+
+  // A field this build does not know is ignored: the design restores
+  // without it, and it is never shown.
+  const harness = createHarness(SharedDesignController, async () =>
+    design({ internalDatabaseId: 42 }),
+  );
+  harness.controller.start(`?design=${publicId}`, readyCatalogue());
+  await settle();
+  assert.equal(harness.controller.getSnapshot().phase, "restored");
+  assert.equal(harness.restored.length, 1);
+  assert.equal(Object.hasOwn(harness.restored[0], "internalDatabaseId"), false);
+  assert.doesNotMatch(
+    harness.controller.getSnapshot().message,
+    /internalDatabaseId|42/,
+  );
 });
 
 test("handles unknown IDs without retry loops or local mutation", async () => {

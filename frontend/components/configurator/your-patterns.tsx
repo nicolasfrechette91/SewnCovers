@@ -53,6 +53,8 @@ const stateLabels: Readonly<Record<CustomUpload["state"], string>> = {
   failed: "Processing failed",
   deleted: "Deleted",
   expired: "Upload expired",
+  // A state this build does not know: not selectable, not polled.
+  unknown: "Unknown status",
 };
 
 function defaultLabel(file: File): string {

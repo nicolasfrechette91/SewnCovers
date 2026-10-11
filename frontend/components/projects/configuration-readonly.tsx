@@ -3,11 +3,8 @@
 import type { CSSProperties } from "react";
 import { useAuth } from "@/context/auth";
 import { getPatternArtworkClassName } from "@/data/patterns";
-import {
-  accountApi,
-  resolveAssetUrl,
-  type ProjectConfigurationRequest,
-} from "@/services/account-api";
+import type { ProjectConfigurationRequest } from "@/services/account-api";
+import { fetchCustomAsset } from "@/services/custom-asset";
 import { useResource } from "@/services/use-resource";
 import { Surface, classNames } from "@/components/ui";
 
@@ -44,12 +41,15 @@ export function ConfigurationReadonly({
     ): Promise<{ label: string; url: string } | { deleted: true }> => {
       if (token === null || assetId === null) return { deleted: true };
       try {
-        const upload = await accountApi.getUpload(token, assetId, { signal });
-        if (upload.state === "deleted") return { deleted: true };
-        const access = await accountApi.assetAccess(token, upload.id, "tile", {
-          signal,
-        });
-        return { label: upload.label, url: resolveAssetUrl(access.url) };
+        const { upload, previewUrl } = await fetchCustomAsset(
+          token,
+          assetId,
+          (found) => found.state !== "deleted",
+          { signal },
+        );
+        return previewUrl === null
+          ? { deleted: true }
+          : { label: upload.label, url: previewUrl };
       } catch {
         return { deleted: true };
       }

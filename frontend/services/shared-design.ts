@@ -2,77 +2,16 @@ import { hasValidMeasurementsForShape } from "../context/configuration/measureme
 import { normalizePatternScale } from "../context/configuration/pattern-scale";
 import type { ConfigurationState } from "../context/configuration/types";
 import type { PatternCatalogueResult } from "../data/patterns";
-import {
-  DEFAULT_CLOSURE_TYPE,
-  DEFAULT_FIT_PREFERENCE,
-  DEFAULT_MATERIAL_ID,
-  DEFAULT_SEAM_STYLE,
-  hasSupportedCoverOptions,
-} from "../data/cover-options";
+import { hasSupportedCoverOptions } from "../data/cover-options";
 import type {
   ApiRequestStatus,
   DesignResponse,
   SewnCoversApiClient,
 } from "./api-client";
-
-const PUBLIC_DESIGN_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
-const PATTERN_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
-const LEGACY_DESIGN_RESPONSE_KEYS = [
-  "shape",
-  "width",
-  "height",
-  "thickness",
-  "unit",
-  "patternId",
-  "patternScale",
-  "publicId",
-] as const;
-const EXPANDED_DESIGN_RESPONSE_KEYS = [
-  "shape",
-  "width",
-  "height",
-  "backWidth",
-  "thickness",
-  "unit",
-  "patternId",
-  "patternScale",
-  "materialId",
-  "fitPreference",
-  "closureType",
-  "seamStyle",
-  "publicId",
-] as const;
-const FABRIC_DESIGN_RESPONSE_KEYS = [
-  "shape",
-  "width",
-  "height",
-  "backWidth",
-  "thickness",
-  "unit",
-  "patternId",
-  "solidColor",
-  "patternScale",
-  "materialId",
-  "fitPreference",
-  "closureType",
-  "seamStyle",
-  "publicId",
-] as const;
-const SOLID_DESIGN_RESPONSE_KEYS = [
-  "shape",
-  "width",
-  "height",
-  "backWidth",
-  "thickness",
-  "unit",
-  "solidColor",
-  "patternScale",
-  "materialId",
-  "fitPreference",
-  "closureType",
-  "seamStyle",
-  "publicId",
-] as const;
+import {
+  PUBLIC_DESIGN_ID_PATTERN,
+  readDesignResponse,
+} from "./design-contract";
 
 export type SharedDesignLoadState =
   | { readonly phase: "idle" }
@@ -111,99 +50,52 @@ const initialState: SharedDesignLoadState = Object.freeze({
   phase: "idle",
 });
 
-function hasExactKeys(value: object, expectedKeys: readonly string[]): boolean {
-  const keys = Object.keys(value);
-
-  return (
-    keys.length === expectedKeys.length &&
-    expectedKeys.every((key) => Object.hasOwn(value, key))
-  );
-}
-
-function hasAtMostDecimalPlaces(value: number, places: number): boolean {
-  if (!Number.isFinite(value)) {
-    return false;
-  }
-
-  const [coefficient, rawExponent = "0"] = value
-    .toString()
-    .toLowerCase()
-    .split("e");
-  const [, fraction = ""] = coefficient.split(".");
-  const exponent = Number(rawExponent);
-
-  return Math.max(0, fraction.length - exponent) <= places;
-}
-
+// The restore reads the record again with the shared reader (a test or
+// another client may hand over the raw record), then checks it can be
+// configured here: the requested public id, measurements in range for the
+// shape, a pattern scale on the step, and cover choices this build offers.
 function configurationFromResponse(
   response: DesignResponse,
   requestedPublicId: string,
 ): Readonly<ConfigurationState> | null {
-  const legacyResponse = hasExactKeys(response, LEGACY_DESIGN_RESPONSE_KEYS);
-  const fabricResponse = hasExactKeys(response, FABRIC_DESIGN_RESPONSE_KEYS);
-  const solidResponse = hasExactKeys(response, SOLID_DESIGN_RESPONSE_KEYS);
-  const resolvedConfiguration = {
-    backWidth: legacyResponse ? null : response.backWidth,
-    closureType: legacyResponse ? DEFAULT_CLOSURE_TYPE : response.closureType,
-    fitPreference: legacyResponse
-      ? DEFAULT_FIT_PREFERENCE
-      : response.fitPreference,
-    materialId: legacyResponse ? DEFAULT_MATERIAL_ID : response.materialId,
-    seamStyle: legacyResponse ? DEFAULT_SEAM_STYLE : response.seamStyle,
-  };
+  const design = readDesignResponse(response);
   if (
-    (!legacyResponse &&
-      !hasExactKeys(response, EXPANDED_DESIGN_RESPONSE_KEYS) &&
-      !fabricResponse &&
-      !solidResponse) ||
-    response.publicId !== requestedPublicId ||
-    !["box", "rectangle", "round", "square", "tapered"].includes(
-      response.shape,
-    ) ||
-    !["cm", "in"].includes(response.unit) ||
-    !hasAtMostDecimalPlaces(response.width, 2) ||
-    !hasAtMostDecimalPlaces(response.height, 2) ||
-    !hasAtMostDecimalPlaces(response.thickness, 2) ||
+    !design ||
+    design.publicId !== requestedPublicId ||
     !hasValidMeasurementsForShape(
-      response.shape,
-      response.width,
-      response.height,
-      response.thickness,
-      response.unit,
-      resolvedConfiguration.backWidth,
+      design.shape,
+      design.width,
+      design.height,
+      design.thickness,
+      design.unit,
+      design.backWidth,
     ) ||
-    !(
-      (response.patternId !== null &&
-        PATTERN_ID_PATTERN.test(response.patternId) &&
-        (!fabricResponse || response.solidColor === null)) ||
-      (((fabricResponse && response.patternId === null) || solidResponse) &&
-        /^#[0-9A-F]{6}$/.test(response.solidColor ?? ""))
-    ) ||
-    !hasAtMostDecimalPlaces(response.patternScale, 1) ||
-    normalizePatternScale(response.patternScale) !== response.patternScale ||
-    !hasSupportedCoverOptions(resolvedConfiguration)
+    normalizePatternScale(design.patternScale) !== design.patternScale ||
+    !hasSupportedCoverOptions(design)
   ) {
     return null;
   }
+  const pattern =
+    design.solidColor !== null
+      ? { kind: "solid" as const, color: design.solidColor }
+      : design.patternId !== null
+        ? { kind: "built-in" as const, patternId: design.patternId }
+        : null;
+  if (pattern === null) return null;
 
   return Object.freeze({
-    shape: response.shape,
-    width: response.width,
-    height: response.height,
-    backWidth: resolvedConfiguration.backWidth,
-    thickness: response.thickness,
-    unit: response.unit,
-    pattern: response.solidColor
-      ? { kind: "solid" as const, color: response.solidColor }
-      : {
-          kind: "built-in" as const,
-          patternId: response.patternId as string,
-        },
-    patternScale: response.patternScale,
-    materialId: resolvedConfiguration.materialId,
-    fitPreference: resolvedConfiguration.fitPreference,
-    closureType: resolvedConfiguration.closureType,
-    seamStyle: resolvedConfiguration.seamStyle,
+    shape: design.shape,
+    width: design.width,
+    height: design.height,
+    backWidth: design.backWidth,
+    thickness: design.thickness,
+    unit: design.unit,
+    pattern,
+    patternScale: design.patternScale,
+    materialId: design.materialId,
+    fitPreference: design.fitPreference,
+    closureType: design.closureType,
+    seamStyle: design.seamStyle,
   });
 }
 

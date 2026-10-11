@@ -16,15 +16,13 @@ import {
   ButtonLink,
 } from "@/components/ui";
 import { useAccountResource } from "@/context/auth/use-account-resource";
-import { AccountApiError } from "@/services/account-api";
+import { describeError } from "@/services/account-api";
 import { commerceApi, type Cart } from "@/services/commerce-api";
 
 import { CommerceError, DemoBanner, SignInForCommerce } from "./demo-banner";
 
 const explain = (error: unknown) =>
-  error instanceof AccountApiError
-    ? error.message
-    : "The cart request failed. Try again.";
+  describeError(error, "The cart request failed. Try again.");
 
 function fabricSummary(configuration: Readonly<Record<string, unknown>>) {
   const pattern =

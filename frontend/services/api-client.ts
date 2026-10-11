@@ -1,15 +1,17 @@
 import {
-  DEFAULT_CLOSURE_TYPE,
-  DEFAULT_FIT_PREFERENCE,
-  DEFAULT_MATERIAL_ID,
-  DEFAULT_SEAM_STYLE,
-} from "../data/cover-options";
-import {
   REQUEST_TIMEOUT_MS,
   send,
   TransportError,
   type HttpResponse,
 } from "./http";
+import {
+  readDesignResponse,
+  type CreateDesignRequest,
+  type DesignResponse,
+} from "./design-contract";
+import { isOneOf, isRecord, readList } from "./validation";
+
+export type { CreateDesignRequest, DesignResponse } from "./design-contract";
 
 export const API_REQUEST_TIMEOUT_MS = REQUEST_TIMEOUT_MS;
 export const API_RETRY_LIMIT = 2;
@@ -17,30 +19,7 @@ export const API_COLD_START_DELAY_MS = 2_000;
 
 const RETRY_DELAYS_MS = [500, 1_000] as const;
 const TRANSIENT_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
-const ERROR_CODES = new Set<ApiErrorCode>([
-  "design_not_found",
-  "field_required",
-  "internal_error",
-  "invalid_format",
-  "invalid_json",
-  "invalid_precision",
-  "invalid_public_id",
-  "invalid_type",
-  "invalid_value",
-  "measurement_out_of_range",
-  "method_not_allowed",
-  "pattern_unavailable",
-  "payload_too_large",
-  "public_id_unavailable",
-  "rate_limited",
-  "resource_not_found",
-  "shape_measurements_mismatch",
-  "square_dimensions_mismatch",
-  "storage_unavailable",
-  "unknown_field",
-  "unsupported_value",
-  "value_out_of_range",
-]);
+const DATABASE_STATES = ["healthy", "unavailable", "unconfigured"] as const;
 
 export type ApiErrorCategory =
   | "backend-contract"
@@ -50,32 +29,9 @@ export type ApiErrorCategory =
   | "network"
   | "timeout";
 
-export type ApiErrorCode =
-  | "design_not_found"
-  | "field_required"
-  | "internal_error"
-  | "invalid_format"
-  | "invalid_json"
-  | "invalid_precision"
-  | "invalid_public_id"
-  | "invalid_type"
-  | "invalid_value"
-  | "measurement_out_of_range"
-  | "method_not_allowed"
-  | "pattern_unavailable"
-  | "payload_too_large"
-  | "public_id_unavailable"
-  | "rate_limited"
-  | "resource_not_found"
-  | "shape_measurements_mismatch"
-  | "square_dimensions_mismatch"
-  | "storage_unavailable"
-  | "unknown_field"
-  | "unsupported_value"
-  | "value_out_of_range";
-
 export interface ApiErrorDetail {
-  readonly code: ApiErrorCode;
+  /** A stable code; one this build does not know still reads as a failure. */
+  readonly code: string;
   readonly message: string;
   readonly location: readonly (number | string)[];
 }
@@ -105,29 +61,6 @@ export interface PatternResponse {
   readonly id: string;
   readonly name: string;
   readonly previewClassName: string;
-}
-
-export type CushionShape = "box" | "rectangle" | "round" | "square" | "tapered";
-export type MeasurementUnit = "cm" | "in";
-
-export interface CreateDesignRequest {
-  readonly height: number;
-  readonly backWidth: number | null;
-  readonly patternId: string | null;
-  readonly solidColor: string | null;
-  readonly patternScale: number;
-  readonly materialId: "cotton-canvas" | "linen-blend" | "polyester-weave";
-  readonly fitPreference: "close" | "relaxed" | "standard";
-  readonly closureType: "envelope" | "slip-on" | "zipper";
-  readonly seamStyle: "piped" | "plain";
-  readonly shape: CushionShape;
-  readonly thickness: number;
-  readonly unit: MeasurementUnit;
-  readonly width: number;
-}
-
-export interface DesignResponse extends CreateDesignRequest {
-  readonly publicId: string;
 }
 
 export interface PatternQuery {
@@ -217,70 +150,36 @@ interface RequestDefinition<ResponseBody> {
   readonly query?: PatternQuery;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function hasExactKeys(
-  value: Record<string, unknown>,
-  keys: readonly string[],
-): boolean {
-  const actualKeys = Object.keys(value);
-  return (
-    actualKeys.length === keys.length &&
-    keys.every((key) => Object.hasOwn(value, key))
-  );
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function hasAtMostDecimalPlaces(value: number, places: number): boolean {
-  const [coefficient, rawExponent = "0"] = value
-    .toString()
-    .toLowerCase()
-    .split("e");
-  const [, fraction = ""] = coefficient.split(".");
-  const exponent = Number(rawExponent);
-  const decimalPlaces = Math.max(0, fraction.length - exponent);
-  return decimalPlaces <= places;
-}
+// Each reader builds its result from the fields this build knows: a field
+// the API adds later is ignored, while a missing or wrong known field makes
+// the response malformed (docs/architecture.md, "Reading responses").
 
 function parseHealthResponse(value: unknown): HealthResponse | undefined {
-  if (!isRecord(value)) {
-    return undefined;
-  }
-
-  // `commit` is optional so this build accepts the API from before and after
-  // that field shipped: the frontend and the API deploy independently.
-  const hasCommit = Object.hasOwn(value, "commit");
-
   if (
-    !hasExactKeys(
-      value,
-      hasCommit ? ["process", "database", "commit"] : ["process", "database"],
-    ) ||
-    (hasCommit &&
-      value.commit !== null &&
-      !(
-        typeof value.commit === "string" && /^[0-9a-f]{40}$/.test(value.commit)
-      )) ||
+    !isRecord(value) ||
     value.process !== "healthy" ||
-    !["healthy", "unavailable", "unconfigured"].includes(String(value.database))
+    !isOneOf(DATABASE_STATES, value.database)
   ) {
     return undefined;
   }
-
-  return value as unknown as HealthResponse;
+  // `commit` is optional so this build reads the API from before and after
+  // that field shipped: the frontend and the API deploy independently.
+  if (!Object.hasOwn(value, "commit")) {
+    return { process: "healthy", database: value.database };
+  }
+  if (
+    value.commit !== null &&
+    !(typeof value.commit === "string" && /^[0-9a-f]{40}$/.test(value.commit))
+  ) {
+    return undefined;
+  }
+  return { process: "healthy", database: value.database, commit: value.commit };
 }
 
 function parseUploadAvailability(
   value: unknown,
 ): UploadAvailabilityResponse | undefined {
-  return isRecord(value) &&
-    hasExactKeys(value, ["enabled"]) &&
-    typeof value.enabled === "boolean"
+  return isRecord(value) && typeof value.enabled === "boolean"
     ? { enabled: value.enabled }
     : undefined;
 }
@@ -288,14 +187,6 @@ function parseUploadAvailability(
 function parsePatternResponse(value: unknown): PatternResponse | undefined {
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, [
-      "id",
-      "name",
-      "description",
-      "categoryId",
-      "colorIds",
-      "previewClassName",
-    ]) ||
     typeof value.id !== "string" ||
     typeof value.name !== "string" ||
     typeof value.description !== "string" ||
@@ -306,206 +197,62 @@ function parsePatternResponse(value: unknown): PatternResponse | undefined {
   ) {
     return undefined;
   }
-
-  return value as unknown as PatternResponse;
+  return {
+    id: value.id,
+    name: value.name,
+    description: value.description,
+    categoryId: value.categoryId,
+    colorIds: [...value.colorIds],
+    previewClassName: value.previewClassName,
+  };
 }
 
 function parsePatternList(
   value: unknown,
 ): readonly PatternResponse[] | undefined {
-  if (!Array.isArray(value)) {
-    return undefined;
-  }
+  return readList(value, parsePatternResponse);
+}
 
-  const patterns = value.map(parsePatternResponse);
-  return patterns.every(
-    (pattern): pattern is PatternResponse => pattern !== undefined,
-  )
-    ? patterns
+function parseLocation(
+  value: unknown,
+): readonly (number | string)[] | undefined {
+  return Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(
+      (segment) =>
+        typeof segment === "string" ||
+        (typeof segment === "number" && Number.isInteger(segment)),
+    )
+    ? [...value]
     : undefined;
 }
 
-function parseDesignResponse(value: unknown): DesignResponse | undefined {
-  const legacyKeys = [
-    "shape",
-    "width",
-    "height",
-    "thickness",
-    "unit",
-    "patternId",
-    "patternScale",
-    "publicId",
-  ] as const;
-  const expandedKeys = [
-    "shape",
-    "width",
-    "height",
-    "backWidth",
-    "thickness",
-    "unit",
-    "patternId",
-    "patternScale",
-    "materialId",
-    "fitPreference",
-    "closureType",
-    "seamStyle",
-    "publicId",
-  ] as const;
-  const fabricKeys = [
-    "shape",
-    "width",
-    "height",
-    "backWidth",
-    "thickness",
-    "unit",
-    "patternId",
-    "solidColor",
-    "patternScale",
-    "materialId",
-    "fitPreference",
-    "closureType",
-    "seamStyle",
-    "publicId",
-  ] as const;
-  const solidKeys = [
-    "shape",
-    "width",
-    "height",
-    "backWidth",
-    "thickness",
-    "unit",
-    "solidColor",
-    "patternScale",
-    "materialId",
-    "fitPreference",
-    "closureType",
-    "seamStyle",
-    "publicId",
-  ] as const;
-  const isLegacy = isRecord(value) && hasExactKeys(value, legacyKeys);
-  const hasFabricFields = isRecord(value) && hasExactKeys(value, fabricKeys);
-  const isSolid = isRecord(value) && hasExactKeys(value, solidKeys);
-
-  if (
-    !isRecord(value) ||
-    (!isLegacy &&
-      !hasExactKeys(value, expandedKeys) &&
-      !hasFabricFields &&
-      !isSolid) ||
-    !["box", "rectangle", "round", "square", "tapered"].includes(
-      String(value.shape),
-    ) ||
-    !isFiniteNumber(value.width) ||
-    value.width <= 0 ||
-    !hasAtMostDecimalPlaces(value.width, 2) ||
-    !isFiniteNumber(value.height) ||
-    value.height <= 0 ||
-    !hasAtMostDecimalPlaces(value.height, 2) ||
-    !isFiniteNumber(value.thickness) ||
-    value.thickness <= 0 ||
-    !hasAtMostDecimalPlaces(value.thickness, 2) ||
-    !["cm", "in"].includes(String(value.unit)) ||
-    !(
-      (typeof value.patternId === "string" &&
-        /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value.patternId) &&
-        (!hasFabricFields || value.solidColor === null)) ||
-      (hasFabricFields &&
-        value.patternId === null &&
-        typeof value.solidColor === "string" &&
-        /^#[0-9A-F]{6}$/.test(value.solidColor)) ||
-      (isSolid &&
-        typeof value.solidColor === "string" &&
-        /^#[0-9A-F]{6}$/.test(value.solidColor))
-    ) ||
-    !isFiniteNumber(value.patternScale) ||
-    value.patternScale < 0.5 ||
-    value.patternScale > 2 ||
-    !hasAtMostDecimalPlaces(value.patternScale, 1) ||
-    typeof value.publicId !== "string" ||
-    !/^[A-Za-z0-9_-]{22}$/.test(value.publicId)
-  ) {
-    return undefined;
-  }
-
-  if (isLegacy) {
-    return {
-      ...(value as unknown as Omit<
-        DesignResponse,
-        | "backWidth"
-        | "closureType"
-        | "fitPreference"
-        | "materialId"
-        | "seamStyle"
-      >),
-      backWidth: null,
-      closureType: DEFAULT_CLOSURE_TYPE,
-      fitPreference: DEFAULT_FIT_PREFERENCE,
-      materialId: DEFAULT_MATERIAL_ID,
-      seamStyle: DEFAULT_SEAM_STYLE,
-      solidColor: null,
-    };
-  }
-
-  if (
-    (value.backWidth !== null &&
-      (!isFiniteNumber(value.backWidth) ||
-        value.backWidth <= 0 ||
-        !hasAtMostDecimalPlaces(value.backWidth, 2))) ||
-    !["cotton-canvas", "linen-blend", "polyester-weave"].includes(
-      String(value.materialId),
-    ) ||
-    !["close", "relaxed", "standard"].includes(String(value.fitPreference)) ||
-    !["envelope", "slip-on", "zipper"].includes(String(value.closureType)) ||
-    !["piped", "plain"].includes(String(value.seamStyle))
-  ) {
-    return undefined;
-  }
-
-  return {
-    ...(value as unknown as DesignResponse),
-    patternId: isSolid ? null : (value.patternId as string),
-    solidColor:
-      hasFabricFields || isSolid ? (value.solidColor as string | null) : null,
-  };
-}
-
+// The error envelope: other keys, here and in each error, are ignored; a
+// code this build does not know is still a documented failure.
 function parseApiErrorResponse(value: unknown): ApiErrorResponse | undefined {
-  // The envelope may carry the server's request id beside the errors; any
-  // other top-level key is still a contract violation.
-  const hasRequestId = isRecord(value) && Object.hasOwn(value, "requestId");
   if (
     !isRecord(value) ||
-    !hasExactKeys(value, hasRequestId ? ["errors", "requestId"] : ["errors"]) ||
-    (hasRequestId && typeof value.requestId !== "string") ||
-    !Array.isArray(value.errors) ||
-    value.errors.length === 0
+    (Object.hasOwn(value, "requestId") && typeof value.requestId !== "string")
   ) {
     return undefined;
   }
-
-  const errors: ApiErrorDetail[] = [];
-
-  for (const error of value.errors) {
+  const errors = readList(value.errors, (error): ApiErrorDetail | undefined => {
     if (
       !isRecord(error) ||
-      !hasExactKeys(error, ["code", "message", "location"]) ||
       typeof error.code !== "string" ||
-      !ERROR_CODES.has(error.code as ApiErrorCode) ||
-      typeof error.message !== "string" ||
-      !Array.isArray(error.location) ||
-      error.location.length === 0 ||
-      !error.location.every(
-        (segment) =>
-          typeof segment === "string" ||
-          (typeof segment === "number" && Number.isInteger(segment)),
-      )
+      typeof error.message !== "string"
     ) {
       return undefined;
     }
-
-    errors.push(error as unknown as ApiErrorDetail);
-  }
-
+    // Checked when present; an error that names no location has none.
+    const location = Object.hasOwn(error, "location")
+      ? parseLocation(error.location)
+      : [];
+    return location === undefined
+      ? undefined
+      : { code: error.code, message: error.message, location };
+  });
+  if (errors === undefined || errors.length === 0) return undefined;
   return typeof value.requestId === "string"
     ? { errors, requestId: value.requestId }
     : { errors };
@@ -777,7 +524,7 @@ export function createApiClient(): SewnCoversApiClient {
         expectedStatuses: [201],
         method: "POST",
         onStatus: options.onStatus,
-        parse: parseDesignResponse,
+        parse: readDesignResponse,
         path: "/designs",
       });
     },
@@ -786,7 +533,7 @@ export function createApiClient(): SewnCoversApiClient {
         expectedStatuses: [200],
         method: "GET",
         onStatus: options.onStatus,
-        parse: parseDesignResponse,
+        parse: readDesignResponse,
         path: `/designs/${encodeURIComponent(publicId)}`,
       });
     },

@@ -138,6 +138,16 @@ Responses never copy submitted values, exception text, SQL, constraint names, in
 
 Every response carries an `X-Request-ID` header, and every error body repeats it as `requestId`. The service writes the same id on each log line for that request, so an error someone reports can be found in the logs from that id alone. A client may send its own `X-Request-ID` of 8 to 64 letters, digits, `.`, `_` or `-`; anything else is replaced with a generated id. Browsers can read the header cross-origin: CORS exposes `X-Request-ID` and `Retry-After`.
 
+## Compatibility
+
+The site and the API deploy independently, in either order, and a browser tab can keep running an older site for hours, so a response change must be safe for the site already deployed. The frontend reads responses as a tolerant reader with strict values ([architecture](architecture.md#talking-to-the-api)):
+
+- **Adding a field is safe.** The site ignores fields it does not know, in responses and in the error envelope, so an additive field needs no frontend change first.
+- **A new field the site will rely on** ships optional first (absent or valid, as `commit` on `/health` did) and becomes required only after both sides have shipped.
+- **Removing or renaming a field takes two deploys**: add the new field and deploy the site that reads it, then remove the old one.
+- **A new value for an existing field** depends on the field. States the site only shows (order, payment, quote, upload and moderation states, carriers, readiness levels) appear as "Unknown status" (or "Unknown carrier", "Unknown level") until the site learns them. Values that drive behaviour (shapes, units, cover choices, pattern kinds, roles, cart and price-book states, privacy, upload methods, image types, currency) make the response unreadable to an older site, so ship the site that knows the value first.
+- **A new error code** is shown with the wording for its status until the site knows it.
+
 ## Limits
 
 Limits are sized so that ordinary use never meets them. Each `429` names the wait in its message and in `Retry-After`.

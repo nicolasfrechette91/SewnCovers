@@ -9,6 +9,7 @@ import {
   type ConfiguratorDraft,
   type DraftProjectLink,
 } from "./configurator-draft";
+import { isRecord } from "./validation";
 
 export interface FingerprintSource {
   readonly shape: string | null;
@@ -23,10 +24,6 @@ export interface FingerprintSource {
   readonly fitPreference: string;
   readonly closureType: string;
   readonly seamStyle: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** A short, non-reversible digest, so links and designs are compared without being stored. */

@@ -1,4 +1,9 @@
-import type { ConfigurationAction, ConfigurationState } from "./types";
+import { isOneOf } from "../../services/validation";
+import {
+  CUSHION_SHAPES,
+  type ConfigurationAction,
+  type ConfigurationState,
+} from "./types";
 import {
   convertMeasurement,
   hasValidMeasurementsForShape,
@@ -56,9 +61,7 @@ export function configurationReducer(
 
       if (
         configuration.shape === null ||
-        !["box", "rectangle", "round", "square", "tapered"].includes(
-          configuration.shape,
-        ) ||
+        !isOneOf(CUSHION_SHAPES, configuration.shape) ||
         !hasValidMeasurementsForShape(
           configuration.shape,
           configuration.width,

@@ -1,3 +1,5 @@
+import { normalizeBasePath, PRODUCTION_BASE_PATH } from "../config/base-path";
+
 export type AuthenticationMode = "login" | "register";
 
 export type AuthenticationReturnTarget =
@@ -41,7 +43,7 @@ export function returnTargetForPath(
   pathname: string,
   basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "",
 ): AuthenticationReturnTarget | null {
-  const base = basePath.replace(/\/+$/, "");
+  const base = normalizeBasePath(basePath);
   const path = (
     base && pathname.startsWith(base) ? pathname.slice(base.length) : pathname
   )
@@ -69,8 +71,10 @@ export function resolveAuthenticationReturnDestination(
   const target = parseAuthenticationReturnTarget(value);
   if (!target) return null;
 
-  const normalizedBasePath = basePath.replace(/\/+$/, "");
+  // Only the deployed base path is ever prefixed (open-redirect defence).
   const safeBasePath =
-    normalizedBasePath === "/SewnCovers" ? normalizedBasePath : "";
+    normalizeBasePath(basePath) === PRODUCTION_BASE_PATH
+      ? PRODUCTION_BASE_PATH
+      : "";
   return `${safeBasePath}${RETURN_PATHS[target]}`;
 }

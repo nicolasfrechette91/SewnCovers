@@ -1,10 +1,66 @@
+import { CARRIER_IDS, type CarrierId } from "../data/carriers";
 import {
   accountRequest,
   type AccountRequestOptions,
   type CallOptions,
   type FailureWording,
-  type Parser,
 } from "./account-api";
+import {
+  anyRecord,
+  flag,
+  integer,
+  knownOrUnknown,
+  listOf,
+  literal,
+  numeric,
+  oneOf,
+  orNull,
+  recordOf,
+  text,
+  textOrNull,
+  wholeNumber,
+  type FieldReaders,
+  type Reader,
+} from "./validation";
+
+// States that drive what the sandbox lets you do are checked strictly; states
+// that are only shown read as "unknown" when this build does not know them,
+// and the screens show a neutral label (docs/architecture.md).
+export const QUOTE_STATUSES = [
+  "active",
+  "expired",
+  "checked_out",
+  "cancelled",
+] as const;
+export const CART_STATES = ["active", "checkout_pending", "closed"] as const;
+export const ORDER_STATES = [
+  "payment_pending",
+  "paid",
+  "production_review",
+  "approved_for_production",
+  "in_production",
+  "quality_check",
+  "ready_to_ship",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "refund_pending",
+  "refunded",
+  "manual_review_required",
+] as const;
+export const PAYMENT_STATUSES = [
+  "pending",
+  "paid",
+  "failed",
+  "cancelled",
+  "refund_pending",
+  "refunded",
+  "manual_review",
+] as const;
+export const PRICE_BOOK_STATES = ["draft", "published"] as const;
+
+export type OrderState = (typeof ORDER_STATES)[number];
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export interface PricingComponent {
   readonly code: string;
@@ -29,7 +85,8 @@ export interface Pricing {
 
 export interface Quote extends Pricing {
   readonly id: string;
-  readonly status: "active" | "expired" | "checked_out" | "cancelled";
+  /** "unknown" for a status this build does not know (only shown). */
+  readonly status: (typeof QUOTE_STATUSES)[number] | "unknown";
   readonly projectVersionId: string | null;
   readonly configuration: Readonly<Record<string, unknown>>;
   readonly createdAt: string;
@@ -48,28 +105,13 @@ export interface CartLine {
 export interface Cart {
   readonly id: string;
   readonly demonstration: true;
-  readonly state: "active" | "checkout_pending" | "closed";
+  readonly state: (typeof CART_STATES)[number];
   readonly currency: "CAD";
   readonly lines: readonly CartLine[];
   readonly subtotalAmountMinor: number;
   readonly subtotalFormatted: string;
   readonly notices: readonly string[];
 }
-
-export type OrderState =
-  | "payment_pending"
-  | "paid"
-  | "production_review"
-  | "approved_for_production"
-  | "in_production"
-  | "quality_check"
-  | "ready_to_ship"
-  | "shipped"
-  | "delivered"
-  | "cancelled"
-  | "refund_pending"
-  | "refunded"
-  | "manual_review_required";
 
 export interface TimelineEntry {
   readonly action: string;
@@ -80,7 +122,8 @@ export interface TimelineEntry {
 }
 
 export interface Shipment {
-  readonly carrier: "canada-post" | "ups" | "fedex" | "purolator";
+  /** "unknown" for a carrier this build does not know (only shown). */
+  readonly carrier: CarrierId | "unknown";
   readonly trackingReference: string;
   readonly trackingUrl: string | null;
   readonly shippedAt: string;
@@ -92,8 +135,10 @@ export interface Order {
   readonly reference: string;
   readonly demonstration: boolean;
   readonly createdAt: string;
-  readonly state: OrderState;
-  readonly paymentStatus: string;
+  /** "unknown" for a state this build does not know (only shown). */
+  readonly state: OrderState | "unknown";
+  /** "unknown" for a status this build does not know (only shown). */
+  readonly paymentStatus: PaymentStatus | "unknown";
   readonly currency: "CAD";
   readonly subtotalAmountMinor: number;
   readonly taxAmountMinor: number;
@@ -128,7 +173,7 @@ export interface PriceBook {
   readonly id: string;
   readonly version: number;
   readonly label: string;
-  readonly state: "draft" | "published";
+  readonly state: (typeof PRICE_BOOK_STATES)[number];
   readonly currency: "CAD";
   readonly configuration: Readonly<Record<string, unknown>>;
   readonly effectiveAt: string | null;
@@ -153,216 +198,155 @@ export interface ProductionAssetAccess {
   readonly processingVersion: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+// Readers: each reads the fields this build knows (see recordOf); a field
+// the API adds later is ignored. Free-form records the screens read
+// defensively (a quote's configuration, an order line, audit data) are kept
+// whole.
 
-function isNonnegativeInteger(value: unknown): value is number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-}
+const readPricingComponent = recordOf<PricingComponent>({
+  code: text,
+  label: text,
+  amountMinor: integer,
+  basis: text,
+});
 
-function isPricing(value: unknown): value is Pricing {
-  return (
-    isRecord(value) &&
-    value.demonstration === true &&
-    value.currency === "CAD" &&
-    typeof value.modelLabel === "string" &&
-    isNonnegativeInteger(value.priceBookVersion) &&
-    isNonnegativeInteger(value.quantity) &&
-    isNonnegativeInteger(value.unitAmountMinor) &&
-    isNonnegativeInteger(value.subtotalAmountMinor) &&
-    typeof value.subtotalFormatted === "string" &&
-    typeof value.taxTreatment === "string" &&
-    typeof value.shippingTreatment === "string" &&
-    Array.isArray(value.breakdown) &&
-    value.breakdown.every(
-      (item) =>
-        isRecord(item) &&
-        typeof item.code === "string" &&
-        typeof item.label === "string" &&
-        typeof item.amountMinor === "number" &&
-        Number.isSafeInteger(item.amountMinor) &&
-        typeof item.basis === "string",
-    )
-  );
-}
+const PRICING_FIELDS: FieldReaders<Pricing> = {
+  demonstration: literal(true),
+  modelLabel: text,
+  priceBookVersion: wholeNumber,
+  currency: literal("CAD"),
+  quantity: wholeNumber,
+  unitAmountMinor: wholeNumber,
+  subtotalAmountMinor: wholeNumber,
+  subtotalFormatted: text,
+  breakdown: listOf(readPricingComponent),
+  taxTreatment: text,
+  shippingTreatment: text,
+};
+const readPricing = recordOf(PRICING_FIELDS);
 
-function isQuote(value: unknown): value is Quote {
-  return (
-    isPricing(value) &&
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    ["active", "expired", "checked_out", "cancelled"].includes(
-      String(value.status),
-    ) &&
-    (value.projectVersionId === null ||
-      typeof value.projectVersionId === "string") &&
-    isRecord(value.configuration) &&
-    typeof value.createdAt === "string" &&
-    typeof value.expiresAt === "string" &&
-    typeof value.canCheckout === "boolean" &&
-    (value.customAsset === null || isRecord(value.customAsset))
-  );
-}
+const readQuote = recordOf<Quote>({
+  ...PRICING_FIELDS,
+  id: text,
+  status: knownOrUnknown(QUOTE_STATUSES),
+  projectVersionId: textOrNull,
+  configuration: anyRecord,
+  createdAt: text,
+  expiresAt: text,
+  canCheckout: flag,
+  customAsset: orNull(anyRecord),
+});
 
-const isQuoteList: Parser<readonly Quote[]> = (
-  value,
-): value is readonly Quote[] => Array.isArray(value) && value.every(isQuote);
+const readCartLine = recordOf<CartLine>({
+  id: text,
+  quote: readQuote,
+  quantity: wholeNumber,
+  extendedAmountMinor: wholeNumber,
+});
 
-function isCart(value: unknown): value is Cart {
-  return (
-    isRecord(value) &&
-    value.demonstration === true &&
-    typeof value.id === "string" &&
-    ["active", "checkout_pending", "closed"].includes(String(value.state)) &&
-    value.currency === "CAD" &&
-    isNonnegativeInteger(value.subtotalAmountMinor) &&
-    typeof value.subtotalFormatted === "string" &&
-    Array.isArray(value.notices) &&
-    value.notices.every((notice) => typeof notice === "string") &&
-    Array.isArray(value.lines) &&
-    value.lines.every(
-      (line) =>
-        isRecord(line) &&
-        typeof line.id === "string" &&
-        isQuote(line.quote) &&
-        isNonnegativeInteger(line.quantity) &&
-        isNonnegativeInteger(line.extendedAmountMinor),
-    )
-  );
-}
+const readCart = recordOf<Cart>({
+  id: text,
+  demonstration: literal(true),
+  state: oneOf(CART_STATES),
+  currency: literal("CAD"),
+  lines: listOf(readCartLine),
+  subtotalAmountMinor: wholeNumber,
+  subtotalFormatted: text,
+  notices: listOf(text),
+});
 
-function isShipment(value: unknown): value is Shipment {
-  return (
-    isRecord(value) &&
-    ["canada-post", "ups", "fedex", "purolator"].includes(
-      String(value.carrier),
-    ) &&
-    typeof value.trackingReference === "string" &&
-    (value.trackingUrl === null || typeof value.trackingUrl === "string") &&
-    typeof value.shippedAt === "string" &&
-    (value.deliveredAt === null || typeof value.deliveredAt === "string")
-  );
-}
+const readShipment = recordOf<Shipment>({
+  carrier: knownOrUnknown(CARRIER_IDS),
+  trackingReference: text,
+  trackingUrl: textOrNull,
+  shippedAt: text,
+  deliveredAt: textOrNull,
+});
 
-function isOrder(value: unknown): value is Order {
-  const states = [
-    "payment_pending",
-    "paid",
-    "production_review",
-    "approved_for_production",
-    "in_production",
-    "quality_check",
-    "ready_to_ship",
-    "shipped",
-    "delivered",
-    "cancelled",
-    "refund_pending",
-    "refunded",
-    "manual_review_required",
-  ];
-  const payments = [
-    "pending",
-    "paid",
-    "failed",
-    "cancelled",
-    "refund_pending",
-    "refunded",
-    "manual_review",
-  ];
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.reference === "string" &&
-    typeof value.demonstration === "boolean" &&
-    typeof value.createdAt === "string" &&
-    states.includes(String(value.state)) &&
-    payments.includes(String(value.paymentStatus)) &&
-    value.currency === "CAD" &&
-    [
-      value.subtotalAmountMinor,
-      value.taxAmountMinor,
-      value.shippingAmountMinor,
-      value.totalAmountMinor,
-    ].every(isNonnegativeInteger) &&
-    typeof value.totalFormatted === "string" &&
-    Array.isArray(value.lines) &&
-    value.lines.every(isRecord) &&
-    (value.shipment === null || isShipment(value.shipment)) &&
-    (value.shippingAddress === null || isRecord(value.shippingAddress)) &&
-    Array.isArray(value.timeline) &&
-    value.timeline.every(
-      (entry) =>
-        isRecord(entry) &&
-        typeof entry.action === "string" &&
-        (entry.fromState === null || typeof entry.fromState === "string") &&
-        (entry.toState === null || typeof entry.toState === "string") &&
-        typeof entry.createdAt === "string" &&
-        isRecord(entry.data),
-    )
-  );
-}
+const readTimelineEntry = recordOf<TimelineEntry>({
+  action: text,
+  fromState: textOrNull,
+  toState: textOrNull,
+  data: anyRecord,
+  createdAt: text,
+});
 
-const isOrderList: Parser<readonly Order[]> = (
-  value,
-): value is readonly Order[] => Array.isArray(value) && value.every(isOrder);
-const isCheckout: Parser<Checkout> = (value): value is Checkout =>
-  isRecord(value) &&
-  typeof value.demonstration === "boolean" &&
-  typeof value.orderId === "string" &&
-  typeof value.orderReference === "string" &&
-  typeof value.checkoutUrl === "string" &&
-  typeof value.expiresAt === "string";
-const isSandboxCheckout: Parser<SandboxCheckout> = (
-  value,
-): value is SandboxCheckout =>
-  isRecord(value) &&
-  value.demonstration === true &&
-  typeof value.sessionId === "string" &&
-  typeof value.orderReference === "string" &&
-  isNonnegativeInteger(value.amountMinor) &&
-  value.currency === "CAD" &&
-  typeof value.status === "string" &&
-  typeof value.expiresAt === "string";
-const isPriceBook: Parser<PriceBook> = (value): value is PriceBook =>
-  isRecord(value) &&
-  typeof value.id === "string" &&
-  isNonnegativeInteger(value.version) &&
-  typeof value.label === "string" &&
-  ["draft", "published"].includes(String(value.state)) &&
-  value.currency === "CAD" &&
-  isRecord(value.configuration) &&
-  (value.effectiveAt === null || typeof value.effectiveAt === "string") &&
-  typeof value.createdAt === "string" &&
-  (value.publishedAt === null || typeof value.publishedAt === "string");
-const isPriceBookList: Parser<readonly PriceBook[]> = (
-  value,
-): value is readonly PriceBook[] =>
-  Array.isArray(value) && value.every(isPriceBook);
-const isAuditList: Parser<readonly AuditEntry[]> = (
-  value,
-): value is readonly AuditEntry[] =>
-  Array.isArray(value) &&
-  value.every(
-    (entry) =>
-      isRecord(entry) &&
-      typeof entry.id === "number" &&
-      (entry.actorAccountId === null ||
-        typeof entry.actorAccountId === "string") &&
-      typeof entry.action === "string" &&
-      typeof entry.targetType === "string" &&
-      typeof entry.targetId === "string" &&
-      isRecord(entry.data) &&
-      typeof entry.createdAt === "string",
-  );
-const isProductionAssetAccess: Parser<ProductionAssetAccess> = (
-  value,
-): value is ProductionAssetAccess =>
-  isRecord(value) &&
-  typeof value.url === "string" &&
-  typeof value.expiresAt === "string" &&
-  typeof value.checksum === "string" &&
-  typeof value.processingVersion === "string";
+const readOrder = recordOf<Order>({
+  id: text,
+  reference: text,
+  demonstration: flag,
+  createdAt: text,
+  state: knownOrUnknown(ORDER_STATES),
+  paymentStatus: knownOrUnknown(PAYMENT_STATUSES),
+  currency: literal("CAD"),
+  subtotalAmountMinor: wholeNumber,
+  taxAmountMinor: wholeNumber,
+  shippingAmountMinor: wholeNumber,
+  totalAmountMinor: wholeNumber,
+  totalFormatted: text,
+  lines: listOf(anyRecord),
+  shipment: orNull(readShipment),
+  shippingAddress: orNull(anyRecord),
+  timeline: listOf(readTimelineEntry),
+});
+
+const readCheckout = recordOf<Checkout>({
+  demonstration: flag,
+  orderId: text,
+  orderReference: text,
+  checkoutUrl: text,
+  expiresAt: text,
+});
+
+const readSandboxCheckout = recordOf<SandboxCheckout>({
+  demonstration: literal(true),
+  sessionId: text,
+  orderReference: text,
+  amountMinor: wholeNumber,
+  currency: literal("CAD"),
+  status: text,
+  expiresAt: text,
+});
+
+const readPriceBook = recordOf<PriceBook>({
+  id: text,
+  version: wholeNumber,
+  label: text,
+  state: oneOf(PRICE_BOOK_STATES),
+  currency: literal("CAD"),
+  configuration: anyRecord,
+  effectiveAt: textOrNull,
+  createdAt: text,
+  publishedAt: textOrNull,
+});
+
+const readAuditEntry = recordOf<AuditEntry>({
+  id: numeric,
+  actorAccountId: textOrNull,
+  action: text,
+  targetType: text,
+  targetId: text,
+  data: anyRecord,
+  createdAt: text,
+});
+
+const readProductionAssetAccess = recordOf<ProductionAssetAccess>({
+  url: text,
+  expiresAt: text,
+  checksum: text,
+  processingVersion: text,
+});
+
+const readSandboxCompletion = recordOf<{
+  readonly received: true;
+  readonly duplicate: boolean;
+  readonly outcome: string;
+}>({ received: literal(true), duplicate: flag, outcome: text });
+
+const readQuoteList = listOf(readQuote);
+const readOrderList = listOf(readOrder);
+const readPriceBookList = listOf(readPriceBook);
+const readAuditList = listOf(readAuditEntry);
 
 const COMMERCE_WORDING: FailureWording = {
   network: "The commerce service could not be reached. Try again.",
@@ -374,7 +358,7 @@ const COMMERCE_WORDING: FailureWording = {
 function commerceRequest<T>(
   path: string,
   options: Omit<AccountRequestOptions<T>, "empty" | "parser" | "wording"> & {
-    readonly parser: Parser<T>;
+    readonly parser: Reader<T>;
   },
 ): Promise<T> {
   return accountRequest(path, { ...options, wording: COMMERCE_WORDING });
@@ -386,7 +370,7 @@ export const commerceApi = {
       method: "POST",
       token,
       body: { projectVersionId, quantity },
-      parser: isPricing,
+      parser: readPricing,
     });
   },
   createQuote(token: string, projectVersionId: string, quantity: number) {
@@ -394,56 +378,60 @@ export const commerceApi = {
       method: "POST",
       token,
       body: { projectVersionId, quantity },
-      parser: isQuote,
+      parser: readQuote,
     });
   },
   quotes(token: string, { signal }: CallOptions = {}) {
     return commerceRequest("/commerce/quotes", {
       token,
-      parser: isQuoteList,
+      parser: readQuoteList,
       signal,
     });
   },
   quote(token: string, quoteId: string) {
     return commerceRequest(`/commerce/quotes/${encodeURIComponent(quoteId)}`, {
       token,
-      parser: isQuote,
+      parser: readQuote,
     });
   },
   reprice(token: string, quoteId: string, quantity: number) {
     return commerceRequest(
       `/commerce/quotes/${encodeURIComponent(quoteId)}/reprice`,
-      { method: "POST", token, body: { quantity }, parser: isQuote },
+      { method: "POST", token, body: { quantity }, parser: readQuote },
     );
   },
   cart(token: string, { signal }: CallOptions = {}) {
-    return commerceRequest("/commerce/cart", { token, parser: isCart, signal });
+    return commerceRequest("/commerce/cart", {
+      token,
+      parser: readCart,
+      signal,
+    });
   },
   addQuote(token: string, quoteId: string) {
     return commerceRequest("/commerce/cart/lines", {
       method: "POST",
       token,
       body: { quoteId },
-      parser: isCart,
+      parser: readCart,
     });
   },
   changeLine(token: string, lineId: string, quantity: number) {
     return commerceRequest(
       `/commerce/cart/lines/${encodeURIComponent(lineId)}`,
-      { method: "PATCH", token, body: { quantity }, parser: isCart },
+      { method: "PATCH", token, body: { quantity }, parser: readCart },
     );
   },
   removeLine(token: string, lineId: string) {
     return commerceRequest(
       `/commerce/cart/lines/${encodeURIComponent(lineId)}`,
-      { method: "DELETE", token, parser: isCart },
+      { method: "DELETE", token, parser: readCart },
     );
   },
   emptyCart(token: string) {
     return commerceRequest("/commerce/cart/lines", {
       method: "DELETE",
       token,
-      parser: isCart,
+      parser: readCart,
     });
   },
   checkout(token: string, idempotencyKey: string) {
@@ -451,27 +439,27 @@ export const commerceApi = {
       method: "POST",
       token,
       body: { idempotencyKey },
-      parser: isCheckout,
+      parser: readCheckout,
     });
   },
   orders(token: string, { signal }: CallOptions = {}) {
     return commerceRequest("/commerce/orders", {
       token,
-      parser: isOrderList,
+      parser: readOrderList,
       signal,
     });
   },
   order(token: string, orderId: string, { signal }: CallOptions = {}) {
     return commerceRequest(`/commerce/orders/${encodeURIComponent(orderId)}`, {
       token,
-      parser: isOrder,
+      parser: readOrder,
       signal,
     });
   },
   sandboxCheckout(sessionId: string, { signal }: CallOptions = {}) {
     return commerceRequest(
       `/commerce/sandbox/checkouts/${encodeURIComponent(sessionId)}`,
-      { parser: isSandboxCheckout, signal },
+      { parser: readSandboxCheckout, signal },
     );
   },
   completeSandbox(
@@ -484,27 +472,21 @@ export const commerceApi = {
       {
         method: "POST",
         body: { shipping, outcome },
-        parser: (
-          value,
-        ): value is { received: true; duplicate: boolean; outcome: string } =>
-          isRecord(value) &&
-          value.received === true &&
-          typeof value.duplicate === "boolean" &&
-          typeof value.outcome === "string",
+        parser: readSandboxCompletion,
       },
     );
   },
   adminOrders(token: string, { signal }: CallOptions = {}) {
     return commerceRequest("/admin/orders", {
       token,
-      parser: isOrderList,
+      parser: readOrderList,
       signal,
     });
   },
   adminOrder(token: string, orderId: string) {
     return commerceRequest(`/admin/orders/${encodeURIComponent(orderId)}`, {
       token,
-      parser: isOrder,
+      parser: readOrder,
     });
   },
   transition(
@@ -515,7 +497,12 @@ export const commerceApi = {
   ) {
     return commerceRequest(
       `/admin/orders/${encodeURIComponent(orderId)}/transition`,
-      { method: "POST", token, body: { targetState, reason }, parser: isOrder },
+      {
+        method: "POST",
+        token,
+        body: { targetState, reason },
+        parser: readOrder,
+      },
     );
   },
   shipment(
@@ -525,25 +512,25 @@ export const commerceApi = {
   ) {
     return commerceRequest(
       `/admin/orders/${encodeURIComponent(orderId)}/shipment`,
-      { method: "PUT", token, body, parser: isOrder },
+      { method: "PUT", token, body, parser: readOrder },
     );
   },
   refund(token: string, orderId: string) {
     return commerceRequest(
       `/admin/orders/${encodeURIComponent(orderId)}/refund`,
-      { method: "POST", token, body: { confirm: true }, parser: isOrder },
+      { method: "POST", token, body: { confirm: true }, parser: readOrder },
     );
   },
   productionAssetAccess(token: string, orderId: string, lineIndex: number) {
     return commerceRequest(
       `/admin/orders/${encodeURIComponent(orderId)}/lines/${lineIndex}/asset-access`,
-      { method: "POST", token, parser: isProductionAssetAccess },
+      { method: "POST", token, parser: readProductionAssetAccess },
     );
   },
   priceBooks(token: string, { signal }: CallOptions = {}) {
     return commerceRequest("/admin/price-books", {
       token,
-      parser: isPriceBookList,
+      parser: readPriceBookList,
       signal,
     });
   },
@@ -556,7 +543,7 @@ export const commerceApi = {
       method: "POST",
       token,
       body: { label, configuration },
-      parser: isPriceBook,
+      parser: readPriceBook,
     });
   },
   updatePriceBook(
@@ -569,19 +556,19 @@ export const commerceApi = {
       method: "PATCH",
       token,
       body: { label, configuration },
-      parser: isPriceBook,
+      parser: readPriceBook,
     });
   },
   publishPriceBook(token: string, bookId: string) {
     return commerceRequest(
       `/admin/price-books/${encodeURIComponent(bookId)}/publish`,
-      { method: "POST", token, body: { confirm: true }, parser: isPriceBook },
+      { method: "POST", token, body: { confirm: true }, parser: readPriceBook },
     );
   },
   audit(token: string, { signal }: CallOptions = {}) {
     return commerceRequest("/admin/audit", {
       token,
-      parser: isAuditList,
+      parser: readAuditList,
       signal,
     });
   },

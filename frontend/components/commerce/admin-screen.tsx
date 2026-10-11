@@ -19,7 +19,12 @@ import {
   EmptyState,
 } from "@/components/ui";
 import { useAccountResource } from "@/context/auth/use-account-resource";
-import { AccountApiError, resolveAssetUrl } from "@/services/account-api";
+import { CARRIERS } from "@/data/carriers";
+import {
+  AccountApiError,
+  describeError,
+  resolveAssetUrl,
+} from "@/services/account-api";
 import {
   commerceApi,
   type Order,
@@ -29,6 +34,7 @@ import {
 
 import { CommerceError, DemoBanner, SignInForCommerce } from "./demo-banner";
 import { OrderCard } from "./orders-screen";
+import { statusLabel as title } from "./status-label";
 
 const STATES: readonly OrderState[] = [
   "production_review",
@@ -39,11 +45,7 @@ const STATES: readonly OrderState[] = [
   "manual_review_required",
 ];
 const explain = (error: unknown) =>
-  error instanceof AccountApiError
-    ? error.message
-    : "The administrator request failed. Try again.";
-const title = (value: string) =>
-  value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+  describeError(error, "The administrator request failed. Try again.");
 
 function ProductionSpecification({
   order,
@@ -653,10 +655,11 @@ export function AdminScreen() {
             <Field label="Carrier">
               {(control) => (
                 <Select {...control} name="carrier">
-                  <option value="canada-post">Canada Post</option>
-                  <option value="ups">UPS</option>
-                  <option value="fedex">FedEx</option>
-                  <option value="purolator">Purolator</option>
+                  {CARRIERS.map((carrier) => (
+                    <option key={carrier.id} value={carrier.id}>
+                      {carrier.name}
+                    </option>
+                  ))}
                 </Select>
               )}
             </Field>

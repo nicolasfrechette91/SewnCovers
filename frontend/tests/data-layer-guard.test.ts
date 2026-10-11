@@ -6,7 +6,7 @@ import { test } from "node:test";
 import ts from "typescript";
 
 // Screens load server data through services/use-resource.ts (or
-// useAccountResource), and every request goes through services/http.ts. Three
+// useAccountResource), and every request goes through services/http.ts. Four
 // rules keep the hand-written alternatives from coming back:
 //
 //   hooks-disable    an eslint-disable comment for a react-hooks rule
@@ -14,18 +14,30 @@ import ts from "typescript";
 //   deferral-timer   setTimeout(..., 0) or queueMicrotask() in components/ or
 //                    context/: the old way to move a setState out of an
 //                    effect body (load through the resource hook instead)
+//   helper-copy      a second definition of a shared helper (see `homes`), or
+//                    any definition of a retired one (see `retired`)
 //
 // A legitimate exception goes in `allowlist` with its file, a pattern that
 // picks out that one call in its source text, and a one-line reason. The test
 // fails when something is flagged and not listed, and when a listed exception
 // no longer matches exactly `count` (default 1) violations, so entries cannot
-// go stale or quietly widen. hooks-disable has no exceptions.
+// go stale or quietly widen. hooks-disable and helper-copy have no exceptions.
 
 // npm test runs from the frontend directory.
 const root = process.cwd();
-const scanned = ["app", "components", "context", "services"] as const;
+const scanned = ["app", "components", "config", "context", "services"] as const;
 
-type Rule = "hooks-disable" | "fetch-call" | "deferral-timer";
+// Where each shared helper is defined; anywhere else it is imported.
+const homes: Readonly<Record<string, string>> = {
+  isRecord: "services/validation.ts",
+  hasAtMostDecimalPlaces: "services/validation.ts",
+  normalizeBasePath: "config/base-path.ts",
+};
+// Exact-key checks broke the UI whenever the API added a field; responses
+// are read with the tolerant reader instead (docs/architecture.md).
+const retired = new Set(["hasExactKeys"]);
+
+type Rule = "hooks-disable" | "fetch-call" | "deferral-timer" | "helper-copy";
 
 interface Violation {
   rule: Rule;
@@ -35,7 +47,7 @@ interface Violation {
 }
 
 interface Exception {
-  rule: Exclude<Rule, "hooks-disable">;
+  rule: "fetch-call" | "deferral-timer";
   file: string;
   match: RegExp;
   count?: number;
@@ -157,6 +169,19 @@ function violationsIn(file: string): Violation[] {
         add("deferral-timer", node);
       }
     }
+    const definedName =
+      ts.isFunctionDeclaration(node) && node.name
+        ? node.name.text
+        : ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)
+          ? node.name.text
+          : null;
+    if (
+      definedName !== null &&
+      (retired.has(definedName) ||
+        (Object.hasOwn(homes, definedName) && homes[definedName] !== file))
+    ) {
+      add("helper-copy", node);
+    }
     ts.forEachChild(node, visit);
   };
   visit(source);
@@ -183,10 +208,29 @@ test("no react-hooks rule is disabled anywhere in the app", () => {
   );
 });
 
+test("shared helpers are defined once and imported everywhere else", () => {
+  assert.deepEqual(
+    violations
+      .filter(({ rule }) => rule === "helper-copy")
+      .map(
+        ({ file, line, excerpt }) => `${file}:${line} ${excerpt.slice(0, 60)}`,
+      ),
+    [],
+  );
+  for (const [name, home] of Object.entries(homes)) {
+    assert.match(
+      readFileSync(path.join(root, home), "utf8"),
+      new RegExp(`export function ${name}\\(`),
+      `${name} is defined in ${home}`,
+    );
+  }
+});
+
 test("requests and deferral timers appear only where the allowlist says why", () => {
   const unlisted = violations.filter(
     (violation) =>
       violation.rule !== "hooks-disable" &&
+      violation.rule !== "helper-copy" &&
       !allowlist.some(
         (exception) =>
           exception.rule === violation.rule &&

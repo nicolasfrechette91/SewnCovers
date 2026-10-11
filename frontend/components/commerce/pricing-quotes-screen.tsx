@@ -17,15 +17,16 @@ import {
   EmptyState,
 } from "@/components/ui";
 import { useAccountResource } from "@/context/auth/use-account-resource";
-import { AccountApiError, accountApi } from "@/services/account-api";
+import { accountApi, describeError } from "@/services/account-api";
 import { commerceApi, type Pricing, type Quote } from "@/services/commerce-api";
 
 import { CommerceError, DemoBanner, SignInForCommerce } from "./demo-banner";
 
 function message(error: unknown) {
-  return error instanceof AccountApiError
-    ? error.message
-    : "The demonstration commerce request failed. Try again.";
+  return describeError(
+    error,
+    "The demonstration commerce request failed. Try again.",
+  );
 }
 
 function PricingCard({ pricing }: Readonly<{ pricing: Pricing }>) {
@@ -245,7 +246,10 @@ export function PrivatePricingWorkspace({
           <ul className="mt-4 grid gap-component lg:grid-cols-2">
             {quotes.map((quote) => (
               <Surface as="li" key={quote.id}>
-                <p className={eyebrowClasses}>Demo quote · {quote.status}</p>
+                <p className={eyebrowClasses}>
+                  Demo quote ·{" "}
+                  {quote.status === "unknown" ? "Unknown status" : quote.status}
+                </p>
                 <p className="mt-2 font-display text-section-title font-heading tracking-heading text-text-primary">
                   <span className="sr-only">Quote subtotal: </span>
                   {quote.subtotalFormatted}

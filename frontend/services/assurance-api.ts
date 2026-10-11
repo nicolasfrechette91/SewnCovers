@@ -3,8 +3,20 @@ import {
   type AccountRequestOptions,
   type CallOptions,
   type FailureWording,
-  type Parser,
 } from "./account-api";
+import {
+  anyRecord,
+  flag,
+  knownOrUnknown,
+  listOf,
+  literal,
+  numeric,
+  recordOf,
+  text,
+  type Reader,
+} from "./validation";
+
+export const READINESS_LEVELS = ["error", "warning", "information"] as const;
 
 export interface LegalDocument {
   readonly id: string;
@@ -41,7 +53,8 @@ export interface ReadinessReport {
   readonly ready: boolean;
   readonly checks: readonly {
     readonly code: string;
-    readonly level: "error" | "warning" | "information";
+    /** "unknown" for a level this build does not know (only shown). */
+    readonly level: (typeof READINESS_LEVELS)[number] | "unknown";
     readonly message: string;
   }[];
   readonly disclaimer: string;
@@ -52,10 +65,6 @@ export interface ProductionQueueFilters {
   readonly state?: string;
   readonly issueState?: string;
   readonly search?: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 const ASSURANCE_WORDING: FailureWording = {
@@ -74,7 +83,7 @@ function request<T>(
     "cache" | "empty" | "parser" | "wording"
   > & {
     readonly method?: "GET" | "POST" | "PUT";
-    readonly parser: Parser<T>;
+    readonly parser: Reader<T>;
   },
 ): Promise<T> {
   return accountRequest(path, {
@@ -84,16 +93,64 @@ function request<T>(
   });
 }
 
-const isWork = (value: unknown): value is ProductionWork =>
-  isRecord(value) &&
-  typeof value.id === "string" &&
-  typeof value.orderReference === "string" &&
-  typeof value.revision === "number" &&
-  isRecord(value.specification) &&
-  Array.isArray(value.checklist) &&
-  Array.isArray(value.issues) &&
-  Array.isArray(value.history) &&
-  value.demonstration === true;
+// Readers: each reads the fields this build knows (see recordOf); a field
+// the API adds later is ignored. A work item's specification, checklist,
+// issues and history are records the screen reads defensively, kept whole.
+
+const recordList = listOf(anyRecord);
+
+const readWork = recordOf<ProductionWork>({
+  id: text,
+  orderReference: text,
+  lineIndex: numeric,
+  state: text,
+  qualityState: text,
+  revision: numeric,
+  specification: anyRecord,
+  checklist: recordList,
+  issues: recordList,
+  history: recordList,
+  demonstration: literal(true),
+});
+
+const readQueue = recordOf<ProductionQueue>({
+  items: listOf(readWork),
+  page: numeric,
+  pageSize: numeric,
+  total: numeric,
+});
+
+const readAcknowledgement = recordOf<{
+  readonly id: number;
+  readonly documentType: string;
+  readonly documentVersion: number;
+  readonly purpose: string;
+  readonly acknowledgedAt: string;
+}>({
+  id: numeric,
+  documentType: text,
+  documentVersion: numeric,
+  purpose: text,
+  acknowledgedAt: text,
+});
+
+const readPacket = recordOf<{
+  readonly content: string;
+  readonly checksum: string;
+  readonly generatedAt: string;
+}>({ content: text, checksum: text, generatedAt: text });
+
+const readReadiness = recordOf<ReadinessReport>({
+  ready: flag,
+  checks: listOf(
+    recordOf<ReadinessReport["checks"][number]>({
+      code: text,
+      level: knownOrUnknown(READINESS_LEVELS),
+      message: text,
+    }),
+  ),
+  disclaimer: text,
+});
 
 export const assuranceApi = {
   acknowledge(
@@ -105,21 +162,7 @@ export const assuranceApi = {
       method: "POST",
       token,
       body: { documentType, documentVersion: 1, purpose },
-      parser: (
-        value,
-      ): value is {
-        id: number;
-        documentType: string;
-        documentVersion: number;
-        purpose: string;
-        acknowledgedAt: string;
-      } =>
-        isRecord(value) &&
-        typeof value.id === "number" &&
-        typeof value.documentType === "string" &&
-        typeof value.documentVersion === "number" &&
-        typeof value.purpose === "string" &&
-        typeof value.acknowledgedAt === "string",
+      parser: readAcknowledgement,
     });
   },
   productionQueue(
@@ -137,17 +180,13 @@ export const assuranceApi = {
         search: filters.search,
       },
       signal,
-      parser: (value): value is ProductionQueue =>
-        isRecord(value) &&
-        Array.isArray(value.items) &&
-        value.items.every(isWork) &&
-        typeof value.total === "number",
+      parser: readQueue,
     });
   },
   work(token: string, id: string) {
     return request(`admin/production-work/${encodeURIComponent(id)}`, {
       token,
-      parser: isWork,
+      parser: readWork,
     });
   },
   checklist(
@@ -162,7 +201,7 @@ export const assuranceApi = {
         method: "PUT",
         token,
         body: { status, expectedRevision: work.revision },
-        parser: isWork,
+        parser: readWork,
       },
     );
   },
@@ -178,7 +217,7 @@ export const assuranceApi = {
         method: "POST",
         token,
         body: { code, reason, expectedRevision: work.revision },
-        parser: isWork,
+        parser: readWork,
       },
     );
   },
@@ -199,7 +238,7 @@ export const assuranceApi = {
           reasonCode: reason ? "manual_review" : undefined,
           reason,
         },
-        parser: isWork,
+        parser: readWork,
       },
     );
   },
@@ -219,7 +258,7 @@ export const assuranceApi = {
           reason,
           expectedRevision: work.revision,
         },
-        parser: isWork,
+        parser: readWork,
       },
     );
   },
@@ -227,33 +266,12 @@ export const assuranceApi = {
     return request(`admin/production-work/${encodeURIComponent(id)}/packet`, {
       method: "POST",
       token,
-      parser: (
-        value,
-      ): value is {
-        content: string;
-        checksum: string;
-        generatedAt: string;
-      } =>
-        isRecord(value) &&
-        typeof value.content === "string" &&
-        typeof value.checksum === "string" &&
-        typeof value.generatedAt === "string",
+      parser: readPacket,
     });
   },
   readiness() {
     return request("readiness", {
-      parser: (value): value is ReadinessReport =>
-        isRecord(value) &&
-        typeof value.ready === "boolean" &&
-        typeof value.disclaimer === "string" &&
-        Array.isArray(value.checks) &&
-        value.checks.every(
-          (check) =>
-            isRecord(check) &&
-            typeof check.code === "string" &&
-            ["error", "warning", "information"].includes(String(check.level)) &&
-            typeof check.message === "string",
-        ),
+      parser: readReadiness,
     });
   },
 };

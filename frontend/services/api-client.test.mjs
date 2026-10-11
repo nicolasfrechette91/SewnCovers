@@ -302,6 +302,44 @@ test("decodes legacy saved-design responses with backward-compatible defaults", 
   });
 });
 
+test("reads designs and patterns that carry fields this build does not know, without them", async () => {
+  const { apiClient } = await loadClient();
+  globalThis.fetch = async (url) =>
+    String(url).includes("/patterns")
+      ? jsonResponse([{ ...pattern(), tags: ["new"] }])
+      : jsonResponse({ ...design(), fabricWeight: 320, note: "private" });
+
+  assert.deepEqual(await apiClient.getDesign(design().publicId), design());
+  assert.deepEqual(await apiClient.listPatterns(), [pattern()]);
+});
+
+test("tells saved-design versions apart by their fields and rejects mixed ones", async () => {
+  const { apiClient, ApiClientError } = await loadClient();
+  const solid = design({ patternId: null, solidColor: "#A1B2C3" });
+  const solidOnly = { ...solid };
+  delete solidOnly.patternId;
+  globalThis.fetch = async () => jsonResponse(solidOnly);
+  assert.deepEqual(await apiClient.getDesign(solid.publicId), solid);
+
+  const partialCover = design();
+  delete partialCover.seamStyle;
+  for (const malformed of [
+    design({ solidColor: "#A1B2C3" }),
+    design({ patternId: null }),
+    partialCover,
+    design({ materialId: "silk" }),
+    design({ shape: "hexagon" }),
+  ]) {
+    globalThis.fetch = async () => jsonResponse(malformed);
+    await assert.rejects(
+      apiClient.getDesign(design().publicId),
+      (error) =>
+        error instanceof ApiClientError &&
+        error.category === "malformed-response",
+    );
+  }
+});
+
 test("preserves the exact typed backend error contract without retrying validation", async () => {
   const { apiClient, ApiClientError } = await loadClient();
   let fetchCalls = 0;
@@ -373,32 +411,63 @@ test("keeps the server request id from an error envelope on the typed error", as
   );
 });
 
-test("still rejects envelopes with any other extra key or a non-string request id", async () => {
+test("reads envelopes whose keys or codes are new, and still rejects a non-string request id", async () => {
   const { apiClient, ApiClientError } = await loadClient();
-  for (const extra of [{ requestId: 42 }, { debug: "private" }]) {
-    globalThis.fetch = async () =>
-      jsonResponse(
-        {
-          errors: [
-            {
-              code: "pattern_unavailable",
-              message: "Selected pattern is unavailable.",
-              location: ["body", "patternId"],
-            },
-          ],
-          ...extra,
-        },
-        422,
-      );
-
-    await assert.rejects(
-      apiClient.createDesign(createDesignRequest()),
-      (error) =>
-        error instanceof ApiClientError &&
-        error.category === "http" &&
-        error.errors.length === 0,
+  globalThis.fetch = async () =>
+    jsonResponse(
+      {
+        errors: [
+          {
+            code: "pattern_retired",
+            message: "Selected pattern is unavailable.",
+            location: ["body", "patternId"],
+            hint: "private",
+          },
+        ],
+        debug: "private",
+      },
+      422,
     );
-  }
+
+  await assert.rejects(
+    apiClient.createDesign(createDesignRequest()),
+    (error) => {
+      assert.ok(error instanceof ApiClientError);
+      assert.equal(error.category, "backend-contract");
+      assert.deepEqual(error.errors, [
+        {
+          code: "pattern_retired",
+          message: "Selected pattern is unavailable.",
+          location: ["body", "patternId"],
+        },
+      ]);
+      assert.doesNotMatch(JSON.stringify(error), /private/);
+      return true;
+    },
+  );
+
+  globalThis.fetch = async () =>
+    jsonResponse(
+      {
+        errors: [
+          {
+            code: "pattern_unavailable",
+            message: "Selected pattern is unavailable.",
+            location: ["body", "patternId"],
+          },
+        ],
+        requestId: 42,
+      },
+      422,
+    );
+
+  await assert.rejects(
+    apiClient.createDesign(createDesignRequest()),
+    (error) =>
+      error instanceof ApiClientError &&
+      error.category === "http" &&
+      error.errors.length === 0,
+  );
 });
 
 test("a rate-limited save says what happened and is never retried", async () => {
@@ -463,8 +532,7 @@ test("distinguishes malformed success payloads from unexpected HTTP failures", a
   globalThis.fetch = async () =>
     jsonResponse({
       process: "healthy",
-      database: "healthy",
-      databaseHost: "private-host",
+      database: "private-host",
     });
 
   await assert.rejects(
@@ -474,6 +542,18 @@ test("distinguishes malformed success payloads from unexpected HTTP failures", a
       error.category === "malformed-response" &&
       !/private-host/.test(error.message),
   );
+
+  // A field this build does not know is ignored and never passed on.
+  globalThis.fetch = async () =>
+    jsonResponse({
+      process: "healthy",
+      database: "healthy",
+      databaseHost: "private-host",
+    });
+  assert.deepEqual(await apiClient.getHealth(), {
+    process: "healthy",
+    database: "healthy",
+  });
 
   globalThis.fetch = async () => jsonResponse(design({ patternScale: 1e-7 }));
 

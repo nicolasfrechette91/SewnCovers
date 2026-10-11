@@ -29,8 +29,8 @@ import {
 import { useAuth } from "@/context/auth";
 import {
   accountApi,
-  AccountApiError,
   buildProjectShareUrl,
+  describeError,
   type ProjectVersion,
 } from "@/services/account-api";
 import {
@@ -44,9 +44,7 @@ import { useResource } from "@/services/use-resource";
 import { ConfigurationReadonly } from "./configuration-readonly";
 
 function errorMessage(error: unknown): string {
-  return error instanceof AccountApiError
-    ? error.message
-    : "The request could not be completed. Try again.";
+  return describeError(error, "The request could not be completed. Try again.");
 }
 
 function ProjectList({ token }: Readonly<{ token: string }>) {

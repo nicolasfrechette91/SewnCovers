@@ -1,4 +1,13 @@
+import { withBasePath } from "../config/base-path";
 import { publicEnvironment } from "../config/environment";
+import {
+  CLOSURE_TYPES,
+  CUSHION_SHAPES,
+  FIT_PREFERENCES,
+  MATERIAL_IDS,
+  MEASUREMENT_UNITS,
+  SEAM_STYLES,
+} from "../context/configuration/types";
 import type { CreateDesignRequest } from "./api-client";
 import {
   retryAfterSeconds,
@@ -8,6 +17,23 @@ import {
   type HttpRequest,
   type HttpResponse,
 } from "./http";
+import {
+  anyRecord,
+  flag,
+  isRecord,
+  knownOrUnknown,
+  listOf,
+  literal,
+  matching,
+  numeric,
+  oneOf,
+  orNull,
+  recordOf,
+  text,
+  textOrNull,
+  type FieldReaders,
+  type Reader,
+} from "./validation";
 
 export type ProjectPatternChoice =
   | { readonly kind: "built-in"; readonly patternId: string }
@@ -27,10 +53,13 @@ export type ProjectConfigurationRequest = Omit<
 const TOKEN_KEY = "sewncovers.session-token";
 export const AUTH_CHANGED_EVENT = "sewncovers:auth-changed";
 
+export const ACCOUNT_ROLES = ["customer", "administrator"] as const;
+export const PROJECT_PRIVACY = ["private", "shared"] as const;
+
 export interface Account {
   readonly email: string;
   readonly createdAt: string;
-  readonly role: "customer" | "administrator";
+  readonly role: (typeof ACCOUNT_ROLES)[number];
 }
 
 export interface AuthSession {
@@ -71,7 +100,7 @@ export interface ProjectSummary {
   readonly name: string;
   readonly versionCount: number;
   readonly updatedAt: string;
-  readonly privacy: "private" | "shared";
+  readonly privacy: (typeof PROJECT_PRIVACY)[number];
 }
 
 export interface ProjectDetail extends ProjectSummary {
@@ -80,28 +109,35 @@ export interface ProjectDetail extends ProjectSummary {
   readonly activeShares: readonly ShareGrant[];
 }
 
-export type UploadState =
-  | "awaiting_upload"
-  | "uploaded"
-  | "processing"
-  | "awaiting_moderation"
-  | "approved"
-  | "rejected"
-  | "failed"
-  | "deleted"
-  | "expired";
+export const UPLOAD_STATES = [
+  "awaiting_upload",
+  "uploaded",
+  "processing",
+  "awaiting_moderation",
+  "approved",
+  "rejected",
+  "failed",
+  "deleted",
+  "expired",
+] as const;
+export type UploadState = (typeof UPLOAD_STATES)[number];
+export const MODERATION_STATES = [
+  "not_started",
+  "pending",
+  "approved",
+  "rejected",
+  "unavailable",
+  "failed",
+] as const;
+export type ModerationState = (typeof MODERATION_STATES)[number];
+const UPLOAD_METHODS = ["POST", "PUT"] as const;
 
 export interface CustomUpload {
   readonly id: string;
   readonly label: string;
-  readonly state: UploadState;
-  readonly moderationState:
-    | "not_started"
-    | "pending"
-    | "approved"
-    | "rejected"
-    | "unavailable"
-    | "failed";
+  /** "unknown" for a state this build does not know (shown, never acted on). */
+  readonly state: UploadState | "unknown";
+  readonly moderationState: ModerationState | "unknown";
   readonly contentType: string;
   readonly byteSize: number;
   readonly width: number | null;
@@ -165,6 +201,14 @@ export class AccountApiError extends Error {
   }
 }
 
+/**
+ * What to tell people about a failed request: the API's own message (written
+ * for people), or the screen's `fallback` for anything else.
+ */
+export function describeError(error: unknown, fallback: string): string {
+  return error instanceof AccountApiError ? error.message : fallback;
+}
+
 /** Describe a wait for people, rounding up as the API's own messages do. */
 export function waitPhrase(seconds: number): string {
   if (seconds < 60)
@@ -175,181 +219,180 @@ export function waitPhrase(seconds: number): string {
   return hours === 1 ? "1 hour" : `${hours} hours`;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+// Readers: each reads the fields this build knows (see recordOf), so a field
+// the API adds later is ignored; a missing or wrong known field makes the
+// response malformed. Upload and moderation states are only shown, so an
+// unknown one reads as "unknown" (shown as "Unknown status"); every other
+// enumerated value is checked strictly. docs/architecture.md has the policy.
 
-function isPatternChoice(value: unknown): value is ProjectPatternChoice {
-  if (!isRecord(value) || typeof value.kind !== "string") return false;
+const SESSION_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const SOLID_COLOR_PATTERN = /^#[0-9A-F]{6}$/;
+
+const numberOrNull = orNull(numeric);
+
+function readPatternChoice(value: unknown): ProjectPatternChoice | undefined {
+  if (!isRecord(value)) return undefined;
   if (value.kind === "built-in") {
-    return (
-      Object.keys(value).length === 2 && typeof value.patternId === "string"
-    );
+    return typeof value.patternId === "string"
+      ? { kind: "built-in", patternId: value.patternId }
+      : undefined;
   }
   if (value.kind === "solid") {
-    return (
-      Object.keys(value).length === 2 &&
-      typeof value.color === "string" &&
-      /^#[0-9A-F]{6}$/.test(value.color)
-    );
+    return typeof value.color === "string" &&
+      SOLID_COLOR_PATTERN.test(value.color)
+      ? { kind: "solid", color: value.color }
+      : undefined;
   }
-  return (
-    value.kind === "custom" &&
-    Object.keys(value).length === 4 &&
+  return value.kind === "custom" &&
     typeof value.assetId === "string" &&
     typeof value.derivativeId === "string" &&
     typeof value.processingVersion === "string"
-  );
+    ? {
+        kind: "custom",
+        assetId: value.assetId,
+        derivativeId: value.derivativeId,
+        processingVersion: value.processingVersion,
+      }
+    : undefined;
 }
 
-function isConfiguration(value: unknown): value is ProjectConfigurationRequest {
-  if (!isRecord(value)) return false;
-  const keys = [
-    "shape",
-    "width",
-    "height",
-    "backWidth",
-    "thickness",
-    "unit",
-    "pattern",
-    "patternScale",
-    "materialId",
-    "fitPreference",
-    "closureType",
-    "seamStyle",
-  ];
-  return (
-    Object.keys(value).length === keys.length &&
-    keys.every((key) => Object.hasOwn(value, key)) &&
-    ["box", "rectangle", "round", "square", "tapered"].includes(
-      String(value.shape),
-    ) &&
-    typeof value.width === "number" &&
-    typeof value.height === "number" &&
-    (value.backWidth === null || typeof value.backWidth === "number") &&
-    typeof value.thickness === "number" &&
-    ["cm", "in"].includes(String(value.unit)) &&
-    isPatternChoice(value.pattern) &&
-    typeof value.patternScale === "number" &&
-    ["cotton-canvas", "linen-blend", "polyester-weave"].includes(
-      String(value.materialId),
-    ) &&
-    ["close", "relaxed", "standard"].includes(String(value.fitPreference)) &&
-    ["envelope", "slip-on", "zipper"].includes(String(value.closureType)) &&
-    ["piped", "plain"].includes(String(value.seamStyle))
-  );
+const readConfiguration = recordOf<ProjectConfigurationRequest>({
+  shape: oneOf(CUSHION_SHAPES),
+  width: numeric,
+  height: numeric,
+  backWidth: numberOrNull,
+  thickness: numeric,
+  unit: oneOf(MEASUREMENT_UNITS),
+  pattern: readPatternChoice,
+  patternScale: numeric,
+  materialId: oneOf(MATERIAL_IDS),
+  fitPreference: oneOf(FIT_PREFERENCES),
+  closureType: oneOf(CLOSURE_TYPES),
+  seamStyle: oneOf(SEAM_STYLES),
+});
+
+const readAccount = recordOf<Account>({
+  email: text,
+  createdAt: text,
+  role: oneOf(ACCOUNT_ROLES),
+});
+
+const readSession = recordOf<SessionMetadata>({
+  id: numeric,
+  createdAt: text,
+  expiresAt: text,
+  revokedAt: textOrNull,
+  current: flag,
+});
+
+const readVersion = recordOf<ProjectVersion>({
+  id: text,
+  versionNumber: numeric,
+  configuration: readConfiguration,
+  createdAt: text,
+  isCurrent: flag,
+});
+
+const SHARE_FIELDS: FieldReaders<ShareGrant> = {
+  id: text,
+  versionId: text,
+  versionNumber: numeric,
+  createdAt: text,
+};
+const readShare = recordOf(SHARE_FIELDS);
+const readCreatedShare = recordOf<CreatedShare>({
+  ...SHARE_FIELDS,
+  shareToken: text,
+});
+
+const PROJECT_SUMMARY_FIELDS: FieldReaders<ProjectSummary> = {
+  id: text,
+  name: text,
+  versionCount: numeric,
+  updatedAt: text,
+  privacy: oneOf(PROJECT_PRIVACY),
+};
+const readProjectSummary = recordOf(PROJECT_SUMMARY_FIELDS);
+const readProjectDetail = recordOf<ProjectDetail>({
+  ...PROJECT_SUMMARY_FIELDS,
+  createdAt: text,
+  currentVersion: readVersion,
+  activeShares: listOf(readShare),
+});
+
+const UPLOAD_FIELDS: FieldReaders<CustomUpload> = {
+  id: text,
+  label: text,
+  state: knownOrUnknown(UPLOAD_STATES),
+  moderationState: knownOrUnknown(MODERATION_STATES),
+  contentType: text,
+  byteSize: numeric,
+  width: numberOrNull,
+  height: numberOrNull,
+  processingVersion: text,
+  tileDerivativeId: textOrNull,
+  thumbnailDerivativeId: textOrNull,
+  processingAttempts: numeric,
+  moderationAttempts: numeric,
+  retryEligible: flag,
+  referencedByVersions: numeric,
+  createdAt: text,
+  updatedAt: text,
+  deletedAt: textOrNull,
+};
+const readUpload = recordOf(UPLOAD_FIELDS);
+
+function readStringMap(
+  value: unknown,
+): Readonly<Record<string, string>> | undefined {
+  return isRecord(value) &&
+    Object.values(value).every((item) => typeof item === "string")
+    ? (Object.fromEntries(Object.entries(value)) as Record<string, string>)
+    : undefined;
 }
 
-function isAccount(value: unknown): value is Account {
-  return (
-    isRecord(value) &&
-    Object.keys(value).length === 3 &&
-    typeof value.email === "string" &&
-    typeof value.createdAt === "string" &&
-    ["customer", "administrator"].includes(String(value.role))
-  );
-}
+const readUploadOperation = recordOf<UploadOperation>({
+  method: oneOf(UPLOAD_METHODS),
+  url: text,
+  headers: readStringMap,
+  fields: readStringMap,
+  expiresAt: text,
+});
 
-function isVersion(value: unknown): value is ProjectVersion {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.versionNumber === "number" &&
-    typeof value.createdAt === "string" &&
-    typeof value.isCurrent === "boolean" &&
-    isConfiguration(value.configuration)
-  );
-}
+const readUploadIntent = recordOf<UploadIntent>({
+  ...UPLOAD_FIELDS,
+  upload: readUploadOperation,
+});
 
-function isShare(value: unknown): value is ShareGrant {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.versionId === "string" &&
-    typeof value.versionNumber === "number" &&
-    typeof value.createdAt === "string"
-  );
-}
+const readAssetAccess = recordOf<AssetAccess>({
+  url: text,
+  expiresAt: text,
+  contentType: literal("image/png"),
+});
 
-function isProjectSummary(value: unknown): value is ProjectSummary {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.name === "string" &&
-    typeof value.versionCount === "number" &&
-    typeof value.updatedAt === "string" &&
-    ["private", "shared"].includes(String(value.privacy))
-  );
-}
+const readAuthSession = recordOf<AuthSession>({
+  account: readAccount,
+  token: matching(SESSION_TOKEN_PATTERN),
+  expiresAt: text,
+});
 
-function isProjectDetail(value: unknown): value is ProjectDetail {
-  if (!isRecord(value) || !isProjectSummary(value)) return false;
-  const record = value as unknown as Record<string, unknown>;
-  return (
-    typeof record.createdAt === "string" &&
-    isVersion(record.currentVersion) &&
-    Array.isArray(record.activeShares) &&
-    record.activeShares.every(isShare)
-  );
-}
+const readSharedConfiguration = recordOf<{
+  readonly configuration: ProjectConfigurationRequest;
+}>({ configuration: readConfiguration });
 
-function isCustomUpload(value: unknown): value is CustomUpload {
-  return (
-    isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.label === "string" &&
-    [
-      "awaiting_upload",
-      "uploaded",
-      "processing",
-      "awaiting_moderation",
-      "approved",
-      "rejected",
-      "failed",
-      "deleted",
-      "expired",
-    ].includes(String(value.state)) &&
-    [
-      "not_started",
-      "pending",
-      "approved",
-      "rejected",
-      "unavailable",
-      "failed",
-    ].includes(String(value.moderationState)) &&
-    typeof value.contentType === "string" &&
-    typeof value.byteSize === "number" &&
-    (value.width === null || typeof value.width === "number") &&
-    (value.height === null || typeof value.height === "number") &&
-    typeof value.processingVersion === "string" &&
-    (value.tileDerivativeId === null ||
-      typeof value.tileDerivativeId === "string") &&
-    (value.thumbnailDerivativeId === null ||
-      typeof value.thumbnailDerivativeId === "string") &&
-    typeof value.processingAttempts === "number" &&
-    typeof value.moderationAttempts === "number" &&
-    typeof value.retryEligible === "boolean" &&
-    typeof value.referencedByVersions === "number" &&
-    typeof value.createdAt === "string" &&
-    typeof value.updatedAt === "string" &&
-    (value.deletedAt === null || typeof value.deletedAt === "string")
-  );
-}
+const readDeletedUpload = recordOf<{
+  readonly id: string;
+  readonly state: "deleted";
+  readonly referencedByVersions: number;
+}>({ id: text, state: literal("deleted"), referencedByVersions: numeric });
 
-function isUploadOperation(value: unknown): value is UploadOperation {
-  return (
-    isRecord(value) &&
-    ["POST", "PUT"].includes(String(value.method)) &&
-    typeof value.url === "string" &&
-    isRecord(value.headers) &&
-    Object.values(value.headers).every((item) => typeof item === "string") &&
-    isRecord(value.fields) &&
-    Object.values(value.fields).every((item) => typeof item === "string") &&
-    typeof value.expiresAt === "string"
-  );
-}
+// The account export is a file the visitor downloads: kept whole, as sent.
+const readExport = anyRecord;
 
-export type Parser<T> = (value: unknown) => value is T;
+const readSessionList = listOf(readSession);
+const readProjectList = listOf(readProjectSummary);
+const readVersionList = listOf(readVersion);
+const readUploadList = listOf(readUpload);
 
 /** For calls a screen loads: cancelled when the screen no longer needs them. */
 export interface CallOptions {
@@ -426,7 +469,7 @@ export interface AccountRequestOptions<T> {
   readonly query?: HttpRequest["query"];
   readonly body?: unknown;
   readonly token?: string | null;
-  readonly parser?: Parser<T>;
+  readonly parser?: Reader<T>;
   /** The response has no body worth checking (sign-out, revoke, delete). */
   readonly empty?: boolean;
   readonly cache?: RequestCache;
@@ -521,75 +564,34 @@ export async function accountRequest<T>(
     );
   }
   if (options.empty) return undefined as T;
-  if (!options.parser?.(body)) {
+  const parsed = options.parser?.(body);
+  if (parsed === undefined) {
     throw new AccountApiError(
       wording.malformed,
       response.status,
       "malformed_response",
     );
   }
-  return body;
+  return parsed;
 }
-
-const isAuthSession: Parser<AuthSession> = (value): value is AuthSession =>
-  isRecord(value) &&
-  isAccount(value.account) &&
-  typeof value.token === "string" &&
-  /^[A-Za-z0-9_-]{43}$/.test(value.token) &&
-  typeof value.expiresAt === "string";
-
-const isSessionList: Parser<readonly SessionMetadata[]> = (
-  value,
-): value is readonly SessionMetadata[] =>
-  Array.isArray(value) &&
-  value.every(
-    (item) =>
-      isRecord(item) &&
-      typeof item.id === "number" &&
-      typeof item.createdAt === "string" &&
-      typeof item.expiresAt === "string" &&
-      (item.revokedAt === null || typeof item.revokedAt === "string") &&
-      typeof item.current === "boolean",
-  );
-
-const isProjectList: Parser<readonly ProjectSummary[]> = (
-  value,
-): value is readonly ProjectSummary[] =>
-  Array.isArray(value) && value.every(isProjectSummary);
-const isVersionList: Parser<readonly ProjectVersion[]> = (
-  value,
-): value is readonly ProjectVersion[] =>
-  Array.isArray(value) && value.every(isVersion);
-const isUploadList: Parser<readonly CustomUpload[]> = (
-  value,
-): value is readonly CustomUpload[] =>
-  Array.isArray(value) && value.every(isCustomUpload);
-const isUpload: Parser<CustomUpload> = isCustomUpload;
-const isUploadIntent: Parser<UploadIntent> = (value): value is UploadIntent =>
-  isCustomUpload(value) && isRecord(value) && isUploadOperation(value.upload);
-const isAssetAccess: Parser<AssetAccess> = (value): value is AssetAccess =>
-  isRecord(value) &&
-  typeof value.url === "string" &&
-  typeof value.expiresAt === "string" &&
-  value.contentType === "image/png";
 
 export const accountApi = {
   register(email: string, password: string) {
     return accountRequest("/auth/register", {
       method: "POST",
       body: { email, password },
-      parser: isAuthSession,
+      parser: readAuthSession,
     });
   },
   login(email: string, password: string) {
     return accountRequest("/auth/login", {
       method: "POST",
       body: { email, password },
-      parser: isAuthSession,
+      parser: readAuthSession,
     });
   },
   current(token: string, { signal }: CallOptions = {}) {
-    return accountRequest("/account", { token, parser: isAccount, signal });
+    return accountRequest("/account", { token, parser: readAccount, signal });
   },
   logout(token: string) {
     return accountRequest<void>("/auth/logout", {
@@ -608,7 +610,7 @@ export const accountApi = {
   sessions(token: string, { signal }: CallOptions = {}) {
     return accountRequest("/account/sessions", {
       token,
-      parser: isSessionList,
+      parser: readSessionList,
       signal,
     });
   },
@@ -622,7 +624,7 @@ export const accountApi = {
   export(token: string) {
     return accountRequest<Record<string, unknown>>("/account/export", {
       token,
-      parser: isRecord,
+      parser: readExport,
     });
   },
   deleteAccount(token: string, password: string) {
@@ -630,13 +632,13 @@ export const accountApi = {
       method: "POST",
       token,
       body: { password },
-      parser: isRecord,
+      parser: readExport,
     });
   },
   listProjects(token: string, { signal }: CallOptions = {}) {
     return accountRequest("/projects", {
       token,
-      parser: isProjectList,
+      parser: readProjectList,
       signal,
     });
   },
@@ -649,13 +651,13 @@ export const accountApi = {
       method: "POST",
       token,
       body: { name, configuration },
-      parser: isProjectDetail,
+      parser: readProjectDetail,
     });
   },
   getProject(token: string, projectId: string, { signal }: CallOptions = {}) {
     return accountRequest(`/projects/${encodeURIComponent(projectId)}`, {
       token,
-      parser: isProjectDetail,
+      parser: readProjectDetail,
       signal,
     });
   },
@@ -664,7 +666,7 @@ export const accountApi = {
       method: "PATCH",
       token,
       body: { name },
-      parser: isProjectDetail,
+      parser: readProjectDetail,
     });
   },
   deleteProject(token: string, projectId: string) {
@@ -679,7 +681,7 @@ export const accountApi = {
       `/projects/${encodeURIComponent(projectId)}/versions`,
       {
         token,
-        parser: isVersionList,
+        parser: readVersionList,
         signal,
       },
     );
@@ -692,7 +694,7 @@ export const accountApi = {
   ) {
     return accountRequest(
       `/projects/${encodeURIComponent(projectId)}/versions/${encodeURIComponent(versionId)}`,
-      { token, parser: isVersion, signal },
+      { token, parser: readVersion, signal },
     );
   },
   createVersion(
@@ -706,16 +708,14 @@ export const accountApi = {
         method: "POST",
         token,
         body: { configuration },
-        parser: isVersion,
+        parser: readVersion,
       },
     );
   },
   createShare(token: string, projectId: string, versionId: string) {
-    const parser: Parser<CreatedShare> = (value): value is CreatedShare =>
-      isRecord(value) && isShare(value) && typeof value.shareToken === "string";
     return accountRequest(
       `/projects/${encodeURIComponent(projectId)}/versions/${encodeURIComponent(versionId)}/shares`,
-      { method: "POST", token, parser },
+      { method: "POST", token, parser: readCreatedShare },
     );
   },
   revokeShare(token: string, projectId: string, grantId: string) {
@@ -725,23 +725,15 @@ export const accountApi = {
     );
   },
   restoreShare(shareToken: string, { signal }: CallOptions = {}) {
-    const parser: Parser<{
-      readonly configuration: ProjectConfigurationRequest;
-    }> = (
-      value,
-    ): value is { readonly configuration: ProjectConfigurationRequest } =>
-      isRecord(value) &&
-      Object.keys(value).length === 1 &&
-      isConfiguration(value.configuration);
     return accountRequest(`/shares/${encodeURIComponent(shareToken)}`, {
-      parser,
+      parser: readSharedConfiguration,
       signal,
     });
   },
   listUploads(token: string, { signal }: CallOptions = {}) {
     return accountRequest("/uploads", {
       token,
-      parser: isUploadList,
+      parser: readUploadList,
       signal,
     });
   },
@@ -755,13 +747,13 @@ export const accountApi = {
         byteSize: file.size,
         crop: null,
       },
-      parser: isUploadIntent,
+      parser: readUploadIntent,
     });
   },
   getUpload(token: string, uploadId: string, { signal }: CallOptions = {}) {
     return accountRequest(`/uploads/${encodeURIComponent(uploadId)}`, {
       token,
-      parser: isUpload,
+      parser: readUpload,
       signal,
     });
   },
@@ -770,7 +762,7 @@ export const accountApi = {
       method: "POST",
       token,
       body: { checksum },
-      parser: isUpload,
+      parser: readUpload,
     });
   },
   renameUpload(token: string, uploadId: string, label: string) {
@@ -778,36 +770,21 @@ export const accountApi = {
       method: "PATCH",
       token,
       body: { label },
-      parser: isUpload,
+      parser: readUpload,
     });
   },
   retryUpload(token: string, uploadId: string) {
     return accountRequest(`/uploads/${encodeURIComponent(uploadId)}/retry`, {
       method: "POST",
       token,
-      parser: isUpload,
+      parser: readUpload,
     });
   },
   deleteUpload(token: string, uploadId: string) {
-    const parser: Parser<{
-      readonly id: string;
-      readonly state: "deleted";
-      readonly referencedByVersions: number;
-    }> = (
-      value,
-    ): value is {
-      readonly id: string;
-      readonly state: "deleted";
-      readonly referencedByVersions: number;
-    } =>
-      isRecord(value) &&
-      typeof value.id === "string" &&
-      value.state === "deleted" &&
-      typeof value.referencedByVersions === "number";
     return accountRequest(`/uploads/${encodeURIComponent(uploadId)}`, {
       method: "DELETE",
       token,
-      parser,
+      parser: readDeletedUpload,
     });
   },
   assetAccess(
@@ -821,7 +798,7 @@ export const accountApi = {
       {
         method: "POST",
         token,
-        parser: isAssetAccess,
+        parser: readAssetAccess,
         signal,
       },
     );
@@ -881,10 +858,7 @@ export function buildSharedAssetUrl(shareToken: string): string {
   return `${publicEnvironment.apiUrl}/shares/${encodeURIComponent(shareToken)}/assets/tile`;
 }
 
-export function withBasePath(path: string): string {
-  const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
-  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
-}
+export { withBasePath };
 
 export function buildProjectShareUrl(token: string): string {
   return `${window.location.origin}${withBasePath(`/configure/?share=${encodeURIComponent(token)}`)}`;

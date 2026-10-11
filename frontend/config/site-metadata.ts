@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 
+import { PRODUCTION_BASE_PATH, withBasePath } from "./base-path";
+
 export const SITE_NAME = "SewnCovers";
 export const DEFAULT_TITLE = "SewnCovers | Cushion-cover design prototype";
 export const DEFAULT_DESCRIPTION =
   "Explore a portfolio prototype for designing a replacement cushion cover: pick one of five shapes, enter real measurements, choose fabric and pattern, and preview it.";
 export const PRODUCTION_ORIGIN = "https://nicolasfrechette91.github.io";
-export const PRODUCTION_BASE_PATH = "/SewnCovers";
+export { PRODUCTION_BASE_PATH };
 export const REPOSITORY_URL =
   "https://github.com/nicolasfrechette91/SewnCovers";
 // Browser chrome colour; mirrors --color-brand in app/globals.css and the
@@ -34,9 +36,7 @@ export function siteUrl(path = "/"): string {
 }
 
 export function exportedAssetPath(path: string): string {
-  const relativePath = path.replace(/^\/+/, "");
-  const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  return `${basePath}/${relativePath}`;
+  return withBasePath(`/${path.replace(/^\/+/, "")}`);
 }
 
 type PageMetadataOptions = Readonly<{

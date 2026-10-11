@@ -3,6 +3,8 @@
 // storage is blocked, full or empty the draft lives in memory for this page
 // session only. Nothing here ever holds a sign-in token.
 
+import { isRecord } from "./validation";
+
 export const CONFIGURATOR_STEP_IDS = [
   "shape",
   "measurements",
@@ -81,10 +83,6 @@ let memoryPendingAction: PendingAccountAction | null = null;
 let authReturnHint: string | null = null;
 const listeners = new Set<() => void>();
 const resetListeners = new Set<(kind: DraftResetKind) => void>();
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function browserStorage(
   kind: "localStorage" | "sessionStorage",

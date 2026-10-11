@@ -9,23 +9,9 @@ import type {
   SewnCoversApiClient,
 } from "./api-client";
 import type { ProjectConfigurationRequest } from "./account-api";
-
-const PATTERN_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
-const PUBLIC_DESIGN_ID_PATTERN = /^[A-Za-z0-9_-]{22}$/;
-const RESPONSE_COMMON_KEYS = [
-  "shape",
-  "width",
-  "height",
-  "backWidth",
-  "thickness",
-  "unit",
-  "patternScale",
-  "materialId",
-  "fitPreference",
-  "closureType",
-  "seamStyle",
-  "publicId",
-] as const;
+import { normalizeBasePath } from "../config/base-path";
+import { PATTERN_ID_PATTERN, readDesignResponse } from "./design-contract";
+import { hasAtMostDecimalPlaces, isRecord } from "./validation";
 
 export type DesignSaveState =
   | {
@@ -76,73 +62,30 @@ export class DesignShareClipboardError extends Error {
   }
 }
 
-function hasAtMostDecimalPlaces(value: number, places: number): boolean {
-  const [coefficient, rawExponent = "0"] = value
-    .toString()
-    .toLowerCase()
-    .split("e");
-  const [, fraction = ""] = coefficient.split(".");
-  const exponent = Number(rawExponent);
-  const decimalPlaces = Math.max(0, fraction.length - exponent);
-
-  return decimalPlaces <= places;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
+// The saved record must be the design that was sent: read it with the shared
+// reader (fields this build does not know are ignored), then compare every
+// field of the request. A share link is only offered for that record.
 function responseMatchesRequest(
   value: unknown,
   request: CreateDesignRequest,
 ): value is DesignResponse {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  const compatibilityKeys = [
-    ...RESPONSE_COMMON_KEYS,
-    request.patternId === null ? "solidColor" : "patternId",
-  ];
-  const currentKeys = [...RESPONSE_COMMON_KEYS, "patternId", "solidColor"];
-  const actualKeys = Object.keys(value);
-  if (!(
-    (actualKeys.length === compatibilityKeys.length &&
-      compatibilityKeys.every((key) => Object.hasOwn(value, key))) ||
-    (actualKeys.length === currentKeys.length &&
-      currentKeys.every((key) => Object.hasOwn(value, key)))
-  )) {
-    return false;
-  }
-
+  const saved = readDesignResponse(value);
   return (
-    value.shape === request.shape &&
-    value.width === request.width &&
-    value.height === request.height &&
-    value.backWidth === request.backWidth &&
-    value.thickness === request.thickness &&
-    value.unit === request.unit &&
-    (request.patternId === null
-      ? value.solidColor === request.solidColor
-      : value.patternId === request.patternId) &&
-    value.patternScale === request.patternScale &&
-    value.materialId === request.materialId &&
-    value.fitPreference === request.fitPreference &&
-    value.closureType === request.closureType &&
-    value.seamStyle === request.seamStyle &&
-    typeof value.publicId === "string" &&
-    PUBLIC_DESIGN_ID_PATTERN.test(value.publicId)
+    saved !== undefined &&
+    saved.shape === request.shape &&
+    saved.width === request.width &&
+    saved.height === request.height &&
+    saved.backWidth === request.backWidth &&
+    saved.thickness === request.thickness &&
+    saved.unit === request.unit &&
+    saved.patternId === request.patternId &&
+    saved.solidColor === request.solidColor &&
+    saved.patternScale === request.patternScale &&
+    saved.materialId === request.materialId &&
+    saved.fitPreference === request.fitPreference &&
+    saved.closureType === request.closureType &&
+    saved.seamStyle === request.seamStyle
   );
-}
-
-function normalizeBasePath(basePath: string): string {
-  const trimmed = basePath.trim();
-
-  if (trimmed === "" || trimmed === "/") {
-    return "";
-  }
-
-  return `/${trimmed.replace(/^\/+|\/+$/g, "")}`;
 }
 
 function messageFromFailureStatus(status: ApiRequestStatus): string | null {

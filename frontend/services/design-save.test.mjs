@@ -241,10 +241,6 @@ test("rejects malformed or mismatched creation responses without producing a lin
     { publicId: "too-short" },
     createdDesign(configuration(), { publicId: "too-short" }),
     createdDesign(configuration(), { width: 99 }),
-    {
-      ...createdDesign(configuration()),
-      internalId: 42,
-    },
   ];
 
   for (const response of malformedResponses) {
@@ -267,6 +263,18 @@ test("rejects malformed or mismatched creation responses without producing a lin
     assert.match(controller.getSnapshot().message, /could not be verified/i);
     assert.equal(shareUrlCalls, 0);
   }
+
+  // A field this build does not know does not change which design was saved.
+  const controller = new DesignSaveController(
+    {
+      async createDesign(request) {
+        return { ...createdDesign(request), internalId: 42 };
+      },
+    },
+    (id) => `https://example.test/configure/?design=${id}`,
+  );
+  await controller.submit(configuration());
+  assert.equal(controller.getSnapshot().phase, "success");
 });
 
 test("builds encoded links for ordinary and GitHub Pages base paths", async () => {

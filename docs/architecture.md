@@ -25,10 +25,10 @@ Next.js 16 (App Router), React 19, TypeScript in strict mode and Tailwind CSS v4
 | `components/account`, `projects`, `commerce`, `assurance` | Account, private-project, sandbox-commerce and operations screens. |
 | `components/ui/`, `components/layout/` | Design-system primitives; header, footer and the API warm-up. |
 | `context/configuration/` | The configuration state: a pure reducer with discriminated-union actions, measurement rules and unit conversion. |
-| `context/auth/` | Session state (`useSyncExternalStore` over `sessionStorage`). |
-| `services/` | Typed API clients with runtime response validation, catalogue, save, share and draft logic. |
-| `data/` | Shape metadata, cover options and the pattern-id to CSS-artwork mapping. |
-| `config/` | Environment validation, static-export verifier and performance budget. |
+| `context/auth/` | Session state: this tab's stored token through `useSyncExternalStore`, a stored session checked with the API, and `useAccountResource`. |
+| `services/` | The HTTP transport, the typed API clients and their response readers, the resource hook, catalogue, save, share and draft logic. |
+| `data/` | Shape metadata, cover options, carriers and the pattern-id to CSS-artwork mapping. |
+| `config/` | Environment validation, the base path, static-export verifier and performance budget. |
 
 Routes: `/` (landing), `/configure/`, `/legal/`, `/commerce/` (pricing), `/cart/`, `/orders/`, `/account/`, `/projects/`, `/admin/`, and the three `/checkout/*` pages, plus `404.html`, `robots.txt` and `sitemap.xml`. Runtime identifiers travel in query parameters (`/projects/?project=…`, `/configure/?design=…`) so a single exported page serves every record at both the domain root and the `/SewnCovers` base path.
 
@@ -47,24 +47,40 @@ Six stages: **Shape, Measurements, Cover details, Pattern, Preview, Review**. Th
 ### Saving, sharing and restoring
 
 - **Save.** Only available on a ready Review. The save boundary re-validates every field, then calls `POST /designs` **once**. The controller admits one request in flight, ignores duplicate clicks, locks the edit actions while the request is unresolved, and never retries automatically; recovery is an explicit "Try saving again". See [ADR 0002](adr/0002-immutable-designs-no-post-retry.md) for why.
-- **Share link.** The response must exactly match the submitted configuration and carry a 22-character URL-safe `publicId`. The link is `<origin><basePath>/configure/?design=<publicId>`, with a read-only URL field and a Copy button that degrades to select-for-manual-copy.
+- **Share link.** The saved record must be the submitted configuration, field for field (fields the API adds are ignored), and carry a 22-character URL-safe `publicId`. The link is `<origin><basePath>/configure/?design=<publicId>`, with a read-only URL field and a Copy button that degrades to select-for-manual-copy.
 - **Restore.** The page reads exactly one `design` query value, validates its format locally (no request for a malformed id), fetches the public record, re-validates every field, and waits for the design's pattern to exist in the current catalogue. Restoration is one atomic reducer action. A version counter invalidates pending work the moment the visitor edits anything, so a late response never overwrites a newer edit. Legacy records without the newer fields restore with `backWidth: null`, Cotton canvas, Standard fit, Zipper and Plain seam. Failures keep the visitor's current configuration, and **Continue with my configuration** removes only the `design` parameter with `history.replaceState`.
 
-### API client
+### Talking to the API
 
-`services/api-client.ts` owns the public endpoints and `services/account-api.ts`, `commerce-api.ts` and `assurance-api.ts` the authenticated ones. All of them read only the statically inlined API origin and validate every response at runtime; unknown shapes become a typed `malformed-response` error rather than data in the UI.
+**Transport.** Every API request goes through `send()` in `services/http.ts`. It builds the URL from the statically inlined API origin, adds `Content-Type: application/json` only with a body and `Authorization: Bearer` only with a session, gives each request (each attempt, for retries) its own `AbortController` and a 20 second limit, honours a caller's cancellation, and reads the body as text, then JSON. It knows nothing about sessions, retries or wording, which the clients add. The only other `fetch()` calls are the preview's custom-pattern tile and the upload transfer to its presigned target (no JSON, no session, no time limit).
 
-- Each attempt has its own `AbortController` and a 20 second timeout.
+**Public client.** `services/api-client.ts` owns patterns, designs, health and upload availability.
+
 - Safe `GET`s retry up to two more times (after 500 ms and 1 s) on timeout, network failure, or HTTP 408, 425, 429, 500, 502, 503 or 504. Permanent 4xx responses and malformed successes never retry.
 - `POST /designs` is never retried automatically.
 - Callers can subscribe to `connecting`, `cold-start`, `retrying`, `success` and `failure` states. After two seconds without a response the UI says the API *may* be waking and can take up to a minute.
-- Errors are classified as `configuration`, `timeout`, `network`, `http`, `backend-contract` or `malformed-response`. Exception details, response bodies, URLs, submitted designs and credentials are never logged or shown.
+- Errors are classified as `configuration`, `timeout`, `network`, `http`, `backend-contract` or `malformed-response`, and shown with wording for each class, never the server's text. Exception details, response bodies, URLs, submitted designs and credentials are never logged or shown.
 - On the home page, `ApiWarmup` sends one quiet `/health` request per browser session so a sleeping Render instance starts waking before the visitor reaches the Pattern stage.
+
+**Signed-in clients.** `services/account-api.ts`, `commerce-api.ts` and `assurance-api.ts` share one request path, `accountRequest()`. A failure becomes an `AccountApiError` carrying the API's own message (written for people, such as how long to wait) or the client's wording, a stable code (the API's, or `timeout`, `network_error`, `unreadable_response`, `malformed_response`), the request id and any `Retry-After` wait. A `401` for a request that carried the session ends it, except `authentication_failed` (a wrong passphrase when confirming account deletion). Nothing is retried: these requests include sign-in, checkout and uploads. Operations requests are never served from the browser cache.
+
+**Loading data in screens.** `services/use-resource.ts` loads a resource for a key. Loading is derived from what has settled, so no state is set in an effect body; a key change or unmount cancels the request and drops its answer; a failure keeps the earlier data; `reload()` can run in the background and can be awaited before moving focus; `update()` applies a mutation's result. `context/auth/use-account-resource.ts` adds the session: nothing is asked until the session is known and allowed (`initializing`, `guest`, `forbidden` or `granted`), and the token is part of the key. Import it from its own module: re-exported from `context/auth`, it would ride with `AuthProvider` into every page's first load. `tests/data-layer-guard.test.ts` rejects react-hooks lint disables, stray `fetch()` calls and zero-delay timers in components.
+
+**Reading responses.** Every reader builds its result from the fields this build knows: "tolerant reader, strict values". The signed-in clients declare each response as a table with one reader per field (`recordOf` and the value readers in `services/validation.ts`), so each field is named once and the result holds exactly the listed fields.
+
+- A field the API adds is ignored, and never reaches the UI, the browser draft or a design fingerprint.
+- Every known field is checked; a missing or wrong one makes the response malformed.
+- An unknown value that drives logic (shape, unit, cover choices, pattern kind, account role, cart and price-book state, project privacy, upload method, image type, currency) makes the response malformed.
+- An unknown value that is only shown (order, payment, quote, upload and moderation states, carriers, readiness levels) reads as `"unknown"`: the screens show "Unknown status", "Unknown carrier" or "Unknown level" and never act on it.
+- Saved designs are told apart by their fields: records from before the cover choices get the defaults, and a design is a pattern or a solid colour, never both.
+- In the error envelope, other keys are ignored and a code this build does not know is still a documented failure.
+
+The value lists live in `context/configuration/types.ts` (shapes, units, cover choices), `data/carriers.ts` and the client modules, and `tests/option-tables.test.ts` keeps the configurator's option tables in step with them. The frontend and the API deploy independently and open tabs keep running an older build, so a field is added as optional first and becomes required only once both sides have shipped, and removing or renaming one takes two deploys (see [API compatibility](api.md#compatibility)).
 
 ### Accounts, drafts and storage in the browser
 
 - **Guest first.** Everything from the landing page to save, share, print and download works without an account. Sign-in is asked for, inline and without navigation, only at account-only actions (private project, cart, custom upload). See the interaction notes in [design](design.md#guest-first-sign-in).
-- **Session token.** After login the API returns an opaque bearer token once. The browser keeps it only in `sessionStorage` and sends it as `Authorization: Bearer`; it is cleared on logout, revocation, expiry, account deletion and any authenticated `401`. It is never put in `localStorage`, cookies, URLs or the saved draft. This avoids a cross-site cookie dependency (the site and API are on different domains) but means a successful same-origin script injection could read it; this is a portfolio-grade design, not a commercial one.
+- **Session token.** After login the API returns an opaque bearer token once. The browser keeps it only in `sessionStorage`, so each tab has its own session, and sends it as `Authorization: Bearer`. A token stored by an earlier page counts only after `GET /account` and `GET /account/sessions` confirm a current session; until then pages show that the session is being restored. It is cleared on logout, revocation, expiry, account deletion, a failed check and any authenticated `401`. It is never put in `localStorage`, cookies, URLs or the saved draft. This avoids a cross-site cookie dependency (the site and API are on different domains) but means a successful same-origin script injection could read it; this is a portfolio-grade design, not a commercial one.
 - **Draft.** The design in progress is kept in `localStorage` (`sewncovers.configurator-draft`) so a reload or a sign-in never loses it, with in-memory fallback when storage is blocked.
 - **Content Security Policy.** GitHub Pages cannot set response headers, so the site ships a CSP `<meta>` tag, which requires `'unsafe-inline'` for Next's inline scripts.
 

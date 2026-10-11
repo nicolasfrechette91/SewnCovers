@@ -13,9 +13,9 @@ import {
   accountApi,
   AccountApiError,
   buildSharedAssetUrl,
-  resolveAssetUrl,
   type ProjectConfigurationRequest,
 } from "@/services/account-api";
+import { fetchCustomAsset } from "@/services/custom-asset";
 import { useResource, type Resource } from "@/services/use-resource";
 
 // Loaded only when a guest opens a private project version link.
@@ -161,23 +161,16 @@ async function restoreState(
       if (share) {
         previewUrl = buildSharedAssetUrl(share);
       } else if (token) {
-        const upload = await accountApi.getUpload(
+        const found = await fetchCustomAsset(
           token,
           configuration.pattern.assetId,
+          (upload) => upload.state === "approved",
           { signal },
         );
-        label = upload.label;
-        if (upload.state === "deleted") unavailableReason = "deleted";
-        else if (upload.state !== "approved") unavailableReason = "unavailable";
-        else {
-          const access = await accountApi.assetAccess(
-            token,
-            upload.id,
-            "tile",
-            { signal },
-          );
-          previewUrl = resolveAssetUrl(access.url);
-        }
+        label = found.upload.label;
+        if (found.upload.state === "deleted") unavailableReason = "deleted";
+        else if (found.previewUrl === null) unavailableReason = "unavailable";
+        else previewUrl = found.previewUrl;
       }
     } catch {
       unavailableReason = "unavailable";

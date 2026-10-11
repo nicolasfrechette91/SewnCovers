@@ -82,6 +82,21 @@ async function checkDocumentStructure(page: Page, route: string) {
   expect(accessibilityTree, route).toContain("heading");
 }
 
+// A capture right after a resize can catch a frame before the whole page has
+// repainted (seen under load as unpainted buttons). Wait for fonts, then for
+// two identical frames in a row.
+async function settleForCapture(page: Page) {
+  await page.evaluate(() => document.fonts.ready);
+  let previous: Buffer | null = null;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const frame = await page.screenshot({ fullPage: true });
+    if (previous?.equals(frame)) return;
+    previous = frame;
+    await page.waitForTimeout(100);
+  }
+  throw new Error("The page never settled; the capture would be unreliable.");
+}
+
 async function checkMatrix(page: Page, name: string, output: string) {
   for (const [width, height] of matrix) {
     await page.setViewportSize({ width, height });
@@ -92,6 +107,7 @@ async function checkMatrix(page: Page, name: string, output: string) {
       process.env.RESPONSIVE_CAPTURE === "true" ||
       process.env.RESPONSIVE_AUDIT
     ) {
+      await settleForCapture(page);
       await page.screenshot({
         path: path.join(output, `${name}-${width}x${height}.png`),
         fullPage: true,

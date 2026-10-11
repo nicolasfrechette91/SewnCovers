@@ -12,23 +12,16 @@ import { isNormalizedHexColor } from "./fabric-color";
 import { isFinitePositiveMeasurement, roundMeasurement } from "./measurements";
 import { normalizePatternScale, PATTERN_SCALE_DEFAULT } from "./pattern-scale";
 import { initialConfigurationState } from "./reducer";
-import type { ConfigurationState, CushionShape, PatternChoice } from "./types";
+import { isOneOf, isRecord } from "../../services/validation";
+import {
+  CUSHION_SHAPES,
+  type ConfigurationState,
+  type PatternChoice,
+} from "./types";
 
 // Browser drafts are validated field by field, so a half-finished or partly
 // damaged draft still brings back everything that is valid. Only the
 // configurator's draft session loads this.
-
-const cushionShapes: readonly CushionShape[] = [
-  "box",
-  "rectangle",
-  "round",
-  "square",
-  "tapered",
-];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function draftMeasurement(value: unknown): number | null {
   return typeof value === "number" &&
@@ -89,7 +82,7 @@ function draftPattern(value: unknown): PatternChoice | null {
  */
 export function sanitizeDraftConfiguration(value: unknown): ConfigurationState {
   if (!isRecord(value)) return initialConfigurationState;
-  const shape = cushionShapes.find((item) => item === value.shape) ?? null;
+  const shape = isOneOf(CUSHION_SHAPES, value.shape) ? value.shape : null;
   const width = draftMeasurement(value.width);
   const patternScale =
     typeof value.patternScale === "number"

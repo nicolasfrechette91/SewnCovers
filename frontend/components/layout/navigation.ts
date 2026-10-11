@@ -1,3 +1,5 @@
+import { normalizeBasePath } from "@/config/base-path";
+
 export interface SiteNavigationItem {
   href: string;
   label: string;
@@ -5,11 +7,6 @@ export interface SiteNavigationItem {
   asButton?: boolean;
   /** Hidden from guests, for whom the destination is only a sign-in prompt. */
   requiresAccount?: boolean;
-}
-
-function normalizeBasePath(basePath: string): string {
-  const value = basePath.trim().replace(/^\/+|\/+$/g, "");
-  return value ? `/${value}` : "";
 }
 
 export function normalizeNavigationPath(

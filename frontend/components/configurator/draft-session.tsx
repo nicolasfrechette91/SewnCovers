@@ -21,7 +21,7 @@ import {
   type PatternChoice,
 } from "@/context/configuration";
 import { sanitizeDraftConfiguration } from "@/context/configuration/draft-configuration";
-import { accountApi, resolveAssetUrl } from "@/services/account-api";
+import { fetchCustomAsset } from "@/services/custom-asset";
 import {
   draftHasDesign,
   type ConfiguratorDraft,
@@ -118,17 +118,16 @@ export async function resolveCustomPatternPreview(
 ): Promise<CustomPattern> {
   if (!token) return { ...pattern, unavailableReason: "unavailable" };
   try {
-    const upload = await accountApi.getUpload(token, pattern.assetId);
+    const { upload, previewUrl } = await fetchCustomAsset(
+      token,
+      pattern.assetId,
+      (found) => found.state === "approved",
+    );
     if (upload.state === "deleted") {
       return { ...pattern, label: upload.label, unavailableReason: "deleted" };
     }
-    if (upload.state === "approved") {
-      const access = await accountApi.assetAccess(token, upload.id, "tile");
-      return {
-        ...pattern,
-        label: upload.label,
-        previewUrl: resolveAssetUrl(access.url),
-      };
+    if (previewUrl !== null) {
+      return { ...pattern, label: upload.label, previewUrl };
     }
   } catch {
     // Stays marked unavailable; the pattern can be chosen again.

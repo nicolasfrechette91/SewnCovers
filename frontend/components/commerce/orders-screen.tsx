@@ -16,17 +16,15 @@ import {
   textLinkClasses,
 } from "@/components/ui";
 import { useAccountResource } from "@/context/auth/use-account-resource";
-import { AccountApiError } from "@/services/account-api";
+import { describeError } from "@/services/account-api";
+import { carrierName, safeTrackingUrl } from "@/data/carriers";
 import { commerceApi, type Order } from "@/services/commerce-api";
 
 import { CommerceError, DemoBanner, SignInForCommerce } from "./demo-banner";
+import { statusLabel as label } from "./status-label";
 
 const explain = (error: unknown) =>
-  error instanceof AccountApiError
-    ? error.message
-    : "Order status could not be loaded. Try again.";
-const label = (value: string) =>
-  value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
+  describeError(error, "Order status could not be loaded. Try again.");
 
 function configurationSummary(line: Readonly<Record<string, unknown>>) {
   const configuration =
@@ -68,15 +66,7 @@ export function OrderCard({
 }: Readonly<{ order: Order; detail?: boolean; sectionHeadingLevel?: 2 | 3 }>) {
   const referenceId = useId();
   const SectionHeading = `h${sectionHeadingLevel}` as const;
-  const safeTracking =
-    order.shipment?.trackingUrl?.startsWith(
-      "https://www.canadapost-postescanada.ca/",
-    ) ||
-    order.shipment?.trackingUrl?.startsWith("https://www.ups.com/") ||
-    order.shipment?.trackingUrl?.startsWith("https://www.fedex.com/") ||
-    order.shipment?.trackingUrl?.startsWith("https://www.purolator.com/")
-      ? order.shipment.trackingUrl
-      : null;
+  const safeTracking = safeTrackingUrl(order.shipment?.trackingUrl);
   const shippingSummary = order.shippingAddress
     ? ["name", "line1", "line2", "city", "region", "postalCode", "country"]
         .map((key) => order.shippingAddress?.[key])
@@ -211,7 +201,7 @@ export function OrderCard({
             >
               <SectionHeading className="font-control">Shipment</SectionHeading>
               <p>
-                {label(order.shipment.carrier)} ·{" "}
+                {carrierName(order.shipment.carrier)} ·{" "}
                 {order.shipment.trackingReference}
               </p>
               {safeTracking ? (

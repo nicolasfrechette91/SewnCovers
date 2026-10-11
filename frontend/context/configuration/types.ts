@@ -1,11 +1,31 @@
-export type CushionShape = "box" | "rectangle" | "round" | "square" | "tapered";
+// Every value each choice can take. The types derive from these lists, and
+// the response and draft readers check against them; the option tables in
+// data/ describe the same values (tests/option-tables.test.ts keeps them in
+// step). An unknown value is rejected: these drive geometry, saves and links.
+export const CUSHION_SHAPES = [
+  "box",
+  "rectangle",
+  "round",
+  "square",
+  "tapered",
+] as const;
+export type CushionShape = (typeof CUSHION_SHAPES)[number];
 
-export type MeasurementUnit = "cm" | "in";
+export const MEASUREMENT_UNITS = ["cm", "in"] as const;
+export type MeasurementUnit = (typeof MEASUREMENT_UNITS)[number];
 
-export type MaterialId = "cotton-canvas" | "linen-blend" | "polyester-weave";
-export type FitPreference = "close" | "relaxed" | "standard";
-export type ClosureType = "envelope" | "slip-on" | "zipper";
-export type SeamStyle = "piped" | "plain";
+export const MATERIAL_IDS = [
+  "cotton-canvas",
+  "linen-blend",
+  "polyester-weave",
+] as const;
+export type MaterialId = (typeof MATERIAL_IDS)[number];
+export const FIT_PREFERENCES = ["close", "relaxed", "standard"] as const;
+export type FitPreference = (typeof FIT_PREFERENCES)[number];
+export const CLOSURE_TYPES = ["envelope", "slip-on", "zipper"] as const;
+export type ClosureType = (typeof CLOSURE_TYPES)[number];
+export const SEAM_STYLES = ["piped", "plain"] as const;
+export type SeamStyle = (typeof SEAM_STYLES)[number];
 
 export type PatternChoice =
   | {

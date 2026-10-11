@@ -13,13 +13,11 @@ import {
   SectionHeader,
 } from "@/components/ui";
 import { useAuth } from "@/context/auth";
-import { AccountApiError } from "@/services/account-api";
+import { describeError } from "@/services/account-api";
 import type { AuthenticationMode } from "@/services/auth-navigation";
 
 export function authErrorMessage(error: unknown): string {
-  return error instanceof AccountApiError
-    ? error.message
-    : "The request could not be completed. Try again.";
+  return describeError(error, "The request could not be completed. Try again.");
 }
 
 interface AuthFieldErrors {
