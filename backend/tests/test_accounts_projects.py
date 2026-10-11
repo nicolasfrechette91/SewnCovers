@@ -3,86 +3,39 @@
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import pytest
-from alembic import command
-from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.accounts.security import hash_token, verify_password
 from app.main import create_application
-from app.persistence.database import get_session
 from app.persistence.models import (
     AuthenticatedSession,
     CoverDesign,
     CustomerAccount,
     Pattern,
+    SavedProject,
     ShareGrant,
 )
-from app.settings import Settings, reset_settings_cache
-from tests.support import error_envelope
-
-CONFIGURATION = {
-    "shape": "tapered",
-    "width": 73.25,
-    "height": 49.75,
-    "backWidth": 61.5,
-    "thickness": 13.5,
-    "unit": "cm",
-    "pattern": {"kind": "built-in", "patternId": "terrace-wave"},
-    "patternScale": 1.6,
-    "materialId": "linen-blend",
-    "fitPreference": "relaxed",
-    "closureType": "envelope",
-    "seamStyle": "piped",
-}
+from app.settings import Settings
+from tests.support import (
+    CONFIGURATION,
+    PASSWORD,
+    auth,
+    error_envelope,
+    open_workspace,
+)
+from tests.support import register_account as register
 
 
 @pytest.fixture
 def workspace_client(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    migrated_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[tuple[TestClient, sessionmaker[Session]]]:
-    database_url = f"sqlite:///{(tmp_path / 'workspace.sqlite3').as_posix()}"
-    monkeypatch.setenv("DATABASE_URL", database_url)
-    monkeypatch.setenv("ENVIRONMENT", "test")
-    reset_settings_cache()
-    config = Config(str(Path(__file__).parents[1] / "alembic.ini"))
-    command.upgrade(config, "head")
-
-    engine = create_engine(database_url)
-    factory = sessionmaker(bind=engine, expire_on_commit=False)
-    application = create_application(
-        Settings(_env_file=None, environment="test", database_url=database_url)
-    )
-
-    def provide_session() -> Iterator[Session]:
-        session = factory()
-        try:
-            yield session
-        finally:
-            session.close()
-
-    application.dependency_overrides[get_session] = provide_session
-    with TestClient(application) as client:
-        yield client, factory
-    engine.dispose()
-    reset_settings_cache()
-
-
-def register(client: TestClient, email: str) -> tuple[str, dict[str, object]]:
-    response = client.post(
-        "/auth/register",
-        json={"email": email, "password": "correct horse battery staple"},
-    )
-    assert response.status_code == 201, response.text
-    return response.json()["token"], response.json()
-
-
-def auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
+    with open_workspace(migrated_database, monkeypatch) as workspace:
+        yield workspace.client, workspace.factory
 
 
 def test_account_sessions_use_argon2id_and_store_only_token_hash(
@@ -99,7 +52,7 @@ def test_account_sessions_use_argon2id_and_store_only_token_hash(
         stored_session = session.scalar(select(AuthenticatedSession))
         assert account is not None and stored_session is not None
         assert account.password_hash.startswith("$argon2id$")
-        assert verify_password(account.password_hash, "correct horse battery staple")
+        assert verify_password(account.password_hash, PASSWORD)
         assert token not in account.password_hash
         assert stored_session.token_hash == hash_token(token)
         assert token not in stored_session.token_hash
@@ -257,26 +210,77 @@ def test_solid_fabric_survives_project_versions_and_sharing(
     assert restored.json()["configuration"] == solid_configuration
 
 
-def test_logout_expiry_logout_all_export_and_account_deletion_are_isolated(
+def sign_in(client: TestClient, email: str) -> str:
+    response = client.post("/auth/login", json={"email": email, "password": PASSWORD})
+    assert response.status_code == 200, response.text
+    return str(response.json()["token"])
+
+
+def test_logging_out_revokes_only_that_session(
+    workspace_client: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, _factory = workspace_client
+    first_token, _ = register(client, "logout@example.com")
+    second_token = sign_in(client, "logout@example.com")
+
+    assert client.post("/auth/logout", headers=auth(first_token)).status_code == 204
+
+    assert client.get("/account", headers=auth(first_token)).status_code == 401
+    assert client.get("/account", headers=auth(second_token)).status_code == 200
+
+
+def test_an_expired_session_is_refused(
     workspace_client: tuple[TestClient, sessionmaker[Session]],
 ) -> None:
     client, factory = workspace_client
-    first_token, _ = register(client, "delete-me@example.com")
-    second_login = client.post(
-        "/auth/login",
-        json={
-            "email": "delete-me@example.com",
-            "password": "correct horse battery staple",
-        },
+    register(client, "expiry@example.com")
+    token = sign_in(client, "expiry@example.com")
+    assert client.get("/account", headers=auth(token)).status_code == 200
+
+    with factory.begin() as session:
+        stored = session.scalar(
+            select(AuthenticatedSession).where(
+                AuthenticatedSession.token_hash == hash_token(token)
+            )
+        )
+        assert stored is not None
+        stored.expires_at = datetime.now(UTC) - timedelta(seconds=1)
+
+    assert client.get("/account", headers=auth(token)).status_code == 401
+
+
+def test_logging_out_everywhere_revokes_every_session_of_the_account(
+    workspace_client: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, _factory = workspace_client
+    first_token, _ = register(client, "logout-all@example.com")
+    second_token = sign_in(client, "logout-all@example.com")
+    other_token, _ = register(client, "bystander@example.com")
+
+    assert (
+        client.post("/auth/logout-all", headers=auth(second_token)).status_code == 204
     )
-    second_token = second_login.json()["token"]
+
+    assert client.get("/account", headers=auth(first_token)).status_code == 401
+    assert client.get("/account", headers=auth(second_token)).status_code == 401
+    # Another account's session is not affected.
+    assert client.get("/account", headers=auth(other_token)).status_code == 200
+
+
+def test_the_export_holds_the_accounts_projects_and_no_secrets(
+    workspace_client: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, _factory = workspace_client
+    token, _ = register(client, "export@example.com")
     created = client.post(
         "/projects",
-        headers=auth(first_token),
+        headers=auth(token),
         json={"name": "Private", "configuration": CONFIGURATION},
     )
     assert created.status_code == 201
-    exported = client.get("/account/export", headers=auth(first_token))
+
+    exported = client.get("/account/export", headers=auth(token))
+
     assert exported.status_code == 200
     assert exported.json()["formatVersion"] == 3
     assert exported.json()["customPatterns"] == []
@@ -287,6 +291,19 @@ def test_logout_expiry_logout_all_export_and_account_deletion_are_isolated(
     assert "password" not in exported.text.casefold()
     assert "token" not in exported.text.casefold()
 
+
+def test_deleting_an_account_removes_its_data_and_keeps_public_designs(
+    workspace_client: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, factory = workspace_client
+    register(client, "delete-me@example.com")
+    token = sign_in(client, "delete-me@example.com")
+    created = client.post(
+        "/projects",
+        headers=auth(token),
+        json={"name": "Private", "configuration": CONFIGURATION},
+    )
+    assert created.status_code == 201
     with factory.begin() as session:
         pattern = session.get(Pattern, "terrace-wave")
         assert pattern is not None
@@ -307,50 +324,17 @@ def test_logout_expiry_logout_all_export_and_account_deletion_are_isolated(
             )
         )
 
-    assert client.post("/auth/logout", headers=auth(first_token)).status_code == 204
-    assert client.get("/account", headers=auth(first_token)).status_code == 401
-    assert client.get("/account", headers=auth(second_token)).status_code == 200
-
-    third_token = client.post(
-        "/auth/login",
-        json={
-            "email": "delete-me@example.com",
-            "password": "correct horse battery staple",
-        },
-    ).json()["token"]
-    with factory.begin() as session:
-        stored = session.scalar(
-            select(AuthenticatedSession).where(
-                AuthenticatedSession.token_hash == hash_token(third_token)
-            )
-        )
-        assert stored is not None
-        stored.expires_at = datetime.now(UTC) - timedelta(seconds=1)
-    assert client.get("/account", headers=auth(third_token)).status_code == 401
-
-    assert (
-        client.post("/auth/logout-all", headers=auth(second_token)).status_code == 204
-    )
-    assert client.get("/account", headers=auth(second_token)).status_code == 401
-
-    deletion_token = client.post(
-        "/auth/login",
-        json={
-            "email": "delete-me@example.com",
-            "password": "correct horse battery staple",
-        },
-    ).json()["token"]
     deleted = client.post(
-        "/account/delete",
-        headers=auth(deletion_token),
-        json={"password": "correct horse battery staple"},
+        "/account/delete", headers=auth(token), json={"password": PASSWORD}
     )
+
     assert deleted.status_code == 200
     assert deleted.json() == {"deleted": True}
-    assert client.get("/account", headers=auth(deletion_token)).status_code == 401
+    assert client.get("/account", headers=auth(token)).status_code == 401
     assert client.get("/designs/" + "L" * 22).status_code == 200
     with factory() as session:
         assert session.scalar(select(CustomerAccount)) is None
+        assert session.scalar(select(SavedProject)) is None
         assert session.scalar(select(CoverDesign.public_id)) == "L" * 22
 
 

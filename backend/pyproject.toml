@@ -36,12 +36,24 @@ dev = [
     "sewncovers-api[commerce,uploads]",
     "httpx2==2.7.0",
     "pytest==9.1.1",
+    "pytest-cov==7.1.0",
     "ruff==0.15.22",
 ]
 
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
+
+# Coverage is measured on request (`python -m pytest --cov`), not on every run,
+# and CI reports it without a minimum yet.
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:"]
 
 [tool.ruff]
 target-version = "py313"

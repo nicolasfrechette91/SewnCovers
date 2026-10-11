@@ -5,7 +5,7 @@ SewnCovers is a cushion-cover configurator: a static Next.js 16 frontend (`front
 ## Commands
 
 - Frontend (from `frontend/`): `npm ci`, `npm run format:check` (`npm run format` writes), `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run verify:export`, `npm run verify:performance`, `npm run test:e2e`.
-- Backend (from `backend/`, venv active): `python -m pip install --require-hashes -r requirements-dev.txt` then `python -m pip install --no-deps -e .`, `python -m ruff format --check .`, `python -m ruff check .`, `python -m pytest`, `python -m pip check`. After editing `backend/pyproject.toml`, run `python tools/compile_requirements.py` (needs uv in its own environment, see [docs/setup.md](docs/setup.md#changing-a-backend-dependency)) and commit the three `requirements*.txt` files.
+- Backend (from `backend/`, venv active): `python -m pip install --require-hashes -r requirements-dev.txt` then `python -m pip install --no-deps -e .`, `python -m ruff format --check .`, `python -m ruff check .`, `python -m pytest` (`--cov` for coverage), `python -m pip check`. After editing `backend/pyproject.toml`, run `python tools/compile_requirements.py` (needs uv in its own environment, see [docs/setup.md](docs/setup.md#changing-a-backend-dependency)) and commit the three `requirements*.txt` files.
 - Run the API locally on SQLite: set `DATABASE_URL=sqlite:///./local.sqlite3` in `backend/.env`, then `python -m alembic upgrade head` and `python -m uvicorn app.main:app --reload`.
 - Once per clone, `git config blame.ignoreRevsFile .git-blame-ignore-revs` makes `git blame` skip the formatting-only commits listed there (GitHub's blame view applies the file by itself).
 
@@ -14,7 +14,7 @@ SewnCovers is a cushion-cover configurator: a static Next.js 16 frontend (`front
 - `npm test` runs `tsx --test` twice, both over globs, so new test files are picked up without editing `frontend/package.json`: `test:node` over `config/*.test.mjs` and `services/*.test.mjs`, then `test:dom` (adds jsdom through `tests/setup-dom.mjs`) over `tests/*.test.ts` and `tests/*.test.tsx`. The `.mjs` tests import the TypeScript sources directly; to get a private copy of a module and its imports (for one that reads `process.env` when it loads), use `importFresh` from `tests/fresh-import.mjs`.
 - `npm run test:e2e` is Playwright. It builds the export itself against a fake `api.sewncovers.test` origin and mocks the API, so it needs no backend. CI runs it in both layouts with one retry; everything it writes stays under the ignored `frontend/.playwright/`.
 - CI has one definition, `.github/workflows/ci.yml`. The deploy workflows call it for their side and deploy only if it passes; only its "CI result" job should be a required check. `npm run verify:performance` reads source maps, so run it after a build without `SEWNCOVERS_GITHUB_PAGES`.
-- Backend tests use pytest with a migrated SQLite database per test; none needs `.env` or network access.
+- Backend tests use pytest with a private copy of one migrated SQLite database per test (`migrated_database` in `backend/tests/conftest.py`, `open_workspace` in `tests/support.py`); none needs `.env` or network access, and on Windows a plain `python -m pytest` picks its own short temporary directory, so `--basetemp` is not needed.
 
 ## Things that will bite you
 

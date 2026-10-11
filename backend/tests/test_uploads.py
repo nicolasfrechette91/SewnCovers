@@ -9,26 +9,21 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
-from alembic import command
-from alembic.config import Config
 from fastapi.testclient import TestClient
 from PIL import Image, ImageCms, PngImagePlugin
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-import app.persistence.database as database_module
-import app.persistence.migrations as migrations_module
 import app.uploads.api as upload_api_module
 import app.uploads.processing as processing_module
 from app.main import create_application
-from app.persistence.database import get_session
 from app.persistence.models import (
     CustomDerivative,
     CustomUpload,
     OrderProductionAsset,
     ProductionAssetReservation,
 )
-from app.settings import Settings, reset_settings_cache
+from app.settings import Settings
 from app.uploads.moderation import (
     DeterministicModerationProvider,
     OpenAIModerationProvider,
@@ -41,6 +36,7 @@ from app.uploads.storage import (
     ObjectStorageError,
     S3ObjectStorage,
 )
+from tests.support import auth, open_workspace, register
 
 BUILT_IN_CONFIGURATION = {
     "shape": "box",
@@ -71,61 +67,20 @@ def png_bytes(*, size: tuple[int, int] = (128, 96), metadata: bool = False) -> b
 
 @pytest.fixture
 def upload_workspace(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    migrated_database: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[tuple[TestClient, sessionmaker[Session], FilesystemObjectStorage]]:
-    database_url = f"sqlite:///{(tmp_path / 'uploads.sqlite3').as_posix()}"
     storage_root = tmp_path / "private-objects"
-    monkeypatch.setenv("DATABASE_URL", database_url)
-    monkeypatch.setenv("ENVIRONMENT", "test")
-    monkeypatch.setenv("CUSTOM_UPLOADS_ENABLED", "true")
-    monkeypatch.setenv("OBJECT_STORAGE_BACKEND", "filesystem")
-    monkeypatch.setenv("OBJECT_STORAGE_ROOT", str(storage_root))
-    monkeypatch.setenv("MODERATION_PROVIDER", "development-approve")
-    monkeypatch.setenv("COMMERCE_ENABLED", "true")
-    monkeypatch.setenv("COMMERCE_MODE", "sandbox")
-    reset_settings_cache()
-    migrations_module.get_settings.cache_clear()
-    database_module.dispose_application_database()
-    command.upgrade(Config(str(Path(__file__).parents[1] / "alembic.ini")), "head")
-    engine = create_engine(database_url)
-    factory = sessionmaker(bind=engine, expire_on_commit=False)
-    application = create_application(
-        Settings(
-            _env_file=None,
-            environment="test",
-            database_url=database_url,
-            custom_uploads_enabled=True,
-            object_storage_root=storage_root,
-            moderation_provider="development-approve",
-            commerce_enabled=True,
-            commerce_mode="sandbox",
-        )
-    )
-
-    def provide_session() -> Iterator[Session]:
-        with factory() as session:
-            yield session
-
-    application.dependency_overrides[get_session] = provide_session
-    with TestClient(application) as client:
-        yield client, factory, FilesystemObjectStorage(storage_root)
-    engine.dispose()
-    database_module.dispose_application_database()
-    reset_settings_cache()
-    migrations_module.get_settings.cache_clear()
-
-
-def register(client: TestClient, email: str) -> str:
-    response = client.post(
-        "/auth/register",
-        json={"email": email, "password": "correct horse battery staple"},
-    )
-    assert response.status_code == 201, response.text
-    return response.json()["token"]
-
-
-def auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
+    with open_workspace(
+        migrated_database,
+        monkeypatch,
+        custom_uploads_enabled=True,
+        object_storage_backend="filesystem",
+        object_storage_root=storage_root,
+        moderation_provider="development-approve",
+        commerce_enabled=True,
+        commerce_mode="sandbox",
+    ) as workspace:
+        yield workspace.client, workspace.factory, FilesystemObjectStorage(storage_root)
 
 
 def create_and_transfer(

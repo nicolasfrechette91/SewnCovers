@@ -67,7 +67,7 @@ The root endpoint (`/`) works without any database. Every other route needs `DAT
 | --- | --- | --- |
 | `requirements.txt` | Runtime dependencies only | Render ([deployment](deployment.md#dependencies)) |
 | `requirements-features.txt` | Runtime plus the `uploads` (Pillow, boto3) and `commerce` (stripe) extras | A service that turns those features on; the CI audit |
-| `requirements-dev.txt` | Everything, with pytest, ruff and the HTTP test client | CI and local development |
+| `requirements-dev.txt` | Everything, with pytest, pytest-cov, ruff and the HTTP test client | CI and local development |
 
 After editing `pyproject.toml`, regenerate and commit all three. The tool is [uv](https://docs.astral.sh/uv/), used only for this, in an environment of its own (CI pins the same version):
 
@@ -171,7 +171,7 @@ Settings are read once through `get_settings()`; importing the app never opens a
 | `frontend` | `npm run screenshots:readme` | Regenerate the README screenshots in `docs/images/`. |
 | `backend` | `python -m uvicorn app.main:app --reload` | Development API. |
 | `backend` | `python -m ruff format --check .` · `python -m ruff check .` | Formatting · lint. |
-| `backend` | `python -m pytest` | Backend tests. |
+| `backend` | `python -m pytest` · `python -m pytest --cov` | Backend tests · the same with coverage of `app/` ([testing](testing.md#backend-tests)). |
 | `backend` | `python tools\compile_requirements.py` | Regenerate the hashed requirements files after editing `pyproject.toml` (needs uv, see above). |
 | `backend` | `python -m app.assurance.cli readiness` | Read-only production-configuration report; it exits non-zero on a local configuration by design. |
 

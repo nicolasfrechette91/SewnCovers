@@ -20,6 +20,8 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+.coverage*
+htmlcov/
 *.sqlite3*
 /backend/.local/
 

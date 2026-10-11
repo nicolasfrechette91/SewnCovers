@@ -6,7 +6,7 @@ Every suite runs offline: no test contacts Render, Neon, a payment provider or a
 | --- | --- | --- | --- |
 | Frontend unit, component and service tests | Over 350, in two `tsx --test` runs | Yes | `npm test` |
 | Playwright browser journeys (Chromium) | About 90 | Yes, in the root and GitHub Pages layouts | `npm run test:e2e` |
-| Backend tests | Over 350 | Yes | `python -m pytest` |
+| Backend tests | Over 450 | Yes | `python -m pytest` (add `--cov` for coverage) |
 | Lint, formatting and type checks | n/a | Yes | see below |
 | Static-export verification | n/a | Yes | `npm run verify:export` |
 | First-load JavaScript budgets | n/a | Yes | `npm run verify:performance` |
@@ -68,7 +68,7 @@ CI runs the suite in both layouts (see [Continuous integration](#continuous-inte
 
 ## Backend tests
 
-`python -m pytest` runs over 350 tests in about 20 files under `backend/tests/`. Each file that needs a database creates its own SQLite database and migrates it with Alembic, so the tests exercise the real migrations. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic. `conftest.py` undoes the process-wide logging changes that application start-up makes, and `support.py` holds the shared error-envelope assertion. It also keeps the tests independent of the machine: reading `backend/.env` is switched off for the whole run and every variable the application reads (`DATABASE_URL`, `ENVIRONMENT` and the rest) is removed from the environment, so a test that needs one sets it itself. Before that, two tests passed with a local `.env` and failed on a clean checkout, which is all CI is. `tests/test_unauthenticated_requests.py` walks every route that needs an account and checks that a missing or unusable token is refused with the same `401` without a database session ever being opened.
+`python -m pytest` runs over 450 tests in about 25 files under `backend/tests/`. The tests that need a database share one SQLite database migrated by Alembic once per run (the `migrated_template` fixture, so they exercise the real migrations and the seed data) and each gets a private copy of it (`migrated_database`: copying takes about a millisecond, migrating about 300). `support.py` builds the application and client on that copy (`open_workspace`, which also puts the settings it was given in the environment, since services read the process-wide settings) and holds `register`, `auth`, the shared `CONFIGURATION` and the error-envelope assertion. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic. `conftest.py` undoes the process-wide logging changes that application start-up makes. It also keeps the tests independent of the machine: reading `backend/.env` is switched off for the whole run and every variable the application reads (`DATABASE_URL`, `ENVIRONMENT` and the rest) is removed from the environment, so a test that needs one sets it itself. Before that, two tests passed with a local `.env` and failed on a clean checkout, which is all CI is. A test must not `importlib.reload(app.settings)`: modules that imported `get_settings` earlier would keep the old function and a cache nothing resets, and later tests would read stale settings (this once made upload tests fail only in a full run). Run the module's code under another name instead (`importlib.util.spec_from_file_location`); `conftest.py` fails the test that reloads it. `tests/test_unauthenticated_requests.py` walks every route that needs an account and checks that a missing or unusable token is refused with the same `401` without a database session ever being opened.
 
 They cover:
 
@@ -87,11 +87,9 @@ They cover:
 
 PostgreSQL itself is not part of the suite; it is exercised only in production and through offline SQL rendering.
 
-On Windows, a long default temporary-directory path can push the filesystem object store past `MAX_PATH` and fail some upload tests. Pass a short base directory to avoid it:
+**Windows paths.** Windows refuses paths of 260 characters or more, and the upload tests write files 143 characters below the directory pytest gives them, so pytest's default (`%TEMP%\pytest-of-<user>\pytest-<n>`) fails them with `503 storage_unavailable` once `%TEMP%` is long. A plain `python -m pytest` avoids that: on Windows, `conftest.py` puts the run's temporary files in `%TEMP%\sc-pytest\<process id>` (or, if `%TEMP%` is too long for that, in `C:\sc-pytest\<process id>`), removes the folder when the run passes and keeps it, to inspect, when it fails, and deletes run folders more than a day old. It does nothing when you pass `--basetemp` yourself, and nothing on macOS or Linux. If neither location is short enough pytest keeps its default and warns.
 
-```powershell
-python -m pytest --basetemp=C:\t
-```
+**Coverage.** `python -m pytest --cov` measures how much of `app/` the tests run, with branch coverage, and prints the lines that were not (`pyproject.toml` configures it; coverage is off by default so a plain run stays fast). CI runs the suite this way and adds the table to the job summary. There is no minimum yet: read the table, then decide what a floor should be.
 
 ## Static-export and budget checks
 
@@ -131,7 +129,7 @@ When a budget fails, the printed table says which: a larger app column means the
 | Detect changed areas | Always | Chooses the frontend jobs, the backend job or both from the changed paths: `frontend/**`; `backend/**` and `render.yaml`; `ci.yml` selects both. A deploy workflow names its side instead. |
 | Frontend - format, lint, types, tests, exports, budgets, audit (Node 24.15.0) | Frontend changed | `npm ci`, `prettier --check`, ESLint, `tsc --noEmit`, `npm test`, build and verify the ordinary export, `verify:performance`, build and verify the GitHub Pages export, `npm audit --omit=dev --audit-level=high`. For a deploy, it uploads that Pages export as the artifact. |
 | Frontend - Playwright (root, github-pages) | Frontend changed | `npx playwright install --with-deps chromium`, then `npm run test:e2e` in each layout. Uploads `frontend/.playwright/` on failure. |
-| Backend - Ruff, tests, dependency checks, audit (Python 3.13.2) | Backend changed | `pip install --require-hashes -r requirements-dev.txt` and `pip install --no-deps -e .`, `ruff format --check`, `ruff check`, `pytest`, `pip check`; regenerate the requirements files and fail if a pin changed; install `requirements.txt` alone into an empty environment and start the API from it (`tools/smoke_runtime_install.py`); `pip-audit` of `requirements-features.txt`. |
+| Backend - Ruff, tests, dependency checks, audit (Python 3.13.2) | Backend changed | `pip install --require-hashes -r requirements-dev.txt` and `pip install --no-deps -e .`, `ruff format --check`, `ruff check`, `pytest --cov` with the coverage table in the job summary, `pip check`; regenerate the requirements files and fail if a pin changed; install `requirements.txt` alone into an empty environment and start the API from it (`tools/smoke_runtime_install.py`); `pip-audit` of `requirements-features.txt`. |
 | CI result | Always | Fails if any job above failed or was cancelled. |
 
 In branch protection, require only **CI result**. A job skipped because its side did not change reports as passing, but a skipped matrix job never reports its per-layout names, so requiring "Frontend - Playwright (root)" directly would wait forever on a backend-only pull request.

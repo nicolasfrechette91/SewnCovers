@@ -1,4 +1,4 @@
-import importlib
+import importlib.util
 import socket
 
 import pytest
@@ -222,4 +222,12 @@ def test_settings_import_does_not_open_network_or_database_connections(
     monkeypatch.setattr(socket, "create_connection", fail_connection)
     monkeypatch.setattr(socket.socket, "connect", fail_connection)
 
-    importlib.reload(settings_module)
+    # Run the module's code again under another name. Reloading app.settings
+    # itself would replace its get_settings and Settings for the rest of the
+    # run, while modules that imported them earlier kept the old ones, each with
+    # its own cache (which broke later tests that reset only the new one).
+    spec = importlib.util.spec_from_file_location(
+        "settings_import_copy", settings_module.__file__
+    )
+    assert spec is not None and spec.loader is not None
+    spec.loader.exec_module(importlib.util.module_from_spec(spec))

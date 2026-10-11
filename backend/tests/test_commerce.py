@@ -8,10 +8,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
-from alembic import command
-from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select, update
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.commerce import cli as commerce_cli
@@ -19,8 +17,7 @@ from app.commerce.cli import promote_existing_account
 from app.commerce.encryption import ShippingCipher, ShippingEncryptionError
 from app.commerce.providers import sandbox_signature
 from app.commerce.service import calculate_demonstration_pricing
-from app.main import create_application
-from app.persistence.database import Database, get_session
+from app.persistence.database import Database
 from app.persistence.models import (
     AuditEvent,
     CommerceQuote,
@@ -31,23 +28,15 @@ from app.persistence.models import (
     PriceBook,
 )
 from app.projects.schema import ProjectConfiguration
-from app.settings import Settings, reset_settings_cache
-from tests.support import error_envelope
+from app.settings import Settings
+from tests.support import (
+    CONFIGURATION,
+    auth,
+    error_envelope,
+    open_workspace,
+    register,
+)
 
-CONFIGURATION = {
-    "shape": "tapered",
-    "width": 73.25,
-    "height": 49.75,
-    "backWidth": 61.5,
-    "thickness": 13.5,
-    "unit": "cm",
-    "pattern": {"kind": "built-in", "patternId": "terrace-wave"},
-    "patternScale": 1.6,
-    "materialId": "linen-blend",
-    "fitPreference": "relaxed",
-    "closureType": "envelope",
-    "seamStyle": "piped",
-}
 FICTIONAL_SHIPPING = {
     "name": "Avery Example",
     "line1": "100 Demonstration Way",
@@ -119,58 +108,16 @@ def test_public_pricing_examples_match_authoritative_price_book() -> None:
 
 @pytest.fixture
 def commerce_client(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    migrated_database: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[tuple[TestClient, sessionmaker[Session], str]]:
-    database_url = f"sqlite:///{(tmp_path / 'commerce.sqlite3').as_posix()}"
-    storage_root = str(tmp_path / "commerce-assets")
-    monkeypatch.setenv("DATABASE_URL", database_url)
-    monkeypatch.setenv("ENVIRONMENT", "test")
-    monkeypatch.setenv("COMMERCE_ENABLED", "true")
-    monkeypatch.setenv("COMMERCE_MODE", "sandbox")
-    monkeypatch.setenv("OBJECT_STORAGE_ROOT", storage_root)
-    reset_settings_cache()
-    config = Config(str(Path(__file__).parents[1] / "alembic.ini"))
-    command.upgrade(config, "head")
-
-    engine = create_engine(database_url)
-    factory = sessionmaker(bind=engine, expire_on_commit=False)
-    application = create_application(
-        Settings(
-            _env_file=None,
-            environment="test",
-            database_url=database_url,
-            commerce_enabled=True,
-            commerce_mode="sandbox",
-            object_storage_root=Path(storage_root),
-        )
-    )
-
-    def provide_session() -> Iterator[Session]:
-        session = factory()
-        try:
-            yield session
-        finally:
-            session.close()
-
-    application.dependency_overrides[get_session] = provide_session
-    with TestClient(application) as client:
-        yield client, factory, database_url
-    engine.dispose()
-    reset_settings_cache()
-
-
-def register(client: TestClient, email: str) -> str:
-    response = client.post(
-        "/auth/register",
-        json={"email": email, "password": "correct horse battery staple"},
-    )
-    assert response.status_code == 201, response.text
-    assert response.json()["account"]["role"] == "customer"
-    return str(response.json()["token"])
-
-
-def auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
+    with open_workspace(
+        migrated_database,
+        monkeypatch,
+        commerce_enabled=True,
+        commerce_mode="sandbox",
+        object_storage_root=tmp_path / "commerce-assets",
+    ) as workspace:
+        yield workspace.client, workspace.factory, workspace.database_url
 
 
 def project_version(

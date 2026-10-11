@@ -261,8 +261,18 @@ jobs:
       - name: Run Ruff lint
         run: python -m ruff check .
 
+      # Measures how much of app/ the tests run (pyproject.toml configures it).
+      # There is no minimum yet: the table below is for reading.
       - name: Run backend tests
-        run: python -m pytest
+        run: python -m pytest --cov
+
+      - name: Summarize backend coverage
+        run: |
+          {
+            echo "### Backend coverage"
+            echo
+            python -m coverage report --format=markdown
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Check installed dependency consistency
         run: python -m pip check

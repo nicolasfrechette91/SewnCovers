@@ -34,7 +34,7 @@ Do not run `python -m app.production` locally: it is the migration-gated entry p
 ```powershell
 python -m ruff format --check .
 python -m ruff check .
-python -m pytest
+python -m pytest            # add --cov for coverage of app/
 python -m pip check
 python -m app.assurance.cli readiness   # read-only configuration report; non-zero locally by design
 ```

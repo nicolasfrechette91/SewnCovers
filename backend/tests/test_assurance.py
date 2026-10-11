@@ -3,14 +3,11 @@
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
-from pathlib import Path
 from threading import Barrier
 
 import pytest
-from alembic import command
-from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 import app.production as production_module
@@ -18,16 +15,14 @@ from app.accounts.service import AccountService
 from app.assurance.schema import ChecklistUpdateRequest
 from app.assurance.service import AssuranceService, create_paid_order_work
 from app.errors import APIProblem
-from app.main import create_application
-from app.persistence.database import get_session
 from app.persistence.models import (
     CustomerAccount,
     CustomerOrder,
     LegalDocument,
     ProductionWork,
 )
-from app.settings import Settings, reset_settings_cache
-from tests.support import error_envelope
+from app.settings import Settings
+from tests.support import auth, error_envelope, open_workspace, register
 
 NOW = datetime(2026, 8, 29, 12, 0, tzinfo=UTC)
 CONFIGURATION = {
@@ -67,47 +62,10 @@ SPECIFICATION = {
 
 @pytest.fixture
 def assurance_client(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+    migrated_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[tuple[TestClient, sessionmaker[Session]]]:
-    database_url = f"sqlite:///{(tmp_path / 'assurance.sqlite3').as_posix()}"
-    monkeypatch.setenv("DATABASE_URL", database_url)
-    monkeypatch.setenv("ENVIRONMENT", "test")
-    reset_settings_cache()
-    config = Config(str(Path(__file__).parents[1] / "alembic.ini"))
-    command.upgrade(config, "head")
-    engine = create_engine(database_url)
-    factory = sessionmaker(bind=engine, expire_on_commit=False)
-    application = create_application(
-        Settings(
-            _env_file=None,
-            environment="test",
-            database_url=database_url,
-        )
-    )
-
-    def provide_session() -> Iterator[Session]:
-        with factory() as session:
-            yield session
-
-    application.dependency_overrides[get_session] = provide_session
-    with TestClient(application) as client:
-        yield client, factory
-    engine.dispose()
-    reset_settings_cache()
-
-
-def register(client: TestClient, email: str) -> str:
-    response = client.post(
-        "/auth/register",
-        json={"email": email, "password": "correct horse battery staple"},
-    )
-    assert response.status_code == 201
-    return str(response.json()["token"])
-
-
-def auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
+    with open_workspace(migrated_database, monkeypatch) as workspace:
+        yield workspace.client, workspace.factory
 
 
 def make_admin(

@@ -6,12 +6,9 @@ from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Annotated
 
 import pytest
-from alembic import command
-from alembic.config import Config
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, func, select
@@ -36,9 +33,8 @@ from app.persistence.database import get_session
 from app.persistence.models import CredentialBackoff, CustomerAccount
 from app.rate_limits import RateLimit, RateLimiter, wait_phrase
 from app.settings import Settings, reset_settings_cache
-from tests.support import error_envelope
+from tests.support import PASSWORD, error_envelope
 
-PASSWORD = "correct horse battery staple"
 WRONG = "incorrect passphrase value"
 NETWORK_A = {"X-Forwarded-For": "198.51.100.10"}
 NETWORK_B = {"X-Forwarded-For": "203.0.113.20"}
@@ -111,14 +107,8 @@ class AccountsHarness:
 
 
 @pytest.fixture
-def accounts(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> Iterator[AccountsHarness]:
-    database_url = f"sqlite:///{(tmp_path / 'limits.sqlite3').as_posix()}"
-    monkeypatch.setenv("DATABASE_URL", database_url)
-    monkeypatch.setenv("ENVIRONMENT", "test")
-    reset_settings_cache()
-    command.upgrade(Config(str(Path(__file__).parents[1] / "alembic.ini")), "head")
+def accounts(migrated_database: str) -> Iterator[AccountsHarness]:
+    database_url = migrated_database
     engine = create_engine(database_url)
     factory = sessionmaker(bind=engine, expire_on_commit=False)
     clock = FakeClock()
