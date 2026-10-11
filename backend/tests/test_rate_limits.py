@@ -276,7 +276,11 @@ def test_registration_is_limited_per_network(accounts: AccountsHarness) -> None:
     accounts.register("person5@example.com", NETWORK_B)
 
     assert limited.status_code == 429
-    assert limited.headers["retry-after"] == "720"
+    # One account refills every 720 s (5 per hour); the limiter runs on the real
+    # clock and the five hashes took real time, so a slow runner reports a few
+    # seconds less. Any other rule would fall far outside this range.
+    assert limited.headers["retry-after"].isdigit()
+    assert 600 <= int(limited.headers["retry-after"]) <= 720
     assert error_envelope(limited)["errors"][0]["code"] == "credential_throttled"
 
 

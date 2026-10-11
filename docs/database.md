@@ -1,6 +1,6 @@
 # Database
 
-Production uses PostgreSQL on Neon. Local development and the whole automated test suite use SQLite; the same Alembic migrations run on both. Models are SQLAlchemy 2 declarative classes in [`backend/app/persistence/models.py`](../backend/app/persistence/models.py), the single owner of the metadata. Importing them emits no DDL and opens no connection.
+Production uses PostgreSQL on Neon. Local development and a plain `python -m pytest` use SQLite, and CI also runs the suite and the production start-up checks on a PostgreSQL 18 server (the major version Neon runs); the same Alembic migrations run on both. Models are SQLAlchemy 2 declarative classes in [`backend/app/persistence/models.py`](../backend/app/persistence/models.py), the single owner of the metadata. Importing them emits no DDL and opens no connection.
 
 ## Tables
 

@@ -91,7 +91,7 @@ DATABASE_URL=postgresql://user:password@localhost:5432/sewncovers
 
 `postgresql://` URLs are rewritten to the installed `psycopg` driver. For Neon, use the direct (not pooled) connection string with `sslmode=require`, keep it only in the ignored `backend/.env`, and never point local work at the production branch. Then run `python -m alembic upgrade head` as above.
 
-The automated tests run on SQLite and render PostgreSQL SQL offline; they do not start a PostgreSQL server.
+A plain `python -m pytest` runs on SQLite and starts no server. To run the tests that use a database on PostgreSQL, as CI does, see [Backend tests](testing.md#backend-tests): it takes one throwaway container and one option.
 
 ## 3. Turn on commerce and custom uploads locally
 

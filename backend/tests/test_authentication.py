@@ -123,12 +123,14 @@ def test_a_session_is_valid_until_the_instant_it_expires(
 def test_a_token_whose_account_no_longer_exists_is_refused(
     workspace: Workspace,
 ) -> None:
-    # The database removes sessions with their account; a row that outlived it
-    # (here the foreign key is not enforced) must not authenticate anyone.
+    # PostgreSQL enforces the foreign key and removes a session with its account.
+    # SQLite does not, so there a row outlives the account, and must not
+    # authenticate anyone either.
     token = register(workspace.client, "orphan@example.com")
     with workspace.factory.begin() as session:
         session.execute(delete(CustomerAccount))
-    assert count(workspace, AuthenticatedSession) == 1
+    enforced = workspace.database_url.startswith("postgresql")
+    assert count(workspace, AuthenticatedSession) == (0 if enforced else 1)
 
     response = workspace.client.get("/account", headers=auth(token))
 

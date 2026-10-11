@@ -110,7 +110,7 @@ Logs are JSON lines in the service's **Logs** tab in Render. Every response has 
 
 `deploy-backend.yml` runs two jobs:
 
-1. **CI** (`scope: backend`): the locked install, Ruff format and lint, the pytest suite, `pip check`, the requirements-files freshness check, the runtime-only install smoke test and `pip-audit` of the locked dependencies, on Python 3.13.2.
+1. **CI** (`scope: backend`): the locked install, Ruff format and lint, the pytest suite, `pip check`, the requirements-files freshness check, the runtime-only install smoke test and `pip-audit` of the locked dependencies, on Python 3.13.2. A second backend job runs the suite again on a PostgreSQL 18.6 service container, with the production start-up checks (`upgrade_database`, `verify_database`); a failure there blocks the deploy like any other.
 2. **Deploy**, only from `main`:
    - requires the `RENDER_DEPLOY_HOOK_URL` repository secret;
    - posts to the deploy hook with `ref=<commit SHA>`, so Render deploys exactly the commit that passed CI even if `main` has moved on (the URL is read from the environment and never printed);

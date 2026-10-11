@@ -20,8 +20,18 @@ def test_the_first_root_with_room_is_used_and_its_folder_created(
     assert not chosen.exists()
 
 
+def too_long_root(tmp_path: Path) -> Path:
+    """A path that never exists and is past the Windows limit on any system.
+
+    Several folders, not one long name: Linux refuses a name over 255 characters
+    with an error instead of reporting the path as missing.
+    """
+    names = ["x" * 100] * (basetemp.WINDOWS_PATH_LIMIT // 100 + 1)
+    return tmp_path.joinpath(*names)
+
+
 def test_a_root_that_is_too_long_is_skipped_for_the_next(tmp_path: Path) -> None:
-    too_long = tmp_path / ("x" * basetemp.WINDOWS_PATH_LIMIT)
+    too_long = too_long_root(tmp_path)
     roomy = tmp_path / "roomy"
     roomy.mkdir()
 
@@ -45,7 +55,7 @@ def test_a_root_that_cannot_be_written_is_skipped_for_the_next(
 
 
 def test_nothing_is_chosen_when_no_root_has_room(tmp_path: Path) -> None:
-    too_long = tmp_path / ("x" * basetemp.WINDOWS_PATH_LIMIT)
+    too_long = too_long_root(tmp_path)
 
     assert basetemp.choose_base([too_long], "1") is None
     assert basetemp.choose_base([], "1") is None

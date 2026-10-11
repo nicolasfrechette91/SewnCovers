@@ -6,7 +6,7 @@ Every suite runs offline: no test contacts Render, Neon, a payment provider or a
 | --- | --- | --- | --- |
 | Frontend unit, component and service tests | Over 350, in two `tsx --test` runs | Yes | `npm test` |
 | Playwright browser journeys (Chromium) | About 90 | Yes, in the root and GitHub Pages layouts | `npm run test:e2e` |
-| Backend tests | Over 450 | Yes | `python -m pytest` (add `--cov` for coverage) |
+| Backend tests | Over 500 | Yes, on SQLite and again on PostgreSQL | `python -m pytest` (add `--cov` for coverage, or `--postgres-url <url>` for PostgreSQL) |
 | Lint, formatting and type checks | n/a | Yes | see below |
 | Static-export verification | n/a | Yes | `npm run verify:export` |
 | First-load JavaScript budgets | n/a | Yes | `npm run verify:performance` |
@@ -68,7 +68,7 @@ CI runs the suite in both layouts (see [Continuous integration](#continuous-inte
 
 ## Backend tests
 
-`python -m pytest` runs over 450 tests in about 25 files under `backend/tests/`. The tests that need a database share one SQLite database migrated by Alembic once per run (the `migrated_template` fixture, so they exercise the real migrations and the seed data) and each gets a private copy of it (`migrated_database`: copying takes about a millisecond, migrating about 300). `support.py` builds the application and client on that copy (`open_workspace`, which also puts the settings it was given in the environment, since services read the process-wide settings) and holds `register`, `auth`, the shared `CONFIGURATION` and the error-envelope assertion. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic. `conftest.py` undoes the process-wide logging changes that application start-up makes. It also keeps the tests independent of the machine: reading `backend/.env` is switched off for the whole run and every variable the application reads (`DATABASE_URL`, `ENVIRONMENT` and the rest) is removed from the environment, so a test that needs one sets it itself. Before that, two tests passed with a local `.env` and failed on a clean checkout, which is all CI is. A test must not `importlib.reload(app.settings)`: modules that imported `get_settings` earlier would keep the old function and a cache nothing resets, and later tests would read stale settings (this once made upload tests fail only in a full run). Run the module's code under another name instead (`importlib.util.spec_from_file_location`); `conftest.py` fails the test that reloads it. `tests/test_unauthenticated_requests.py` walks every route that needs an account and checks that a missing or unusable token is refused with the same `401` without a database session ever being opened.
+`python -m pytest` runs over 500 tests in 30 files under `backend/tests/`. The tests that need a database share one SQLite database migrated by Alembic once per run (the `migrated_template` fixture, so they exercise the real migrations and the seed data) and each gets a private copy of it (`migrated_database`: copying takes about a millisecond, migrating about 300). `support.py` builds the application and client on that copy (`open_workspace`, which also puts the settings it was given in the environment, since services read the process-wide settings) and holds `register`, `auth`, the shared `CONFIGURATION` and the error-envelope assertion. Dependency overrides, failure-injecting repositories and injected clocks make behaviour deterministic. `conftest.py` undoes the process-wide logging changes that application start-up makes. It also keeps the tests independent of the machine: reading `backend/.env` is switched off for the whole run and every variable the application reads (`DATABASE_URL`, `ENVIRONMENT` and the rest) is removed from the environment, so a test that needs one sets it itself. Before that, two tests passed with a local `.env` and failed on a clean checkout, which is all CI is. A test must not `importlib.reload(app.settings)`: modules that imported `get_settings` earlier would keep the old function and a cache nothing resets, and later tests would read stale settings (this once made upload tests fail only in a full run). Run the module's code under another name instead (`importlib.util.spec_from_file_location`); `conftest.py` fails the test that reloads it. `tests/test_unauthenticated_requests.py` walks every route that needs an account and checks that a missing or unusable token is refused with the same `401` without a database session ever being opened.
 
 They cover:
 
@@ -85,7 +85,15 @@ They cover:
 - legal, production work and readiness;
 - migrations: the exact schema from empty, upgrade and downgrade round trips, model and migration parity, offline PostgreSQL SQL, and the production start-up gate.
 
-PostgreSQL itself is not part of the suite; it is exercised only in production and through offline SQL rendering.
+**PostgreSQL.** Production is PostgreSQL, and SQLite is more forgiving (it does not enforce foreign keys, it stores any value in any column, and it hands back datetimes without a time zone), so the suite can also run on a real server. `python -m pytest --postgres-url <url>` runs every test that uses `migrated_database` on it: one database is migrated to head once per run and each test gets its own clone of it (`CREATE DATABASE ... TEMPLATE`, in `tests/postgres.py`, about as independent as the SQLite copy). Tests that build their own SQLite database, such as the step-by-step migration tests, stay on SQLite. `tests/test_postgresql.py` adds what only means something on PostgreSQL, and is skipped without the option: the production start-up checks (`upgrade_database` then `verify_database`, which compares the names of all 30 tables, the revision, the seed count, and the constraints and indexes of the tables `EXPECTED_CONSTRAINTS` lists) on an empty database, a second start that changes nothing, the migrations going down to nothing and back up, and a gate that refuses a database that lost a constraint, an index or a seed row, or gained a table. CI runs the whole suite both ways; the PostgreSQL job uses a `postgres:18.6` service container (Neon runs PostgreSQL 18) and is part of the **CI result** that gates the backend deploy. To run it yourself, with Docker:
+
+```powershell
+docker run -d --name sewncovers-test-postgres -e POSTGRES_PASSWORD=postgres -p 127.0.0.1:54329:5432 postgres:18.6
+python -m pytest --postgres-url postgresql+psycopg://postgres:postgres@127.0.0.1:54329/postgres
+docker rm -f sewncovers-test-postgres
+```
+
+The URL's user must be allowed to create databases (the container's `postgres` user is). Use a throwaway server: every test creates and drops a database named `sc_test_<random>` on it, and a run that is killed can leave one behind. Never point this at Neon or any server that holds data.
 
 **Windows paths.** Windows refuses paths of 260 characters or more, and the upload tests write files 143 characters below the directory pytest gives them, so pytest's default (`%TEMP%\pytest-of-<user>\pytest-<n>`) fails them with `503 storage_unavailable` once `%TEMP%` is long. A plain `python -m pytest` avoids that: on Windows, `conftest.py` puts the run's temporary files in `%TEMP%\sc-pytest\<process id>` (or, if `%TEMP%` is too long for that, in `C:\sc-pytest\<process id>`), removes the folder when the run passes and keeps it, to inspect, when it fails, and deletes run folders more than a day old. It does nothing when you pass `--basetemp` yourself, and nothing on macOS or Linux. If neither location is short enough pytest keeps its default and warns.
 
@@ -130,7 +138,8 @@ When a budget fails, the printed table says which: a larger app column means the
 | Frontend - format, lint, types, tests, exports, budgets, audit (Node 24.15.0) | Frontend changed | `npm ci`, `prettier --check`, ESLint, `tsc --noEmit`, `npm test`, build and verify the ordinary export, `verify:performance`, build and verify the GitHub Pages export, `npm audit --omit=dev --audit-level=high`. For a deploy, it uploads that Pages export as the artifact. |
 | Frontend - Playwright (root, github-pages) | Frontend changed | `npx playwright install --with-deps chromium`, then `npm run test:e2e` in each layout. Uploads `frontend/.playwright/` on failure. |
 | Backend - Ruff, tests, dependency checks, audit (Python 3.13.2) | Backend changed | `pip install --require-hashes -r requirements-dev.txt` and `pip install --no-deps -e .`, `ruff format --check`, `ruff check`, `pytest --cov` with the coverage table in the job summary, `pip check`; regenerate the requirements files and fail if a pin changed; install `requirements.txt` alone into an empty environment and start the API from it (`tools/smoke_runtime_install.py`); `pip-audit` of `requirements-features.txt`. |
-| CI result | Always | Fails if any job above failed or was cancelled. |
+| Backend - tests and start-up checks on PostgreSQL (Python 3.13.2, PostgreSQL 18.6) | Backend changed | The locked install, then `pytest --postgres-url` against a `postgres:18.6` service container: the whole suite with the database tests on PostgreSQL, plus `tests/test_postgresql.py` (the production start-up checks and the migrations' round trip). |
+| CI result | Always | Fails if any job above failed or was cancelled, the PostgreSQL job included. |
 
 In branch protection, require only **CI result**. A job skipped because its side did not change reports as passing, but a skipped matrix job never reports its per-layout names, so requiring "Frontend - Playwright (root)" directly would wait forever on a backend-only pull request.
 
@@ -138,7 +147,8 @@ The audits can fail on a newly published advisory even when nothing in the repos
 
 The Python packages are locked with hashes ([setup](setup.md#changing-a-backend-dependency)): CI installs exactly `requirements-dev.txt`, so it tests the versions that will run, and the freshness step re-runs `tools/compile_requirements.py` and fails when a package pin differs from the committed file. It ignores a new hash for an already pinned version, which PyPI adds when it publishes another wheel. The smoke step installs `requirements.txt` alone, as Render does, and checks that the API serves with Pillow, boto3 and stripe absent and that `/commerce` and `/uploads` answer `503`; `tests/test_optional_dependencies.py` repeats the import check inside the normal suite by blocking the four modules, and `tests/test_lockfiles.py` checks the files against `pyproject.toml` offline.
 
-Actions are pinned by commit SHA with version comments, every job has least-privilege permissions, and checkouts never persist credentials.
+Actions are pinned by commit SHA with version comments, the PostgreSQL image by digest, every job has least-privilege permissions, and checkouts never persist credentials.
+
 ## Before you push
 
 ```powershell

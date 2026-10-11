@@ -18,6 +18,7 @@ from app.health import RUNNING_COMMIT_VARIABLE
 from app.persistence.migrations import ALEMBIC_CONFIG_PATH
 from app.settings import Settings, reset_settings_cache
 from tests import basetemp
+from tests.postgres import PostgresServer
 
 _SERVER_LOGGERS = ("uvicorn", "uvicorn.error", "uvicorn.access")
 # What other modules imported from app.settings, as it was when they did.
@@ -60,6 +61,35 @@ def _isolate_configuration() -> None:
 _isolate_configuration()
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--postgres-url",
+        default=None,
+        metavar="URL",
+        help=(
+            "Run the tests that use a migrated database on this PostgreSQL server "
+            "(a SQLAlchemy URL such as "
+            "postgresql+psycopg://postgres:postgres@localhost:5432/postgres) "
+            "instead of SQLite. Each test gets its own database on it, and the "
+            "user needs the right to create databases."
+        ),
+    )
+
+
+def pytest_report_header(config: pytest.Config) -> str:
+    url = config.getoption("--postgres-url")
+    if url is None:
+        return "migrated databases: SQLite, one copy per test"
+    server = PostgresServer(url)
+    try:
+        version = f"PostgreSQL {server.version()}"
+    except Exception:  # the first test reports the cause
+        version = "PostgreSQL, not reachable"
+    finally:
+        server.dispose()
+    return f"migrated databases: {version} at {server.location}, one clone per test"
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config: pytest.Config) -> None:
     """On Windows, keep pytest's temporary files on a short path.
@@ -94,6 +124,18 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
         shutil.rmtree(_run_directory, ignore_errors=True)
 
 
+def _migrate_to_head(url: str) -> None:
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setenv("DATABASE_URL", url)
+        patch.setenv("ENVIRONMENT", "test")
+        reset_settings_cache()
+        configuration = Config(str(ALEMBIC_CONFIG_PATH))
+        # alembic.ini's logging setup would replace the handlers pytest installs.
+        configuration.attributes["configure_logging"] = False
+        command.upgrade(configuration, "head")
+        reset_settings_cache()
+
+
 @pytest.fixture(scope="session")
 def migrated_template(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """One SQLite database migrated to head, built once per run.
@@ -102,35 +144,64 @@ def migrated_template(tmp_path_factory: pytest.TempPathFactory) -> Path:
     tests that need a migrated database copy this one (``migrated_database``).
     """
     template = tmp_path_factory.mktemp("template") / "head.sqlite3"
-    with pytest.MonkeyPatch.context() as patch:
-        patch.setenv("DATABASE_URL", f"sqlite:///{template.as_posix()}")
-        patch.setenv("ENVIRONMENT", "test")
-        reset_settings_cache()
-        configuration = Config(str(ALEMBIC_CONFIG_PATH))
-        # alembic.ini's logging setup would replace the handlers pytest installs.
-        configuration.attributes["configure_logging"] = False
-        command.upgrade(configuration, "head")
-        reset_settings_cache()
+    _migrate_to_head(f"sqlite:///{template.as_posix()}")
     return template
+
+
+@pytest.fixture(scope="session")
+def postgres_server(request: pytest.FixtureRequest) -> Iterator[PostgresServer | None]:
+    """The server ``--postgres-url`` names, or None when the tests use SQLite."""
+    url = request.config.getoption("--postgres-url")
+    if url is None:
+        yield None
+        return
+    server = PostgresServer(url)
+    try:
+        yield server
+    finally:
+        server.dispose()
+
+
+@pytest.fixture(scope="session")
+def postgres_template(postgres_server: PostgresServer | None) -> Iterator[str]:
+    """The name of a PostgreSQL database migrated to head, built once per run."""
+    assert postgres_server is not None
+    name = postgres_server.create()
+    try:
+        _migrate_to_head(postgres_server.url_for(name))
+        yield name
+    finally:
+        postgres_server.drop(name)
 
 
 @pytest.fixture
 def migrated_database(
-    migrated_template: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> str:
+    request: pytest.FixtureRequest, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[str]:
     """A private copy of the migrated database, as the settings' DATABASE_URL.
 
     The copy has the schema and the seed data of the real migrations, and the
-    test may change it freely. ``DATABASE_URL`` and ``ENVIRONMENT=test`` are set
-    for the test, and the settings are read afresh.
+    test may change it freely. It is a SQLite file, or with ``--postgres-url`` a
+    database on that server; either way ``DATABASE_URL`` and ``ENVIRONMENT=test``
+    are set for the test, and the settings are read afresh.
     """
-    database = tmp_path / "test.sqlite3"
-    shutil.copyfile(migrated_template, database)
-    url = f"sqlite:///{database.as_posix()}"
+    server: PostgresServer | None = request.getfixturevalue("postgres_server")
+    clone: str | None = None
+    if server is None:
+        database = tmp_path / "test.sqlite3"
+        shutil.copyfile(request.getfixturevalue("migrated_template"), database)
+        url = f"sqlite:///{database.as_posix()}"
+    else:
+        clone = server.create(template=request.getfixturevalue("postgres_template"))
+        url = server.url_for(clone)
     monkeypatch.setenv("DATABASE_URL", url)
     monkeypatch.setenv("ENVIRONMENT", "test")
     reset_settings_cache()
-    return url
+    try:
+        yield url
+    finally:
+        if server is not None and clone is not None:
+            server.drop(clone)
 
 
 @pytest.fixture(autouse=True)
