@@ -1,5 +1,6 @@
 """Migration-gated production Uvicorn process entry point."""
 
+import importlib.util
 import logging
 from typing import Any
 
@@ -248,6 +249,42 @@ def require_production_environment(settings: Settings) -> None:
         )
 
 
+def feature_requirements(settings: Settings) -> list[tuple[str, str, tuple[str, ...]]]:
+    """Return (flag, extra, modules) for each optional feature the settings enable.
+
+    The modules are the importable names the feature needs from the optional
+    dependencies in pyproject.toml, which production does not install while
+    the feature is off. Uploads need Pillow, and boto3 for S3 storage; commerce
+    needs the Stripe SDK only for the real provider (sandbox mode never does,
+    and production commerce is always the real provider).
+    """
+    features: list[tuple[str, str, tuple[str, ...]]] = []
+    if settings.custom_uploads_enabled:
+        modules = (
+            ("PIL", "boto3") if settings.object_storage_backend == "s3" else ("PIL",)
+        )
+        features.append(("CUSTOM_UPLOADS_ENABLED", "uploads", modules))
+    if settings.commerce_enabled and settings.commerce_mode == "production":
+        features.append(("COMMERCE_ENABLED", "commerce", ("stripe",)))
+    return features
+
+
+def require_feature_dependencies(settings: Settings) -> None:
+    """Refuse to start when a feature flag is on without its extra installed.
+
+    Without this the service would start and fail on the first request that
+    needs the missing package.
+    """
+    for flag, extra, modules in feature_requirements(settings):
+        missing = [name for name in modules if importlib.util.find_spec(name) is None]
+        if missing:
+            raise ProductionConfigurationError(
+                f"{flag} is on but the {extra} extra is not installed "
+                f"(missing: {', '.join(missing)}); install "
+                "requirements-features.txt or turn the flag off"
+            )
+
+
 class ProductionVerificationError(RuntimeError):
     """Report incompatible production schema state without database details."""
 
@@ -328,6 +365,7 @@ def main() -> None:
     """Migrate successfully, then run FastAPI on the platform-provided port."""
     settings = get_settings()
     require_production_environment(settings)
+    require_feature_dependencies(settings)
     configure_application_logging(settings)
     # Which header entry the rate limits and access log treat as the client;
     # the settings only, never an address.

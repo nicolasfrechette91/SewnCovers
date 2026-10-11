@@ -42,7 +42,7 @@ Changing `NEXT_PUBLIC_API_URL` after a build changes nothing; rebuild.
 | Service, type, plan | `sewncovers-api`, Web Service, Free |
 | Region | Ohio (US East), next to the Neon database |
 | Branch, root directory | `main`, `backend` |
-| Build command | `python -m pip install .` |
+| Build command | `python -m pip install --require-hashes -r requirements.txt` ([Dependencies](#dependencies)) |
 | Start command | `python -m app.production` |
 | Health check | `/health` |
 | Auto-deploy | Off (`autoDeployTrigger: "off"`); deploys come from the GitHub workflow |
@@ -50,7 +50,27 @@ Changing `NEXT_PUBLIC_API_URL` after a build changes nothing; rebuild.
 | Protected environment | `DATABASE_URL`, declared with `sync: false` and set only in Render |
 | Optional environment | `LOG_LEVEL` (default `INFO`) and `CLIENT_IP_HEADER` (see [Client address](#client-address)); neither needs setting |
 
-Render supplies `PORT`; the production entry point binds `0.0.0.0` on it. Dependencies are the pinned direct dependencies in `backend/pyproject.toml`; there is no backend lockfile, so transitive versions are resolved at build time.
+Render supplies `PORT`; the production entry point binds `0.0.0.0` on it. The build installs the locked runtime dependencies from `backend/requirements.txt` and nothing else ([Dependencies](#dependencies)); the application runs from the source tree, so it is not installed as a package.
+
+### Dependencies
+
+Every package the API runs on is pinned to an exact version and a set of hashes, and Render installs exactly that set: `pip install --require-hashes` refuses a package whose hash is not in the file, so a build on Monday and a build on Friday get the same code. The three files in `backend/` are generated from `pyproject.toml` with `tools/compile_requirements.py` ([setup](setup.md#changing-a-backend-dependency)):
+
+- `requirements.txt` is the runtime lock, 28 packages. It leaves out Pillow, boto3 (with botocore) and stripe, which only the two features that are off in production use. The application imports each of them lazily, and a test proves the app starts and serves with all four modules blocked.
+- `requirements-features.txt` adds those packages. To switch a feature on in production, change the build command to `python -m pip install --require-hashes -r requirements-features.txt` as well as setting the feature's environment (see [Feature flags in production](#feature-flags-in-production)). The entry point refuses to start with `CUSTOM_UPLOADS_ENABLED` or a production-mode `COMMERCE_ENABLED` on and the matching package missing, with a message that names the file.
+- `requirements-dev.txt` is for CI and local development.
+
+CI installs `requirements-dev.txt`, then proves the runtime lock on its own: it installs `requirements.txt` into an empty environment, starts the API from it and requests `/health`, `/patterns` and the two flag-off features (`tools/smoke_runtime_install.py`). It also audits `requirements-features.txt` with `pip-audit` and fails if a committed file no longer matches `pyproject.toml`.
+
+#### Does the Render service use `render.yaml`?
+
+`render.yaml` only changes a service that is attached to a Blueprint; a service that was created by hand in the dashboard ignores the file, and its build command is whatever the dashboard says. To find out, in the Render Dashboard:
+
+1. Open the **Blueprints** page from the sidebar. If it lists a Blueprint whose repository is this one, and its resources include `sewncovers-api`, the service is Blueprint-managed (its row in the dashboard also carries a Blueprint icon). Open that Blueprint's **Settings**: with **Auto Sync** set to **Yes**, Render applies every push of `render.yaml` to the linked branch to the service by itself, and the next sync overwrites any hand-made difference. With **Auto Sync** set to **No**, press **Manual Sync** on the Blueprint's page after pushing.
+2. If **Blueprints** is empty, or does not contain `sewncovers-api`, the service is not managed, and you change the build command by hand: open the service, **Settings**, **Build & Deploy**, **Build Command**, edit it to `python -m pip install --require-hashes -r requirements.txt` and save. Do not use **Manual Deploy**; the workflow deploys.
+3. Either way, confirm it from the first deploy's build log (service, **Logs**, the deploy): a locked install lists `Collecting alembic==1.18.5 (from -r requirements.txt` and its final `Successfully installed` line names 28 packages and none of `stripe`, `boto3`, `pillow` or `sewncovers-api`. The old command instead builds and installs `sewncovers-api` itself and resolves unpinned versions.
+
+The old command keeps working after this change (`pyproject.toml` still declares the runtime dependencies), so a late or forgotten edit never fails a deploy; it only means that deploy was not locked.
 
 ### Server settings
 
@@ -94,7 +114,7 @@ Logs are JSON lines in the service's **Logs** tab in Render. Every response has 
 
 `deploy-backend.yml` runs two jobs:
 
-1. **CI** (`scope: backend`): Ruff format and lint, the pytest suite, `pip check` and `pip-audit` of the runtime dependencies, on Python 3.13.2.
+1. **CI** (`scope: backend`): the locked install, Ruff format and lint, the pytest suite, `pip check`, the requirements-files freshness check, the runtime-only install smoke test and `pip-audit` of the locked dependencies, on Python 3.13.2.
 2. **Deploy**, only from `main`:
    - requires the `RENDER_DEPLOY_HOOK_URL` repository secret;
    - posts to the deploy hook with `ref=<commit SHA>`, so Render deploys exactly the commit that passed CI even if `main` has moved on (the URL is read from the environment and never printed);
@@ -109,7 +129,7 @@ Concurrent runs cancel the older one; the newer run deploys its own commit. To d
 
 Render's free plan has no pre-deploy command, so the start command owns the sequence ([ADR 0003](adr/0003-migration-gated-production-start.md)):
 
-1. Load settings and require `ENVIRONMENT=production`, the exact Pages origin and a `DATABASE_URL`, then configure JSON logging.
+1. Load settings and require `ENVIRONMENT=production`, the exact Pages origin and a `DATABASE_URL`, the installed packages of any feature whose flag is on ([Dependencies](#dependencies)), then configure JSON logging.
 2. Run `alembic upgrade head`.
 3. Verify the exact revision (`20261007_02`), the expected tables, the named constraints, the intended pattern indexes and exactly 15 seeded patterns.
 4. Only then start Uvicorn.
@@ -120,7 +140,7 @@ If any step fails the process exits with a fixed message, the cause is logged wi
 
 Custom uploads and commerce are implemented but **disabled** on the deployed API: `CUSTOM_UPLOADS_ENABLED` and `COMMERCE_ENABLED` are not set, so they default to `false`, and their routes answer `503 storage_unavailable`. `GET /readiness` reports both as disabled, and the frontend routes for them still exist but show a guest or unavailable state. The reasons and trade-offs are in [ADR 0006](adr/0006-feature-flags-off-in-production.md).
 
-Enabling either in production needs, at minimum, private S3-compatible storage and a moderation provider (uploads), or a payment provider, webhook secret, encryption key, return URL and operations contact (commerce). Production start-up refuses partial configurations.
+Enabling either in production needs, at minimum, private S3-compatible storage and a moderation provider (uploads), or a payment provider, webhook secret, encryption key, return URL and operations contact (commerce). Production start-up refuses partial configurations. It also needs the feature's packages, which the production build does not install while the flag is off: use `requirements-features.txt` as the build command's requirements file ([Dependencies](#dependencies)).
 
 ## Free-tier behaviour
 

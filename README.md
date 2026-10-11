@@ -67,7 +67,7 @@ if (-not (Test-Path .env.local)) { Copy-Item .env.example .env.local }; npm run 
 # API, http://127.0.0.1:8000 (second terminal)
 cd backend
 python -m venv .venv; .venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
+python -m pip install --require-hashes -r requirements-dev.txt; python -m pip install --no-deps -e .
 $env:DATABASE_URL = "sqlite:///./local.sqlite3"
 python -m alembic upgrade head
 python -m uvicorn app.main:app --reload

@@ -11,9 +11,12 @@ Requires Python 3.13. From this directory, on Windows PowerShell:
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
+python -m pip install --require-hashes -r requirements-dev.txt
+python -m pip install --no-deps -e .
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
+
+`requirements-dev.txt` locks every package with hashes (the set CI tests); Render installs the smaller `requirements.txt`, without the optional Pillow, boto3 and stripe. See [Changing a backend dependency](../docs/setup.md#changing-a-backend-dependency).
 
 Set `DATABASE_URL=sqlite:///./local.sqlite3` in `.env` (no Neon account needed), then:
 
@@ -50,6 +53,7 @@ Tests use isolated SQLite databases and dependency overrides; none needs a popul
 | `app/persistence/` | Engine and sessions, ORM models, transactions. |
 | `app/settings.py`, `errors.py`, `production.py` | Typed settings, error contract, production entry point. |
 | `migrations/` | Linear Alembic history (head `20261007_02`). |
+| `requirements*.txt`, `tools/` | Hashed dependency locks, generated from `pyproject.toml` by `tools/compile_requirements.py`; the runtime-install smoke check. |
 | `tests/` | pytest suite. |
 
 ## Documentation

@@ -33,11 +33,14 @@ Without a running API the home page still loads; the configurator shows a retrya
 cd backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
+python -m pip install --require-hashes -r requirements-dev.txt
+python -m pip install --no-deps -e .
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
 On macOS or Linux, use `python3.13 -m venv .venv`, `source .venv/bin/activate` and `test -e .env || cp .env.example .env`.
+
+`requirements-dev.txt` pins every package, direct or not, with hashes, and is the exact set CI tests; it includes the test tools and the optional `uploads` and `commerce` packages (Pillow, boto3, stripe). `python -m pip install -e ".[dev]"` also works but resolves the transitive versions afresh, so it can differ from CI.
 
 Open `backend/.env` and give the API a database. The simplest is a local SQLite file (already git-ignored):
 
@@ -56,6 +59,28 @@ Check it at <http://127.0.0.1:8000/health>, which should return `{"process":"hea
 
 The root endpoint (`/`) works without any database. Every other route needs `DATABASE_URL` and a migrated schema.
 
+### Changing a backend dependency
+
+`backend/pyproject.toml` declares the direct dependencies with exact versions, and three generated files lock the rest with hashes. Production installs only what `requirements.txt` lists:
+
+| File | Contents | Used by |
+| --- | --- | --- |
+| `requirements.txt` | Runtime dependencies only | Render ([deployment](deployment.md#dependencies)) |
+| `requirements-features.txt` | Runtime plus the `uploads` (Pillow, boto3) and `commerce` (stripe) extras | A service that turns those features on; the CI audit |
+| `requirements-dev.txt` | Everything, with pytest, ruff and the HTTP test client | CI and local development |
+
+After editing `pyproject.toml`, regenerate and commit all three. The tool is [uv](https://docs.astral.sh/uv/), used only for this, in an environment of its own (CI pins the same version):
+
+```powershell
+python -m venv $env:TEMP\uv
+& $env:TEMP\uv\Scripts\python.exe -m pip install uv==0.12.10
+$env:PATH = "$env:TEMP\uv\Scripts;$env:PATH"
+python tools\compile_requirements.py            # keeps existing pins, adds what changed
+python tools\compile_requirements.py --upgrade  # re-resolves every package to the newest allowed
+```
+
+On macOS or Linux, use `python3.13 -m venv /tmp/uv`, `/tmp/uv/bin/python -m pip install uv==0.12.10` and `PATH=/tmp/uv/bin:$PATH python tools/compile_requirements.py`. The files are resolved for every platform at once, so they are the same wherever you generate them. CI regenerates them and fails if a pin differs, and `tests/test_lockfiles.py` checks them against `pyproject.toml` without a network.
+
 ### Using PostgreSQL instead
 
 Production runs PostgreSQL (Neon). To use a local PostgreSQL server, or a Neon development branch, put its URL in `DATABASE_URL`:
@@ -71,6 +96,8 @@ The automated tests run on SQLite and render PostgreSQL SQL offline; they do not
 ## 3. Turn on commerce and custom uploads locally
 
 Both feature sets exist in the code and are switched **off** by default, as they are on the deployed API (see [deployment](deployment.md#feature-flags-in-production)). With the flags off, their routes answer `503 storage_unavailable`.
+
+The development install above includes the packages these features need. A runtime-only install (`requirements.txt`, as on Render) does not: Pillow, boto3 and stripe are optional extras, and the production entry point refuses to start with a flag on and its package missing.
 
 Add this to `backend/.env` and restart the API:
 
@@ -145,6 +172,7 @@ Settings are read once through `get_settings()`; importing the app never opens a
 | `backend` | `python -m uvicorn app.main:app --reload` | Development API. |
 | `backend` | `python -m ruff format --check .` · `python -m ruff check .` | Formatting · lint. |
 | `backend` | `python -m pytest` | Backend tests. |
+| `backend` | `python tools\compile_requirements.py` | Regenerate the hashed requirements files after editing `pyproject.toml` (needs uv, see above). |
 | `backend` | `python -m app.assurance.cli readiness` | Read-only production-configuration report; it exits non-zero on a local configuration by design. |
 
 ## Troubleshooting

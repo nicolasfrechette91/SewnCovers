@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session, sessionmaker
 import app.persistence.database as database_module
 import app.persistence.migrations as migrations_module
 import app.uploads.api as upload_api_module
+import app.uploads.processing as processing_module
 from app.main import create_application
 from app.persistence.database import get_session
 from app.persistence.models import (
@@ -473,6 +474,9 @@ def test_processing_rejects_dimensions_animation_and_invalid_crop() -> None:
 def test_processing_enforces_decompression_bomb_warning(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # The module applies its own cap when Pillow is first used; do that first so
+    # lowering it here is not undone by the first call, whatever ran before.
+    assert processing_module._pillow().MAX_IMAGE_PIXELS == processing_module.MAX_PIXELS
     monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 4_000)
     with pytest.raises(ImageValidationError, match="decompression_bomb"):
         process_image(png_bytes(size=(100, 100)), "image/png")

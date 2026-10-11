@@ -170,7 +170,11 @@ class StripeCheckoutProvider:
     def __init__(self, settings: Settings) -> None:
         if settings.stripe_secret_key is None or settings.stripe_webhook_secret is None:
             raise ProviderError("Stripe commerce configuration is incomplete")
-        import stripe
+        try:
+            # The SDK belongs to the optional ``commerce`` extra.
+            import stripe
+        except ImportError:
+            raise ProviderError("The Stripe SDK is not installed") from None
 
         self._stripe = stripe
         self._client = stripe.StripeClient(

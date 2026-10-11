@@ -131,12 +131,14 @@ When a budget fails, the printed table says which: a larger app column means the
 | Detect changed areas | Always | Chooses the frontend jobs, the backend job or both from the changed paths: `frontend/**`; `backend/**` and `render.yaml`; `ci.yml` selects both. A deploy workflow names its side instead. |
 | Frontend - format, lint, types, tests, exports, budgets, audit (Node 24.15.0) | Frontend changed | `npm ci`, `prettier --check`, ESLint, `tsc --noEmit`, `npm test`, build and verify the ordinary export, `verify:performance`, build and verify the GitHub Pages export, `npm audit --omit=dev --audit-level=high`. For a deploy, it uploads that Pages export as the artifact. |
 | Frontend - Playwright (root, github-pages) | Frontend changed | `npx playwright install --with-deps chromium`, then `npm run test:e2e` in each layout. Uploads `frontend/.playwright/` on failure. |
-| Backend - Ruff, tests, dependency checks, audit (Python 3.13.2) | Backend changed | `pip install -e ".[dev]"`, `ruff format --check`, `ruff check`, `pytest`, `pip check`, then `pip-audit` of the runtime dependencies as Render resolves them. |
+| Backend - Ruff, tests, dependency checks, audit (Python 3.13.2) | Backend changed | `pip install --require-hashes -r requirements-dev.txt` and `pip install --no-deps -e .`, `ruff format --check`, `ruff check`, `pytest`, `pip check`; regenerate the requirements files and fail if a pin changed; install `requirements.txt` alone into an empty environment and start the API from it (`tools/smoke_runtime_install.py`); `pip-audit` of `requirements-features.txt`. |
 | CI result | Always | Fails if any job above failed or was cancelled. |
 
 In branch protection, require only **CI result**. A job skipped because its side did not change reports as passing, but a skipped matrix job never reports its per-layout names, so requiring "Frontend - Playwright (root)" directly would wait forever on a backend-only pull request.
 
-The audits can fail on a newly published advisory even when nothing in the repository changed; that is deliberate. Dependencies are updated manually: npm and Python packages and GitHub Actions stay at their pinned versions until someone bumps them, and the CI audits block known vulnerabilities in the meantime (`npm audit` fails on high or critical advisories in production npm dependencies, `pip-audit --strict` on any advisory in the runtime Python dependencies). Development-only npm advisories are not gated; at the time of writing that is `braces` under `eslint-config-next`, which has no fix within Next.js 16. `pip-audit` (pinned in the workflow) runs from its own virtual environment, so it is not a project dependency.
+The audits can fail on a newly published advisory even when nothing in the repository changed; that is deliberate. Dependencies are updated manually: npm and Python packages and GitHub Actions stay at their pinned versions until someone bumps them, and the CI audits block known vulnerabilities in the meantime (`npm audit` fails on high or critical advisories in production npm dependencies, `pip-audit --strict` on any advisory in the locked runtime Python dependencies, including the optional `uploads` and `commerce` packages a service would add to turn those features on). Development-only npm advisories are not gated; at the time of writing that is `braces` under `eslint-config-next`, which has no fix within Next.js 16, and the Python test tools in `requirements-dev.txt` are not audited either. `pip-audit` and `uv` (both pinned in the workflow) run from their own virtual environments, so neither is a project dependency.
+
+The Python packages are locked with hashes ([setup](setup.md#changing-a-backend-dependency)): CI installs exactly `requirements-dev.txt`, so it tests the versions that will run, and the freshness step re-runs `tools/compile_requirements.py` and fails when a package pin differs from the committed file. It ignores a new hash for an already pinned version, which PyPI adds when it publishes another wheel. The smoke step installs `requirements.txt` alone, as Render does, and checks that the API serves with Pillow, boto3 and stripe absent and that `/commerce` and `/uploads` answer `503`; `tests/test_optional_dependencies.py` repeats the import check inside the normal suite by blocking the four modules, and `tests/test_lockfiles.py` checks the files against `pyproject.toml` offline.
 
 Actions are pinned by commit SHA with version comments, every job has least-privilege permissions, and checkouts never persist credentials.
 ## Before you push
@@ -159,7 +161,17 @@ cd frontend; npm audit --omit=dev --audit-level=high
 
 cd ../backend
 python -m venv $env:TEMP\pip-audit; & $env:TEMP\pip-audit\Scripts\python.exe -m pip install pip-audit==2.10.1
-& $env:TEMP\pip-audit\Scripts\pip-audit.exe --strict .
+& $env:TEMP\pip-audit\Scripts\pip-audit.exe --strict --progress-spinner off --no-deps --disable-pip -r requirements-features.txt
 ```
+
+To check that a service installed the way Render does would start, in a new environment (from `backend`):
+
+```powershell
+python -m venv $env:TEMP\runtime-check
+& $env:TEMP\runtime-check\Scripts\python.exe -m pip install --require-hashes -r requirements.txt
+& $env:TEMP\runtime-check\Scripts\python.exe tools\smoke_runtime_install.py
+```
+
+The script creates its own throwaway SQLite database and ignores `DATABASE_URL` and every secret in your environment.
 
 For workflow changes, run [actionlint](https://github.com/rhysd/actionlint) (a standalone binary, not a project dependency) from the repository root.

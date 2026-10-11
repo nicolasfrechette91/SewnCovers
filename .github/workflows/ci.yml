@@ -245,10 +245,15 @@ jobs:
         with:
           python-version: 3.13.2
           cache: pip
-          cache-dependency-path: backend/pyproject.toml
+          cache-dependency-path: backend/requirements-dev.txt
 
-      - name: Install pinned backend dependencies
-        run: python -m pip install -e ".[dev]"
+      # Every package, direct or not, comes from the committed lock with its
+      # hashes (backend/tools/compile_requirements.py writes it). The project
+      # itself is then installed on its own, without resolving anything.
+      - name: Install locked backend dependencies
+        run: |
+          python -m pip install --require-hashes -r requirements-dev.txt
+          python -m pip install --no-deps -e .
 
       - name: Check Ruff formatting
         run: python -m ruff format --check .
@@ -262,15 +267,45 @@ jobs:
       - name: Check installed dependency consistency
         run: python -m pip check
 
-      # Audits the runtime dependencies as Render installs them (a fresh
-      # resolution of pyproject.toml without the dev extra), like
-      # `npm audit --omit=dev`. pip-audit runs from its own virtual
+      # Re-running the compile keeps the committed pins as preferences, so it
+      # changes a file only when pyproject.toml changed (or a pin was yanked).
+      # Only lines that pin a package are compared: PyPI occasionally adds a
+      # hash for a new wheel of an already pinned version, which is harmless.
+      # uv runs from its own virtual environment, like pip-audit below, and is
+      # a development tool, not a project dependency.
+      - name: Check the requirements files are current
+        run: |
+          python -m venv "${RUNNER_TEMP}/uv"
+          "${RUNNER_TEMP}/uv/bin/python" -m pip install --quiet "uv==${UV_VERSION}"
+          PATH="${RUNNER_TEMP}/uv/bin:${PATH}" python tools/compile_requirements.py
+          if ! git diff --exit-code -G'^[A-Za-z0-9_.-]+==' -- 'requirements*.txt'; then
+            echo "::error title=Stale requirements::requirements*.txt do not match pyproject.toml. Run 'python tools/compile_requirements.py' in backend/ (uv==${UV_VERSION}) and commit the result."
+            exit 1
+          fi
+        env:
+          UV_VERSION: 0.12.10
+
+      # Installs requirements.txt alone, the way render.yaml does, in a new
+      # environment (so no extra, no test tool) and starts the API from it:
+      # proves the runtime lock is complete, the optional extras are not
+      # needed, and the flag-off features still answer 503.
+      - name: Smoke-test the runtime-only install
+        run: |
+          python -m venv "${RUNNER_TEMP}/runtime"
+          runtime="${RUNNER_TEMP}/runtime/bin/python"
+          "${runtime}" -m pip install --quiet --require-hashes -r requirements.txt
+          "${runtime}" -m pip check
+          "${runtime}" tools/smoke_runtime_install.py
+
+      # Audits the packages the lock pins, like `npm audit --omit=dev`: the
+      # runtime plus the two extras a service would add to turn those features
+      # on, but not the test tools. pip-audit runs from its own virtual
       # environment, so it never joins the project's dependency set.
-      - name: Audit runtime dependencies
+      - name: Audit locked runtime dependencies
         run: |
           python -m venv "${RUNNER_TEMP}/pip-audit"
           "${RUNNER_TEMP}/pip-audit/bin/python" -m pip install --quiet "pip-audit==${PIP_AUDIT_VERSION}"
-          "${RUNNER_TEMP}/pip-audit/bin/pip-audit" --strict --progress-spinner off .
+          "${RUNNER_TEMP}/pip-audit/bin/pip-audit" --strict --progress-spinner off --no-deps --disable-pip -r requirements-features.txt
         env:
           PIP_AUDIT_VERSION: 2.10.1
 

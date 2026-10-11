@@ -5,7 +5,7 @@ SewnCovers is a cushion-cover configurator: a static Next.js 16 frontend (`front
 ## Commands
 
 - Frontend (from `frontend/`): `npm ci`, `npm run format:check` (`npm run format` writes), `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run verify:export`, `npm run verify:performance`, `npm run test:e2e`.
-- Backend (from `backend/`, venv active): `python -m ruff format --check .`, `python -m ruff check .`, `python -m pytest`, `python -m pip check`.
+- Backend (from `backend/`, venv active): `python -m pip install --require-hashes -r requirements-dev.txt` then `python -m pip install --no-deps -e .`, `python -m ruff format --check .`, `python -m ruff check .`, `python -m pytest`, `python -m pip check`. After editing `backend/pyproject.toml`, run `python tools/compile_requirements.py` (needs uv in its own environment, see [docs/setup.md](docs/setup.md#changing-a-backend-dependency)) and commit the three `requirements*.txt` files.
 - Run the API locally on SQLite: set `DATABASE_URL=sqlite:///./local.sqlite3` in `backend/.env`, then `python -m alembic upgrade head` and `python -m uvicorn app.main:app --reload`.
 - Once per clone, `git config blame.ignoreRevsFile .git-blame-ignore-revs` makes `git blame` skip the formatting-only commits listed there (GitHub's blame view applies the file by itself).
 
@@ -23,6 +23,7 @@ SewnCovers is a cushion-cover configurator: a static Next.js 16 frontend (`front
 - The design system is enforced: Tailwind's default colour, type, radius and shadow scales are reset, and `tests/design-tokens.test.ts` rejects raw colours and arbitrary values. Use the semantic tokens in `frontend/app/globals.css` and read [docs/design.md](docs/design.md).
 - `POST /designs` is never retried automatically, on purpose ([ADR 0002](docs/adr/0002-immutable-designs-no-post-retry.md)). Saved designs are immutable.
 - Commerce (`COMMERCE_ENABLED`) and custom uploads (`CUSTOM_UPLOADS_ENABLED`) are off by default and in production; flag-off routes return 503. Enable them locally as described in [docs/setup.md](docs/setup.md).
+- Render installs only `backend/requirements.txt`, which leaves out Pillow, boto3 and stripe (the `uploads` and `commerce` extras). Import them inside the function that uses them, never at module level; `tests/test_optional_dependencies.py` blocks the modules and imports the app. Adding a runtime dependency to `pyproject.toml` means regenerating the lock files.
 - Never run `python -m app.production` locally; it is the migration-gated Render entry point. Never use the production `DATABASE_URL` locally, and never commit or print `backend/.env` or any secret.
 - A new Alembic revision must also update `EXPECTED_REVISION` and the expected tables and constraints in `backend/app/production.py`; the tests compare them with the model metadata.
 - The measurement ranges and pattern-scale rules exist on both sides (`frontend/context/configuration/` and `backend/app/designs/`) and must change together. The pattern seed migration and `frontend/data/patterns.ts` must list the same 15 ids.

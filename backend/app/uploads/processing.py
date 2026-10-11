@@ -6,8 +6,12 @@ import hashlib
 import io
 import warnings
 from dataclasses import dataclass
+from functools import cache
+from types import ModuleType
+from typing import TYPE_CHECKING
 
-from PIL import Image, ImageOps, UnidentifiedImageError
+if TYPE_CHECKING:
+    from PIL import Image
 
 MAX_ENCODED_BYTES = 10 * 1024 * 1024
 MIN_DIMENSION = 64
@@ -16,7 +20,20 @@ MAX_PIXELS = 16_000_000
 PROCESSING_VERSION = "tile-v1"
 ALLOWED_FORMATS = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}
 
-Image.MAX_IMAGE_PIXELS = MAX_PIXELS
+
+@cache
+def _pillow() -> ModuleType:
+    """Import Pillow on first use and apply the pixel cap, once.
+
+    Pillow belongs to the optional ``uploads`` extra, which a production service
+    with uploads off does not install; the application imports this module at
+    start-up for its constants, so the import has to wait until an image is
+    processed.
+    """
+    from PIL import Image
+
+    Image.MAX_IMAGE_PIXELS = MAX_PIXELS
+    return Image
 
 
 class ImageValidationError(ValueError):
@@ -96,6 +113,9 @@ def process_image(
     if not 1 <= len(data) <= MAX_ENCODED_BYTES:
         raise ImageValidationError("encoded_size_invalid")
     _validate_container(data)
+    Image = _pillow()
+    from PIL import ImageOps, UnidentifiedImageError
+
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
