@@ -154,6 +154,7 @@ Populated `.env` and `.env.local` files are git-ignored. Values prefixed `NEXT_P
 | `COMMERCE_ENABLED`, `COMMERCE_MODE` | `false`, `sandbox` | Commerce switch and mode. `production` mode needs a full provider, webhook, encryption and contact configuration and only works with `ENVIRONMENT=production`. |
 | `CUSTOM_UPLOADS_ENABLED`, `OBJECT_STORAGE_*`, `MODERATION_PROVIDER` | `false`, filesystem, `none` | Upload switch, private storage (`filesystem` or S3-compatible) and moderation provider (`none`, `development-approve`, `development-reject`, `openai`). Production uploads require S3 storage and `openai` moderation. |
 | `SHIPPING_ENCRYPTION_KEY`, `SHIPPING_ENCRYPTION_KEY_ID` | unset, `sandbox-v1` | AES-GCM key for shipping fields (base64 of 32 random bytes). Sandbox uses an internal fictional key when absent. |
+| `SHIPPING_ENCRYPTION_PREVIOUS_KEYS` | unset | Keys from before a rotation as `key_id:base64key` pairs, comma-separated. They only decrypt ([database](database.md#uploads-and-commerce)). |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | unset | Configured-only Stripe adapter; unused in sandbox mode. |
 | `VULNERABILITY_REPORT_CONTACT` | placeholder | Surfaced by the readiness report; the placeholder intentionally fails the production-readiness check. |
 

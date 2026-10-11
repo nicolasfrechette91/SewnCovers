@@ -25,7 +25,15 @@ from sqlalchemy import (
 )
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.engine import Connection
-from sqlalchemy.orm import DeclarativeBase, Mapped, Mapper, mapped_column, relationship
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    Mapper,
+    ORMExecuteState,
+    Session,
+    mapped_column,
+    relationship,
+)
 
 PATTERN_CATEGORIES = ("abstract", "botanical", "geometric", "striped", "woven")
 DESIGN_SHAPES = ("box", "rectangle", "round", "square", "tapered")
@@ -1502,3 +1510,62 @@ def _reject_cover_design_mutation(
     _target: CoverDesign,
 ) -> None:
     raise ImmutableDesignError("cover designs are append-only")
+
+
+class ImmutableProjectVersionError(RuntimeError):
+    """Reject changes to a saved project version; a change is a new version."""
+
+
+@event.listens_for(ProjectVersion, "before_update")
+def _reject_project_version_update(
+    mapper: Mapper[ProjectVersion], _connection: Connection, target: ProjectVersion
+) -> None:
+    # SQLAlchemy calls this for every instance it considers modified, including
+    # one that only had a relationship collection touched, which changes no
+    # column. Only a changed column is a change to the saved version.
+    inspected = sa_inspect(target)
+    if any(
+        inspected.attrs[column.key].history.has_changes()
+        for column in mapper.column_attrs
+    ):
+        raise ImmutableProjectVersionError(
+            "project versions are immutable; save a new version instead"
+        )
+
+
+# The listeners above see changes made to loaded objects. A bulk statement run
+# through a Session (`update(ProjectVersion).values(...)`, or the same on the
+# table) bypasses them, so this refuses it before it runs. Deleting a project
+# version stays possible (deleting a project or an account removes its
+# versions); raw SQL and other connections are outside what the application can
+# see, and nothing in the database itself stops them.
+_REFUSED_BULK_UPDATES: dict[str, tuple[type[RuntimeError], str]] = {
+    "project_versions": (
+        ImmutableProjectVersionError,
+        "project versions are immutable; save a new version instead",
+    ),
+    "cover_designs": (ImmutableDesignError, "cover designs are append-only"),
+    "legal_documents": (
+        ImmutableCommerceSnapshotError,
+        "Legal document versions are immutable; create a new version instead",
+    ),
+}
+_REFUSED_BULK_DELETES = {
+    name: refusal
+    for name, refusal in _REFUSED_BULK_UPDATES.items()
+    if name != "project_versions"
+}
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _reject_bulk_changes_to_immutable_tables(state: ORMExecuteState) -> None:
+    if state.is_update:
+        refused = _REFUSED_BULK_UPDATES
+    elif state.is_delete:
+        refused = _REFUSED_BULK_DELETES
+    else:
+        return
+    table_name = getattr(getattr(state.statement, "table", None), "name", None)
+    if table_name in refused:
+        error_class, message = refused[table_name]
+        raise error_class(message)

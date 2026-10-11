@@ -88,7 +88,7 @@ A share id is opaque but is **not** an authentication or privacy boundary: anyon
 
 ## Authentication
 
-`POST /auth/register` and `POST /auth/login` take an email and a passphrase of 12 to 128 characters and return an account summary, an `expiresAt` and a bearer `token`. The token is shown once; send it as `Authorization: Bearer <token>`. Sessions last seven days. See [architecture](architecture.md#authentication-and-authorization) for how tokens are stored and authorised.
+`POST /auth/register` and `POST /auth/login` take an email and a passphrase of 12 to 128 characters and return an account summary, an `expiresAt` and a bearer `token`. The token is shown once; send it as `Authorization: Bearer <token>`. Sessions last seven days, stay listed by `GET /account/sessions` for 30 days after they expire, and are then deleted: a successful sign-in removes up to 100 of the oldest such sessions, so no scheduled job is needed. See [architecture](architecture.md#authentication-and-authorization) for how tokens are stored and authorised.
 
 A missing, malformed, unknown, expired or revoked token returns `401 authentication_required`. Wrong passwords, unknown emails and duplicate registrations share one generic `401 authentication_failed` body; a wrong passphrase re-entered to confirm `POST /account/delete` returns the same code and leaves the session valid. A signed-in account without the administrator role gets `403 permission_denied` from administrator routes. Repeated attempts are slowed as described in [Limits](#limits).
 
@@ -137,6 +137,15 @@ Responses never copy submitted values, exception text, SQL, constraint names, in
 ## Request ids
 
 Every response carries an `X-Request-ID` header, and every error body repeats it as `requestId`. The service writes the same id on each log line for that request, so an error someone reports can be found in the logs from that id alone. A client may send its own `X-Request-ID` of 8 to 64 letters, digits, `.`, `_` or `-`; anything else is replaced with a generated id. Browsers can read the header cross-origin: CORS exposes `X-Request-ID` and `Retry-After`.
+
+## Deliberate choices
+
+A few shapes look like omissions. Each is kept on purpose, because the deployed site already reads them ([Compatibility](#compatibility)):
+
+- **Lists are bare arrays, not paginated** (`GET /projects`, a project's versions, `GET /uploads`, `GET /commerce/quotes`, `GET /commerce/orders`, the administrator order and price-book lists). Each belongs to one account, or to a demonstration shop whose orders are sandbox orders, so it stays short; there is no server-side cap on them. The lists that can grow are bounded: `GET /admin/audit` returns the newest 500 entries and `GET /admin/production-work` takes `page` and `pageSize`. Paginating an existing bare array turns the response into an object and makes it unreadable to a site already deployed, so a list that outgrows this gets a compatible change (a new path, or optional parameters with today's response as the default), not a change to the existing one.
+- **`DELETE /uploads/{id}` answers `200` with a body; the other deletes answer `204`.** The body is `{id, state: "deleted", referencedByVersions}`, and the deployed site's reader requires it, so answering `204` would make a successful delete look malformed to the site already running. (The count in the site's confirmation question comes from the upload list, before the delete.) The other deletes return nothing the site reads.
+- **The checkout idempotency key is a field of the request body** (`idempotencyKey`), not an `Idempotency-Key` header. It is validated with the rest of the request and shown in the OpenAPI document, and the site sends it there. Commerce is off in production. Moving it would break the contract for no gain; if another endpoint ever needs one, accepting the header alongside the field is the compatible way.
+- **Share links do not expire.** A share is a read-only bearer link that its owner can list and revoke (`DELETE /projects/{id}/shares/{grant_id}`), and it works until then. An expiry would silently end links people already hold, including the demonstration link in the README, and needs a new column and migration.
 
 ## Compatibility
 

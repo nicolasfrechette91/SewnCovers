@@ -1,6 +1,7 @@
 """Typed, side-effect-free environment settings for the FastAPI application."""
 
 import base64
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -45,6 +46,37 @@ class CorsConfiguration:
     exposed_headers: tuple[str, ...] = CORS_EXPOSED_HEADERS
     allow_credentials: Literal[False] = False
     preflight_max_age_seconds: int = 600
+
+
+PREVIOUS_SHIPPING_KEYS_MESSAGE = (
+    "SHIPPING_ENCRYPTION_PREVIOUS_KEYS must be comma-separated key_id:base64key "
+    "pairs: ids of 1 to 32 letters, digits, dots, hyphens or underscores, each "
+    "different from the others and from SHIPPING_ENCRYPTION_KEY_ID, each key "
+    "base64 for exactly 32 bytes"
+)
+_SHIPPING_KEY_ID = re.compile(r"^[A-Za-z0-9._-]{1,32}$")
+
+
+def parse_previous_shipping_keys(raw: str) -> dict[str, bytes]:
+    """Read `key_id:base64key,key_id:base64key` into {key_id: 32-byte key}.
+
+    The message never repeats any part of the value: it is a secret.
+    """
+    keys: dict[str, bytes] = {}
+    for entry in raw.split(","):
+        key_id, separator, encoded = entry.strip().partition(":")
+        try:
+            key = base64.b64decode(encoded, validate=True) if separator else b""
+        except (ValueError, TypeError):
+            key = b""
+        if (
+            _SHIPPING_KEY_ID.fullmatch(key_id) is None
+            or len(key) != 32
+            or key_id in keys
+        ):
+            raise ValueError(PREVIOUS_SHIPPING_KEYS_MESSAGE)
+        keys[key_id] = key
+    return keys
 
 
 def _normalize_http_origin(value: object) -> object:
@@ -222,6 +254,14 @@ class Settings(BaseSettings):
         max_length=32,
         validation_alias="SHIPPING_ENCRYPTION_KEY_ID",
     )
+    # Keys that encrypted existing orders before a rotation, as
+    # `key_id:base64key` pairs separated by commas. They only decrypt.
+    shipping_encryption_previous_keys: SecretStr | None = Field(
+        default=None,
+        exclude=True,
+        repr=False,
+        validation_alias="SHIPPING_ENCRYPTION_PREVIOUS_KEYS",
+    )
     commerce_tax_behavior: Literal["provider"] = Field(
         default="provider", validation_alias="COMMERCE_TAX_BEHAVIOR"
     )
@@ -356,6 +396,16 @@ class Settings(BaseSettings):
                     "COMMERCE_CHECKOUT_RETURN_URL must use the configured "
                     "frontend origin"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def validate_previous_shipping_keys(self) -> Self:
+        if self.shipping_encryption_previous_keys is not None:
+            keys = parse_previous_shipping_keys(
+                self.shipping_encryption_previous_keys.get_secret_value()
+            )
+            if self.shipping_encryption_key_id in keys:
+                raise ValueError(PREVIOUS_SHIPPING_KEYS_MESSAGE)
         return self
 
     @field_validator("commerce_currency", mode="before")

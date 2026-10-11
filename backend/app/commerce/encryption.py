@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from app.settings import Settings
+from app.settings import Settings, parse_previous_shipping_keys
 
 SANDBOX_ENCRYPTION_KEY = bytes.fromhex(
     "6c2eac56df0d3fe7577d3d5b0bdb868b719d04f6f696637ac4fe58b62f7ab1f2"
@@ -45,6 +45,18 @@ class ShippingCipher:
         if len(self._key) != 32:
             raise ShippingEncryptionError("shipping encryption is not configured")
         self.key_id = settings.shipping_encryption_key_id
+        # Keys from before a rotation. An order records the id of the key that
+        # encrypted it, so these only ever decrypt; new data uses the current key.
+        self._previous: dict[str, bytes] = {}
+        if settings.shipping_encryption_previous_keys is not None:
+            try:
+                self._previous = parse_previous_shipping_keys(
+                    settings.shipping_encryption_previous_keys.get_secret_value()
+                )
+            except ValueError:
+                raise ShippingEncryptionError(
+                    "shipping encryption is not configured"
+                ) from None
 
     def encrypt(self, order_id: str, shipping: dict[str, object]) -> EncryptedShipping:
         nonce = os.urandom(12)
@@ -55,10 +67,11 @@ class ShippingCipher:
     def decrypt(
         self, order_id: str, ciphertext: bytes, nonce: bytes, key_id: str
     ) -> dict[str, object]:
-        if key_id != self.key_id or len(nonce) != 12:
+        key = self._key if key_id == self.key_id else self._previous.get(key_id)
+        if key is None or len(nonce) != 12:
             raise ShippingEncryptionError("shipping data cannot be decrypted")
         try:
-            plaintext = AESGCM(self._key).decrypt(nonce, ciphertext, order_id.encode())
+            plaintext = AESGCM(key).decrypt(nonce, ciphertext, order_id.encode())
             value = json.loads(plaintext)
         except Exception:
             raise ShippingEncryptionError("shipping data cannot be decrypted") from None

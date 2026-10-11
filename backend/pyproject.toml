@@ -34,7 +34,7 @@ commerce = [
 # Everything the test suite and the checks need, including both extras.
 dev = [
     "sewncovers-api[commerce,uploads]",
-    "httpx2==2.7.0",
+    "httpx2==2.13.1",
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
     "ruff==0.15.22",

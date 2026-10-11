@@ -64,6 +64,11 @@ from app.settings import get_settings
 from app.uploads.storage import ObjectStorageError, get_object_storage
 
 SESSION_LIFETIME = timedelta(days=7)
+# A session stays listed (GET /account/sessions) for this long after it expires,
+# then a later sign-in deletes it, so the table does not grow without bound
+# without a scheduled job. Each sign-in removes at most one batch.
+SESSION_RETENTION = timedelta(days=30)
+SESSION_PURGE_BATCH = 100
 TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_-]{43}$")
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{22}$")
 TOKEN_ATTEMPTS = 5
@@ -158,6 +163,7 @@ class AccountService:
         with service_transaction(self._session):
             response = self._create_session(account, now)
             self._backoff.clear("login", request.email, client_network)
+            self._purge_old_sessions(now)
         return response
 
     def authenticate(self, raw_token: str | None) -> AuthenticatedAccount:
@@ -548,6 +554,25 @@ class AccountService:
             "internal_error",
             "Unable to create an authenticated session.",
             ("service", "session"),
+        )
+
+    def _purge_old_sessions(self, now: datetime) -> None:
+        """Delete sessions that expired more than SESSION_RETENTION ago.
+
+        Runs on a successful sign-in, which already does a password hash, so the
+        one indexed delete (by expires_at) is a rounding error. A batch bounds
+        the work of a sign-in after a long quiet spell.
+        """
+        oldest = (
+            select(AuthenticatedSession.id)
+            .where(AuthenticatedSession.expires_at < now - SESSION_RETENTION)
+            .order_by(AuthenticatedSession.expires_at)
+            .limit(SESSION_PURGE_BATCH)
+        )
+        self._session.execute(
+            delete(AuthenticatedSession)
+            .where(AuthenticatedSession.id.in_(oldest))
+            .execution_options(synchronize_session=False)
         )
 
     def _new_identifier(self) -> str:

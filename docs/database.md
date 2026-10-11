@@ -26,9 +26,17 @@ Saved designs are append-only: the repository exposes only insert and public-id 
 
 Passwords are stored only as Argon2id hashes, and session tokens and share tokens only as SHA-256 digests; raw secrets are never columns. Projects belong to exactly one account and cascade-delete with it. `saved_projects.next_version_number` is incremented with an atomic `UPDATE … RETURNING`, and `(project_id, version_number)` is unique, so two concurrent saves can never receive the same sequence number. Each `project_versions` row stores a complete validated configuration snapshot that never changes afterwards. Deleting an account removes its sessions, projects, versions and share grants and does not touch anonymous `cover_designs`.
 
+**Saved versions are never changed.** An ORM update of a `project_versions` column raises `ImmutableProjectVersionError` (touching only a relationship, such as adding a share grant, is not a change). A bulk statement that bypasses the ORM listeners, `update(ProjectVersion).values(...)` or the same on the table, is refused by a session-level guard before it runs; the guard also refuses bulk updates and deletes of `cover_designs` and `legal_documents`. Deleting a version stays possible, because deleting a project or an account removes its versions. This protection lives in the application: raw SQL or another client of the database is not stopped. No database trigger backs it, deliberately: a trigger is dialect-specific DDL to keep in step with the models and the start-up gate, for a table that only this application writes.
+
+**Sessions are kept for 30 days after they expire.** The sessions list shows them until then, and a successful sign-in deletes up to 100 older ones using the index on `expires_at`. Share grants have no expiry; they last until revoked ([API](api.md#deliberate-choices)).
+
+**JSON, not JSONB.** Snapshots and lists are stored with SQLAlchemy's generic `JSON` type, which is `json` on PostgreSQL: the text is kept exactly as written, which is what an immutable snapshot should be, and nothing queries inside these documents (they are read whole, and checksums use sorted keys). `jsonb` would normalise key order and whitespace and need a migration that rewrites every JSON column, for an index nobody would use.
+
 ### Uploads and commerce
 
 Image bytes never enter the database: it stores opaque object metadata and references, the durable processing and moderation state with a worker lease, and exact account, version and derivative links. Money is stored as integer minor units with a currency check. Price books, quotes and orders are immutable once published or created; shipping details are encrypted with AES-GCM using the order id as associated data.
+
+**Rotating the shipping key.** Each order records the id of the key that encrypted it, and a cipher decrypts with the current key or with a key listed in `SHIPPING_ENCRYPTION_PREVIOUS_KEYS`, never encrypting with the latter. To rotate: generate a new key (base64 of 32 random bytes) and a new id, set them as `SHIPPING_ENCRYPTION_KEY` and `SHIPPING_ENCRYPTION_KEY_ID`, and put the old pair in `SHIPPING_ENCRYPTION_PREVIOUS_KEYS` as `old_id:old_key` (comma-separated for several). New orders use the new key and existing ones still decrypt. Nothing re-encrypts old rows, so keep a previous key for as long as orders encrypted with it exist; a malformed list stops the application from starting rather than failing on the first order.
 
 ## Migrations
 

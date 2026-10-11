@@ -10,7 +10,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from fastapi.testclient import TestClient
-from PIL import Image, ImageCms, PngImagePlugin
+from PIL import Image, ImageCms
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -36,7 +36,12 @@ from app.uploads.storage import (
     ObjectStorageError,
     S3ObjectStorage,
 )
-from tests.support import auth, open_workspace, register
+from tests.support import auth, register
+from tests.uploads_support import (
+    create_and_transfer,
+    open_upload_workspace,
+    png_bytes,
+)
 
 BUILT_IN_CONFIGURATION = {
     "shape": "box",
@@ -54,59 +59,14 @@ BUILT_IN_CONFIGURATION = {
 }
 
 
-def png_bytes(*, size: tuple[int, int] = (128, 96), metadata: bool = False) -> bytes:
-    image = Image.new("RGBA", size, (34, 99, 71, 190))
-    output = io.BytesIO()
-    pnginfo = None
-    if metadata:
-        pnginfo = PngImagePlugin.PngInfo()
-        pnginfo.add_text("customer", "must-be-stripped")
-    image.save(output, format="PNG", pnginfo=pnginfo)
-    return output.getvalue()
-
-
 @pytest.fixture
 def upload_workspace(
     migrated_database: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[tuple[TestClient, sessionmaker[Session], FilesystemObjectStorage]]:
-    storage_root = tmp_path / "private-objects"
-    with open_workspace(
-        migrated_database,
-        monkeypatch,
-        custom_uploads_enabled=True,
-        object_storage_backend="filesystem",
-        object_storage_root=storage_root,
-        moderation_provider="development-approve",
-        commerce_enabled=True,
-        commerce_mode="sandbox",
-    ) as workspace:
-        yield workspace.client, workspace.factory, FilesystemObjectStorage(storage_root)
-
-
-def create_and_transfer(
-    client: TestClient, token: str, data: bytes
-) -> dict[str, object]:
-    intent = client.post(
-        "/uploads",
-        headers=auth(token),
-        json={
-            "label": "  Garden repeat  ",
-            "contentType": "image/png",
-            "byteSize": len(data),
-            "crop": None,
-        },
-    )
-    assert intent.status_code == 201, intent.text
-    body = intent.json()
-    assert body["label"] == "Garden repeat"
-    assert "Garden" not in body["upload"]["url"]
-    transferred = client.put(
-        body["upload"]["url"],
-        content=data,
-        headers={"Content-Type": "image/png"},
-    )
-    assert transferred.status_code == 204, transferred.text
-    return body
+    with open_upload_workspace(
+        migrated_database, tmp_path / "private-objects", monkeypatch
+    ) as (workspace, storage):
+        yield workspace.client, workspace.factory, storage
 
 
 def process_one(
