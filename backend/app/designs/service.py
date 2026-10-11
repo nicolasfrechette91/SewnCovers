@@ -11,7 +11,11 @@ from sqlalchemy.orm import Session
 from app.designs.repository import DesignRepository, SavedDesign
 from app.designs.schema import (
     CENTIMETRES_PER_INCH,
+    FACE_MAXIMUM_CM,
+    FACE_MINIMUM_CM,
     PUBLIC_ID_PATTERN,
+    THICKNESS_MAXIMUM_CM,
+    THICKNESS_MINIMUM_CM,
     CreateDesignRequest,
     DesignResponse,
 )
@@ -114,20 +118,20 @@ class DesignService:
             (
                 "width",
                 Decimal(str(request.width)) * factor,
-                Decimal("10"),
-                Decimal("300"),
+                FACE_MINIMUM_CM,
+                FACE_MAXIMUM_CM,
             ),
             (
                 "height",
                 Decimal(str(request.height)) * factor,
-                Decimal("10"),
-                Decimal("300"),
+                FACE_MINIMUM_CM,
+                FACE_MAXIMUM_CM,
             ),
             (
                 "thickness",
                 Decimal(str(request.thickness)) * factor,
-                Decimal("1"),
-                Decimal("60"),
+                THICKNESS_MINIMUM_CM,
+                THICKNESS_MAXIMUM_CM,
             ),
         )
         errors = [
@@ -163,11 +167,14 @@ class DesignService:
                 )
             else:
                 back_width_cm = Decimal(str(request.back_width)) * factor
-                if not Decimal("10") <= back_width_cm <= Decimal("300"):
+                if not FACE_MINIMUM_CM <= back_width_cm <= FACE_MAXIMUM_CM:
                     errors.append(
                         DomainValidationIssue(
                             code="measurement_out_of_range",
-                            message="Back width must be between 10 and 300 cm.",
+                            message=(
+                                "Back width must be between "
+                                f"{FACE_MINIMUM_CM:g} and {FACE_MAXIMUM_CM:g} cm."
+                            ),
                             field="backWidth",
                         )
                     )

@@ -1,4 +1,4 @@
-"""Task 10.5 legal, production, trust, and security coverage."""
+"""Legal, production, trust, and security coverage."""
 
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor

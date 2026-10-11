@@ -21,6 +21,15 @@ type ClosureType = Literal["envelope", "slip-on", "zipper"]
 type SeamStyle = Literal["piped", "plain"]
 
 CENTIMETRES_PER_INCH = Decimal("2.54")
+# The allowed measurements in centimetres, and the pattern scale. The frontend
+# (frontend/context/configuration/) and the CHECK constraints of cover_designs
+# in models.py (literals, as SQL has to be) repeat them: change all three together.
+FACE_MINIMUM_CM = Decimal("10")  # width, height and back width
+FACE_MAXIMUM_CM = Decimal("300")
+THICKNESS_MINIMUM_CM = Decimal("1")
+THICKNESS_MAXIMUM_CM = Decimal("60")
+PATTERN_SCALE_MINIMUM = 0.5
+PATTERN_SCALE_MAXIMUM = 2
 PUBLIC_ID_LENGTH = 22
 PUBLIC_ID_PATTERN = rf"^[A-Za-z0-9_-]{{{PUBLIC_ID_LENGTH}}}$"
 
@@ -62,7 +71,12 @@ Measurement = Annotated[
 ]
 PatternScale = Annotated[
     float,
-    Field(strict=True, ge=0.5, le=2, allow_inf_nan=False),
+    Field(
+        strict=True,
+        ge=PATTERN_SCALE_MINIMUM,
+        le=PATTERN_SCALE_MAXIMUM,
+        allow_inf_nan=False,
+    ),
     AfterValidator(_validate_pattern_scale),
 ]
 

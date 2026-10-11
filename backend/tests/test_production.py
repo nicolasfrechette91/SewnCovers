@@ -334,8 +334,6 @@ def test_startup_expectations_match_the_migration_scripts_and_models() -> None:
     assert production_module.EXPECTED_TABLES == set(Base.metadata.tables) | {
         "alembic_version"
     }
-    assert set(production_module.EXPECTED_CONSTRAINTS) <= set(Base.metadata.tables)
-    assert "credential_backoffs" in production_module.EXPECTED_CONSTRAINTS
 
 
 @pytest.mark.parametrize("port", ["0", "65536", "not-a-port"])

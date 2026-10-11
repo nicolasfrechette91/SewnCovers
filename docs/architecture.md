@@ -94,7 +94,7 @@ FastAPI with Pydantic v2 and synchronous SQLAlchemy 2 sessions on Psycopg 3, a s
 
 ### Layout
 
-`backend/app/` is organised by capability. Each package has an `api.py` (route functions), `schema.py` (Pydantic contracts) and `service.py` (use-case rules and transactions); `designs/` and `patterns/` add a `repository.py`. `main.py` registers every route and middleware.
+`backend/app/` is organised by capability. Each package has an `api.py` (route functions), `schema.py` (Pydantic contracts) and `service.py` (use-case rules and transactions); `designs/` and `patterns/` add a `repository.py`. Each package that serves routes also has a `routes.py` that declares them (an `APIRouter` named `router`, or for `commerce/` and `assurance/` a `register_*_routes` function), and `service_routes.py` declares `/` and `/health`. `main.py` builds the application, its middleware and its OpenAPI tags, and includes those routers in order; `error_docs.py` holds the error responses several routers document in common.
 
 | Package | Responsibility |
 | --- | --- |
@@ -105,7 +105,7 @@ FastAPI with Pydantic v2 and synchronous SQLAlchemy 2 sessions on Psycopg 3, a s
 | `commerce/` | Price books, quotes, cart, checkout, payment events, orders, refunds, administration, audit. Includes the deterministic sandbox provider and a configured-only Stripe adapter. |
 | `assurance/` | Versioned legal documents and acknowledgements, production work and quality control, trust metadata and the read-only readiness report. |
 | `persistence/` | Lazy engine and session ownership, ORM models, transaction helpers, migration metadata. |
-| `settings.py`, `errors.py`, `health.py`, `production.py` | Typed settings, the error contract, the health check, the migration-gated production entry point. |
+| `settings.py`, `errors.py`, `health.py`, `production.py` | Typed settings, the error contract, the health check, the migration-gated production entry point (it verifies the schema against `persistence/schema_boundaries.py`, which derives what to expect from the models). |
 | `observability.py`, `client_ip.py`, `rate_limits.py`, `body_limits.py` | Request ids and redacted JSON logs, the trusted client address, per-network limits, request body size limits. |
 
 ### Request flow

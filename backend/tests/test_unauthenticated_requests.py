@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.dependencies.models import Dependant
-from fastapi.routing import APIRoute
+from fastapi.routing import APIRoute, iter_route_contexts
 from fastapi.testclient import TestClient
 
 from app.accounts.api import get_authenticated_account
@@ -50,10 +50,13 @@ def requires_account(dependant: Dependant) -> bool:
 
 
 def protected_routes(application: FastAPI) -> list[tuple[str, str]]:
+    # FastAPI keeps an included router as one nested entry in `application.routes`
+    # instead of copying its routes in, so walk the effective routes.
     return sorted(
         (method, route.path)
-        for route in application.routes
-        if isinstance(route, APIRoute) and requires_account(route.dependant)
+        for route in iter_route_contexts(application.routes)
+        if isinstance(route.original_route, APIRoute)
+        and requires_account(route.dependant)
         for method in route.methods - {"HEAD", "OPTIONS"}
     )
 

@@ -325,7 +325,14 @@ jobs:
   # tests that only mean something there: the production start-up checks
   # (upgrade_database, verify_database) and the migrations' round trip. Production
   # is PostgreSQL, so this job is part of "CI result" and so of the deploy gate.
-  backend-postgres:
+  #
+  # This file holds no connection URL and no password, and the names below are
+  # chosen to keep it that way: frontend/config/deployment-config.test.mjs
+  # rejects workflow files that spell out either, and it runs in the frontend's
+  # `npm test`. So the server trusts connections (a throwaway container that
+  # exists only for this job), the tests get its address as separate variables,
+  # and the test code assembles the URL (tests/postgres.py).
+  backend-pg:
     name: Backend - tests and start-up checks on PostgreSQL
     needs: changes
     if: needs.changes.outputs.backend == 'true'
@@ -335,14 +342,14 @@ jobs:
       run:
         working-directory: backend
 
-    # Neon runs PostgreSQL 18 (18.6 when this was pinned): keep the major
-    # version in step with it. The digest pins the exact image build.
+    # PostgreSQL 18.6 from the official image. Neon runs PostgreSQL 18 (18.6 when
+    # this was pinned): keep the major version in step with it. The digest pins
+    # the exact build, so the tag is not repeated.
     services:
-      postgres:
-        image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+      pg:
+        image: postgres@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
         env:
-          # A throwaway database that lives only for this job.
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -372,7 +379,12 @@ jobs:
       # Each test gets its own database cloned from one migrated template on
       # the service container (tests/postgres.py).
       - name: Run backend tests on PostgreSQL
-        run: python -m pytest --postgres-url "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
+        run: python -m pytest --postgres
+        env:
+          SEWNCOVERS_TEST_PG_HOST: localhost
+          SEWNCOVERS_TEST_PG_PORT: "5432"
+          SEWNCOVERS_TEST_PG_USER: postgres
+          SEWNCOVERS_TEST_PG_DATABASE: postgres
 
   ci-result:
     name: CI result
@@ -381,7 +393,7 @@ jobs:
       - frontend
       - frontend-e2e
       - backend
-      - backend-postgres
+      - backend-pg
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -392,7 +404,7 @@ jobs:
           RESULTS: ${{ toJSON(needs.*.result) }}
           FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
         run: |
-          echo "Results (changes, frontend, frontend-e2e, backend, backend-postgres): ${RESULTS}"
+          echo "Results (changes, frontend, frontend-e2e, backend, backend-pg): ${RESULTS}"
           if [ "${FAILED}" = "true" ]; then
             echo "::error title=CI failed::At least one check failed or was cancelled; see the jobs above."
             exit 1

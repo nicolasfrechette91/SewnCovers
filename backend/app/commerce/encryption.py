@@ -11,6 +11,10 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from app.settings import Settings, parse_previous_shipping_keys
 
+# The key sandbox mode falls back to when SHIPPING_ENCRYPTION_KEY is not set. It
+# is public on purpose, being in this repository: sandbox orders hold fictional
+# shipping data. ShippingCipher refuses to use it outside commerce's sandbox
+# mode, where a real key is required.
 SANDBOX_ENCRYPTION_KEY = bytes.fromhex(
     "6c2eac56df0d3fe7577d3d5b0bdb868b719d04f6f696637ac4fe58b62f7ab1f2"
 )

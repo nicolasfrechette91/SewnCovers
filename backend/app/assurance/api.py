@@ -1,4 +1,4 @@
-"""FastAPI dependencies and handlers for Task 10.5."""
+"""FastAPI dependencies and handlers for legal, trust and production routes."""
 
 from typing import Annotated, Literal
 

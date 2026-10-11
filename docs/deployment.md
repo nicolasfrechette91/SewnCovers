@@ -127,7 +127,7 @@ Render's free plan has no pre-deploy command, so the start command owns the sequ
 
 1. Load settings and require `ENVIRONMENT=production`, the exact Pages origin and a `DATABASE_URL`, the installed packages of any feature whose flag is on ([Dependencies](#dependencies)), then configure JSON logging.
 2. Run `alembic upgrade head`.
-3. Verify the exact revision (`20261007_02`), the expected tables, the named constraints, the intended pattern indexes and exactly 15 seeded patterns.
+3. Verify the exact revision (`20261007_02`), the tables, the constraints, foreign keys and indexes of every table (derived from the models) and exactly 15 seeded patterns.
 4. Only then start Uvicorn.
 
 If any step fails the process exits with a fixed message, the cause is logged with secrets masked, and Render keeps the previous deploy serving. Importing the app, running the tests or running the development server never calls Alembic or opens a connection.

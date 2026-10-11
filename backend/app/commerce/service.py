@@ -56,7 +56,7 @@ from app.commerce.schema import (
     VersionQuantityRequest,
     WebhookResponse,
 )
-from app.designs.schema import DesignConfiguration
+from app.designs.schema import CENTIMETRES_PER_INCH, DesignConfiguration
 from app.designs.service import DesignService
 from app.errors import APIProblem, permission_denied
 from app.patterns.repository import PatternRepository
@@ -174,7 +174,7 @@ def calculate_demonstration_pricing(
             "Quantity is outside the published price-book bounds.",
             "quantity",
         )
-    factor = Decimal("1") if configuration.unit == "cm" else Decimal("2.54")
+    factor = Decimal("1") if configuration.unit == "cm" else CENTIMETRES_PER_INCH
     width = Decimal(str(configuration.width)) * factor
     height = Decimal(str(configuration.height)) * factor
     thickness = Decimal(str(configuration.thickness)) * factor

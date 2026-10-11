@@ -1,4 +1,4 @@
-"""Read-only Task 10.5 production-readiness validation command."""
+"""Read-only production-readiness validation command."""
 
 from __future__ import annotations
 

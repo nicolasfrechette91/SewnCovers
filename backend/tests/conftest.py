@@ -18,7 +18,12 @@ from app.health import RUNNING_COMMIT_VARIABLE
 from app.persistence.migrations import ALEMBIC_CONFIG_PATH
 from app.settings import Settings, reset_settings_cache
 from tests import basetemp
-from tests.postgres import PostgresServer
+from tests.postgres import (
+    ENVIRONMENT_NAMES,
+    ENVIRONMENT_PREFIX,
+    PostgresServer,
+    choose_url,
+)
 
 _SERVER_LOGGERS = ("uvicorn", "uvicorn.error", "uvicorn.access")
 # What other modules imported from app.settings, as it was when they did.
@@ -29,6 +34,8 @@ _SETTINGS_API = (
 )
 # The folder this run chose for its temporary files (Windows only, see below).
 _run_directory: Path | None = None
+# The PostgreSQL server the run was told to use (--postgres-url or --postgres).
+_postgres_url: str | None = None
 # Every variable the application reads. A test that needs one sets it itself.
 _CONFIGURATION_VARIABLES = frozenset(
     {
@@ -74,10 +81,21 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "user needs the right to create databases."
         ),
     )
+    parser.addoption(
+        "--postgres",
+        action="store_true",
+        default=False,
+        help=(
+            "Like --postgres-url, for the server that the environment variables "
+            + ", ".join(ENVIRONMENT_PREFIX + name for name in ENVIRONMENT_NAMES)
+            + " describe. There is no password variable: the server must trust "
+            "the connection, as CI's throwaway service container does."
+        ),
+    )
 
 
 def pytest_report_header(config: pytest.Config) -> str:
-    url = config.getoption("--postgres-url")
+    url = _postgres_url
     if url is None:
         return "migrated databases: SQLite, one copy per test"
     server = PostgresServer(url)
@@ -92,13 +110,22 @@ def pytest_report_header(config: pytest.Config) -> str:
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config: pytest.Config) -> None:
-    """On Windows, keep pytest's temporary files on a short path.
+    """Settle which PostgreSQL server the run uses, if any, and on Windows keep
+    pytest's temporary files on a short path.
 
     See ``tests/basetemp.py`` for why. A ``--basetemp`` given on the command
     line is respected, and pytest's default is kept where nothing short enough
     can be created. This runs before pytest's own tmpdir plugin reads the option.
     """
-    global _run_directory
+    global _postgres_url, _run_directory
+    try:
+        _postgres_url = choose_url(
+            config.getoption("--postgres-url"),
+            config.getoption("--postgres"),
+            os.environ,
+        )
+    except ValueError as error:
+        raise pytest.UsageError(str(error)) from None
     if os.name != "nt" or config.option.basetemp is not None:
         return
     chosen = basetemp.choose_base(basetemp.candidate_roots(), str(os.getpid()))
@@ -149,13 +176,12 @@ def migrated_template(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 @pytest.fixture(scope="session")
-def postgres_server(request: pytest.FixtureRequest) -> Iterator[PostgresServer | None]:
-    """The server ``--postgres-url`` names, or None when the tests use SQLite."""
-    url = request.config.getoption("--postgres-url")
-    if url is None:
+def postgres_server() -> Iterator[PostgresServer | None]:
+    """The server the run was told to use, or None when the tests use SQLite."""
+    if _postgres_url is None:
         yield None
         return
-    server = PostgresServer(url)
+    server = PostgresServer(_postgres_url)
     try:
         yield server
     finally:

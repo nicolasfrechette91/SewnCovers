@@ -1,4 +1,4 @@
-"""Documented route registration for Task 10.5."""
+"""Documented route registration for legal, trust and production operations."""
 
 from fastapi import FastAPI
 

@@ -9,9 +9,49 @@ This module only creates, names and drops databases; it knows nothing of pytest.
 """
 
 import uuid
+from collections.abc import Mapping
 
 from sqlalchemy import NullPool, create_engine, text
-from sqlalchemy.engine import make_url
+from sqlalchemy.engine import URL, make_url
+
+# The server can also be described by these variables (``--postgres``), so a
+# workflow file never has to contain a connection URL. There is no password
+# variable: the server must trust the connection, as CI's throwaway service
+# container does. A password is given in the URL form (``--postgres-url``).
+ENVIRONMENT_PREFIX = "SEWNCOVERS_TEST_PG_"
+ENVIRONMENT_NAMES = ("HOST", "PORT", "USER", "DATABASE")
+
+
+def url_from_environment(environ: Mapping[str, str]) -> str:
+    """The URL of the server the ``SEWNCOVERS_TEST_PG_*`` variables describe."""
+    values = {
+        name: environ.get(ENVIRONMENT_PREFIX + name, "") for name in ENVIRONMENT_NAMES
+    }
+    missing = [ENVIRONMENT_PREFIX + name for name, value in values.items() if not value]
+    if missing:
+        raise ValueError(
+            f"--postgres needs these environment variables: {', '.join(missing)}"
+        )
+    if not values["PORT"].isdecimal():
+        raise ValueError(f"{ENVIRONMENT_PREFIX}PORT must be a number")
+    return URL.create(
+        "postgresql+psycopg",
+        username=values["USER"],
+        host=values["HOST"],
+        port=int(values["PORT"]),
+        database=values["DATABASE"],
+    ).render_as_string(hide_password=False)
+
+
+def choose_url(
+    url: str | None, from_environment: bool, environ: Mapping[str, str]
+) -> str | None:
+    """The server to use, from ``--postgres-url`` or ``--postgres``, or None."""
+    if url is not None and from_environment:
+        raise ValueError("give --postgres-url or --postgres, not both")
+    if from_environment:
+        return url_from_environment(environ)
+    return url
 
 
 class PostgresServer:

@@ -63,6 +63,9 @@ from app.rate_limits import too_many_requests
 from app.settings import get_settings
 from app.uploads.storage import ObjectStorageError, get_object_storage
 
+# A session lasts one fixed week from sign-in. Nothing extends it (there is no
+# refresh), so people sign in again each week, and a stolen token is useful for
+# at most that long; signing out everywhere ends it sooner.
 SESSION_LIFETIME = timedelta(days=7)
 # A session stays listed (GET /account/sessions) for this long after it expires,
 # then a later sign-in deletes it, so the table does not grow without bound
@@ -71,6 +74,10 @@ SESSION_RETENTION = timedelta(days=30)
 SESSION_PURGE_BATCH = 100
 TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_-]{43}$")
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{22}$")
+# How many times to draw a new token or identifier before giving up. A draw is
+# refused only when it has the wrong shape or already exists, which a working
+# generator (at least 128 random bits) does with negligible probability, so
+# reaching the limit means the generator is broken: answer 503, never loop.
 TOKEN_ATTEMPTS = 5
 _DUMMY_PASSWORD_HASH: str | None = None
 

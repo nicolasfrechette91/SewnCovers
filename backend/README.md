@@ -45,7 +45,7 @@ Tests use isolated SQLite databases and dependency overrides; none needs a popul
 
 | Path | Contents |
 | --- | --- |
-| `app/main.py` | Application factory, middleware, route registration. |
+| `app/main.py`, `app/*/routes.py` | Application factory and middleware; each package declares its own routes in a router that `main.py` includes. |
 | `app/patterns/`, `app/designs/` | Public catalogue and immutable saved designs. |
 | `app/accounts/`, `app/projects/` | Accounts, sessions, private projects, versions, shares. |
 | `app/uploads/` | Custom pattern uploads, processing, moderation, worker. |

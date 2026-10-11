@@ -13,6 +13,10 @@ from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 from argon2.low_level import Type
 
+# A bearer token carries 256 random bits (43 URL-safe characters) and a resource
+# identifier 128 (22). With that much entropy there is nothing to guess, which
+# is why a token is stored as a plain SHA-256 and not a slow password hash;
+# passwords, which people choose, use Argon2id below.
 SESSION_TOKEN_BYTES = 32
 RESOURCE_ID_BYTES = 16
 

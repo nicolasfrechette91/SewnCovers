@@ -1,4 +1,4 @@
-"""Strict public contracts for Task 10.5 capabilities."""
+"""Strict public contracts for legal, trust and production operations."""
 
 from datetime import datetime
 from typing import Literal

@@ -1,8 +1,8 @@
 """The migrations and the production start-up checks on a real PostgreSQL server.
 
 Everything else the suite does with a migrated database runs on SQLite unless
-``--postgres-url`` is given (see ``tests/postgres.py``). These tests only mean
-something on PostgreSQL, so they are skipped without it.
+``--postgres-url`` or ``--postgres`` is given (see ``tests/postgres.py``). These
+tests only mean something on PostgreSQL, so they are skipped without it.
 """
 
 from collections.abc import Iterator
@@ -21,7 +21,7 @@ from tests.postgres import PostgresServer
 @pytest.fixture
 def server(postgres_server: PostgresServer | None) -> PostgresServer:
     if postgres_server is None:
-        pytest.skip("needs a PostgreSQL server (--postgres-url)")
+        pytest.skip("needs a PostgreSQL server (--postgres-url or --postgres)")
     return postgres_server
 
 
