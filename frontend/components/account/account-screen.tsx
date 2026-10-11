@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -20,11 +20,8 @@ import {
 } from "@/components/ui";
 import { buttonClasses } from "@/components/ui/button-styles";
 import { useAuth } from "@/context/auth";
-import {
-  AccountApiError,
-  accountApi,
-  type SessionMetadata,
-} from "@/services/account-api";
+import { useAccountResource } from "@/context/auth/use-account-resource";
+import { AccountApiError, accountApi } from "@/services/account-api";
 import {
   buildAccountHref,
   parseAuthenticationMode,
@@ -69,10 +66,20 @@ function AuthenticatedAccount({
   onSessionEnding,
 }: Readonly<{ onSessionEnding: () => void }>) {
   const { state, logout, logoutAll, clear } = useAuth();
-  const [sessions, setSessions] = useState<readonly SessionMetadata[] | null>(
-    null,
+  const sessionList = useAccountResource((sessionToken, signal) =>
+    accountApi.sessions(sessionToken, { signal }),
   );
-  const [error, setError] = useState<string | null>(null);
+  const sessions = sessionList.data;
+  // One banner for the list and the actions: an action or a reload clears
+  // both, as a new request replaces whatever the banner said.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const error =
+    actionError ??
+    (sessionList.error === undefined ? null : message(sessionList.error));
+  const setError = (next: string | null) => {
+    setActionError(next);
+    if (next === null) sessionList.clearError();
+  };
   const [pending, setPending] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -81,20 +88,10 @@ function AuthenticatedAccount({
   const token = state.status === "authenticated" ? state.token : null;
   const account = state.status === "authenticated" ? state.account : null;
 
-  const loadSessions = async () => {
-    if (!token) return;
+  const loadSessions = () => {
     setError(null);
-    try {
-      setSessions(await accountApi.sessions(token));
-    } catch (caught) {
-      setError(message(caught));
-    }
+    return sessionList.reload();
   };
-
-  useEffect(() => {
-    const timer = globalThis.setTimeout(() => void loadSessions(), 0);
-    return () => globalThis.clearTimeout(timer);
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!token || !account) return null;
 
@@ -189,7 +186,7 @@ function AuthenticatedAccount({
 
       <Surface as="section">
         <SectionHeader title="Active sessions" />
-        {sessions === null ? (
+        {sessions === undefined ? (
           <LoadingState className="mt-3" label="Loading sessions…" />
         ) : (
           <ul className="mt-3 space-y-3">
@@ -237,7 +234,7 @@ function AuthenticatedAccount({
           </ul>
         )}
         {error ? <ErrorMessage className="mt-3">{error}</ErrorMessage> : null}
-        {sessions === null || error ? (
+        {sessions === undefined || error ? (
           <Button
             className="mt-3"
             variant="secondary"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useAuth } from "@/context/auth";
 import { getPatternArtworkClassName } from "@/data/patterns";
 import {
@@ -8,6 +8,7 @@ import {
   resolveAssetUrl,
   type ProjectConfigurationRequest,
 } from "@/services/account-api";
+import { useResource } from "@/services/use-resource";
 import { Surface, classNames } from "@/components/ui";
 
 const labels: Readonly<Record<string, string>> = {
@@ -28,36 +29,33 @@ export function ConfigurationReadonly({
   configuration,
 }: Readonly<{ configuration: ProjectConfigurationRequest }>) {
   const { state: auth } = useAuth();
-  const [custom, setCustom] = useState<
-    { label: string; url: string } | { deleted: true } | null
-  >(null);
-  useEffect(() => {
-    let active = true;
-    const pattern = configuration.pattern;
-    if (pattern.kind !== "custom" || auth.status !== "authenticated") return;
-    void (async () => {
+  const token = auth.status === "authenticated" ? auth.token : null;
+  const assetId =
+    configuration.pattern.kind === "custom"
+      ? configuration.pattern.assetId
+      : null;
+  // A custom pattern needs a fresh, short-lived grant; anything that fails
+  // reads as deleted, as the asset can't be shown.
+  const customAsset = useResource(
+    token === null || assetId === null ? null : `${token}\u0000${assetId}`,
+    async (
+      _key,
+      signal,
+    ): Promise<{ label: string; url: string } | { deleted: true }> => {
+      if (token === null || assetId === null) return { deleted: true };
       try {
-        const upload = await accountApi.getUpload(auth.token, pattern.assetId);
-        if (!active) return;
-        if (upload.state === "deleted") {
-          setCustom({ deleted: true });
-          return;
-        }
-        const access = await accountApi.assetAccess(
-          auth.token,
-          upload.id,
-          "tile",
-        );
-        if (active)
-          setCustom({ label: upload.label, url: resolveAssetUrl(access.url) });
+        const upload = await accountApi.getUpload(token, assetId, { signal });
+        if (upload.state === "deleted") return { deleted: true };
+        const access = await accountApi.assetAccess(token, upload.id, "tile", {
+          signal,
+        });
+        return { label: upload.label, url: resolveAssetUrl(access.url) };
       } catch {
-        if (active) setCustom({ deleted: true });
+        return { deleted: true };
       }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [auth, configuration.pattern]);
+    },
+  );
+  const custom = customAsset.data ?? null;
   const measurement = (value: number) => `${value} ${configuration.unit}`;
   const artworkClassName =
     configuration.pattern.kind === "built-in"

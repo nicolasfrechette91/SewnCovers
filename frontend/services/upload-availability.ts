@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import { apiClient, type SewnCoversApiClient } from "./api-client";
+import { useResource } from "./use-resource";
 
 /**
  * Whether custom uploads can be offered. Only "enabled" offers them:
@@ -38,21 +37,15 @@ export function resetUploadAvailability(): void {
 }
 
 export function useUploadAvailability(): UploadAvailability {
-  const [availability, setAvailability] =
-    useState<UploadAvailability>("checking");
+  const { data: enabled } = useResource("upload-availability", () =>
+    loadUploadAvailability(),
+  );
 
-  useEffect(() => {
-    let active = true;
-    void loadUploadAvailability().then((enabled) => {
-      if (!active) return;
-      setAvailability(
-        enabled === null ? "unknown" : enabled ? "enabled" : "disabled",
-      );
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return availability;
+  return enabled === undefined
+    ? "checking"
+    : enabled === null
+      ? "unknown"
+      : enabled
+        ? "enabled"
+        : "disabled";
 }

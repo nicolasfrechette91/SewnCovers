@@ -1,6 +1,7 @@
 import {
   accountRequest,
   type AccountRequestOptions,
+  type CallOptions,
   type FailureWording,
   type Parser,
 } from "./account-api";
@@ -458,10 +459,10 @@ export const commerceApi = {
       parser: isOrder,
     });
   },
-  sandboxCheckout(sessionId: string) {
+  sandboxCheckout(sessionId: string, { signal }: CallOptions = {}) {
     return commerceRequest(
       `/commerce/sandbox/checkouts/${encodeURIComponent(sessionId)}`,
-      { parser: isSandboxCheckout },
+      { parser: isSandboxCheckout, signal },
     );
   },
   completeSandbox(

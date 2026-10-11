@@ -351,6 +351,11 @@ function isUploadOperation(value: unknown): value is UploadOperation {
 
 export type Parser<T> = (value: unknown) => value is T;
 
+/** For calls a screen loads: cancelled when the screen no longer needs them. */
+export interface CallOptions {
+  readonly signal?: AbortSignal;
+}
+
 // Browsers that block site storage throw on access; treat that as no session.
 function tokenStorage(): Storage | null {
   try {
@@ -590,10 +595,11 @@ export const accountApi = {
       empty: true,
     });
   },
-  sessions(token: string) {
+  sessions(token: string, { signal }: CallOptions = {}) {
     return accountRequest("/account/sessions", {
       token,
       parser: isSessionList,
+      signal,
     });
   },
   revokeSession(token: string, id: number) {
@@ -617,8 +623,12 @@ export const accountApi = {
       parser: isRecord,
     });
   },
-  listProjects(token: string) {
-    return accountRequest("/projects", { token, parser: isProjectList });
+  listProjects(token: string, { signal }: CallOptions = {}) {
+    return accountRequest("/projects", {
+      token,
+      parser: isProjectList,
+      signal,
+    });
   },
   createProject(
     token: string,
@@ -632,10 +642,11 @@ export const accountApi = {
       parser: isProjectDetail,
     });
   },
-  getProject(token: string, projectId: string) {
+  getProject(token: string, projectId: string, { signal }: CallOptions = {}) {
     return accountRequest(`/projects/${encodeURIComponent(projectId)}`, {
       token,
       parser: isProjectDetail,
+      signal,
     });
   },
   renameProject(token: string, projectId: string, name: string) {
@@ -653,12 +664,13 @@ export const accountApi = {
       empty: true,
     });
   },
-  listVersions(token: string, projectId: string) {
+  listVersions(token: string, projectId: string, { signal }: CallOptions = {}) {
     return accountRequest(
       `/projects/${encodeURIComponent(projectId)}/versions`,
       {
         token,
         parser: isVersionList,
+        signal,
       },
     );
   },
@@ -726,10 +738,11 @@ export const accountApi = {
       parser: isUploadIntent,
     });
   },
-  getUpload(token: string, uploadId: string) {
+  getUpload(token: string, uploadId: string, { signal }: CallOptions = {}) {
     return accountRequest(`/uploads/${encodeURIComponent(uploadId)}`, {
       token,
       parser: isUpload,
+      signal,
     });
   },
   confirmUpload(token: string, uploadId: string, checksum: string) {
@@ -777,13 +790,19 @@ export const accountApi = {
       parser,
     });
   },
-  assetAccess(token: string, uploadId: string, kind: "thumbnail" | "tile") {
+  assetAccess(
+    token: string,
+    uploadId: string,
+    kind: "thumbnail" | "tile",
+    { signal }: CallOptions = {},
+  ) {
     return accountRequest(
       `/uploads/${encodeURIComponent(uploadId)}/assets/${kind}/access`,
       {
         method: "POST",
         token,
         parser: isAssetAccess,
+        signal,
       },
     );
   },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import {
   Button,
@@ -18,7 +18,8 @@ import {
   withBasePath,
 } from "@/services/account-api";
 import { assuranceApi } from "@/services/assurance-api";
-import { commerceApi, type SandboxCheckout } from "@/services/commerce-api";
+import { commerceApi } from "@/services/commerce-api";
+import { useResource } from "@/services/use-resource";
 
 import { CommerceError, DemoBanner } from "./demo-banner";
 
@@ -36,53 +37,43 @@ export function SandboxCheckoutScreen() {
   const params = useSearchParams();
   const sessionId = params.get("session");
   const orderId = params.get("order");
-  const [checkout, setCheckout] = useState<SandboxCheckout | null>(null);
-  const [loading, setLoading] = useState(true);
+  const session = useResource(sessionId, (id, signal) =>
+    commerceApi.sandboxCheckout(id, { signal }),
+  );
+  const checkout = session.data;
   const [busy, setBusy] = useState<"success" | "failure" | "cancel" | null>(
     null,
   );
-  const [error, setError] = useState<string | null>(null);
+  // Until the visitor acts, the banner explains why there is no checkout.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const error =
+    actionError ??
+    (sessionId === null
+      ? "The fictional checkout session is missing."
+      : session.error === undefined
+        ? null
+        : session.error instanceof AccountApiError
+          ? session.error.message
+          : "The fictional checkout could not be loaded.");
   const [termsAcknowledged, setTermsAcknowledged] = useState(false);
 
-  useEffect(() => {
-    const timer = globalThis.setTimeout(async () => {
-      if (!sessionId) {
-        setError("The fictional checkout session is missing.");
-        setLoading(false);
-        return;
-      }
-      try {
-        setCheckout(await commerceApi.sandboxCheckout(sessionId));
-      } catch (caught) {
-        setError(
-          caught instanceof AccountApiError
-            ? caught.message
-            : "The fictional checkout could not be loaded.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, 0);
-    return () => globalThis.clearTimeout(timer);
-  }, [sessionId]);
-
-  if (loading) {
+  if (session.loading) {
     return <LoadingState label="Opening fictional hosted checkout…" />;
   }
 
   const finish = async (outcome: "success" | "failure" | "cancel") => {
     if (!sessionId || !orderId) {
-      setError("The fictional checkout mapping is incomplete.");
+      setActionError("The fictional checkout mapping is incomplete.");
       return;
     }
     if (outcome === "success" && !termsAcknowledged) {
-      setError(
+      setActionError(
         "Acknowledge demonstration commerce notice version 1 before continuing.",
       );
       return;
     }
     setBusy(outcome);
-    setError(null);
+    setActionError(null);
     try {
       const token = readSessionToken();
       if (outcome === "success" && token) {
@@ -95,7 +86,7 @@ export function SandboxCheckoutScreen() {
         withBasePath(target) + "?order=" + encodeURIComponent(orderId),
       );
     } catch (caught) {
-      setError(
+      setActionError(
         caught instanceof AccountApiError
           ? caught.message
           : "The fictional payment event failed.",

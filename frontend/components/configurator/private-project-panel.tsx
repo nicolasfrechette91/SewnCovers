@@ -152,23 +152,23 @@ export function PrivateProjectPanel({
 
   // A draft linked to a project: confirm it still belongs to this account
   // and learn its name. A project that's gone (or another account's) is
-  // unlinked, so the next save creates a new one.
+  // unlinked, so the next save creates a new one. Saving also sets `linked`,
+  // and the later of the two wins, so this stays an effect rather than a
+  // resource of its own.
   useEffect(() => {
     if (!token || !linkedProjectId) return;
-    let cancelled = false;
-    const timer = globalThis.setTimeout(async () => {
-      try {
-        const project = await accountApi.getProject(token, linkedProjectId);
-        if (!cancelled) setLinked(linkedFrom(project));
-      } catch (caught) {
-        if (!cancelled && isMissingProject(caught))
+    const controller = new AbortController();
+    const { signal } = controller;
+    accountApi.getProject(token, linkedProjectId, { signal }).then(
+      (project) => {
+        if (!signal.aborted) setLinked(linkedFrom(project));
+      },
+      (caught: unknown) => {
+        if (!signal.aborted && isMissingProject(caught))
           writeDraft({ project: null, cart: null });
-      }
-    }, 0);
-    return () => {
-      cancelled = true;
-      globalThis.clearTimeout(timer);
-    };
+      },
+    );
+    return () => controller.abort();
   }, [linkedProjectId, token]);
 
   // Saves to the linked project when there is one (a new version only if the

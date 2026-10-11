@@ -31,8 +31,6 @@ import {
   accountApi,
   AccountApiError,
   buildProjectShareUrl,
-  type ProjectDetail,
-  type ProjectSummary,
   type ProjectVersion,
 } from "@/services/account-api";
 import {
@@ -41,13 +39,9 @@ import {
   getServerDraftSnapshot,
   subscribeToDraft,
 } from "@/services/configurator-draft";
+import { useResource } from "@/services/use-resource";
 
 import { ConfigurationReadonly } from "./configuration-readonly";
-
-type LoadState<T> =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; value: T };
 
 function errorMessage(error: unknown): string {
   return error instanceof AccountApiError
@@ -56,40 +50,25 @@ function errorMessage(error: unknown): string {
 }
 
 function ProjectList({ token }: Readonly<{ token: string }>) {
-  const [state, setState] = useState<LoadState<readonly ProjectSummary[]>>({
-    status: "loading",
-  });
-  const load = async () => {
-    setState({ status: "loading" });
-    try {
-      setState({
-        status: "ready",
-        value: await accountApi.listProjects(token),
-      });
-    } catch (error) {
-      setState({ status: "error", message: errorMessage(error) });
-    }
-  };
-  useEffect(() => {
-    const timer = globalThis.setTimeout(() => void load(), 0);
-    return () => globalThis.clearTimeout(timer);
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
-  if (state.status === "loading")
+  const projects = useResource(token, (sessionToken, signal) =>
+    accountApi.listProjects(sessionToken, { signal }),
+  );
+  if (projects.loading)
     return <LoadingState label="Loading your private projects…" />;
-  if (state.status === "error")
+  if (projects.error !== undefined || projects.data === undefined)
     return (
       <div>
-        <ErrorMessage>{state.message}</ErrorMessage>
+        <ErrorMessage>{errorMessage(projects.error)}</ErrorMessage>
         <Button
           className="mt-3"
           variant="secondary"
-          onClick={() => void load()}
+          onClick={() => void projects.reload()}
         >
           Retry projects
         </Button>
       </div>
     );
-  if (state.value.length === 0)
+  if (projects.data.length === 0)
     return (
       <EmptyState
         title="No private projects yet"
@@ -104,7 +83,7 @@ function ProjectList({ token }: Readonly<{ token: string }>) {
     );
   return (
     <ul className="grid min-w-0 wrap-anywhere gap-component sm:grid-cols-2 lg:grid-cols-3">
-      {state.value.map((project) => (
+      {projects.data.map((project) => (
         <Surface
           as="li"
           key={project.id}
@@ -142,9 +121,20 @@ function ProjectView({
 }: Readonly<{ token: string; projectId: string }>) {
   const router = useRouter();
   const focusLater = useDeferredFocus();
-  const [state, setState] = useState<
-    LoadState<{ detail: ProjectDetail; versions: readonly ProjectVersion[] }>
-  >({ status: "loading" });
+  const project = useResource(
+    `${token}\u0000${projectId}`,
+    async (_key, signal) => {
+      const [detail, versions] = await Promise.all([
+        accountApi.getProject(token, projectId, { signal }),
+        accountApi.listVersions(token, projectId, { signal }),
+      ]);
+      return { detail, versions };
+    },
+  );
+  const ready =
+    !project.loading &&
+    project.error === undefined &&
+    project.data !== undefined;
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -154,36 +144,21 @@ function ProjectView({
   const actionStatusRef = useRef<HTMLElement>(null);
   const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const confirmDeleteButtonRef = useRef<HTMLButtonElement>(null);
-  const load = async () => {
-    setState({ status: "loading" });
-    try {
-      const [detail, versions] = await Promise.all([
-        accountApi.getProject(token, projectId),
-        accountApi.listVersions(token, projectId),
-      ]);
-      setState({ status: "ready", value: { detail, versions } });
-    } catch (error) {
-      setState({ status: "error", message: errorMessage(error) });
-    }
-  };
+  const load = project.reload;
   useEffect(() => {
-    const timer = globalThis.setTimeout(() => void load(), 0);
-    return () => globalThis.clearTimeout(timer);
-  }, [projectId, token]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (!shareUrl || state.status !== "ready") return;
+    if (!shareUrl || !ready) return;
     const timer = globalThis.setTimeout(() => {
       shareRef.current?.focus();
       shareRef.current?.select();
     }, 0);
     return () => globalThis.clearTimeout(timer);
-  }, [shareUrl, state.status]);
-  if (state.status === "loading")
+  }, [shareUrl, ready]);
+  if (project.loading)
     return <LoadingState label="Loading project and version history…" />;
-  if (state.status === "error")
+  if (project.error !== undefined || project.data === undefined)
     return (
       <div>
-        <ErrorMessage>{state.message}</ErrorMessage>
+        <ErrorMessage>{errorMessage(project.error)}</ErrorMessage>
         <Button
           className="mt-3"
           variant="secondary"
@@ -193,7 +168,7 @@ function ProjectView({
         </Button>
       </div>
     );
-  const { detail, versions } = state.value;
+  const { detail, versions } = project.data;
 
   const rename = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
