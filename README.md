@@ -5,7 +5,7 @@ Measure the cushion you already own, pick a fabric, and get a previewed, shareab
 [![Frontend CI and deploy](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-pages.yml)
 [![Backend CI and deploy](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-backend.yml/badge.svg)](https://github.com/nicolasfrechette91/SewnCovers/actions/workflows/deploy-backend.yml)
 
-![The configurator's Preview stage: a rectangular cushion covered in the green Fern trail pattern on a cutting mat, beside the pattern-size slider and the design details.](docs/images/preview-step.jpg)
+![The configurator's Preview stage: a rectangular cushion drawn in the green Fern trail pattern on a grid-lined cutting mat, with the pattern-size slider and edit buttons beside it and the design details below.](docs/images/preview-step.jpg)
 
 - **Live demo:** [nicolasfrechette91.github.io/SewnCovers](https://nicolasfrechette91.github.io/SewnCovers/) ([open the configurator](https://nicolasfrechette91.github.io/SewnCovers/configure/))
 - **Demo share link:** [a saved box cushion in Terrace wave](https://nicolasfrechette91.github.io/SewnCovers/configure/?design=fzlGCyCVpfiMf96geBq_jg), restored exactly from the API
@@ -17,16 +17,16 @@ The API runs on a free Render instance. It sleeps when idle, so the first reques
 | --- | --- |
 | ![The landing page: the headline "Design a cover that fits the cushion you already have", a Start configuring button and a measured 45 by 45 cm patterned cushion drawing.](docs/images/home.jpg) | ![The configurator's Shape stage: a six-stage progress track and five cushion shape cards with Rectangle cushion selected.](docs/images/shape-step.png) |
 | **Pattern stage** | **Review stage** |
-| ![The Pattern stage: built-in pattern search and filters, the Fern trail card selected, and a Current selections panel listing the rectangle's measurements and cover choices.](docs/images/pattern-step.png) | ![The Review stage: the prototype notice, a table of the chosen measurements and options, and the patterned cushion preview.](docs/images/review.jpg) |
+| ![The Pattern stage: a search box and style and colour filters above the 15 patterns, with Fern trail selected, and beside them a Current selections list and a live cushion preview in that pattern.](docs/images/pattern-step.jpg) | ![The Review stage: the prototype notice, a list of the chosen measurements and options, and the patterned cushion preview.](docs/images/review.jpg) |
 
 ## What this demonstrates
 
-- **A static frontend on a separate API.** Next.js 16 exported to GitHub Pages with no frontend server and no third-party runtime dependencies, validating every API response at runtime ([architecture](docs/architecture.md)).
+- **A static frontend on a separate API.** Next.js 16 exported to GitHub Pages with no frontend server and no runtime dependencies beyond Next.js and React, validating every API response at runtime ([architecture](docs/architecture.md)).
 - **Immutable share links with an explicit no-retry policy.** A saved design never changes, and the client never silently retries the write ([ADR 0002](docs/adr/0002-immutable-designs-no-post-retry.md)).
 - **A production start that refuses a wrong schema.** The API migrates, verifies the exact schema, constraints and seed, and only then serves ([ADR 0003](docs/adr/0003-migration-gated-production-start.md)).
 - **Guest-first accounts.** The whole design flow works without signing up; sign-in is inline and never costs the design. Argon2id passwords, hashed and revocable bearer sessions, object-level authorization ([ADR 0004](docs/adr/0004-guest-first-opaque-sessions.md)).
 - **A documented, enforced design system.** Tokens, checked contrast ratios, reduced-motion and forced-colours support, guarded by a test ([design](docs/design.md)).
-- **Offline-by-construction tests.** Over 250 frontend unit tests, about 90 Playwright journeys against a mocked API, and over 350 backend tests on migrated SQLite databases, all run by CI before either side deploys ([testing](docs/testing.md)).
+- **Offline-by-construction tests.** Over 350 frontend unit tests, about 90 Playwright journeys against a mocked API, and over 550 backend tests on migrated SQLite databases, all run by CI before either side deploys ([testing](docs/testing.md)).
 
 The reasoning behind the project is in the [case study](docs/case-study.md).
 
@@ -88,7 +88,7 @@ macOS and Linux commands, PostgreSQL, and how to switch on commerce and custom u
 
 ## Honest boundaries
 
-- **Custom uploads and commerce are switched off in production.** Both are implemented and tested, but the live API answers `503` for them. Uploads need object storage and an image-moderation provider, commerce needs a payment provider, tax and legal review, and none of that is worth operating for a portfolio. Both run locally ([setup](docs/setup.md#3-turn-on-commerce-and-custom-uploads-locally)). Commerce is a fictional CAD sandbox that never contacts a provider.
+- **Custom uploads and commerce are switched off in production.** Both are implemented and tested, but the live API reports them disabled and answers `503` to their routes, and the Pattern stage shows a "not enabled in this demo" note instead of the upload form. Uploads need object storage and an image-moderation provider, commerce needs a payment provider, tax and legal review, and none of that is worth operating for a portfolio. Both run locally ([setup](docs/setup.md#3-turn-on-commerce-and-custom-uploads-locally)). Commerce is a fictional CAD sandbox that never contacts a provider.
 - **It is a prototype.** It cannot charge money, ship anything or produce a finished cover, and says so where it matters.
 - **Authentication is portfolio-grade.** No email verification or password recovery, and the session token lives in `sessionStorage`. Sign-in attempts are slowed per network and per email with a backoff kept in the database, so it survives restarts ([limits](docs/api.md#limits)). See [SECURITY.md](SECURITY.md).
 - **Free tiers mean cold starts.** The free API instance sleeps when idle and nothing keeps it awake; the site warms it on page load and shows a waking notice ([deployment](docs/deployment.md#free-tier-behaviour)).

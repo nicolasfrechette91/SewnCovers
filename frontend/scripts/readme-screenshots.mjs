@@ -188,14 +188,15 @@ const design = {
   width: "80",
 };
 
-// The file extension decides the format. Measured at 1280 px wide: flat
-// screens (shape, pattern) are smallest as PNG, about 100-130 KB; the pages
-// with the grid-paper background and the shaded cushion (home, preview,
-// review) are 170-220 KB as PNG but about 100-120 KB as JPEG at this quality,
-// with text still crisp. Re-deflating the PNGs at level 9 saves only ~2%.
+// The file extension decides the format. Measured at 1280 px wide: the flat
+// shape screen is smallest as PNG, under 100 KB; the pages with the
+// grid-paper background and the shaded cushion (home, preview, review) and the
+// pattern grid with its artwork and live preview are 160-220 KB as PNG but
+// about 80-120 KB as JPEG at this quality, with text still crisp. Re-deflating
+// the PNGs at level 9 saves only ~2%.
 const captures = {
   home: { file: "home.jpg" },
-  pattern: { file: "pattern-step.png" },
+  pattern: { file: "pattern-step.jpg" },
   preview: { file: "preview-step.jpg" },
   review: { file: "review.jpg" },
   shape: { file: "shape-step.png" },
@@ -554,9 +555,11 @@ async function captureAll(browser) {
     await page.getByText("15 patterns", { exact: true }).waitFor();
     await page.getByText(design.pattern, { exact: true }).click();
     await check(page.getByRole("radio", { name: design.pattern }));
+    // 912 px ends just below the first row of cards instead of cutting the
+    // second row in half, and keeps the PNG under the size budget.
     written.push(
       await capture(page, "pattern", {
-        height: 960,
+        height: 912,
         scrollTo: page.getByRole("heading", { exact: true, name: "Patterns" }),
       }),
     );
